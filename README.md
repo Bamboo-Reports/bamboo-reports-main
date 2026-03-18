@@ -199,6 +199,7 @@ bamboo-reports-nextjs/
 | `NEXT_PUBLIC_MAPTILER_KEY` | **Yes** | MapTiler public key for rendering map tiles. |
 | `NEXT_PUBLIC_MAPTILER_STATE_STYLE_ID` | No | MapTiler style ID (or map URL) used for state view. |
 | `NEXT_PUBLIC_MAPTILER_CITY_STYLE_ID` | No | MapTiler style ID (or map URL) used for city view. |
+| `NEXT_PUBLIC_MAP_VIEWPOINT_ISO2` | No | Optional geopolitically-aware choropleth alias mode. Set `IN` to apply India-specific disputed-region alias rules in state choropleth rendering. |
 | `NEXT_PUBLIC_MAPTILER_STYLE_ID` | No | Legacy fallback style ID used only if mode-specific IDs are not set. |
 | `NEXT_PUBLIC_LOGO_DEV_TOKEN` | No | Token for fetching company logos (optional). |
 
@@ -269,6 +270,7 @@ We maintain detailed documentation for specific subsystems in the `documentation
 - [**Project Architecture**](documentation/project-architecture.md): High-level design, Server Actions, and State Management.
 - [**Developer Workflow**](documentation/developer-workflow.md): Guide for common tasks, adding filters, and troubleshooting.
 - [**Logo Integration**](documentation/logo-integration.md): Setup and usage guide for the Logo.dev integration.
+- [**Map Disputed Boundaries**](documentation/map-disputed-boundaries.md): State choropleth disputed-boundary behavior, alias rules, and styling guidance.
 
 ---
 
