@@ -514,7 +514,7 @@ function DashboardContent(): JSX.Element | null {
       {dataLoaded && (
         <main
           id="main-content"
-          className="flex flex-1 overflow-hidden [--dashboard-content-top-gap:1.5rem] [--dashboard-content-bottom-gap:0.75rem]"
+          className="flex flex-1 overflow-hidden [--dashboard-content-top-gap:1.5rem] [--dashboard-content-bottom-gap:0.75rem] [--dashboard-panel-height:calc(100dvh-18.75rem)]"
         >
           <ExportDialog
             open={exportDialogOpen}

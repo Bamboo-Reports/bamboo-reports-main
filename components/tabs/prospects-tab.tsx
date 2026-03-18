@@ -271,10 +271,10 @@ export function ProspectsTab({
 
        {/* Data Table */}
        {prospectsView === "data" && (
-         <Card className="w-full flex flex-col h-[calc(100vh-19.5rem)] border shadow-sm animate-fade-in">
-           <CardHeader className="shrink-0 px-6 py-4">
+         <Card className="w-full flex flex-col h-[var(--dashboard-panel-height)] border shadow-sm animate-fade-in">
+           <CardHeader className="shrink-0 px-6 py-3">
              <div className="flex flex-wrap items-center gap-3">
-               <CardTitle className="text-lg">Prospects Data</CardTitle>
+               <CardTitle className="text-base">Prospects Data</CardTitle>
                <ViewSwitcher
                  value={dataLayout}
                  onValueChange={(value) => setDataLayout(value as "table" | "grid")}

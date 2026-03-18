@@ -159,21 +159,21 @@ export const SummaryCards = React.memo(function SummaryCards({
               className="pointer-events-none absolute inset-px rounded-[calc(var(--radius)-2px)] border border-white/40 dark:border-white/10 opacity-60"
               aria-hidden="true"
             />
-            <CardHeader className="relative p-4 pb-2">
+            <CardHeader className="relative px-4 pt-3 pb-1.5">
               <CardTitle className="text-sm font-medium text-sidebar-foreground flex items-center gap-2">
                 <Icon className={cn('h-4 w-4', card.iconClassName)} />
                 {card.title}
               </CardTitle>
             </CardHeader>
-            <CardContent className="relative flex items-end justify-between gap-3 p-4 pt-1">
+            <CardContent className="relative flex items-end justify-between gap-3 px-4 pt-0 pb-3.5">
               <div>
                 <AnimatedNumber
                   value={card.value}
                   className="text-sidebar-foreground"
                 />
-                <p className="mt-1 text-xs text-muted-foreground">Currently visible</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">Currently visible</p>
               </div>
-              <span className="inline-flex items-center rounded-full border border-border/60 bg-secondary/70 px-3 py-1 text-[11px] font-medium text-muted-foreground backdrop-blur-sm">
+              <span className="inline-flex items-center rounded-full border border-border/60 bg-secondary/70 px-3 py-0.5 text-[11px] font-medium text-muted-foreground backdrop-blur-sm">
                 {card.total.toLocaleString()} total
               </span>
             </CardContent>

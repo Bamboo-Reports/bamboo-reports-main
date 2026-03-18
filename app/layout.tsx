@@ -7,6 +7,11 @@ export const metadata: Metadata = {
   title: 'Bamboo Reports - A Research NXT Product',
   description: 'Intelligence-driven insights for accounts, centers, and services',
   generator: 'Next.js',
+  icons: {
+    icon: '/logo.svg',
+    shortcut: '/logo.svg',
+    apple: '/logo.svg',
+  },
 }
 
 export default function RootLayout({

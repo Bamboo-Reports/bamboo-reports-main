@@ -79,6 +79,29 @@ If you modify the database schema (e.g., rename a column):
 3.  **Update `lib/types.ts`** to match the new column names.
 4.  **Search & Replace** the old column name in `app/actions.ts` to ensure queries don't fail.
 
+### 2.4 Adjusting Dashboard Panel Height (Map/Data vs Sidebar Alignment)
+When changing map/data card heights, keep the bottom edge aligned with the left filters sidebar.
+
+Use this rule:
+-   Set the panel height in one place only using `--dashboard-panel-height` on the dashboard `<main>` container in `app/page.tsx`.
+-   Consume the same variable in panel cards with `h-[var(--dashboard-panel-height)]` (Accounts, Centers, Prospects tabs).
+-   Avoid hardcoding separate `h-[calc(100vh-...)]` values per tab because they drift out of alignment.
+
+Current implementation:
+-   `app/page.tsx`
+    -   `--dashboard-panel-height: calc(100dvh-18.75rem)`
+-   `components/tabs/accounts-tab.tsx`
+    -   Map/Data cards use `h-[var(--dashboard-panel-height)]`
+-   `components/tabs/centers-tab.tsx`
+    -   Map/Data cards use `h-[var(--dashboard-panel-height)]`
+-   `components/tabs/prospects-tab.tsx`
+    -   Data card uses `h-[var(--dashboard-panel-height)]`
+
+If UI alignment needs tuning:
+1.  Edit only `--dashboard-panel-height` in `app/page.tsx`.
+2.  Refresh Accounts/ Centers/ Prospects views and confirm the sidebar and panel bottoms end on the same line.
+3.  Keep header compaction consistent (`CardHeader` `py-3`, `CardTitle` `text-base`) unless a redesign is intended.
+
 ---
 
 ## 3. Coding Standards
