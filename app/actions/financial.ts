@@ -134,6 +134,7 @@ export async function getAccountFinancialInfo(rawTicker: string): Promise<Accoun
         targetLowPrice: toNumber(financialData?.targetLowPrice),
         targetMeanPrice: toNumber(financialData?.targetMeanPrice),
         totalRevenue: toNumber(financialData?.totalRevenue),
+        netProfit: toNumber(keyStats?.netIncomeToCommon),
         ebitda: toNumber(financialData?.ebitda),
         grossMargins: toNumber(financialData?.grossMargins),
         operatingMargins: toNumber(financialData?.operatingMargins),

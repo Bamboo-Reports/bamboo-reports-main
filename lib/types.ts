@@ -269,6 +269,7 @@ export interface AccountFinancialInfo {
   targetLowPrice: number | null
   targetMeanPrice: number | null
   totalRevenue: number | null
+  netProfit: number | null
   ebitda: number | null
   grossMargins: number | null
   operatingMargins: number | null

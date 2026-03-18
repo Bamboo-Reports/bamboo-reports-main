@@ -47,43 +47,12 @@ import {
 } from "@/components/ui/chart"
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
 
-function formatNumber(value: number | null): string | null {
-  if (value === null) return null
-  return new Intl.NumberFormat("en-US").format(value)
-}
-
 function formatCompactNumber(value: number | null): string | null {
   if (value === null) return null
   return new Intl.NumberFormat("en-US", {
     notation: "compact",
     maximumFractionDigits: 2,
   }).format(value)
-}
-
-function formatCurrency(value: number | null, currency: string | null): string | null {
-  if (value === null) return null
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: currency || "USD",
-    maximumFractionDigits: 2,
-  }).format(value)
-}
-
-function formatPercent(value: number | null): string | null {
-  if (value === null) return null
-  const normalized = Math.abs(value) > 1 ? value : value * 100
-  return `${normalized.toFixed(2)}%`
-}
-
-function formatDate(value: string | null): string | null {
-  if (!value) return null
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return null
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-  })
 }
 
 function formatRevenueAxis(value: number): string {
@@ -168,6 +137,7 @@ export function AccountDetailsDialog({
   useEffect(() => {
     setActiveTab("info")
     setFinancialData(null)
+    setFinancialLoading(false)
     setFinancialError(null)
     setFinancialTickerLoaded(null)
   }, [accountName])
@@ -176,7 +146,7 @@ export function AccountDetailsDialog({
     let cancelled = false
 
     async function loadFinancialData() {
-      if (!open || activeTab !== "financial" || !ticker || financialTickerLoaded === ticker) {
+      if (!open || activeTab !== "info" || !ticker || financialTickerLoaded === ticker) {
         return
       }
 
@@ -229,7 +199,7 @@ export function AccountDetailsDialog({
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="info" className="flex items-center gap-2">
                 <Building2 className="h-4 w-4" />
                 Account Info
@@ -247,10 +217,6 @@ export function AccountDetailsDialog({
                 <Badge variant="secondary" className="ml-1">
                   {accountProspects.length}
                 </Badge>
-              </TabsTrigger>
-              <TabsTrigger value="financial" className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4" />
-                Financial Info
               </TabsTrigger>
             </TabsList>
 
@@ -403,6 +369,97 @@ export function AccountDetailsDialog({
                     value={account.account_center_employees_range}
                   />
                 </div>
+              </div>
+
+              {/* Financials Section */}
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Financials
+                </h3>
+
+                {!ticker ? (
+                  <div className="rounded-lg border border-dashed border-border/60 bg-background/30 p-4 text-sm text-muted-foreground">
+                    No stock ticker is available for this account.
+                  </div>
+                ) : financialLoading ? (
+                  <div className="rounded-lg border border-dashed border-border/60 bg-background/30 p-4 text-sm text-muted-foreground">
+                    Loading financial data for {ticker}...
+                  </div>
+                ) : financialError ? (
+                  <div className="rounded-lg border border-dashed border-border/60 bg-background/30 p-4 text-sm text-muted-foreground">
+                    <p className="font-medium">Unable to load financial data</p>
+                    <p className="mt-1">{financialError}</p>
+                  </div>
+                ) : !financialData ? (
+                  <div className="rounded-lg border border-dashed border-border/60 bg-background/30 p-4 text-sm text-muted-foreground">
+                    No financial data found for {ticker}.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                      <InfoRow icon={Building2} label="Stock Ticker" value={financialData.inputTicker} />
+                      <InfoRow icon={Building2} label="Exchange" value={financialData.exchange} />
+                      <InfoRow icon={DollarSign} label="Market Cap" value={formatCompactNumber(financialData.marketCap)} />
+                      <InfoRow
+                        icon={TrendingUp}
+                        label="Net Profit"
+                        value={financialData.netProfit !== null ? formatCompactNumber(financialData.netProfit) : "Not available"}
+                      />
+                    </div>
+
+                    <div className="rounded-lg border border-border/60 bg-background/40 backdrop-blur-sm shadow-sm p-4">
+                      <div className="text-sm font-semibold text-muted-foreground mb-3">
+                        Annual Revenue (FY)
+                      </div>
+                      {financialData.annualRevenueSeries.length > 0 ? (
+                        <ChartContainer config={revenueChartConfig} className="h-[280px] w-full">
+                          <AreaChart
+                            data={financialData.annualRevenueSeries}
+                            margin={{ left: 8, right: 8, top: 8, bottom: 8 }}
+                          >
+                            <defs>
+                              <linearGradient id="annualRevenueFill" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="var(--color-revenue)" stopOpacity={0.35} />
+                                <stop offset="95%" stopColor="var(--color-revenue)" stopOpacity={0.04} />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid vertical={false} />
+                            <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} />
+                            <YAxis
+                              tickLine={false}
+                              axisLine={false}
+                              tickMargin={8}
+                              tickFormatter={formatRevenueAxis}
+                              width={72}
+                            />
+                            <ChartTooltip
+                              cursor={false}
+                              content={
+                                <ChartTooltipContent
+                                  formatter={(value) => formatCompactNumber(value as number) ?? "N/A"}
+                                />
+                              }
+                            />
+                            <Area
+                              type="natural"
+                              dataKey="revenue"
+                              fill="url(#annualRevenueFill)"
+                              stroke="var(--color-revenue)"
+                              strokeWidth={2}
+                              dot={{ r: 3 }}
+                              activeDot={{ r: 5 }}
+                            />
+                          </AreaChart>
+                        </ChartContainer>
+                      ) : (
+                        <div className="h-[280px] flex items-center justify-center text-sm text-muted-foreground">
+                          Annual revenue trend not available.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Rankings & Recognition Section */}
@@ -559,239 +616,6 @@ export function AccountDetailsDialog({
                     </div>
                   ))}
                 </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="financial" className="space-y-6 mt-4">
-              {!ticker ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No stock ticker is available for this account.</p>
-                </div>
-              ) : financialLoading ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50 animate-pulse" />
-                  <p>Loading financial data for {ticker}...</p>
-                </div>
-              ) : financialError ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p className="font-medium">Unable to load financial data</p>
-                  <p className="text-sm mt-1">{financialError}</p>
-                </div>
-              ) : !financialData ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No financial data found for {ticker}.</p>
-                </div>
-              ) : (
-                <>
-                  <div>
-                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
-                      <DollarSign className="h-4 w-4" />
-                      Market Snapshot
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <InfoRow icon={Building2} label="Input Ticker" value={financialData.inputTicker} />
-                      <InfoRow icon={Building2} label="Market Symbol" value={financialData.symbol} />
-                      <InfoRow icon={Building2} label="Exchange" value={financialData.exchange} />
-                      <InfoRow icon={Globe} label="Currency" value={financialData.currency} />
-                      <InfoRow
-                        icon={DollarSign}
-                        label="Current Price"
-                        value={formatCurrency(financialData.regularMarketPrice, financialData.currency)}
-                      />
-                      <InfoRow icon={TrendingUp} label="Daily Change" value={formatPercent(financialData.regularMarketChangePercent)} />
-                      <InfoRow icon={DollarSign} label="Open" value={formatCurrency(financialData.regularMarketOpen, financialData.currency)} />
-                      <InfoRow icon={DollarSign} label="Day High" value={formatCurrency(financialData.regularMarketDayHigh, financialData.currency)} />
-                      <InfoRow icon={DollarSign} label="Day Low" value={formatCurrency(financialData.regularMarketDayLow, financialData.currency)} />
-                      <InfoRow icon={DollarSign} label="Previous Close" value={formatCurrency(financialData.regularMarketPreviousClose, financialData.currency)} />
-                      <InfoRow icon={TrendingUp} label="Volume" value={formatNumber(financialData.regularMarketVolume)} />
-                      <InfoRow icon={TrendingUp} label="Average Volume" value={formatNumber(financialData.averageVolume)} />
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
-                      <Briefcase className="h-4 w-4" />
-                      Company Profile
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <InfoRow icon={Building2} label="Company Name" value={financialData.longName || financialData.shortName} />
-                      <InfoRow icon={Briefcase} label="Sector" value={financialData.sector} />
-                      <InfoRow icon={Briefcase} label="Industry" value={financialData.industry} />
-                      <InfoRow icon={Users} label="Full-Time Employees" value={formatNumber(financialData.fullTimeEmployees)} />
-                      <InfoRow icon={Globe} label="Country" value={financialData.country} />
-                      <InfoRow icon={Globe} label="Website" value={financialData.website} link={financialData.website || undefined} />
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4" />
-                      Revenue Trend
-                    </h3>
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                      <div className="rounded-lg border border-border/60 bg-background/40 backdrop-blur-sm shadow-sm p-4">
-                        <div className="text-sm font-semibold text-muted-foreground mb-3">
-                          Annual Revenue (FY)
-                        </div>
-                        {financialData.annualRevenueSeries.length > 0 ? (
-                          <ChartContainer config={revenueChartConfig} className="h-[280px] w-full">
-                            <AreaChart
-                              data={financialData.annualRevenueSeries}
-                              margin={{ left: 8, right: 8, top: 8, bottom: 8 }}
-                            >
-                              <defs>
-                                <linearGradient id="annualRevenueFill" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="5%" stopColor="var(--color-revenue)" stopOpacity={0.35} />
-                                  <stop offset="95%" stopColor="var(--color-revenue)" stopOpacity={0.04} />
-                                </linearGradient>
-                              </defs>
-                              <CartesianGrid vertical={false} />
-                              <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} />
-                              <YAxis
-                                tickLine={false}
-                                axisLine={false}
-                                tickMargin={8}
-                                tickFormatter={formatRevenueAxis}
-                                width={72}
-                              />
-                              <ChartTooltip
-                                cursor={false}
-                                content={
-                                  <ChartTooltipContent
-                                    formatter={(value) => formatCompactNumber(value as number) ?? "N/A"}
-                                  />
-                                }
-                              />
-                              <Area
-                                type="natural"
-                                dataKey="revenue"
-                                fill="url(#annualRevenueFill)"
-                                stroke="var(--color-revenue)"
-                                strokeWidth={2}
-                                dot={{ r: 3 }}
-                                activeDot={{ r: 5 }}
-                              />
-                            </AreaChart>
-                          </ChartContainer>
-                        ) : (
-                          <div className="h-[280px] flex items-center justify-center text-sm text-muted-foreground">
-                            Annual revenue trend not available.
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="rounded-lg border border-border/60 bg-background/40 backdrop-blur-sm shadow-sm p-4">
-                        <div className="text-sm font-semibold text-muted-foreground mb-3">
-                          Quarterly Revenue
-                        </div>
-                        {financialData.quarterlyRevenueSeries.length > 0 ? (
-                          <ChartContainer config={revenueChartConfig} className="h-[280px] w-full">
-                            <AreaChart
-                              data={financialData.quarterlyRevenueSeries}
-                              margin={{ left: 8, right: 8, top: 8, bottom: 8 }}
-                            >
-                              <defs>
-                                <linearGradient id="quarterlyRevenueFill" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="5%" stopColor="var(--color-revenue)" stopOpacity={0.35} />
-                                  <stop offset="95%" stopColor="var(--color-revenue)" stopOpacity={0.04} />
-                                </linearGradient>
-                              </defs>
-                              <CartesianGrid vertical={false} />
-                              <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} />
-                              <YAxis
-                                tickLine={false}
-                                axisLine={false}
-                                tickMargin={8}
-                                tickFormatter={formatRevenueAxis}
-                                width={72}
-                              />
-                              <ChartTooltip
-                                cursor={false}
-                                content={
-                                  <ChartTooltipContent
-                                    formatter={(value) => formatCompactNumber(value as number) ?? "N/A"}
-                                  />
-                                }
-                              />
-                              <Area
-                                type="natural"
-                                dataKey="revenue"
-                                fill="url(#quarterlyRevenueFill)"
-                                stroke="var(--color-revenue)"
-                                strokeWidth={2}
-                                dot={{ r: 3 }}
-                                activeDot={{ r: 5 }}
-                              />
-                            </AreaChart>
-                          </ChartContainer>
-                        ) : (
-                          <div className="h-[280px] flex items-center justify-center text-sm text-muted-foreground">
-                            Quarterly revenue trend not available.
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4" />
-                      Key Ratios & Valuation
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <InfoRow icon={DollarSign} label="Market Cap" value={formatCompactNumber(financialData.marketCap)} />
-                      <InfoRow icon={DollarSign} label="Enterprise Value" value={formatCompactNumber(financialData.enterpriseValue)} />
-                      <InfoRow icon={TrendingUp} label="52W Low" value={formatCurrency(financialData.fiftyTwoWeekLow, financialData.currency)} />
-                      <InfoRow icon={TrendingUp} label="52W High" value={formatCurrency(financialData.fiftyTwoWeekHigh, financialData.currency)} />
-                      <InfoRow icon={TrendingUp} label="Trailing P/E" value={financialData.trailingPE} />
-                      <InfoRow icon={TrendingUp} label="Forward P/E" value={financialData.forwardPE} />
-                      <InfoRow icon={TrendingUp} label="EPS (TTM)" value={financialData.epsTrailingTwelveMonths} />
-                      <InfoRow icon={TrendingUp} label="Dividend Yield" value={formatPercent(financialData.dividendYield)} />
-                      <InfoRow icon={TrendingUp} label="Payout Ratio" value={formatPercent(financialData.payoutRatio)} />
-                      <InfoRow icon={TrendingUp} label="Beta" value={financialData.beta} />
-                      <InfoRow icon={Calendar} label="Ex-Dividend Date" value={formatDate(financialData.exDividendDate)} />
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
-                      <DollarSign className="h-4 w-4" />
-                      Financial Performance
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <InfoRow icon={DollarSign} label="Total Revenue" value={formatCompactNumber(financialData.totalRevenue)} />
-                      <InfoRow icon={DollarSign} label="EBITDA" value={formatCompactNumber(financialData.ebitda)} />
-                      <InfoRow icon={DollarSign} label="Free Cashflow" value={formatCompactNumber(financialData.freeCashflow)} />
-                      <InfoRow icon={DollarSign} label="Operating Cashflow" value={formatCompactNumber(financialData.operatingCashflow)} />
-                      <InfoRow icon={TrendingUp} label="Gross Margin" value={formatPercent(financialData.grossMargins)} />
-                      <InfoRow icon={TrendingUp} label="Operating Margin" value={formatPercent(financialData.operatingMargins)} />
-                      <InfoRow icon={TrendingUp} label="Profit Margin" value={formatPercent(financialData.profitMargins)} />
-                      <InfoRow icon={TrendingUp} label="Debt to Equity" value={financialData.debtToEquity} />
-                      <InfoRow icon={TrendingUp} label="Return on Assets" value={formatPercent(financialData.returnOnAssets)} />
-                      <InfoRow icon={TrendingUp} label="Return on Equity" value={formatPercent(financialData.returnOnEquity)} />
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
-                      <Users className="h-4 w-4" />
-                      Analyst & Ownership
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <InfoRow icon={TrendingUp} label="Recommendation" value={financialData.recommendationKey?.toUpperCase()} />
-                      <InfoRow icon={Users} label="Analyst Opinions" value={financialData.numberOfAnalystOpinions} />
-                      <InfoRow icon={DollarSign} label="Target Low" value={formatCurrency(financialData.targetLowPrice, financialData.currency)} />
-                      <InfoRow icon={DollarSign} label="Target Mean" value={formatCurrency(financialData.targetMeanPrice, financialData.currency)} />
-                      <InfoRow icon={DollarSign} label="Target High" value={formatCurrency(financialData.targetHighPrice, financialData.currency)} />
-                      <InfoRow icon={Users} label="Shares Outstanding" value={formatCompactNumber(financialData.sharesOutstanding)} />
-                      <InfoRow icon={Users} label="Institutional Holding" value={formatPercent(financialData.heldPercentInstitutions)} />
-                      <InfoRow icon={Users} label="Insider Holding" value={formatPercent(financialData.heldPercentInsiders)} />
-                    </div>
-                  </div>
-                </>
               )}
             </TabsContent>
 
