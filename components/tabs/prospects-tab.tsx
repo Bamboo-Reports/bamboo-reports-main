@@ -265,12 +265,6 @@ export function ProspectsTab({
               countLabel="Total Prospects"
               showBigPercentage
             />
-            <PieChartCard
-              title="City"
-              data={prospectChartData.cityData}
-              countLabel="Total Prospects"
-              showBigPercentage
-            />
           </div>
         </div>
       )}
