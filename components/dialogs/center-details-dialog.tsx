@@ -159,7 +159,7 @@ export function CenterDetailsDialog({
               />
               <InfoRow
                 icon={Users}
-                label="Employee Range"
+                label="Center Headcount"
                 value={center.center_employees_range}
               />
               <InfoRow

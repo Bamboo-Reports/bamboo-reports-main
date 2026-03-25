@@ -189,8 +189,8 @@ export function AccountsTab({
 
     const getValue = (account: Account) => {
       switch (sort.key) {
-        case "location":
-          return [account.account_hq_city, account.account_hq_country].filter(Boolean).join(", ")
+        case "employees":
+          return account.account_center_employees_range
         case "industry":
           return account.account_hq_industry
         case "revenue":
@@ -253,25 +253,25 @@ export function AccountsTab({
         <div className="w-full mb-6 animate-fade-in">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <PieChartCard
-              title="Region Distribution"
+              title="Region"
               data={accountChartData.regionData}
               countLabel="Total Accounts"
               showBigPercentage
             />
             <PieChartCard
-              title="Primary Nature Distribution"
+              title="Primary Nature"
               data={accountChartData.primaryNatureData}
               countLabel="Total Accounts"
               showBigPercentage
             />
             <PieChartCard
-              title="Revenue Range Distribution"
+              title="Revenue Range"
               data={accountChartData.revenueRangeData}
               countLabel="Total Accounts"
               showBigPercentage
             />
             <PieChartCard
-              title="Employee Range Distribution"
+              title="Aggregate India Headcount"
               data={accountChartData.employeesRangeData}
               countLabel="Total Accounts"
               showBigPercentage
@@ -355,14 +355,14 @@ export function AccountsTab({
                       <TableHead className="w-[280px]">
                         <SortButton label="Account Name" sortKey="name" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                       </TableHead>
-                      <TableHead className="w-[200px]">
-                        <SortButton label="Location" sortKey="location" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
-                      </TableHead>
                       <TableHead className="w-[220px]">
                         <SortButton label="Industry" sortKey="industry" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                       </TableHead>
                       <TableHead className="w-[140px]">
                         <SortButton label="Revenue Range" sortKey="revenue" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
+                      </TableHead>
+                      <TableHead className="w-[200px]">
+                        <SortButton label="Aggregate India Headcount" sortKey="employees" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                       </TableHead>
                     </TableRow>
                   </TableHeader>

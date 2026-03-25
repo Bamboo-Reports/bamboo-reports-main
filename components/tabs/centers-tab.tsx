@@ -249,25 +249,25 @@ export function CentersTab({
         <div className="w-full mb-6 animate-fade-in">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <PieChartCard
-              title="Center Type Distribution"
+              title="Center Type"
               data={centerChartData.centerTypeData}
               countLabel="Total Centers"
               showBigPercentage
             />
             <PieChartCard
-              title="Employee Range Distribution"
+              title="Center Headcount"
               data={centerChartData.employeesRangeData}
               countLabel="Total Centers"
               showBigPercentage
             />
             <PieChartCard
-              title="City Distribution"
+              title="City"
               data={centerChartData.cityData}
               countLabel="Total Centers"
               showBigPercentage
             />
             <PieChartCard
-              title="Function Distribution"
+              title="Function"
               data={centerChartData.functionData}
               countLabel="Total Centers"
               showBigPercentage
@@ -358,7 +358,7 @@ export function CentersTab({
                           <SortButton label="Center Type" sortKey="type" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
                         <TableHead className="w-[160px]">
-                          <SortButton label="Employee Range" sortKey="employees" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
+                          <SortButton label="Center Headcount" sortKey="employees" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
                       </TableRow>
                     </TableHeader>

@@ -11,7 +11,7 @@ export function getAccountChartData(accounts: Account[]) {
     regionData: calculateChartData(accounts, "account_hq_region"),
     primaryNatureData: calculateChartData(accounts, "account_primary_nature"),
     revenueRangeData: calculateChartData(accounts, "account_hq_revenue_range"),
-    employeesRangeData: calculateChartData(accounts, "account_hq_employee_range"),
+    employeesRangeData: calculateChartData(accounts, "account_center_employees_range"),
   }
 }
 
@@ -30,5 +30,6 @@ export function getProspectChartData(prospects: Prospect[]) {
   return {
     departmentData: calculateChartData(prospects, "prospect_department"),
     levelData: calculateChartData(prospects, "prospect_level"),
+    cityData: calculateChartData(prospects, "prospect_city"),
   }
 }

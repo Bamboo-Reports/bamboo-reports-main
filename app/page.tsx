@@ -567,6 +567,8 @@ function DashboardContent(): JSX.Element | null {
                   totalCentersCount={centers.length}
                   filteredProspectsCount={filteredData.filteredProspects.length}
                   totalProspectsCount={prospects.length}
+                  filteredHeadcount={filteredData.filteredCenters.reduce((sum, c) => sum + (c.center_employees ?? 0), 0)}
+                  totalHeadcount={centers.reduce((sum, c) => sum + (c.center_employees ?? 0), 0)}
                   activeView={activeSection}
                   onSelect={handleSectionSelect}
                 />

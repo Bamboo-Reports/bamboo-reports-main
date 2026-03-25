@@ -1,7 +1,7 @@
 "use client"
 
-import React, { useState } from 'react'
-import { Briefcase, Building, ChevronLeft, ChevronRight, Filter, Users } from 'lucide-react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { Briefcase, Building, ChevronDown, ChevronLeft, ChevronRight, Filter, Users } from 'lucide-react'
 import { SavedFiltersManager } from '@/components/saved-filters-manager'
 import {
   AccountFiltersSection,
@@ -75,6 +75,35 @@ export function FiltersSidebar({
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
   const [openSections, setOpenSections] = useState<string[]>(['accounts'])
   const totalActiveFilters = getTotalActiveFilters()
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [canScrollDown, setCanScrollDown] = useState(false)
+
+  const checkScroll = useCallback(() => {
+    requestAnimationFrame(() => {
+      const el = scrollRef.current
+      if (!el) return
+      setCanScrollDown(el.scrollHeight - el.scrollTop - el.clientHeight > 10)
+    })
+  }, [])
+
+  useEffect(() => {
+    checkScroll()
+  }, [openSections, checkScroll])
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    el.addEventListener('scroll', checkScroll, { passive: true })
+    const observer = new MutationObserver(checkScroll)
+    observer.observe(el, { childList: true, subtree: true, attributes: true })
+    const resizeObserver = new ResizeObserver(checkScroll)
+    resizeObserver.observe(el)
+    return () => {
+      el.removeEventListener('scroll', checkScroll)
+      observer.disconnect()
+      resizeObserver.disconnect()
+    }
+  }, [checkScroll])
 
   const handleCollapsedIconClick = (section: string) => {
     setOpenSections([section])
@@ -145,6 +174,7 @@ export function FiltersSidebar({
       </div>
 
       <div
+        ref={scrollRef}
         className={cn(
           'absolute inset-y-0 left-0 w-[320px] overflow-y-auto p-4 space-y-3 transition-all duration-200 ease-out motion-reduce:transition-none',
           isCollapsed ? 'opacity-0 translate-x-1 pointer-events-none' : 'opacity-100 translate-x-0 pointer-events-auto'
@@ -256,6 +286,20 @@ export function FiltersSidebar({
             </AccordionContent>
           </AccordionItem>
         </Accordion>
+      </div>
+
+      {/* Scroll down indicator */}
+      <div
+        className={cn(
+          'absolute bottom-0 left-0 w-[320px] flex justify-center pointer-events-none transition-opacity duration-300',
+          canScrollDown && !isCollapsed ? 'opacity-100' : 'opacity-0'
+        )}
+      >
+        <div className="bg-gradient-to-t from-sidebar/90 to-transparent w-full pt-6 pb-3 flex justify-center">
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/20 border border-primary/40 animate-bounce">
+            <ChevronDown className="h-3.5 w-3.5 text-primary shrink-0 translate-y-[0.5px]" />
+          </div>
+        </div>
       </div>
     </aside>
   )

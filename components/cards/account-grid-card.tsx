@@ -1,5 +1,5 @@
 import { memo } from "react"
-import { ArrowUpRight, CircleCheck, CircleX } from "lucide-react"
+import { ArrowUpRight, CircleCheck } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CompanyLogo } from "@/components/ui/company-logo"
@@ -21,7 +21,7 @@ export const AccountGridCard = memo(({ account, isRecentlyUpdated = false, onCli
 
   return (
     <Card className="h-full">
-      <CardContent className="p-4 flex flex-col gap-4">
+      <CardContent className="p-4 flex flex-col gap-4 h-full">
         <div className="flex items-start gap-3">
           <CompanyLogo
             domain={account.account_hq_website ?? undefined}
@@ -47,55 +47,51 @@ export const AccountGridCard = memo(({ account, isRecentlyUpdated = false, onCli
             >
               {location || account.account_hq_country || "-"}
             </p>
-            <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              <div
-                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                  isNasscomVerified
-                    ? "bg-green-500/15 text-green-700 dark:text-green-300"
-                    : "bg-red-500/15 text-red-700 dark:text-red-300"
-                }`}
-                title={isNasscomVerified ? "NASSCOM listed" : "Not listed in NASSCOM"}
-              >
-                {isNasscomVerified ? (
-                  <CircleCheck className="h-3 w-3" aria-hidden="true" />
-                ) : (
-                  <CircleX className="h-3 w-3" aria-hidden="true" />
-                )}
-                NASSCOM
+            {isNasscomVerified && (
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                <div
+                  className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold bg-green-500/15 text-green-700 dark:text-green-300"
+                  title="NASSCOM listed"
+                >
+                  <CircleCheck className="h-3 w-3 animate-pulse" aria-hidden="true" />
+                  NASSCOM
+                </div>
               </div>
+            )}
+          </div>
+        </div>
+        <div className="mt-auto flex flex-col gap-4">
+          <div className="space-y-2 text-sm">
+            <div className="flex items-center justify-between gap-3 min-w-0">
+              <span className="text-muted-foreground">Industry</span>
+              <span
+                className="font-medium text-foreground text-right truncate max-w-[160px]"
+                title={account.account_hq_industry || "-"}
+              >
+                {account.account_hq_industry || "-"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-3 min-w-0">
+              <span className="text-muted-foreground">Revenue</span>
+              <span
+                className="font-medium text-foreground text-right truncate max-w-[160px]"
+                title={account.account_hq_revenue_range || "-"}
+              >
+                {account.account_hq_revenue_range || "-"}
+              </span>
             </div>
           </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onClick}
+            className="w-full justify-between bg-foreground text-background border-foreground hover:bg-foreground/90 hover:text-background"
+          >
+            View Details
+            <ArrowUpRight className="h-4 w-4" />
+          </Button>
         </div>
-        <div className="space-y-2 text-sm">
-          <div className="flex items-center justify-between gap-3 min-w-0">
-            <span className="text-muted-foreground">Industry</span>
-            <span
-              className="font-medium text-foreground text-right truncate max-w-[160px]"
-              title={account.account_hq_industry || "-"}
-            >
-              {account.account_hq_industry || "-"}
-            </span>
-          </div>
-          <div className="flex items-center justify-between gap-3 min-w-0">
-            <span className="text-muted-foreground">Revenue</span>
-            <span
-              className="font-medium text-foreground text-right truncate max-w-[160px]"
-              title={account.account_hq_revenue_range || "-"}
-            >
-              {account.account_hq_revenue_range || "-"}
-            </span>
-          </div>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={onClick}
-          className="w-full justify-between bg-foreground text-background border-foreground hover:bg-foreground/90 hover:text-background"
-        >
-          View Details
-          <ArrowUpRight className="h-4 w-4" />
-        </Button>
       </CardContent>
     </Card>
   )

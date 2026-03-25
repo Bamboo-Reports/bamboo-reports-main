@@ -1,5 +1,5 @@
 import { memo } from "react"
-import { CircleCheck, CircleX } from "lucide-react"
+import { CircleCheck } from "lucide-react"
 import { TableRow, TableCell } from "@/components/ui/table"
 import type { Account } from "@/lib/types"
 import { CompanyLogo } from "@/components/ui/company-logo"
@@ -48,29 +48,18 @@ export const AccountRow = memo(({ account, isRecentlyUpdated = false, onClick }:
                 <RecentlyUpdatedIndicator title="This account has unread recent updates" />
               ) : null}
             </div>
-            <div className="mt-1 flex flex-wrap items-center gap-1.5">
-              <div
-                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                  isNasscomVerified
-                    ? "bg-green-500/15 text-green-700 dark:text-green-300"
-                    : "bg-red-500/15 text-red-700 dark:text-red-300"
-                }`}
-                title={isNasscomVerified ? "NASSCOM listed" : "Not listed in NASSCOM"}
-              >
-                {isNasscomVerified ? (
-                  <CircleCheck className="h-3 w-3" aria-hidden="true" />
-                ) : (
-                  <CircleX className="h-3 w-3" aria-hidden="true" />
-                )}
-                NASSCOM
+            {isNasscomVerified && (
+              <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                <div
+                  className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold bg-green-500/15 text-green-700 dark:text-green-300"
+                  title="NASSCOM listed"
+                >
+                  <CircleCheck className="h-3 w-3 animate-pulse" aria-hidden="true" />
+                  NASSCOM
+                </div>
               </div>
-            </div>
+            )}
           </div>
-        </div>
-      </TableCell>
-      <TableCell className="max-w-[200px]">
-        <div className="truncate" title={location || account.account_hq_country || "N/A"}>
-          {location || account.account_hq_country || "N/A"}
         </div>
       </TableCell>
       <TableCell className="max-w-[220px]">
@@ -81,6 +70,11 @@ export const AccountRow = memo(({ account, isRecentlyUpdated = false, onClick }:
       <TableCell className="max-w-[140px]">
         <div className="truncate" title={account.account_hq_revenue_range || "N/A"}>
           {account.account_hq_revenue_range || "N/A"}
+        </div>
+      </TableCell>
+      <TableCell className="max-w-[200px]">
+        <div className="truncate" title={account.account_center_employees_range || "N/A"}>
+          {account.account_center_employees_range || "N/A"}
         </div>
       </TableCell>
     </TableRow>

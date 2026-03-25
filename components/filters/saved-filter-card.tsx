@@ -143,12 +143,12 @@ export const SavedFilterCard = memo(({
             )}
             {centerIncYearFilterActive && (
               <FilterBadge
-                filterKey="Timeline"
+                filterKey="Incorporation Timeline"
                 value={`${minCenterIncYear.toLocaleString()} - ${maxCenterIncYear.toLocaleString()}`}
               />
             )}
             {filter.filters.centerIncYearIncludeNull && (
-              <FilterBadge filterKey="Timeline" value="Include null/zero" />
+              <FilterBadge filterKey="Incorporation Timeline" value="Include null/zero" />
             )}
           </div>
         </div>

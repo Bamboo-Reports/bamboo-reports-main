@@ -312,6 +312,7 @@ export const EnhancedMultiSelect = React.memo(function EnhancedMultiSelect({
   const visibleOptions = React.useMemo(() => {
     const allOptions = options.map((option) => ({
       value: typeof option === "string" ? option : option.value,
+      count: typeof option === "object" ? (option.count ?? 0) : 0,
       disabled: typeof option === "object" ? (option.disabled ?? false) : false,
     }))
 
@@ -319,7 +320,8 @@ export const EnhancedMultiSelect = React.memo(function EnhancedMultiSelect({
       return allOptions.filter((option) => option.value.toLowerCase().includes(normalizedSearchQuery))
     }
 
-    return allOptions.slice(0, DEFAULT_VISIBLE_OPTIONS)
+    const sorted = [...allOptions].sort((a, b) => b.count - a.count)
+    return sorted.slice(0, DEFAULT_VISIBLE_OPTIONS)
   }, [options, normalizedSearchQuery])
 
   const hasMoreOptions = normalizedSearchQuery.length === 0 && options.length > DEFAULT_VISIBLE_OPTIONS

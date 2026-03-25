@@ -58,7 +58,7 @@ export function AccountFiltersSection({
   formatRevenueInMillions,
 }: AccountFilterSectionProps) {
   return (
-    <div className="max-h-[320px] overflow-y-auto pr-2">
+    <div className="pr-2">
         <div className="space-y-4 pt-2">
           <div className="space-y-3">
             <div className="space-y-3">
@@ -92,6 +92,7 @@ export function AccountFiltersSection({
                   type="number"
                   value={pendingFilters.accountHqRevenueRange[0]}
                   onChange={(e) => handleMinRevenueChange(e.target.value)}
+                  onFocus={(e) => e.target.select()}
                   min={revenueRange.min}
                   max={pendingFilters.accountHqRevenueRange[1]}
                   className="text-xs h-8"
@@ -104,6 +105,7 @@ export function AccountFiltersSection({
                   type="number"
                   value={pendingFilters.accountHqRevenueRange[1]}
                   onChange={(e) => handleMaxRevenueChange(e.target.value)}
+                  onFocus={(e) => e.target.select()}
                   min={pendingFilters.accountHqRevenueRange[0]}
                   max={revenueRange.max}
                   className="text-xs h-8"
@@ -152,7 +154,7 @@ export function AccountFiltersSection({
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-xs font-medium">IND Employee Range</Label>
+            <Label className="text-xs font-medium">Aggregate India Headcount</Label>
             <EnhancedMultiSelect
               options={availableOptions.accountCenterEmployeesRangeValues}
               selected={pendingFilters.accountCenterEmployeesRangeValues}
@@ -197,6 +199,7 @@ export function AccountFiltersSection({
                   type="number"
                   value={pendingFilters.accountYearsInIndiaRange[0]}
                   onChange={(e) => handleMinYearsInIndiaChange(e.target.value)}
+                  onFocus={(e) => e.target.select()}
                   min={yearsInIndiaRange.min}
                   max={pendingFilters.accountYearsInIndiaRange[1]}
                   className="text-xs h-8"
@@ -209,6 +212,7 @@ export function AccountFiltersSection({
                   type="number"
                   value={pendingFilters.accountYearsInIndiaRange[1]}
                   onChange={(e) => handleMaxYearsInIndiaChange(e.target.value)}
+                  onFocus={(e) => e.target.select()}
                   min={pendingFilters.accountYearsInIndiaRange[0]}
                   max={yearsInIndiaRange.max}
                   className="text-xs h-8"
@@ -376,12 +380,12 @@ export function CenterFiltersSection({
   handleCenterIncYearRangeChange,
 }: CenterFilterSectionProps) {
   return (
-    <div className="max-h-[320px] overflow-y-auto pr-2">
+    <div className="pr-2">
       <div className="space-y-4 pt-2">
         <div className="space-y-3">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label className="text-xs font-medium">Timeline</Label>
+              <Label className="text-xs font-medium">Incorporation Timeline</Label>
               <div className="flex items-center gap-2">
                 <Checkbox
                   id="include-null-center-inc-year"
@@ -410,6 +414,11 @@ export function CenterFiltersSection({
                   type="number"
                   value={pendingFilters.centerIncYearRange[0]}
                   onChange={(e) => handleMinCenterIncYearChange(e.target.value)}
+                  onFocus={(e) => e.target.select()}
+                  onBlur={() => {
+                    const clamped = Math.max(centerIncYearRange.min, Math.min(pendingFilters.centerIncYearRange[0], pendingFilters.centerIncYearRange[1]))
+                    setPendingFilters((prev) => ({ ...prev, centerIncYearRange: [clamped, prev.centerIncYearRange[1]] }))
+                  }}
                   min={centerIncYearRange.min}
                   max={pendingFilters.centerIncYearRange[1]}
                   className="text-xs h-8"
@@ -422,6 +431,11 @@ export function CenterFiltersSection({
                   type="number"
                   value={pendingFilters.centerIncYearRange[1]}
                   onChange={(e) => handleMaxCenterIncYearChange(e.target.value)}
+                  onFocus={(e) => e.target.select()}
+                  onBlur={() => {
+                    const clamped = Math.min(centerIncYearRange.max, Math.max(pendingFilters.centerIncYearRange[1], pendingFilters.centerIncYearRange[0]))
+                    setPendingFilters((prev) => ({ ...prev, centerIncYearRange: [prev.centerIncYearRange[0], clamped] }))
+                  }}
                   min={pendingFilters.centerIncYearRange[0]}
                   max={centerIncYearRange.max}
                   className="text-xs h-8"
@@ -459,7 +473,7 @@ export function CenterFiltersSection({
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-xs font-medium">Employee Range</Label>
+            <Label className="text-xs font-medium">Center Headcount</Label>
             <EnhancedMultiSelect
               options={availableOptions.centerEmployeesRangeValues}
               selected={pendingFilters.centerEmployeesRangeValues}
@@ -583,7 +597,7 @@ export function ProspectFiltersSection({
   setActiveFilter,
 }: ProspectFilterSectionProps) {
   return (
-    <div className="max-h-[320px] overflow-y-auto pr-2">
+    <div className="pr-2">
       <div className="space-y-4 pt-2">
         <div className="space-y-3">
           <div className="space-y-2">
