@@ -15,6 +15,7 @@ import {
   toTrackedStringArray,
 } from "@/lib/analytics/tracking"
 import type { Account, Center, Function, Prospect, Service, Tech, Filters, AvailableOptions, FilterValue } from "@/lib/types"
+import { isFilterEnabled } from "@/lib/config/filters"
 import { createDefaultFilters } from "@/lib/dashboard/defaults"
 import { calculateBaseRanges } from "@/lib/dashboard/ranges"
 import {
@@ -234,48 +235,56 @@ export function useDashboardFilters({
 
   const getActiveFilterCountFor = useCallback(
     (sourceFilters: Filters) => {
-      return (
-        sourceFilters.accountHqRegionValues.length +
-        sourceFilters.accountHqCountryValues.length +
-        sourceFilters.accountHqIndustryValues.length +
-        sourceFilters.accountDataCoverageValues.length +
-        sourceFilters.accountSourceValues.length +
-        sourceFilters.accountTypeValues.length +
-        sourceFilters.accountPrimaryCategoryValues.length +
-        sourceFilters.accountPrimaryNatureValues.length +
-        sourceFilters.accountNasscomStatusValues.length +
-        sourceFilters.accountHqEmployeeRangeValues.length +
-        sourceFilters.accountCenterEmployeesRangeValues.length +
-        (sourceFilters.accountHqRevenueRange[0] !== revenueRange.min ||
+      let count = 0
+      const e = isFilterEnabled
+
+      // Multi-select filters: count selected values for enabled filters
+      if (e("accountHqRegionValues")) count += sourceFilters.accountHqRegionValues.length
+      if (e("accountHqCountryValues")) count += sourceFilters.accountHqCountryValues.length
+      if (e("accountHqIndustryValues")) count += sourceFilters.accountHqIndustryValues.length
+      if (e("accountDataCoverageValues")) count += sourceFilters.accountDataCoverageValues.length
+      if (e("accountSourceValues")) count += sourceFilters.accountSourceValues.length
+      if (e("accountTypeValues")) count += sourceFilters.accountTypeValues.length
+      if (e("accountPrimaryCategoryValues")) count += sourceFilters.accountPrimaryCategoryValues.length
+      if (e("accountPrimaryNatureValues")) count += sourceFilters.accountPrimaryNatureValues.length
+      if (e("accountNasscomStatusValues")) count += sourceFilters.accountNasscomStatusValues.length
+      if (e("accountHqEmployeeRangeValues")) count += sourceFilters.accountHqEmployeeRangeValues.length
+      if (e("accountCenterEmployeesRangeValues")) count += sourceFilters.accountCenterEmployeesRangeValues.length
+      if (e("accountGlobalLegalNameKeywords")) count += sourceFilters.accountGlobalLegalNameKeywords.length
+      if (e("centerTypeValues")) count += sourceFilters.centerTypeValues.length
+      if (e("centerFocusValues")) count += sourceFilters.centerFocusValues.length
+      if (e("centerCityValues")) count += sourceFilters.centerCityValues.length
+      if (e("centerStateValues")) count += sourceFilters.centerStateValues.length
+      if (e("centerCountryValues")) count += sourceFilters.centerCountryValues.length
+      if (e("centerEmployeesRangeValues")) count += sourceFilters.centerEmployeesRangeValues.length
+      if (e("centerStatusValues")) count += sourceFilters.centerStatusValues.length
+      if (e("functionNameValues")) count += sourceFilters.functionNameValues.length
+      if (e("techSoftwareInUseKeywords")) count += sourceFilters.techSoftwareInUseKeywords.length
+      if (e("prospectDepartmentValues")) count += sourceFilters.prospectDepartmentValues.length
+      if (e("prospectLevelValues")) count += sourceFilters.prospectLevelValues.length
+      if (e("prospectCityValues")) count += sourceFilters.prospectCityValues.length
+      if (e("prospectTitleKeywords")) count += sourceFilters.prospectTitleKeywords.length
+
+      // Range filters: count as 1 if range has been adjusted from default
+      if (e("accountHqRevenueRange") && (
+        sourceFilters.accountHqRevenueRange[0] !== revenueRange.min ||
         sourceFilters.accountHqRevenueRange[1] !== revenueRange.max
-          ? 1
-          : 0) +
-        (sourceFilters.accountHqRevenueIncludeNull ? 1 : 0) +
-        (sourceFilters.accountYearsInIndiaRange[0] !== yearsInIndiaRange.min ||
+      )) count += 1
+      if (e("accountYearsInIndiaRange") && (
+        sourceFilters.accountYearsInIndiaRange[0] !== yearsInIndiaRange.min ||
         sourceFilters.accountYearsInIndiaRange[1] !== yearsInIndiaRange.max
-          ? 1
-          : 0) +
-        (sourceFilters.yearsInIndiaIncludeNull ? 1 : 0) +
-        sourceFilters.accountGlobalLegalNameKeywords.length +
-        sourceFilters.centerTypeValues.length +
-        sourceFilters.centerFocusValues.length +
-        sourceFilters.centerCityValues.length +
-        sourceFilters.centerStateValues.length +
-        sourceFilters.centerCountryValues.length +
-        sourceFilters.centerEmployeesRangeValues.length +
-        sourceFilters.centerStatusValues.length +
-        (sourceFilters.centerIncYearRange[0] !== centerIncYearRange.min ||
+      )) count += 1
+      if (e("centerIncYearRange") && (
+        sourceFilters.centerIncYearRange[0] !== centerIncYearRange.min ||
         sourceFilters.centerIncYearRange[1] !== centerIncYearRange.max
-          ? 1
-          : 0) +
-        (sourceFilters.centerIncYearIncludeNull ? 1 : 0) +
-        sourceFilters.functionNameValues.length +
-        sourceFilters.techSoftwareInUseKeywords.length +
-        sourceFilters.prospectDepartmentValues.length +
-        sourceFilters.prospectLevelValues.length +
-        sourceFilters.prospectCityValues.length +
-        sourceFilters.prospectTitleKeywords.length
-      )
+      )) count += 1
+
+      // Boolean toggles: count as 1 if toggled on
+      if (e("accountHqRevenueIncludeNull") && sourceFilters.accountHqRevenueIncludeNull) count += 1
+      if (e("yearsInIndiaIncludeNull") && sourceFilters.yearsInIndiaIncludeNull) count += 1
+      if (e("centerIncYearIncludeNull") && sourceFilters.centerIncYearIncludeNull) count += 1
+
+      return count
     },
     [revenueRange, yearsInIndiaRange, centerIncYearRange]
   )

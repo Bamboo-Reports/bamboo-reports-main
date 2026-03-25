@@ -6,6 +6,7 @@ import { Slider } from "@/components/ui/slider"
 import { EnhancedMultiSelect } from "@/components/enhanced-multi-select"
 import { AccountAutocomplete } from "@/components/filters/account-autocomplete"
 import { TitleKeywordInput } from "@/components/filters/title-keyword-input"
+import { isFilterEnabled } from "@/lib/config/filters"
 import type { Filters, AvailableOptions } from "@/lib/types"
 
 interface FilterSectionBaseProps {
@@ -61,9 +62,11 @@ export function AccountFiltersSection({
     <div className="pr-2">
         <div className="space-y-4 pt-2">
           <div className="space-y-3">
+            {isFilterEnabled("accountHqRevenueRange") && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label className="text-xs font-medium">Revenue (USDMn)</Label>
+                {isFilterEnabled("accountHqRevenueIncludeNull") && (
                 <div className="flex items-center gap-2">
                 <Checkbox
                   id="include-null-revenue"
@@ -83,6 +86,7 @@ export function AccountFiltersSection({
                   Include all
                 </Label>
               </div>
+                )}
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
@@ -127,7 +131,9 @@ export function AccountFiltersSection({
               <span>{formatRevenueInMillions(revenueRange.max)}</span>
             </div>
           </div>
+            )}
 
+          {isFilterEnabled("accountGlobalLegalNameKeywords") && (
           <div className="space-y-2">
             <Label className="text-xs font-medium">Account Name</Label>
             <AccountAutocomplete
@@ -138,7 +144,9 @@ export function AccountFiltersSection({
               trackingKey="accountGlobalLegalNameKeywords"
             />
           </div>
+          )}
 
+          {isFilterEnabled("accountHqEmployeeRangeValues") && (
           <div className="space-y-2">
             <Label className="text-xs font-medium">Employee Range</Label>
             <EnhancedMultiSelect
@@ -153,6 +161,8 @@ export function AccountFiltersSection({
               isApplying={isApplying && activeFilter === "accountHqEmployeeRangeValues"}
             />
           </div>
+          )}
+          {isFilterEnabled("accountCenterEmployeesRangeValues") && (
           <div className="space-y-2">
             <Label className="text-xs font-medium">Aggregate India Headcount</Label>
             <EnhancedMultiSelect
@@ -167,10 +177,13 @@ export function AccountFiltersSection({
               isApplying={isApplying && activeFilter === "accountCenterEmployeesRangeValues"}
             />
           </div>
+          )}
 
+          {isFilterEnabled("accountYearsInIndiaRange") && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label className="text-xs font-medium">Years In India</Label>
+              {isFilterEnabled("yearsInIndiaIncludeNull") && (
               <div className="flex items-center gap-2">
                 <Checkbox
                   id="include-null-years-in-india"
@@ -190,6 +203,7 @@ export function AccountFiltersSection({
                   Include all
                 </Label>
               </div>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
@@ -234,7 +248,9 @@ export function AccountFiltersSection({
               <span>{yearsInIndiaRange.max.toLocaleString()}</span>
             </div>
           </div>
+          )}
 
+          {isFilterEnabled("accountHqRegionValues") && (
           <div className="space-y-2">
             <Label className="text-xs font-medium">Region</Label>
             <EnhancedMultiSelect
@@ -249,6 +265,8 @@ export function AccountFiltersSection({
               isApplying={isApplying && activeFilter === "accountHqRegionValues"}
             />
           </div>
+          )}
+          {isFilterEnabled("accountHqCountryValues") && (
           <div className="space-y-2">
             <Label className="text-xs font-medium">Country</Label>
             <EnhancedMultiSelect
@@ -263,6 +281,8 @@ export function AccountFiltersSection({
               isApplying={isApplying && activeFilter === "accountHqCountryValues"}
             />
           </div>
+          )}
+          {isFilterEnabled("accountPrimaryNatureValues") && (
           <div className="space-y-2">
             <Label className="text-xs font-medium">Segment</Label>
             <EnhancedMultiSelect
@@ -277,6 +297,8 @@ export function AccountFiltersSection({
               isApplying={isApplying && activeFilter === "accountPrimaryNatureValues"}
             />
           </div>
+          )}
+          {isFilterEnabled("accountPrimaryCategoryValues") && (
           <div className="space-y-2">
             <Label className="text-xs font-medium">Category</Label>
             <EnhancedMultiSelect
@@ -291,6 +313,8 @@ export function AccountFiltersSection({
               isApplying={isApplying && activeFilter === "accountPrimaryCategoryValues"}
             />
           </div>
+          )}
+          {isFilterEnabled("accountHqIndustryValues") && (
           <div className="space-y-2">
             <Label className="text-xs font-medium">Industry</Label>
             <EnhancedMultiSelect
@@ -305,6 +329,8 @@ export function AccountFiltersSection({
               isApplying={isApplying && activeFilter === "accountHqIndustryValues"}
             />
           </div>
+          )}
+          {isFilterEnabled("accountNasscomStatusValues") && (
           <div className="space-y-2">
             <Label className="text-xs font-medium">NASSCOM Status</Label>
             <EnhancedMultiSelect
@@ -319,6 +345,8 @@ export function AccountFiltersSection({
               isApplying={isApplying && activeFilter === "accountNasscomStatusValues"}
             />
           </div>
+          )}
+          {isFilterEnabled("accountSourceValues") && (
           <div className="space-y-2">
             <Label className="text-xs font-medium">Source</Label>
             <EnhancedMultiSelect
@@ -333,6 +361,8 @@ export function AccountFiltersSection({
               isApplying={isApplying && activeFilter === "accountSourceValues"}
             />
           </div>
+          )}
+          {isFilterEnabled("accountTypeValues") && (
           <div className="space-y-2">
             <Label className="text-xs font-medium">Type</Label>
             <EnhancedMultiSelect
@@ -347,6 +377,8 @@ export function AccountFiltersSection({
               isApplying={isApplying && activeFilter === "accountTypeValues"}
             />
           </div>
+          )}
+          {isFilterEnabled("accountDataCoverageValues") && (
           <div className="space-y-2">
             <Label className="text-xs font-medium">Coverage</Label>
             <EnhancedMultiSelect
@@ -361,6 +393,7 @@ export function AccountFiltersSection({
               isApplying={isApplying && activeFilter === "accountDataCoverageValues"}
             />
           </div>
+          )}
         </div>
       </div>
     </div>
@@ -383,9 +416,11 @@ export function CenterFiltersSection({
     <div className="pr-2">
       <div className="space-y-4 pt-2">
         <div className="space-y-3">
+          {isFilterEnabled("centerIncYearRange") && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label className="text-xs font-medium">Incorporation Timeline</Label>
+              {isFilterEnabled("centerIncYearIncludeNull") && (
               <div className="flex items-center gap-2">
                 <Checkbox
                   id="include-null-center-inc-year"
@@ -405,6 +440,7 @@ export function CenterFiltersSection({
                   Include all
                 </Label>
               </div>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
@@ -457,7 +493,9 @@ export function CenterFiltersSection({
               <span>{centerIncYearRange.max.toLocaleString()}</span>
             </div>
           </div>
+          )}
 
+          {isFilterEnabled("centerStatusValues") && (
           <div className="space-y-2">
             <Label className="text-xs font-medium">Status</Label>
             <EnhancedMultiSelect
@@ -472,6 +510,8 @@ export function CenterFiltersSection({
               isApplying={isApplying && activeFilter === "centerStatusValues"}
             />
           </div>
+          )}
+          {isFilterEnabled("centerEmployeesRangeValues") && (
           <div className="space-y-2">
             <Label className="text-xs font-medium">Center Headcount</Label>
             <EnhancedMultiSelect
@@ -486,6 +526,8 @@ export function CenterFiltersSection({
               isApplying={isApplying && activeFilter === "centerEmployeesRangeValues"}
             />
           </div>
+          )}
+          {isFilterEnabled("centerCountryValues") && (
           <div className="space-y-2">
             <Label className="text-xs font-medium">Country</Label>
             <EnhancedMultiSelect
@@ -500,6 +542,8 @@ export function CenterFiltersSection({
               isApplying={isApplying && activeFilter === "centerCountryValues"}
             />
           </div>
+          )}
+          {isFilterEnabled("centerStateValues") && (
           <div className="space-y-2">
             <Label className="text-xs font-medium">State</Label>
             <EnhancedMultiSelect
@@ -514,6 +558,8 @@ export function CenterFiltersSection({
               isApplying={isApplying && activeFilter === "centerStateValues"}
             />
           </div>
+          )}
+          {isFilterEnabled("centerCityValues") && (
           <div className="space-y-2">
             <Label className="text-xs font-medium">City</Label>
             <EnhancedMultiSelect
@@ -528,6 +574,8 @@ export function CenterFiltersSection({
               isApplying={isApplying && activeFilter === "centerCityValues"}
             />
           </div>
+          )}
+          {isFilterEnabled("centerFocusValues") && (
           <div className="space-y-2">
             <Label className="text-xs font-medium">Focus</Label>
             <EnhancedMultiSelect
@@ -542,6 +590,8 @@ export function CenterFiltersSection({
               isApplying={isApplying && activeFilter === "centerFocusValues"}
             />
           </div>
+          )}
+          {isFilterEnabled("centerTypeValues") && (
           <div className="space-y-2">
             <Label className="text-xs font-medium">Type</Label>
             <EnhancedMultiSelect
@@ -556,7 +606,9 @@ export function CenterFiltersSection({
               isApplying={isApplying && activeFilter === "centerTypeValues"}
             />
           </div>
+          )}
 
+          {isFilterEnabled("functionNameValues") && (
           <div className="space-y-2">
             <Label className="text-xs font-medium">Services Offered</Label>
             <EnhancedMultiSelect
@@ -571,6 +623,8 @@ export function CenterFiltersSection({
               isApplying={isApplying && activeFilter === "functionNameValues"}
             />
           </div>
+          )}
+          {isFilterEnabled("techSoftwareInUseKeywords") && (
           <div className="space-y-2">
             <Label className="text-xs font-medium">Software In Use</Label>
             <TitleKeywordInput
@@ -582,6 +636,7 @@ export function CenterFiltersSection({
               trackingKey="techSoftwareInUseKeywords"
             />
           </div>
+          )}
         </div>
       </div>
     </div>
@@ -600,6 +655,7 @@ export function ProspectFiltersSection({
     <div className="pr-2">
       <div className="space-y-4 pt-2">
         <div className="space-y-3">
+          {isFilterEnabled("prospectDepartmentValues") && (
           <div className="space-y-2">
             <Label className="text-xs font-medium">Department</Label>
             <EnhancedMultiSelect
@@ -614,6 +670,8 @@ export function ProspectFiltersSection({
               isApplying={isApplying && activeFilter === "prospectDepartmentValues"}
             />
           </div>
+          )}
+          {isFilterEnabled("prospectLevelValues") && (
           <div className="space-y-2">
             <Label className="text-xs font-medium">Seniority Level</Label>
             <EnhancedMultiSelect
@@ -628,6 +686,8 @@ export function ProspectFiltersSection({
               isApplying={isApplying && activeFilter === "prospectLevelValues"}
             />
           </div>
+          )}
+          {isFilterEnabled("prospectCityValues") && (
           <div className="space-y-2">
             <Label className="text-xs font-medium">City</Label>
             <EnhancedMultiSelect
@@ -642,6 +702,8 @@ export function ProspectFiltersSection({
               isApplying={isApplying && activeFilter === "prospectCityValues"}
             />
           </div>
+          )}
+          {isFilterEnabled("prospectTitleKeywords") && (
           <div className="space-y-2">
             <Label className="text-xs font-medium">Job Title</Label>
             <TitleKeywordInput
@@ -651,6 +713,7 @@ export function ProspectFiltersSection({
               trackingKey="prospectTitleKeywords"
             />
           </div>
+          )}
         </div>
       </div>
     </div>

@@ -11,6 +11,7 @@ import {
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { isSectionVisible } from '@/lib/config/filters'
 import type { AvailableOptions, Filters } from '@/lib/types'
 
 interface FiltersSidebarProps {
@@ -151,7 +152,7 @@ export function FiltersSidebar({
             { icon: Building, label: 'Account Attributes', section: 'accounts', iconClass: 'text-primary' },
             { icon: Briefcase, label: 'Center Attributes', section: 'centers', iconClass: 'text-[hsl(var(--chart-2))]' },
             { icon: Users, label: 'Prospect Attributes', section: 'prospects', iconClass: 'text-[hsl(var(--chart-3))]' },
-          ].map(({ icon: Icon, label, section, iconClass }) => (
+          ].filter(({ section }) => isSectionVisible(section)).map(({ icon: Icon, label, section, iconClass }) => (
             <Button
               key={label}
               variant="ghost"
@@ -215,6 +216,7 @@ export function FiltersSidebar({
         </div>
 
         <Accordion type="multiple" value={openSections} onValueChange={setOpenSections} className="w-full space-y-2">
+          {isSectionVisible("accounts") && (
           <AccordionItem value="accounts" className="overflow-hidden rounded-xl border border-border/70 bg-secondary/30 px-3 data-[state=open]:bg-background data-[state=open]:shadow-sm">
             <AccordionTrigger className="py-3 text-sm font-semibold hover:no-underline">
               <div className="flex items-center gap-2.5">
@@ -243,7 +245,9 @@ export function FiltersSidebar({
               />
             </AccordionContent>
           </AccordionItem>
+          )}
 
+          {isSectionVisible("centers") && (
           <AccordionItem value="centers" className="overflow-hidden rounded-xl border border-border/70 bg-secondary/30 px-3 data-[state=open]:bg-background data-[state=open]:shadow-sm">
             <AccordionTrigger className="py-3 text-sm font-semibold hover:no-underline">
               <div className="flex items-center gap-2.5">
@@ -266,7 +270,9 @@ export function FiltersSidebar({
               />
             </AccordionContent>
           </AccordionItem>
+          )}
 
+          {isSectionVisible("prospects") && (
           <AccordionItem value="prospects" className="overflow-hidden rounded-xl border border-border/70 bg-secondary/30 px-3 data-[state=open]:bg-background data-[state=open]:shadow-sm">
             <AccordionTrigger className="py-3 text-sm font-semibold hover:no-underline">
               <div className="flex items-center gap-2.5">
@@ -285,6 +291,7 @@ export function FiltersSidebar({
               />
             </AccordionContent>
           </AccordionItem>
+          )}
         </Accordion>
       </div>
 
