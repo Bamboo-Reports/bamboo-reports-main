@@ -29,6 +29,8 @@ import {
   Building,
   UserCircle,
   Layers,
+  ExternalLink,
+  Linkedin,
 } from "lucide-react"
 import { formatRevenueInMillions, parseRevenue } from "@/lib/utils/helpers"
 import { InfoRow } from "@/components/ui/info-row"
@@ -190,7 +192,33 @@ export function AccountDetailsDialog({
                 theme="auto"
               />
               <div className="flex-1">
-                <div>{account.account_global_legal_name}</div>
+                <div className="flex items-center gap-2">
+                  <span>{account.account_global_legal_name}</span>
+                  <div className="flex items-center gap-1.5">
+                    {account.account_hq_website && (
+                      <a
+                        href={account.account_hq_website.startsWith("http") ? account.account_hq_website : `https://${account.account_hq_website}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-muted-foreground hover:text-primary transition-colors"
+                        title={account.account_hq_website}
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    )}
+                    {account.account_hq_linkedin_link && (
+                      <a
+                        href={account.account_hq_linkedin_link.startsWith("http") ? account.account_hq_linkedin_link : `https://${account.account_hq_linkedin_link}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-muted-foreground hover:text-[#0A66C2] transition-colors"
+                        title="LinkedIn"
+                      >
+                        <Linkedin className="h-4 w-4" />
+                      </a>
+                    )}
+                  </div>
+                </div>
                 <p className="text-sm font-normal text-muted-foreground mt-1">
                   {location || account.account_hq_region}
                 </p>
@@ -365,24 +393,25 @@ export function AccountDetailsDialog({
                   />
                   <InfoRow
                     icon={Users}
-                    label="Center Employees Range"
+                    label="Total Center Employees"
+                    value={account.account_center_employees}
+                  />
+                  <InfoRow
+                    icon={Users}
+                    label="Aggregate India Headcount"
                     value={account.account_center_employees_range}
                   />
                 </div>
               </div>
 
               {/* Financials Section */}
-              <div>
+              {ticker && <div>
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
                   <DollarSign className="h-4 w-4" />
                   Financials
                 </h3>
 
-                {!ticker ? (
-                  <div className="rounded-lg border border-dashed border-border/60 bg-background/30 p-4 text-sm text-muted-foreground">
-                    No stock ticker is available for this account.
-                  </div>
-                ) : financialLoading ? (
+                {financialLoading ? (
                   <div className="rounded-lg border border-dashed border-border/60 bg-background/30 p-4 text-sm text-muted-foreground">
                     Loading financial data for {ticker}...
                   </div>
@@ -460,7 +489,7 @@ export function AccountDetailsDialog({
                     </div>
                   </div>
                 )}
-              </div>
+              </div>}
 
               {/* Rankings & Recognition Section */}
               {(account.account_hq_forbes_2000_rank || account.account_hq_fortune_500_rank || account.account_nasscom_status) && (

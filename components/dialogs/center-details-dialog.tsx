@@ -24,6 +24,8 @@ import {
   TrendingUp,
   Headphones,
   MoreHorizontal,
+  ExternalLink,
+  Linkedin,
 } from "lucide-react"
 import type { Center, Service } from "@/lib/types"
 import { CompanyLogo } from "@/components/ui/company-logo"
@@ -97,7 +99,10 @@ export function CenterDetailsDialog({
 
   const hasBusinessInfo =
     isPresent(center.center_business_segment) ||
-    isPresent(center.center_business_sub_segment)
+    isPresent(center.center_business_sub_segment) ||
+    isPresent(center.center_management_partner) ||
+    isPresent(center.center_jv_status) ||
+    isPresent(center.center_jv_name)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -113,6 +118,30 @@ export function CenterDetailsDialog({
             <div className="flex-1">
               <div className="flex items-center gap-3">
                 <span>{center.center_name}</span>
+                <div className="flex items-center gap-1.5">
+                  {center.center_website && (
+                    <a
+                      href={center.center_website.startsWith("http") ? center.center_website : `https://${center.center_website}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground hover:text-primary transition-colors"
+                      title={center.center_website}
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  )}
+                  {center.center_linkedin && (
+                    <a
+                      href={center.center_linkedin.startsWith("http") ? center.center_linkedin : `https://${center.center_linkedin}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground hover:text-[#0A66C2] transition-colors"
+                      title="LinkedIn"
+                    >
+                      <Linkedin className="h-4 w-4" />
+                    </a>
+                  )}
+                </div>
                 <div className="flex items-center gap-2">
                   <div
                     className={`h-3 w-3 rounded-full ${getStatusColor(center.center_status)} ${getStatusGlow(center.center_status)}`}
@@ -167,6 +196,21 @@ export function CenterDetailsDialog({
                 label="Boardline Number"
                 value={center.center_boardline}
               />
+              <InfoRow
+                icon={Calendar}
+                label="End Year"
+                value={center.center_end_year}
+              />
+              <InfoRow
+                icon={Calendar}
+                label="Announced Year"
+                value={center.announced_year}
+              />
+              <InfoRow
+                icon={Calendar}
+                label="Announced Month"
+                value={center.announced_month}
+              />
             </div>
           </div>
 
@@ -192,6 +236,21 @@ export function CenterDetailsDialog({
                 label="Country"
                 value={center.center_country}
               />
+              <InfoRow
+                icon={Globe}
+                label="Region"
+                value={center.center_region}
+              />
+              <InfoRow
+                icon={MapPin}
+                label="Zip Code"
+                value={center.center_zip_code}
+              />
+              <InfoRow
+                icon={MapPin}
+                label="Address"
+                value={center.center_address}
+              />
             </div>
           </div>
 
@@ -212,6 +271,21 @@ export function CenterDetailsDialog({
                   icon={Briefcase}
                   label="Business Sub-Segment"
                   value={center.center_business_sub_segment}
+                />
+                <InfoRow
+                  icon={Users}
+                  label="Management Partner"
+                  value={center.center_management_partner}
+                />
+                <InfoRow
+                  icon={Briefcase}
+                  label="JV Status"
+                  value={center.center_jv_status}
+                />
+                <InfoRow
+                  icon={Briefcase}
+                  label="JV Name"
+                  value={center.center_jv_name}
                 />
               </div>
             </div>

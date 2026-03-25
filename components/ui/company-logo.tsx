@@ -68,7 +68,7 @@ export function CompanyLogo({
     return (
       <div
         className={cn(
-          "rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0",
+          "rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0",
           sizeConfig.container,
           className
         )}
@@ -96,7 +96,7 @@ export function CompanyLogo({
   return (
     <div
       className={cn(
-        "rounded-full bg-background border border-border/50 flex items-center justify-center overflow-hidden flex-shrink-0 relative",
+        "rounded-lg bg-background border border-border/50 flex items-center justify-center overflow-hidden flex-shrink-0 relative",
         sizeConfig.container,
         className
       )}
@@ -125,7 +125,7 @@ export function CompanyLogo({
         }}
         style={{
           padding: "8%",
-          transform: "scale(1.5)",
+          transform: "scale(1.2)",
         }}
       />
     </div>
