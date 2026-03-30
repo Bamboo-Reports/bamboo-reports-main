@@ -57,12 +57,12 @@ The filter sidebar is located on the left side of the dashboard. Filters are gro
 | Category | `accountPrimaryCategoryValues` | `account_primary_category` | `accounts` | Multi-select (include/exclude) |
 | Industry | `accountHqIndustryValues` | `account_hq_industry` | `accounts` | Multi-select (include/exclude) |
 | Type | `accountTypeValues` | `account_type` | `accounts` | Multi-select (include/exclude) |
-| NASSCOM Status | `accountNasscomStatusValues` | `account_nasscom_status` | `accounts` | Multi-select (include/exclude) |
+| NASSCOM GCC Listing Status | `accountNasscomStatusValues` | `account_nasscom_status` | `accounts` | Multi-select (include/exclude) |
 | Source | `accountSourceValues` | `account_source` | `accounts` | Multi-select (include/exclude) |
 | Coverage | `accountDataCoverageValues` | `account_data_coverage` | `accounts` | Multi-select (include/exclude) |
-| Employee Range | `accountHqEmployeeRangeValues` | `account_hq_employee_range` | `accounts` | Multi-select (include/exclude) |
-| Aggregate India Headcount | `accountCenterEmployeesRangeValues` | `account_center_employees_range` | `accounts` | Multi-select (include/exclude) |
-| Revenue (USDMn) | `accountHqRevenueRange` | `account_hq_revenue` | `accounts` | Range slider [min, max] |
+| HQ Employee Range | `accountHqEmployeeRangeValues` | `account_hq_employee_range` | `accounts` | Multi-select (include/exclude) |
+| GCC Aggregate Headcount (India) | `accountCenterEmployeesRangeValues` | `account_center_employees_range` | `accounts` | Multi-select (include/exclude) |
+| HQ Company Revenue | `accountHqRevenueRange` | `account_hq_revenue` | `accounts` | Range slider [min, max] |
 | Revenue — "Include all" toggle | `accountHqRevenueIncludeNull` | `account_hq_revenue` | `accounts` | Boolean toggle (include NULLs) |
 | Years In India | `accountYearsInIndiaRange` | `years_in_india` | `accounts` | Range slider [min, max] |
 | Years In India — "Include all" toggle | `yearsInIndiaIncludeNull` | `years_in_india` | `accounts` | Boolean toggle (include NULLs) |
@@ -120,7 +120,7 @@ Each tab in the dashboard displays a paginated data table. Tables show 50 rows p
 | *(NASSCOM badge)* | `account_nasscom_status` | `accounts` | Badge | Shows green "NASSCOM" badge when value is `"yes"` |
 | Industry | `account_hq_industry` | `accounts` | Text | — |
 | Revenue Range | `account_hq_revenue_range` | `accounts` | Text | Bucketed range string (e.g., "$1B-$5B") |
-| Aggregate India Headcount | `account_center_employees_range` | `accounts` | Text | Bucketed range string (e.g., "1,001-5,000") |
+| GCC Aggregate Headcount (India) | `account_center_employees_range` | `accounts` | Text | Bucketed range string (e.g., "1,001-5,000") |
 
 **Hidden fields used internally:**
 | Field | Database Column | Purpose |
@@ -244,7 +244,7 @@ This is a tabbed dialog with three tabs: **Account Info**, **Centers**, and **Pr
 | Total Employees | `account_hq_employee_count` | `accounts` |
 | Employees Range | `account_hq_employee_range` | `accounts` |
 | Total Center Employees | `account_center_employees` | `accounts` |
-| Aggregate India Headcount | `account_center_employees_range` | `accounts` |
+| GCC Aggregate Headcount (India) | `account_center_employees_range` | `accounts` |
 
 **Financials Section** *(loaded via `getAccountFinancialInfo` server action — Yahoo Finance API):*
 
@@ -262,7 +262,7 @@ This is a tabbed dialog with three tabs: **Account Info**, **Centers**, and **Pr
 |----------|----------------|-------|
 | Forbes Ranking | `account_hq_forbes_2000_rank` | `accounts` |
 | Fortune Ranking | `account_hq_fortune_500_rank` | `accounts` |
-| NASSCOM Status | `account_nasscom_status` | `accounts` |
+| NASSCOM GCC Listing Status | `account_nasscom_status` | `accounts` |
 
 **India Operations Section:**
 
@@ -442,9 +442,9 @@ These charts use the `calculateChartData(accounts, field)` helper which counts o
 | Segment | `account_primary_nature` | `accounts` | Count of accounts per segment |
 | Category | `account_primary_category` | `accounts` | Count of accounts per category |
 | Revenue Range | `account_hq_revenue_range` | `accounts` | Count of accounts per revenue bucket |
-| Employee Range | `account_hq_employee_range` | `accounts` | Count of accounts per employee bucket |
-| Aggregate India Headcount | `account_center_employees_range` | `accounts` | Count of accounts per headcount bucket |
-| NASSCOM Status | `account_nasscom_status` | `accounts` | Count of accounts per status |
+| HQ Employee Range | `account_hq_employee_range` | `accounts` | Count of accounts per employee bucket |
+| GCC Aggregate Headcount (India) | `account_center_employees_range` | `accounts` | Count of accounts per headcount bucket |
+| NASSCOM GCC Listing Status | `account_nasscom_status` | `accounts` | Count of accounts per status |
 
 #### Center Charts
 
@@ -578,11 +578,11 @@ Exports columns from the `accounts` table based on the currently filtered datase
 | Revenue | `account_hq_revenue` |
 | Revenue Range | `account_hq_revenue_range` |
 | Employee Count | `account_hq_employee_count` |
-| Employee Range | `account_hq_employee_range` |
+| HQ Employee Range | `account_hq_employee_range` |
 | Center Employees | `account_center_employees` |
 | Center Employees Range | `account_center_employees_range` |
 | Website | `account_hq_website` |
-| NASSCOM Status | `account_nasscom_status` |
+| NASSCOM GCC Listing Status | `account_nasscom_status` |
 | Years in India | `years_in_india` |
 
 #### Centers Sheet

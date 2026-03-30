@@ -57,7 +57,7 @@
         {
             "filterKey": "accountNasscomStatusValues",
             "uiSection": "Account Attributes",
-            "uiLabel": "NASSCOM Status",
+            "uiLabel": "NASSCOM GCC Listing Status",
             "referencedColumns": [
                 {
                     "dataset": "accounts",

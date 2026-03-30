@@ -398,7 +398,7 @@ export function AccountDetailsDialog({
                   />
                   <InfoRow
                     icon={Users}
-                    label="Aggregate India Headcount"
+                    label="GCC Aggregate Headcount (India)"
                     value={account.account_center_employees_range}
                   />
                 </div>
@@ -511,7 +511,7 @@ export function AccountDetailsDialog({
                     />
                     <InfoRow
                       icon={Award}
-                      label="NASSCOM Status"
+                      label="NASSCOM GCC Listing Status"
                       value={account.account_nasscom_status}
                     />
                   </div>

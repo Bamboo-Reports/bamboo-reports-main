@@ -51,7 +51,7 @@ export const AccountRow = memo(({ account, isRecentlyUpdated = false, onClick }:
             {isNasscomVerified && (
               <div className="mt-1 flex flex-wrap items-center gap-1.5">
                 <div
-                  className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold bg-green-500/15 text-green-700 dark:text-green-300"
+                  className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold bg-[#C03430]/15 text-[#C03430]"
                   title="NASSCOM listed"
                 >
                   <CircleCheck className="h-3 w-3 animate-pulse" aria-hidden="true" />

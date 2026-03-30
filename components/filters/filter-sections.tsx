@@ -62,10 +62,57 @@ export function AccountFiltersSection({
     <div className="pr-2">
         <div className="space-y-4 pt-2">
           <div className="space-y-3">
+          {isFilterEnabled("accountGlobalLegalNameKeywords") && (
+          <div className="space-y-2">
+            <Label className="text-xs font-medium">Account Name</Label>
+            <AccountAutocomplete
+              accountNames={accountNames}
+              selectedAccounts={pendingFilters.accountGlobalLegalNameKeywords}
+              onChange={(keywords) => setPendingFilters((prev) => ({ ...prev, accountGlobalLegalNameKeywords: keywords }))}
+              placeholder="Type to search account names..."
+              trackingKey="accountGlobalLegalNameKeywords"
+            />
+          </div>
+          )}
+
+          {isFilterEnabled("accountCenterEmployeesRangeValues") && (
+          <div className="space-y-2">
+            <Label className="text-xs font-medium">GCC Aggregate Headcount (India)</Label>
+            <EnhancedMultiSelect
+              options={availableOptions.accountCenterEmployeesRangeValues}
+              selected={pendingFilters.accountCenterEmployeesRangeValues}
+              trackingKey="accountCenterEmployeesRangeValues"
+              onChange={(selected) => {
+                setPendingFilters((prev) => ({ ...prev, accountCenterEmployeesRangeValues: selected }))
+                setActiveFilter("accountCenterEmployeesRangeValues")
+              }}
+              placeholder="Select center employees..."
+              isApplying={isApplying && activeFilter === "accountCenterEmployeesRangeValues"}
+            />
+          </div>
+          )}
+
+          {isFilterEnabled("accountHqEmployeeRangeValues") && (
+          <div className="space-y-2">
+            <Label className="text-xs font-medium">HQ Employee Range</Label>
+            <EnhancedMultiSelect
+              options={availableOptions.accountHqEmployeeRangeValues}
+              selected={pendingFilters.accountHqEmployeeRangeValues}
+              trackingKey="accountHqEmployeeRangeValues"
+              onChange={(selected) => {
+                setPendingFilters((prev) => ({ ...prev, accountHqEmployeeRangeValues: selected }))
+                setActiveFilter("accountHqEmployeeRangeValues")
+              }}
+              placeholder="Select employees range..."
+              isApplying={isApplying && activeFilter === "accountHqEmployeeRangeValues"}
+            />
+          </div>
+          )}
+
             {isFilterEnabled("accountHqRevenueRange") && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label className="text-xs font-medium">Revenue (USDMn)</Label>
+                <Label className="text-xs font-medium">HQ Company Revenue</Label>
                 {isFilterEnabled("accountHqRevenueIncludeNull") && (
                 <div className="flex items-center gap-2">
                 <Checkbox
@@ -132,52 +179,6 @@ export function AccountFiltersSection({
             </div>
           </div>
             )}
-
-          {isFilterEnabled("accountGlobalLegalNameKeywords") && (
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">Account Name</Label>
-            <AccountAutocomplete
-              accountNames={accountNames}
-              selectedAccounts={pendingFilters.accountGlobalLegalNameKeywords}
-              onChange={(keywords) => setPendingFilters((prev) => ({ ...prev, accountGlobalLegalNameKeywords: keywords }))}
-              placeholder="Type to search account names..."
-              trackingKey="accountGlobalLegalNameKeywords"
-            />
-          </div>
-          )}
-
-          {isFilterEnabled("accountHqEmployeeRangeValues") && (
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">Employee Range</Label>
-            <EnhancedMultiSelect
-              options={availableOptions.accountHqEmployeeRangeValues}
-              selected={pendingFilters.accountHqEmployeeRangeValues}
-              trackingKey="accountHqEmployeeRangeValues"
-              onChange={(selected) => {
-                setPendingFilters((prev) => ({ ...prev, accountHqEmployeeRangeValues: selected }))
-                setActiveFilter("accountHqEmployeeRangeValues")
-              }}
-              placeholder="Select employees range..."
-              isApplying={isApplying && activeFilter === "accountHqEmployeeRangeValues"}
-            />
-          </div>
-          )}
-          {isFilterEnabled("accountCenterEmployeesRangeValues") && (
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">Aggregate India Headcount</Label>
-            <EnhancedMultiSelect
-              options={availableOptions.accountCenterEmployeesRangeValues}
-              selected={pendingFilters.accountCenterEmployeesRangeValues}
-              trackingKey="accountCenterEmployeesRangeValues"
-              onChange={(selected) => {
-                setPendingFilters((prev) => ({ ...prev, accountCenterEmployeesRangeValues: selected }))
-                setActiveFilter("accountCenterEmployeesRangeValues")
-              }}
-              placeholder="Select center employees..."
-              isApplying={isApplying && activeFilter === "accountCenterEmployeesRangeValues"}
-            />
-          </div>
-          )}
 
           {isFilterEnabled("accountYearsInIndiaRange") && (
           <div className="space-y-3">
@@ -252,7 +253,7 @@ export function AccountFiltersSection({
 
           {isFilterEnabled("accountHqRegionValues") && (
           <div className="space-y-2">
-            <Label className="text-xs font-medium">Region</Label>
+            <Label className="text-xs font-medium">HQ Region</Label>
             <EnhancedMultiSelect
               options={availableOptions.accountHqRegionValues || []}
               selected={pendingFilters.accountHqRegionValues}
@@ -268,7 +269,7 @@ export function AccountFiltersSection({
           )}
           {isFilterEnabled("accountHqCountryValues") && (
           <div className="space-y-2">
-            <Label className="text-xs font-medium">Country</Label>
+            <Label className="text-xs font-medium">HQ Country</Label>
             <EnhancedMultiSelect
               options={availableOptions.accountHqCountryValues || []}
               selected={pendingFilters.accountHqCountryValues}
@@ -300,7 +301,7 @@ export function AccountFiltersSection({
           )}
           {isFilterEnabled("accountPrimaryCategoryValues") && (
           <div className="space-y-2">
-            <Label className="text-xs font-medium">Category</Label>
+            <Label className="text-xs font-medium">Industry</Label>
             <EnhancedMultiSelect
               options={availableOptions.accountPrimaryCategoryValues}
               selected={pendingFilters.accountPrimaryCategoryValues}
@@ -316,7 +317,7 @@ export function AccountFiltersSection({
           )}
           {isFilterEnabled("accountHqIndustryValues") && (
           <div className="space-y-2">
-            <Label className="text-xs font-medium">Industry</Label>
+            <Label className="text-xs font-medium">Sub Industry</Label>
             <EnhancedMultiSelect
               options={availableOptions.accountHqIndustryValues}
               selected={pendingFilters.accountHqIndustryValues}
@@ -332,7 +333,7 @@ export function AccountFiltersSection({
           )}
           {isFilterEnabled("accountNasscomStatusValues") && (
           <div className="space-y-2">
-            <Label className="text-xs font-medium">NASSCOM Status</Label>
+            <Label className="text-xs font-medium">NASSCOM GCC Listing Status</Label>
             <EnhancedMultiSelect
               options={availableOptions.accountNasscomStatusValues}
               selected={pendingFilters.accountNasscomStatusValues}
@@ -575,25 +576,9 @@ export function CenterFiltersSection({
             />
           </div>
           )}
-          {isFilterEnabled("centerFocusValues") && (
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">Focus</Label>
-            <EnhancedMultiSelect
-              options={availableOptions.centerFocusValues}
-              selected={pendingFilters.centerFocusValues}
-              trackingKey="centerFocusValues"
-              onChange={(selected) => {
-                setPendingFilters((prev) => ({ ...prev, centerFocusValues: selected }))
-                setActiveFilter("centerFocusValues")
-              }}
-              placeholder="Select focus..."
-              isApplying={isApplying && activeFilter === "centerFocusValues"}
-            />
-          </div>
-          )}
           {isFilterEnabled("centerTypeValues") && (
           <div className="space-y-2">
-            <Label className="text-xs font-medium">Type</Label>
+            <Label className="text-xs font-medium">Center Type</Label>
             <EnhancedMultiSelect
               options={availableOptions.centerTypeValues}
               selected={pendingFilters.centerTypeValues}
@@ -621,6 +606,22 @@ export function CenterFiltersSection({
               }}
               placeholder="Select functions..."
               isApplying={isApplying && activeFilter === "functionNameValues"}
+            />
+          </div>
+          )}
+          {isFilterEnabled("centerFocusValues") && (
+          <div className="space-y-2">
+            <Label className="text-xs font-medium">Center Focus</Label>
+            <EnhancedMultiSelect
+              options={availableOptions.centerFocusValues}
+              selected={pendingFilters.centerFocusValues}
+              trackingKey="centerFocusValues"
+              onChange={(selected) => {
+                setPendingFilters((prev) => ({ ...prev, centerFocusValues: selected }))
+                setActiveFilter("centerFocusValues")
+              }}
+              placeholder="Select focus..."
+              isApplying={isApplying && activeFilter === "centerFocusValues"}
             />
           </div>
           )}

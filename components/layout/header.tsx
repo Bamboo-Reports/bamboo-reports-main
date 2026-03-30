@@ -43,7 +43,7 @@ const FIELD_LABELS: Record<string, string> = {
   account_hq_city: "HQ City",
   account_hq_zip_code: "HQ ZIP Code",
   account_hq_address: "HQ Address",
-  account_nasscom_status: "NASSCOM Status",
+  account_nasscom_status: "NASSCOM GCC Listing Status",
   center_status: "Center Status",
 }
 
