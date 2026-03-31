@@ -229,7 +229,7 @@ export function AccountDetailsDialog({
                 />
                 <InfoRow
                   icon={Award}
-                  label="NASSCOM Status"
+                  label="NASSCOM GCC Listing Status"
                   value={account.account_nasscom_status}
                 />
               </div>

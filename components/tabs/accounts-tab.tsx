@@ -271,7 +271,7 @@ export function AccountsTab({
               showBigPercentage
             />
             <PieChartCard
-              title="Aggregate India Headcount"
+              title="GCC Aggregate Headcount (India)"
               data={accountChartData.employeesRangeData}
               countLabel="Total Accounts"
               showBigPercentage
@@ -356,13 +356,13 @@ export function AccountsTab({
                         <SortButton label="Account Name" sortKey="name" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                       </TableHead>
                       <TableHead className="w-[220px]">
-                        <SortButton label="Industry" sortKey="industry" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
+                        <SortButton label="Sub Industry" sortKey="industry" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                       </TableHead>
                       <TableHead className="w-[140px]">
                         <SortButton label="Revenue Range" sortKey="revenue" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                       </TableHead>
                       <TableHead className="w-[200px]">
-                        <SortButton label="Aggregate India Headcount" sortKey="employees" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
+                        <SortButton label="GCC Aggregate Headcount (India)" sortKey="employees" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                       </TableHead>
                     </TableRow>
                   </TableHeader>
