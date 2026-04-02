@@ -8,6 +8,14 @@ import { calculateActiveFilters, withFilterDefaults } from "@/lib/dashboard/filt
 import type { SavedFilter } from "@/components/filters/saved-filter-card"
 import type { Filters } from "@/lib/types"
 
+export interface FilterShare {
+  id: string
+  filter_id: string
+  shared_with_user_id: string
+  shared_with_email: string
+  created_at: string
+}
+
 export function useSavedFilters() {
   const supabase = getSupabaseBrowserClient()
   const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([])
@@ -43,30 +51,65 @@ export function useSavedFilters() {
 
     setLoading(true)
     try {
-      const { data, error } = await supabase
+      // Fetch own filters
+      const { data: ownData, error: ownError } = await supabase
         .from("saved_filters")
-        .select("id, name, filters, created_at, updated_at")
+        .select("id, name, filters, created_at, updated_at, user_id")
+        .eq("user_id", userId)
         .order("created_at", { ascending: false })
 
-      if (error) {
-        throw error
+      if (ownError) throw ownError
+
+      // Fetch filters shared with me
+      const { data: sharedData, error: sharedError } = await supabase
+        .from("filter_shares")
+        .select("filter_id, shared_with_email, saved_filters(id, name, filters, created_at, updated_at, user_id)")
+        .eq("shared_with_user_id", userId)
+
+      if (sharedError) throw sharedError
+
+      const normalizeFilter = (filter: Record<string, unknown>, ownerEmail?: string): SavedFilter | null => {
+        try {
+          const parsedFilters = typeof filter.filters === "string" ? JSON.parse(filter.filters as string) : filter.filters
+          if (!parsedFilters) return null
+          return {
+            id: filter.id as string,
+            name: filter.name as string,
+            filters: withFilterDefaults(parsedFilters),
+            created_at: filter.created_at as string,
+            updated_at: filter.updated_at as string,
+            user_id: filter.user_id as string,
+            owner_email: ownerEmail,
+          }
+        } catch (error) {
+          console.error("Failed to parse saved filter:", error)
+          return null
+        }
       }
 
-      const normalizedFilters = Array.isArray(data)
-        ? data
-            .map((filter) => {
-              try {
-                const parsedFilters = typeof filter.filters === "string" ? JSON.parse(filter.filters) : filter.filters
-                if (!parsedFilters) return null
-                return { ...filter, filters: withFilterDefaults(parsedFilters) } as SavedFilter
-              } catch (error) {
-                console.error("Failed to parse saved filter:", error)
-                return null
-              }
-            })
-            .filter((item): item is SavedFilter => Boolean(item))
+      const ownFilters = Array.isArray(ownData)
+        ? ownData.map((f) => normalizeFilter(f)).filter((item): item is SavedFilter => Boolean(item))
         : []
-      setSavedFilters(normalizedFilters)
+
+      const sharedFilters: SavedFilter[] = []
+      if (Array.isArray(sharedData)) {
+        for (const share of sharedData) {
+          const filterData = share.saved_filters as unknown as Record<string, unknown> | null
+          if (filterData) {
+            // Look up the owner's email from profiles
+            const { data: ownerProfile } = await supabase
+              .from("profiles")
+              .select("email")
+              .eq("user_id", filterData.user_id as string)
+              .single()
+
+            const normalized = normalizeFilter(filterData, ownerProfile?.email ?? "a teammate")
+            if (normalized) sharedFilters.push(normalized)
+          }
+        }
+      }
+
+      setSavedFilters([...ownFilters, ...sharedFilters])
     } catch (error) {
       console.error("Failed to load saved filters:", error)
     } finally {
@@ -173,12 +216,110 @@ export function useSavedFilters() {
     }
   }, [loadSavedFilters, savedFilters, supabase])
 
+  const shareFilter = useCallback(async (filterId: string, email: string): Promise<{ success: boolean; error?: string }> => {
+    if (!userId) return { success: false, error: "Not authenticated" }
+
+    setLoading(true)
+    try {
+      // Look up recipient by email in profiles
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("user_id, email")
+        .eq("email", email.trim().toLowerCase())
+        .single()
+
+      if (profileError || !profile) {
+        return { success: false, error: "No user found with that email address" }
+      }
+
+      if (profile.user_id === userId) {
+        return { success: false, error: "You cannot share a filter with yourself" }
+      }
+
+      // Insert the share record
+      const { error: shareError } = await supabase
+        .from("filter_shares")
+        .insert({
+          filter_id: filterId,
+          owner_user_id: userId,
+          shared_with_user_id: profile.user_id,
+          shared_with_email: profile.email,
+        })
+
+      if (shareError) {
+        if (shareError.code === "23505") {
+          return { success: false, error: "This filter is already shared with that user" }
+        }
+        throw shareError
+      }
+
+      const filter = savedFilters.find((f) => f.id === filterId)
+      captureEvent(ANALYTICS_EVENTS.SAVED_FILTER_SHARED, {
+        saved_filter_id: filterId,
+        saved_filter_name: filter ? normalizeTrackedText(filter.name) : null,
+        shared_with_email: normalizeTrackedText(email),
+      })
+
+      return { success: true }
+    } catch (error) {
+      console.error("Error sharing filter:", error)
+      return { success: false, error: "Failed to share filter" }
+    } finally {
+      setLoading(false)
+    }
+  }, [userId, supabase, savedFilters])
+
+  const unshareFilter = useCallback(async (filterId: string, sharedWithUserId: string) => {
+    setLoading(true)
+    try {
+      const { error } = await supabase
+        .from("filter_shares")
+        .delete()
+        .eq("filter_id", filterId)
+        .eq("shared_with_user_id", sharedWithUserId)
+
+      if (error) throw error
+
+      captureEvent(ANALYTICS_EVENTS.SAVED_FILTER_UNSHARED, {
+        saved_filter_id: filterId,
+        unshared_with_user_id: sharedWithUserId,
+      })
+
+      return true
+    } catch (error) {
+      console.error("Error unsharing filter:", error)
+      return false
+    } finally {
+      setLoading(false)
+    }
+  }, [supabase])
+
+  const getFilterShares = useCallback(async (filterId: string): Promise<FilterShare[]> => {
+    try {
+      const { data, error } = await supabase
+        .from("filter_shares")
+        .select("id, filter_id, shared_with_user_id, shared_with_email, created_at")
+        .eq("filter_id", filterId)
+        .order("created_at", { ascending: false })
+
+      if (error) throw error
+      return data ?? []
+    } catch (error) {
+      console.error("Error fetching filter shares:", error)
+      return []
+    }
+  }, [supabase])
+
   return {
     savedFilters,
     loading,
+    userId,
     saveFilter,
     deleteFilter,
     updateFilter,
+    shareFilter,
+    unshareFilter,
+    getFilterShares,
     refreshFilters: loadSavedFilters
   }
 }

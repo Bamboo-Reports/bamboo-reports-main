@@ -149,5 +149,72 @@ for each row execute function public.set_updated_at();
 - **Saving:** The frontend serializes the entire `filters` state object to JSON and sends it to Supabase.
 - **Loading:** The frontend fetches the JSON, parses it, and runs it through `withFilterDefaults` to ensure required keys and range defaults are present.
 
+---
 
+## 5. Filter Sharing
+
+### 5.1 Table: `filter_shares`
+
+Enables users to share saved filter configurations with specific teammates by email.
+
+| Column | Type | Nullable | Notes |
+| :--- | :--- | :--- | :--- |
+| `id` | `UUID` | **NO** | Primary Key. Defaults to `gen_random_uuid()`. |
+| `filter_id` | `UUID` | **NO** | FK to `saved_filters(id)`. CASCADE on delete. |
+| `owner_user_id` | `UUID` | **NO** | FK to `auth.users(id)`. The user who shared the filter. |
+| `shared_with_user_id` | `UUID` | **NO** | FK to `auth.users(id)`. The recipient user. |
+| `shared_with_email` | `TEXT` | **NO** | Email of the recipient (for display purposes). |
+| `created_at` | `TIMESTAMPTZ` | **NO** | Default `now()`. |
+
+**Unique constraint:** `(filter_id, shared_with_user_id)` — a filter can only be shared once per recipient.
+
+### 5.2 SQL Definition
+
+```sql
+CREATE TABLE IF NOT EXISTS public.filter_shares (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  filter_id UUID NOT NULL REFERENCES public.saved_filters(id) ON DELETE CASCADE,
+  owner_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  shared_with_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  shared_with_email TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(filter_id, shared_with_user_id)
+);
+```
+
+### 5.3 RLS Policies
+
+```sql
+-- Owners can manage their shares
+CREATE POLICY "Owners can manage their shares"
+  ON public.filter_shares FOR ALL
+  USING (auth.uid() = owner_user_id);
+
+-- Recipients can view shares directed at them
+CREATE POLICY "Recipients can view their shares"
+  ON public.filter_shares FOR SELECT
+  USING (auth.uid() = shared_with_user_id);
+
+-- Recipients can read the shared filter data from saved_filters
+CREATE POLICY "Users can view filters shared with them"
+  ON public.saved_filters FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.filter_shares
+      WHERE filter_shares.filter_id = saved_filters.id
+        AND filter_shares.shared_with_user_id = auth.uid()
+    )
+  );
+```
+
+### 5.4 Sharing Flow
+
+1. **Share:** Owner clicks Share on a saved filter → enters recipient email → app looks up `profiles` table → creates `filter_shares` record.
+2. **View:** Recipient sees shared filters in a "Shared with me" section in the saved filters dropdown.
+3. **Load:** Recipient can load shared filters (read-only — cannot edit or delete the original).
+4. **Revoke:** Owner can view who they've shared with and remove access.
+
+### 5.5 Migration
+
+See `documentation/sql/filter-shares-migration.sql` for the complete migration script.
 

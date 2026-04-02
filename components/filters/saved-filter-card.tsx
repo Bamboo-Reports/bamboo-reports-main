@@ -1,6 +1,6 @@
 
 import { memo, useCallback } from "react"
-import { Calendar, Edit, Filter, Trash2 } from "lucide-react"
+import { Calendar, Edit, Filter, Share2, Trash2, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -19,20 +19,26 @@ export interface SavedFilter {
   filters: Filters
   created_at: string
   updated_at: string
+  user_id: string
+  owner_email?: string
 }
 
 interface SavedFilterCardProps {
   filter: SavedFilter
+  isOwner: boolean
   onLoad: (filter: SavedFilter) => void
   onEdit: (filter: SavedFilter) => void
   onDelete: (filter: SavedFilter) => void
+  onShare?: (filter: SavedFilter) => void
 }
 
 export const SavedFilterCard = memo(({
   filter,
+  isOwner,
   onLoad,
   onEdit,
-  onDelete
+  onDelete,
+  onShare
 }: SavedFilterCardProps) => {
   const filterCount = useCallback(() => {
     return calculateActiveFilters(filter.filters)
@@ -54,25 +60,46 @@ export const SavedFilterCard = memo(({
           <CardTitle className="text-lg">{filter.name}</CardTitle>
           <div className="flex items-center gap-2">
             <Badge variant="secondary">{filterCount()} filters</Badge>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => onEdit(filter)}
-              aria-label={`Edit saved filter ${filter.name}`}
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="text-destructive hover:text-destructive hover:bg-destructive/10"
-              onClick={() => onDelete(filter)}
-              aria-label={`Delete saved filter ${filter.name}`}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            {!isOwner && filter.owner_email && (
+              <Badge variant="outline" className="text-xs gap-1">
+                <Users className="h-3 w-3" />
+                Shared by {filter.owner_email}
+              </Badge>
+            )}
+            {isOwner && onShare && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => onShare(filter)}
+                aria-label={`Share saved filter ${filter.name}`}
+              >
+                <Share2 className="h-4 w-4" />
+              </Button>
+            )}
+            {isOwner && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => onEdit(filter)}
+                aria-label={`Edit saved filter ${filter.name}`}
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+            )}
+            {isOwner && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={() => onDelete(filter)}
+                aria-label={`Delete saved filter ${filter.name}`}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
