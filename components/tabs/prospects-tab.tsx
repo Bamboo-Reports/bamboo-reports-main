@@ -227,6 +227,7 @@ export function ProspectsTab({
         <PieChartIcon className="h-5 w-5 text-[hsl(var(--chart-1))]" />
         <h2 className="text-lg font-semibold text-foreground">Prospect Analytics</h2>
         <ViewSwitcher
+          data-tour="view-switcher"
           value={prospectsView}
           onValueChange={(value) => setProspectsView(value as "chart" | "data")}
           options={[

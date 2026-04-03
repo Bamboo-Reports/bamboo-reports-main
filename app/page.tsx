@@ -22,6 +22,7 @@ import {
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { buildTrackedFiltersSnapshot } from "@/lib/analytics/tracking"
 import { canExportData } from "@/lib/auth/roles"
+import { useProductTour } from "@/hooks/use-product-tour"
 import { formatRevenueInMillions } from "@/lib/utils/helpers"
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "br-dashboard-sidebar-collapsed"
@@ -439,6 +440,9 @@ function DashboardContent(): JSX.Element | null {
   const dataLoaded =
     !loading && accounts.length > 0 && centers.length > 0 && services.length > 0 && prospects.length > 0
 
+  const hasMapView = accountsView === "map" || centersView === "map"
+  const { startTour } = useProductTour({ userId, dataLoaded, hasMapView })
+
   useEffect(() => {
     if (!dataLoaded || hasTrackedDashboardLoadRef.current) {
       return
@@ -509,7 +513,7 @@ function DashboardContent(): JSX.Element | null {
       >
         Skip to main content
       </a>
-      <Header onRefresh={handleRefresh} />
+      <Header onRefresh={handleRefresh} onStartTour={startTour} />
 
       {dataLoaded && (
         <main
@@ -573,7 +577,7 @@ function DashboardContent(): JSX.Element | null {
                   onSelect={handleSectionSelect}
                 />
 
-                <Tabs value={activeSection} className="space-y-4">
+                <Tabs value={activeSection} className="space-y-4" data-tour="tab-navigation">
                   <AccountsTab
                     accounts={filteredData.filteredAccounts}
                     centers={filteredData.filteredCenters}

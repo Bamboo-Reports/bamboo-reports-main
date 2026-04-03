@@ -178,7 +178,7 @@ export const SummaryCards = React.memo(function SummaryCards({
   ]
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6" aria-label="Dashboard sections">
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6" aria-label="Dashboard sections" data-tour="summary-cards">
       {cards.map((card) => {
         const Icon = card.icon
         const isActive = card.clickable && activeView === card.id

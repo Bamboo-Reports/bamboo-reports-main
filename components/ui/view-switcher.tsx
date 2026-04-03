@@ -15,6 +15,7 @@ interface ViewSwitcherProps<V extends string> {
   onValueChange: (value: V) => void
   options: SwitcherOption<V>[]
   className?: string
+  "data-tour"?: string
 }
 
 export function ViewSwitcher<V extends string>({
@@ -22,9 +23,10 @@ export function ViewSwitcher<V extends string>({
   onValueChange,
   options,
   className,
+  "data-tour": dataTour,
 }: ViewSwitcherProps<V>) {
   return (
-    <Tabs value={value} onValueChange={(v) => onValueChange(v as V)} className={cn("w-fit", className)}>
+    <Tabs value={value} onValueChange={(v) => onValueChange(v as V)} className={cn("w-fit", className)} data-tour={dataTour}>
       <TabsList className="gap-2 bg-secondary/80 shadow-sm">
         {options.map(({ value: optionValue, label, icon }) => (
           <TabsTrigger

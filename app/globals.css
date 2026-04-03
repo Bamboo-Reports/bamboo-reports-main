@@ -149,10 +149,14 @@
     will-change: transform, opacity;
   }
 
-  /* Smooth scrolling */
+  /* Smooth scrolling — disabled during product tour to avoid double-animation */
   html {
     font-size: 100%;
     scroll-behavior: smooth;
+  }
+
+  html.tour-active {
+    scroll-behavior: auto;
   }
 
   /* Optimize scrollbar */
@@ -542,4 +546,91 @@
         var(--theme-transition-y, 50%)
     );
   }
+}
+
+/* Product Tour (driver.js) Theme Overrides */
+.driver-overlay {
+  will-change: opacity;
+}
+
+.driver-popover.br-tour-popover {
+  will-change: transform, opacity;
+  background: hsl(var(--popover)) !important;
+  color: hsl(var(--popover-foreground)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12) !important;
+  font-family: inherit !important;
+  max-width: 360px !important;
+  padding: 16px !important;
+}
+
+.driver-popover.br-tour-popover .driver-popover-title {
+  font-size: 0.95rem !important;
+  font-weight: 600 !important;
+  color: hsl(var(--foreground)) !important;
+  font-family: inherit !important;
+}
+
+.driver-popover.br-tour-popover .driver-popover-description {
+  font-size: 0.835rem !important;
+  color: hsl(var(--muted-foreground)) !important;
+  line-height: 1.55 !important;
+  font-family: inherit !important;
+}
+
+.driver-popover.br-tour-popover .driver-popover-navigation-btns {
+  gap: 6px !important;
+}
+
+.driver-popover.br-tour-popover .driver-popover-next-btn {
+  background: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+  border: none !important;
+  border-radius: calc(var(--radius) - 2px) !important;
+  font-size: 0.8rem !important;
+  font-weight: 500 !important;
+  padding: 0.375rem 0.875rem !important;
+  font-family: inherit !important;
+  text-shadow: none !important;
+}
+
+.driver-popover.br-tour-popover .driver-popover-prev-btn {
+  background: transparent !important;
+  color: hsl(var(--muted-foreground)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  border-radius: calc(var(--radius) - 2px) !important;
+  font-size: 0.8rem !important;
+  font-weight: 500 !important;
+  padding: 0.375rem 0.875rem !important;
+  font-family: inherit !important;
+  text-shadow: none !important;
+}
+
+.driver-popover.br-tour-popover .driver-popover-close-btn {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.driver-popover.br-tour-popover .driver-popover-progress-text {
+  font-size: 0.7rem !important;
+  color: hsl(var(--muted-foreground)) !important;
+  font-family: inherit !important;
+}
+
+.driver-popover.br-tour-popover .driver-popover-arrow-side-left,
+.driver-popover.br-tour-popover .driver-popover-arrow-side-right,
+.driver-popover.br-tour-popover .driver-popover-arrow-side-top,
+.driver-popover.br-tour-popover .driver-popover-arrow-side-bottom {
+  border-color: hsl(var(--border)) !important;
+}
+
+.driver-popover.br-tour-popover .driver-popover-arrow {
+  border: none !important;
+}
+
+.driver-popover.br-tour-popover .driver-popover-arrow-side-left .driver-popover-arrow,
+.driver-popover.br-tour-popover .driver-popover-arrow-side-right .driver-popover-arrow,
+.driver-popover.br-tour-popover .driver-popover-arrow-side-top .driver-popover-arrow,
+.driver-popover.br-tour-popover .driver-popover-arrow-side-bottom .driver-popover-arrow {
+  background: hsl(var(--popover)) !important;
 }

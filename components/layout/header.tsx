@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { Bell, CheckCheck, LogOut, Mail, Phone, RefreshCw, ShieldCheck, UserRound } from 'lucide-react'
+import { Bell, CheckCheck, Compass, LogOut, Mail, Phone, RefreshCw, ShieldCheck, UserRound } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -25,6 +25,7 @@ import type { Profile } from '@/lib/types'
 
 interface HeaderProps {
   onRefresh: () => void
+  onStartTour?: () => void
 }
 
 const NOTIFICATIONS_PAGE_SIZE = 10
@@ -67,7 +68,7 @@ const ACRONYM_LABELS: Record<string, string> = {
 const RELATIVE_TIME_FORMATTER = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" })
 const NOTIFICATIONS_CHANGED_EVENT = "bamboo:notifications-changed"
 
-export const Header = React.memo(function Header({ onRefresh }: HeaderProps): JSX.Element {
+export const Header = React.memo(function Header({ onRefresh, onStartTour }: HeaderProps): JSX.Element {
   const environmentLabel = getEnvironmentLabel()
   const notificationsEnabled = areNotificationsEnabled()
   const router = useRouter()
@@ -352,7 +353,7 @@ export const Header = React.memo(function Header({ onRefresh }: HeaderProps): JS
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" data-tour="header-actions">
             <Button variant="ghost" size="sm" onClick={onRefresh} className="h-8 px-3 group" title="Refresh" aria-label="Refresh data">
               <RefreshCw className="h-4 w-4 group-hover:rotate-180 transition-transform duration-300" />
             </Button>
@@ -525,7 +526,16 @@ export const Header = React.memo(function Header({ onRefresh }: HeaderProps): JS
                 </div>
 
                 <DropdownMenuSeparator />
-                <div className="p-2">
+                <div className="p-2 space-y-1.5">
+                  {onStartTour && (
+                    <DropdownMenuItem
+                      className="h-9 cursor-pointer rounded-md font-medium"
+                      onSelect={() => onStartTour()}
+                    >
+                      <Compass className="h-4 w-4" />
+                      Take a tour
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem
                     disabled={isLoadingProfile}
                     className="h-9 cursor-pointer rounded-md border border-destructive/25 bg-destructive/10 font-medium text-destructive focus:bg-destructive/15 focus:text-destructive"

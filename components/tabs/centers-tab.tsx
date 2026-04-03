@@ -215,6 +215,7 @@ export function CentersTab({
         <PieChartIcon className="h-5 w-5 text-[hsl(var(--chart-2))]" />
         <h2 className="text-lg font-semibold text-foreground">Center Analytics</h2>
         <ViewSwitcher
+          data-tour="view-switcher"
           value={centersView}
           onValueChange={(value) => setCentersView(value as "chart" | "data" | "map")}
           options={[
@@ -278,7 +279,7 @@ export function CentersTab({
 
       {/* Map Section */}
        {centersView === "map" && (
-         <Card className="w-full flex flex-col h-[var(--dashboard-panel-height)] border shadow-sm animate-fade-in">
+         <Card data-tour="map-view" className="w-full flex flex-col h-[var(--dashboard-panel-height)] border shadow-sm animate-fade-in">
            <CardHeader className="shrink-0 px-6 py-3">
              <div className="flex items-center gap-3">
                <CardTitle className="text-base">Centers Map</CardTitle>

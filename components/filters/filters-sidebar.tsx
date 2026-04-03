@@ -116,6 +116,7 @@ export function FiltersSidebar({
   return (
     <aside
       id="filters-sidebar"
+      data-tour="filters-sidebar"
       className={cn(
         'bg-sidebar/90 backdrop-blur-sm overflow-hidden shrink-0 relative ml-6 mt-[var(--dashboard-content-top-gap)] mb-[var(--dashboard-content-bottom-gap)] rounded-2xl border border-sidebar-border shadow-[0_24px_60px_-45px_rgba(0,0,0,0.55)]',
         'transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
@@ -202,7 +203,7 @@ export function FiltersSidebar({
               <ChevronLeft className="h-4 w-4" />
             </Button>
           </div>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2" data-tour="saved-filters">
             <SavedFiltersManager
               currentFilters={filters}
               onLoadFilters={handleLoadSavedFilters}

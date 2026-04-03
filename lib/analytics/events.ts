@@ -58,6 +58,10 @@ export const ANALYTICS_EVENTS = {
   NO_RESULTS_AFTER_FILTER: "no_results_after_filter",
   ERROR_STATE_SHOWN: "error_state_shown",
   ERROR_RETRY_CLICKED: "error_retry_clicked",
+  TOUR_STARTED: "tour_started",
+  TOUR_STEP_VIEWED: "tour_step_viewed",
+  TOUR_COMPLETED: "tour_completed",
+  TOUR_SKIPPED: "tour_skipped",
 } as const
 
 export type AnalyticsEventName = (typeof ANALYTICS_EVENTS)[keyof typeof ANALYTICS_EVENTS]

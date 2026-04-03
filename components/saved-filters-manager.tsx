@@ -420,6 +420,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
               className="w-full h-8 text-xs font-medium"
               aria-label={canExport ? "Export data" : "Export data (admin only)"}
               title={canExport ? "Export data" : "Only admins can export data"}
+              data-tour="export-button"
             >
               Export
             </Button>
