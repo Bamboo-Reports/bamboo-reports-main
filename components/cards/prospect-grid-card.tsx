@@ -2,16 +2,14 @@ import { memo } from "react"
 import { ArrowUpRight } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { RecentlyUpdatedIndicator } from "@/components/ui/recently-updated-indicator"
 import type { Prospect } from "@/lib/types"
 
 interface ProspectGridCardProps {
   prospect: Prospect
-  isRecentlyUpdated?: boolean
   onClick: () => void
 }
 
-export const ProspectGridCard = memo(({ prospect, isRecentlyUpdated = false, onClick }: ProspectGridCardProps) => {
+export const ProspectGridCard = memo(({ prospect, onClick }: ProspectGridCardProps) => {
   const fullName =
     prospect.prospect_full_name ||
     [prospect.prospect_first_name, prospect.prospect_last_name].filter(Boolean).join(" ")
@@ -31,17 +29,12 @@ export const ProspectGridCard = memo(({ prospect, isRecentlyUpdated = false, onC
             <span className="text-sm font-bold text-primary">{initials || "?"}</span>
           </div>
           <div className="min-w-0">
-            <div className="flex min-w-0 items-center gap-2">
-              <h3
-                className="min-w-0 flex-1 truncate text-base font-semibold leading-snug text-foreground"
-                title={fullName || "Prospect"}
-              >
-                {fullName || "Prospect"}
-              </h3>
-              {isRecentlyUpdated ? (
-                <RecentlyUpdatedIndicator title="This prospect has unread recent updates" />
-              ) : null}
-            </div>
+            <h3
+              className="min-w-0 truncate text-base font-semibold leading-snug text-foreground"
+              title={fullName || "Prospect"}
+            >
+              {fullName || "Prospect"}
+            </h3>
             <p
               className="text-sm text-muted-foreground mt-1 truncate"
               title={location || prospect.prospect_country || "-"}

@@ -2,15 +2,13 @@ import { memo } from "react"
 import { TableRow, TableCell } from "@/components/ui/table"
 import type { Center } from "@/lib/types"
 import { CompanyLogo } from "@/components/ui/company-logo"
-import { RecentlyUpdatedIndicator } from "@/components/ui/recently-updated-indicator"
 
 interface CenterRowProps {
   center: Center
-  isRecentlyUpdated?: boolean
   onClick: () => void
 }
 
-export const CenterRow = memo(({ center, isRecentlyUpdated = false, onClick }: CenterRowProps) => (
+export const CenterRow = memo(({ center, onClick }: CenterRowProps) => (
   <TableRow
     className="cursor-pointer hover:bg-muted/50 transition-colors focus-visible:bg-muted/70"
     onClick={onClick}
@@ -31,11 +29,8 @@ export const CenterRow = memo(({ center, isRecentlyUpdated = false, onClick }: C
           size="sm"
           theme="auto"
         />
-        <div className="min-w-0 flex items-center gap-2">
-          <div className="min-w-0 flex-1 truncate" title={center.center_name || "N/A"}>
-            {center.center_name || "N/A"}
-          </div>
-          {isRecentlyUpdated ? <RecentlyUpdatedIndicator title="This center has unread recent updates" /> : null}
+        <div className="min-w-0 truncate" title={center.center_name || "N/A"}>
+          {center.center_name || "N/A"}
         </div>
       </div>
     </TableCell>

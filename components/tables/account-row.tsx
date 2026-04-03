@@ -3,15 +3,13 @@ import { CircleCheck } from "lucide-react"
 import { TableRow, TableCell } from "@/components/ui/table"
 import type { Account } from "@/lib/types"
 import { CompanyLogo } from "@/components/ui/company-logo"
-import { RecentlyUpdatedIndicator } from "@/components/ui/recently-updated-indicator"
 
 interface AccountRowProps {
   account: Account
-  isRecentlyUpdated?: boolean
   onClick: () => void
 }
 
-export const AccountRow = memo(({ account, isRecentlyUpdated = false, onClick }: AccountRowProps) => {
+export const AccountRow = memo(({ account, onClick }: AccountRowProps) => {
   const location = [account.account_hq_city, account.account_hq_country]
     .filter(Boolean)
     .join(", ")
@@ -40,13 +38,8 @@ export const AccountRow = memo(({ account, isRecentlyUpdated = false, onClick }:
             theme="auto"
           />
           <div className="min-w-0">
-            <div className="flex min-w-0 items-center gap-2">
-              <div className="min-w-0 flex-1 truncate" title={accountName}>
-                {accountName}
-              </div>
-              {isRecentlyUpdated ? (
-                <RecentlyUpdatedIndicator title="This account has unread recent updates" />
-              ) : null}
+            <div className="min-w-0 truncate" title={accountName}>
+              {accountName}
             </div>
             {isNasscomVerified && (
               <div className="mt-1 flex flex-wrap items-center gap-1.5">

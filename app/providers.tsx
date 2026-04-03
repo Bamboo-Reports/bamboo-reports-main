@@ -3,6 +3,7 @@
 import { useEffect, type ReactNode } from "react"
 import { usePathname } from "next/navigation"
 import { capturePageView, initAnalytics } from "@/lib/analytics/client"
+import { NotificationProvider } from "@/contexts/notification-context"
 
 export function AppProviders({ children }: { children: ReactNode }) {
   const pathname = usePathname()
@@ -24,5 +25,9 @@ export function AppProviders({ children }: { children: ReactNode }) {
     capturePageView(url)
   }, [pathname])
 
-  return <>{children}</>
+  return (
+    <NotificationProvider>
+      {children}
+    </NotificationProvider>
+  )
 }

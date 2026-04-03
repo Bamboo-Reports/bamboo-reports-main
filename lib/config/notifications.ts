@@ -7,7 +7,7 @@ function normalizeEnvValue(value: string | undefined): string | null {
   return normalized || null
 }
 
-export function areNotificationsEnabled(): boolean {
+function areNotificationsEnabled(): boolean {
   const normalized = normalizeEnvValue(process.env.NEXT_PUBLIC_NOTIFICATIONS_ENABLED)
 
   if (!normalized) return true
@@ -16,3 +16,6 @@ export function areNotificationsEnabled(): boolean {
 
   return true
 }
+
+/** Evaluated once at module load — env vars don't change at runtime. */
+export const NOTIFICATIONS_ENABLED = areNotificationsEnabled()

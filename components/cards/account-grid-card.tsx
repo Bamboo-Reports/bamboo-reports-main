@@ -3,16 +3,14 @@ import { ArrowUpRight, CircleCheck } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CompanyLogo } from "@/components/ui/company-logo"
-import { RecentlyUpdatedIndicator } from "@/components/ui/recently-updated-indicator"
 import type { Account } from "@/lib/types"
 
 interface AccountGridCardProps {
   account: Account
-  isRecentlyUpdated?: boolean
   onClick: () => void
 }
 
-export const AccountGridCard = memo(({ account, isRecentlyUpdated = false, onClick }: AccountGridCardProps) => {
+export const AccountGridCard = memo(({ account, onClick }: AccountGridCardProps) => {
   const location = [account.account_hq_city, account.account_hq_country]
     .filter(Boolean)
     .join(", ")
@@ -30,17 +28,12 @@ export const AccountGridCard = memo(({ account, isRecentlyUpdated = false, onCli
             theme="auto"
           />
           <div className="min-w-0">
-            <div className="flex min-w-0 items-center gap-2">
-              <h3
-                className="min-w-0 flex-1 truncate text-base font-semibold leading-snug text-foreground"
-                title={accountName}
-              >
-                {accountName}
-              </h3>
-              {isRecentlyUpdated ? (
-                <RecentlyUpdatedIndicator title="This account has unread recent updates" />
-              ) : null}
-            </div>
+            <h3
+              className="min-w-0 truncate text-base font-semibold leading-snug text-foreground"
+              title={accountName}
+            >
+              {accountName}
+            </h3>
             <p
               className="text-sm text-muted-foreground mt-1 truncate"
               title={location || account.account_hq_country || "-"}

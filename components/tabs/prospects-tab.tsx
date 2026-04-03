@@ -16,7 +16,6 @@ import { SortButton } from "@/components/ui/sort-button"
 import { PaginationControls } from "@/components/ui/pagination-controls"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
-import { useRecentlyUpdatedTableRecords } from "@/hooks/use-recently-updated-table-records"
 import type { Prospect } from "@/lib/types"
 
 interface ProspectsTabProps {
@@ -67,40 +66,6 @@ export function ProspectsTab({
     )
   }, [])
 
-  const getProspectFallbackIdentity = React.useCallback((prospect: Prospect) => {
-    const normalized = (value: string | null | undefined) => (value ?? "").trim()
-    return [
-      "fallback:prospect_email=",
-      normalized(prospect.prospect_email),
-      "|prospect_full_name=",
-      normalized(prospect.prospect_full_name),
-      "|prospect_first_name=",
-      normalized(prospect.prospect_first_name),
-      "|prospect_last_name=",
-      normalized(prospect.prospect_last_name),
-      "|account_global_legal_name=",
-      normalized(prospect.account_global_legal_name),
-    ].join("")
-  }, [])
-
-  const { isRecordRecentlyUpdated: isProspectRecentlyUpdated, markRecordAsRead: markProspectAsRead } =
-    useRecentlyUpdatedTableRecords<Prospect>({
-      tableName: "prospects",
-      getRecordUuid: (prospect) => prospect.uuid,
-      getRecordIdentity: (prospect) => {
-        const prospectKey = (prospect as Prospect & { ps_unique_key?: string | null }).ps_unique_key
-        if (!prospectKey) return null
-        return `key:ps_unique_key=${prospectKey}`
-      },
-      getRecordLabel: getProspectDisplayName,
-      getAdditionalRecordIdentities: (prospect) => [getProspectFallbackIdentity(prospect)],
-      getAdditionalRecordLabels: (prospect) => [
-        prospect.prospect_email,
-        prospect.prospect_full_name,
-        [prospect.prospect_first_name, prospect.prospect_last_name].filter(Boolean).join(" "),
-      ],
-    })
-
   const handleProspectClick = (prospect: Prospect, openedFrom: "table_row" | "grid_card") => {
     if (isDialogOpen && openedRecordRef.current) {
       const dwellSeconds = Math.max(0, Math.round((Date.now() - openedRecordRef.current.openedAt) / 1000))
@@ -110,7 +75,6 @@ export function ProspectsTab({
         dwell_seconds: dwellSeconds,
         close_reason: "switch_to_another_record",
       })
-      void markProspectAsRead(openedRecordRef.current.prospect)
     }
     setSelectedProspect(prospect)
     setIsDialogOpen(true)
@@ -180,9 +144,8 @@ export function ProspectsTab({
       dwell_seconds: dwellSeconds,
       close_reason: "dialog_closed",
     })
-    void markProspectAsRead(openedRecordRef.current.prospect)
     openedRecordRef.current = null
-  }, [isDialogOpen, markProspectAsRead])
+  }, [isDialogOpen])
 
 
   const sortedProspects = React.useMemo(() => {
@@ -326,7 +289,6 @@ export function ProspectsTab({
                           <ProspectRow
                             key={`${prospect.prospect_email}-${index}`}
                             prospect={prospect}
-                            isRecentlyUpdated={isProspectRecentlyUpdated(prospect)}
                             onClick={() => handleProspectClick(prospect, "table_row")}
                           />
                         )
@@ -358,7 +320,6 @@ export function ProspectsTab({
                           <ProspectGridCard
                             key={`${prospect.prospect_email}-${index}`}
                             prospect={prospect}
-                            isRecentlyUpdated={isProspectRecentlyUpdated(prospect)}
                             onClick={() => handleProspectClick(prospect, "grid_card")}
                           />
                         )

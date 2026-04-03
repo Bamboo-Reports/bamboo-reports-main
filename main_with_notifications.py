@@ -735,6 +735,7 @@ def compute_table_field_changes(
 ) -> List[Dict[str, Optional[str]]]:
     """
     Returns row-level field change events for rows that exist in both snapshots.
+    Uses vectorized pandas operations for performance instead of row-by-row loops.
     """
     if old_df.empty or new_df.empty or not tracked_fields:
         return []
@@ -745,37 +746,60 @@ def compute_table_field_changes(
         return []
 
     common_rows = old_norm.index.intersection(new_norm.index)
+    if len(common_rows) == 0:
+        return []
 
-    events: List[Dict[str, Optional[str]]] = []
-    for identity in common_rows:
+    # Filter to only tracked fields that exist in both dataframes
+    available_fields = [f for f in tracked_fields if f in old_norm.columns and f in new_norm.columns]
+    if not available_fields:
+        return []
+
+    # Align both dataframes to common rows and tracked fields
+    old_aligned = old_norm.loc[common_rows, available_fields]
+    new_aligned = new_norm.loc[common_rows, available_fields]
+
+    # Vectorized: normalize all values to strings for comparison
+    old_str = old_aligned.apply(lambda col: col.map(normalize_change_value))
+    new_str = new_aligned.apply(lambda col: col.map(normalize_change_value))
+
+    # Vectorized: find cells that changed (handles None == None correctly)
+    changed_mask = (old_str != new_str) & ~(old_str.isna() & new_str.isna())
+
+    # Stack to get (identity, field) pairs for changed cells only
+    changed_pairs = changed_mask.stack()
+    changed_pairs = changed_pairs[changed_pairs]
+
+    if changed_pairs.empty:
+        return []
+
+    # Pre-compute per-row metadata (uuid, label) only for rows that have changes
+    changed_identities = changed_pairs.index.get_level_values(0).unique()
+    row_metadata: Dict[str, Dict[str, Optional[str]]] = {}
+    for identity in changed_identities:
         row_new = new_norm.loc[identity]
         row_old = old_norm.loc[identity]
-
         row_uuid_new = normalize_change_value(row_new.get(ACCOUNT_UUID_COLUMN))
         row_uuid_old = normalize_change_value(row_old.get(ACCOUNT_UUID_COLUMN))
-        row_uuid = row_uuid_new or row_uuid_old
-        record_label = resolve_table_row_label(table, row_new, row_old)
+        row_metadata[identity] = {
+            "record_uuid": row_uuid_new or row_uuid_old,
+            "record_label": resolve_table_row_label(table, row_new, row_old),
+        }
 
-        for field in tracked_fields:
-            old_raw = row_old.get(field)
-            new_raw = row_new.get(field)
-
-            old_value = normalize_change_value(old_raw)
-            new_value = normalize_change_value(new_raw)
-            if old_value == new_value:
-                continue
-
-            events.append(
-                {
-                    "table_name": table,
-                    "record_uuid": row_uuid,
-                    "record_identity": identity,
-                    "record_label": record_label,
-                    "field_name": field,
-                    "old_value": old_value,
-                    "new_value": new_value,
-                }
-            )
+    # Build events from changed pairs
+    events: List[Dict[str, Optional[str]]] = []
+    for identity, field in changed_pairs.index:
+        meta = row_metadata[identity]
+        events.append(
+            {
+                "table_name": table,
+                "record_uuid": meta["record_uuid"],
+                "record_identity": identity,
+                "record_label": meta["record_label"],
+                "field_name": field,
+                "old_value": old_str.at[identity, field],
+                "new_value": new_str.at[identity, field],
+            }
+        )
 
     return events
 
@@ -827,6 +851,31 @@ def compute_table_lifecycle_events(
         )
 
     return events
+
+RETENTION_DAYS = 90
+
+
+def cleanup_old_change_events(engine: Engine):
+    """Deletes change events older than the retention period to prevent unbounded table growth."""
+    try:
+        with engine.connect() as conn:
+            conn.execution_options(isolation_level="AUTOCOMMIT")
+            result = conn.execute(
+                text(
+                    f"""
+                    DELETE FROM {CHANGE_EVENTS_TABLE}
+                    WHERE changed_at < NOW() - INTERVAL '{RETENTION_DAYS} days'
+                    """
+                )
+            )
+            deleted = result.rowcount
+            if deleted > 0:
+                logger.info(f"Cleaned up {deleted} change events older than {RETENTION_DAYS} days.")
+            else:
+                logger.debug(f"No change events older than {RETENTION_DAYS} days to clean up.")
+    except Exception as e:
+        logger.warning(f"Could not clean up old change events: {e}")
+
 
 def insert_change_events(
     engine: Engine, import_run_id: int, events: List[Dict[str, Optional[str]]]
@@ -1181,6 +1230,7 @@ def run_import(
                 change_events_logged=total_change_events_logged,
                 error_message=None,
             )
+            cleanup_old_change_events(engine)
 
         return loaded
     except Exception as e:

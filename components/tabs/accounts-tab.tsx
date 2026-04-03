@@ -29,7 +29,6 @@ import { PaginationControls } from "@/components/ui/pagination-controls"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { getPaginatedData } from "@/lib/utils/helpers"
-import { useRecentlyUpdatedAccounts } from "@/hooks/use-recently-updated-accounts"
 import type { Account, Center, Prospect, Service, Function, Tech } from "@/lib/types"
 
 interface AccountsTabProps {
@@ -84,8 +83,6 @@ export function AccountsTab({
     openedFrom: "table_row" | "grid_card"
     account: Account
   } | null>(null)
-  const { isAccountRecentlyUpdated, markAccountAsRead } = useRecentlyUpdatedAccounts()
-
   const handleAccountClick = (account: Account, openedFrom: "table_row" | "grid_card") => {
     if (isDialogOpen && openedRecordRef.current) {
       const dwellSeconds = Math.max(0, Math.round((Date.now() - openedRecordRef.current.openedAt) / 1000))
@@ -95,7 +92,6 @@ export function AccountsTab({
         dwell_seconds: dwellSeconds,
         close_reason: "switch_to_another_record",
       })
-      void markAccountAsRead(openedRecordRef.current.account)
     }
     setSelectedAccount(account)
     setIsDialogOpen(true)
@@ -176,9 +172,8 @@ export function AccountsTab({
       dwell_seconds: dwellSeconds,
       close_reason: "dialog_closed",
     })
-    void markAccountAsRead(openedRecordRef.current.account)
     openedRecordRef.current = null
-  }, [isDialogOpen, markAccountAsRead])
+  }, [isDialogOpen])
 
 
   const sortedAccounts = React.useMemo(() => {
@@ -373,7 +368,6 @@ export function AccountsTab({
                         <AccountRow
                           key={`${account.account_global_legal_name}-${index}`}
                           account={account}
-                          isRecentlyUpdated={isAccountRecentlyUpdated(account)}
                           onClick={() => handleAccountClick(account, "table_row")}
                         />
                       )
@@ -405,7 +399,6 @@ export function AccountsTab({
                         <AccountGridCard
                           key={`${account.account_global_legal_name}-${index}`}
                           account={account}
-                          isRecentlyUpdated={isAccountRecentlyUpdated(account)}
                           onClick={() => handleAccountClick(account, "grid_card")}
                         />
                       )
