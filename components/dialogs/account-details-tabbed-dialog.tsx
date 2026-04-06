@@ -107,7 +107,13 @@ export function AccountDetailsDialog({
     ? centers.filter((center) => center.account_global_legal_name === account.account_global_legal_name)
     : []
   const accountProspects = account
-    ? prospects.filter((prospect) => prospect.account_global_legal_name === account.account_global_legal_name)
+    ? prospects
+        .filter((prospect) => prospect.account_global_legal_name === account.account_global_legal_name)
+        .sort((a, b) => {
+          const nameA = `${a.prospect_first_name ?? ""} ${a.prospect_last_name ?? ""}`.trim().toLowerCase()
+          const nameB = `${b.prospect_first_name ?? ""} ${b.prospect_last_name ?? ""}`.trim().toLowerCase()
+          return nameA.localeCompare(nameB)
+        })
     : []
   const accountTech = account
     ? tech.filter((item) => item.account_global_legal_name === account.account_global_legal_name)
@@ -227,11 +233,12 @@ export function AccountDetailsDialog({
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className={`grid w-full ${accountCenters.length > 0 && accountProspects.length > 0 ? "grid-cols-3" : accountCenters.length > 0 || accountProspects.length > 0 ? "grid-cols-2" : "grid-cols-1"}`}>
               <TabsTrigger value="info" className="flex items-center gap-2">
                 <Building2 className="h-4 w-4" />
                 Account Info
               </TabsTrigger>
+              {accountCenters.length > 0 && (
               <TabsTrigger value="centers" className="flex items-center gap-2">
                 <Building className="h-4 w-4" />
                 Centers
@@ -239,6 +246,8 @@ export function AccountDetailsDialog({
                   {accountCenters.length}
                 </Badge>
               </TabsTrigger>
+              )}
+              {accountProspects.length > 0 && (
               <TabsTrigger value="prospects" className="flex items-center gap-2">
                 <UserCircle className="h-4 w-4" />
                 Prospects
@@ -246,6 +255,7 @@ export function AccountDetailsDialog({
                   {accountProspects.length}
                 </Badge>
               </TabsTrigger>
+              )}
             </TabsList>
 
             {/* Account Info Tab */}
@@ -256,7 +266,8 @@ export function AccountDetailsDialog({
                   <Info className="h-4 w-4" />
                   Tech Stack & Centers
                 </h3>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+                <div className={`grid grid-cols-1 ${accountTech.length > 0 ? "lg:grid-cols-2" : ""} gap-4 items-start`}>
+                  {accountTech.length > 0 && (
                   <div className="rounded-lg border border-border/60 bg-background/40 backdrop-blur-sm shadow-sm overflow-hidden h-[300px] lg:h-[420px]">
                     <div className="flex h-full flex-col">
                       <div className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-muted-foreground border-b border-border/40">
@@ -268,6 +279,7 @@ export function AccountDetailsDialog({
                       </div>
                     </div>
                   </div>
+                  )}
                   <div className="rounded-lg border border-border/60 bg-background/40 backdrop-blur-sm shadow-sm overflow-hidden h-[300px] lg:h-[420px]">
                     <div className="flex h-full flex-col">
                       <div className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-muted-foreground border-b border-border/40">
@@ -405,27 +417,13 @@ export function AccountDetailsDialog({
               </div>
 
               {/* Financials Section */}
-              {ticker && <div>
+              {ticker && !financialError && !financialLoading && financialData && <div>
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
                   <DollarSign className="h-4 w-4" />
                   Financials
                 </h3>
 
-                {financialLoading ? (
-                  <div className="rounded-lg border border-dashed border-border/60 bg-background/30 p-4 text-sm text-muted-foreground">
-                    Loading financial data for {ticker}...
-                  </div>
-                ) : financialError ? (
-                  <div className="rounded-lg border border-dashed border-border/60 bg-background/30 p-4 text-sm text-muted-foreground">
-                    <p className="font-medium">Unable to load financial data</p>
-                    <p className="mt-1">{financialError}</p>
-                  </div>
-                ) : !financialData ? (
-                  <div className="rounded-lg border border-dashed border-border/60 bg-background/30 p-4 text-sm text-muted-foreground">
-                    No financial data found for {ticker}.
-                  </div>
-                ) : (
-                  <div className="space-y-4">
+                <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
                       <InfoRow icon={Building2} label="Stock Ticker" value={financialData.inputTicker} />
                       <InfoRow icon={Building2} label="Exchange" value={financialData.exchange} />
@@ -481,14 +479,9 @@ export function AccountDetailsDialog({
                             />
                           </AreaChart>
                         </ChartContainer>
-                      ) : (
-                        <div className="h-[280px] flex items-center justify-center text-sm text-muted-foreground">
-                          Annual revenue trend not available.
-                        </div>
-                      )}
+                      ) : null}
                     </div>
                   </div>
-                )}
               </div>}
 
               {/* Rankings & Recognition Section */}
@@ -542,13 +535,8 @@ export function AccountDetailsDialog({
             </TabsContent>
 
             {/* Centers Tab */}
+            {accountCenters.length > 0 && (
             <TabsContent value="centers" className="mt-4">
-              {accountCenters.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <Building className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No centers found for this account</p>
-                </div>
-              ) : (
                 <div className="space-y-3">
                   {accountCenters.map((center, index) => (
                     <div
@@ -592,17 +580,12 @@ export function AccountDetailsDialog({
                     </div>
                   ))}
                 </div>
-              )}
             </TabsContent>
+            )}
 
             {/* Prospects Tab */}
+            {accountProspects.length > 0 && (
             <TabsContent value="prospects" className="mt-4">
-              {accountProspects.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <UserCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No prospects found for this account</p>
-                </div>
-              ) : (
                 <div className="space-y-3">
                   {accountProspects.map((prospect, index) => (
                     <div
@@ -645,8 +628,8 @@ export function AccountDetailsDialog({
                     </div>
                   ))}
                 </div>
-              )}
             </TabsContent>
+            )}
 
           </Tabs>
         </DialogContent>
