@@ -1,17 +1,8 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { Loader2 } from "lucide-react"
 
-interface DatabaseStatus {
-  hasUrl: boolean
-  hasConnection: boolean
-  urlLength: number
-  environment: string
-  error?: string
-}
-
 interface LoadingStateProps {
   connectionStatus?: string
-  dbStatus?: DatabaseStatus | null
 }
 
 export function LoadingState(_: LoadingStateProps) {

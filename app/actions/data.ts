@@ -74,6 +74,110 @@ export async function getProspects(): Promise<Prospect[]> {
 }
 
 // ============================================
+// DASHBOARD-OPTIMIZED QUERIES (specific columns only)
+// ============================================
+
+async function getDashboardAccounts(): Promise<Account[]> {
+  try {
+    const sqlClient = getSqlOrThrow()
+    return (await fetchWithRetry(
+      () => sqlClient`SELECT account_nasscom_status, account_nasscom_member_status, account_data_coverage,
+        account_source, account_type, account_global_legal_name, account_hq_stock_ticker,
+        account_hq_company_type, account_about, account_hq_key_offerings,
+        account_hq_city, account_hq_country, account_hq_region,
+        account_hq_sub_industry, account_hq_industry, account_hq_linkedin_link,
+        account_primary_category, account_primary_nature, account_hq_revenue,
+        account_hq_revenue_range, account_hq_employee_count, account_hq_employee_range,
+        account_hq_forbes_2000_rank, account_hq_fortune_500_rank,
+        account_first_center_year, years_in_india, account_hq_website,
+        account_center_employees, account_center_employees_range
+        FROM accounts ORDER BY account_global_legal_name`
+    )) as Account[]
+  } catch (error) {
+    console.error("Error fetching dashboard accounts:", error)
+    return []
+  }
+}
+
+async function getDashboardCenters(): Promise<Center[]> {
+  try {
+    const sqlClient = getSqlOrThrow()
+    return (await fetchWithRetry(
+      () => sqlClient`SELECT account_global_legal_name, cn_unique_key, center_status, center_inc_year,
+        announced_year, announced_month, center_end_year, center_name,
+        center_management_partner, center_jv_status, center_jv_name,
+        center_type, center_focus, center_website, center_linkedin,
+        center_city, center_state, center_country, center_country_iso2,
+        center_region, center_employees, center_employees_range,
+        center_business_segment, center_business_sub_segment,
+        center_boardline, center_account_website, lat, lng
+        FROM centers ORDER BY center_name`
+    )) as Center[]
+  } catch (error) {
+    console.error("Error fetching dashboard centers:", error)
+    return []
+  }
+}
+
+async function getDashboardFunctions(): Promise<Function[]> {
+  try {
+    const sqlClient = getSqlOrThrow()
+    return (await fetchWithRetry(
+      () => sqlClient`SELECT cn_unique_key, function_name FROM functions ORDER BY cn_unique_key`
+    )) as Function[]
+  } catch (error) {
+    console.error("Error fetching dashboard functions:", error)
+    return []
+  }
+}
+
+async function getDashboardServices(): Promise<Service[]> {
+  try {
+    const sqlClient = getSqlOrThrow()
+    return (await fetchWithRetry(
+      () => sqlClient`SELECT cn_unique_key, center_name, primary_service, focus_region,
+        service_it, service_erd, service_fna, service_hr,
+        service_procurement, service_sales_marketing, service_customer_support,
+        service_others, software_vendor, software_in_use
+        FROM services ORDER BY center_name`
+    )) as Service[]
+  } catch (error) {
+    console.error("Error fetching dashboard services:", error)
+    return []
+  }
+}
+
+async function getDashboardTech(): Promise<Tech[]> {
+  try {
+    const sqlClient = getSqlOrThrow()
+    return (await fetchWithRetry(
+      () => sqlClient`SELECT account_global_legal_name, cn_unique_key, software_in_use,
+        software_vendor, software_category
+        FROM tech ORDER BY account_global_legal_name, software_category, software_in_use`
+    )) as Tech[]
+  } catch (error) {
+    console.error("Error fetching dashboard tech:", error)
+    return []
+  }
+}
+
+async function getDashboardProspects(): Promise<Prospect[]> {
+  try {
+    const sqlClient = getSqlOrThrow()
+    return (await fetchWithRetry(
+      () => sqlClient`SELECT account_global_legal_name, prospect_full_name, prospect_first_name,
+        prospect_last_name, prospect_title, prospect_department, prospect_level,
+        prospect_email, prospect_linkedin_url, prospect_city, prospect_state,
+        prospect_country
+        FROM prospects ORDER BY prospect_last_name, prospect_first_name`
+    )) as Prospect[]
+  } catch (error) {
+    console.error("Error fetching dashboard prospects:", error)
+    return []
+  }
+}
+
+// ============================================
 // AGGREGATED DATA FUNCTIONS
 // ============================================
 
@@ -147,6 +251,41 @@ export async function getAllData(): Promise<AllDataResult> {
       services: [],
       tech: [],
       prospects: [],
+      error: error instanceof Error ? error.message : "Unknown database error",
+    }
+  }
+}
+
+/**
+ * Dashboard-optimized data fetch (specific columns, smaller payload).
+ * Used by the /api/dashboard route. Exports use getAllData() for full columns.
+ */
+export async function getDashboardData(): Promise<AllDataResult> {
+  try {
+    if (!process.env.DATABASE_URL) {
+      return { accounts: [], centers: [], functions: [], services: [], tech: [], prospects: [], error: "Database configuration missing" }
+    }
+
+    try {
+      getSqlOrThrow()
+    } catch {
+      return { accounts: [], centers: [], functions: [], services: [], tech: [], prospects: [], error: "Database connection failed" }
+    }
+
+    const [accounts, centers, functions, services, tech, prospects] = await Promise.all([
+      getDashboardAccounts(),
+      getDashboardCenters(),
+      getDashboardFunctions(),
+      getDashboardServices(),
+      getDashboardTech(),
+      getDashboardProspects(),
+    ])
+
+    return { accounts, centers, functions, services, tech, prospects, error: null } satisfies AllDataResult
+  } catch (error) {
+    console.error("Error fetching dashboard data:", error)
+    return {
+      accounts: [], centers: [], functions: [], services: [], tech: [], prospects: [],
       error: error instanceof Error ? error.message : "Unknown database error",
     }
   }

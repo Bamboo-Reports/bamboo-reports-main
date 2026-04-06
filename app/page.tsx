@@ -40,7 +40,6 @@ function DashboardContent(): JSX.Element | null {
     loading,
     error,
     connectionStatus,
-    databaseStatus,
     loadData,
   } = useDashboardData({ enabled: authReady && !!userId })
 
@@ -355,11 +354,8 @@ function DashboardContent(): JSX.Element | null {
 
     captureEvent(ANALYTICS_EVENTS.ERROR_STATE_SHOWN, {
       error_message: error,
-      has_database_status: Boolean(databaseStatus),
-      has_database_url: databaseStatus?.hasUrl ?? false,
-      has_database_connection: databaseStatus?.hasConnection ?? false,
     })
-  }, [error, databaseStatus])
+  }, [error])
 
   useEffect(() => {
     if (currentScreenRef.current === activeSection) {
@@ -492,14 +488,13 @@ function DashboardContent(): JSX.Element | null {
   }
 
   if (loading) {
-    return <LoadingState connectionStatus={connectionStatus} dbStatus={databaseStatus} />
+    return <LoadingState connectionStatus={connectionStatus} />
   }
 
   if (error) {
     return (
       <ErrorState
         error={error}
-        dbStatus={databaseStatus}
         onRetry={handleErrorRetry}
       />
     )
