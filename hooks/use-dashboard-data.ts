@@ -1,19 +1,10 @@
 import { useCallback, useEffect, useState } from "react"
-import { getAllData, testConnection, getDatabaseStatus } from "@/app/actions"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import type { Account, Center, Function, Service, Tech, Prospect } from "@/lib/types"
 
 interface UseDashboardDataOptions {
   enabled: boolean
-}
-
-interface DatabaseStatus {
-  hasUrl: boolean
-  hasConnection: boolean
-  urlLength: number
-  environment: string
-  error?: string
 }
 
 interface AllDataResult {
@@ -36,73 +27,23 @@ export function useDashboardData({ enabled }: UseDashboardDataOptions) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [connectionStatus, setConnectionStatus] = useState<string>("")
-  const [databaseStatus, setDatabaseStatus] = useState<DatabaseStatus | null>(null)
-
-  const checkDatabaseStatus = useCallback(async () => {
-    try {
-      const status = await getDatabaseStatus()
-      setDatabaseStatus(status)
-      console.log("Database status:", status)
-      return status
-    } catch (err) {
-      console.error("Failed to check database status:", err)
-      return null
-    }
-  }, [])
-
-  const testDatabaseConnection = useCallback(async () => {
-    try {
-      const result = await testConnection()
-      setConnectionStatus(result.message)
-      return result.success
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Connection test failed"
-      setConnectionStatus(errorMessage)
-      return false
-    }
-  }, [])
 
   const loadData = useCallback(async () => {
     const startedAt = Date.now()
     try {
       setLoading(true)
       setError(null)
-      setConnectionStatus("Checking database configuration...")
-
-      const status = await checkDatabaseStatus()
-      if (status && !status.hasUrl) {
-        setError("Database URL not configured. Please check environment variables.")
-        setConnectionStatus("Database URL missing")
-        captureEvent(ANALYTICS_EVENTS.DATA_LOAD_FAILED, {
-          failure_reason: "database_url_missing",
-          duration_ms: Date.now() - startedAt,
-        })
-        return
-      }
-
-      if (status && !status.hasConnection) {
-        setError("Database connection could not be initialized.")
-        setConnectionStatus("Connection initialization failed")
-        captureEvent(ANALYTICS_EVENTS.DATA_LOAD_FAILED, {
-          failure_reason: "connection_initialization_failed",
-          duration_ms: Date.now() - startedAt,
-        })
-        return
-      }
-
-      setConnectionStatus("Testing database connection...")
-      const connectionOk = await testDatabaseConnection()
-      if (!connectionOk) {
-        setError("Database connection test failed. Please check your database configuration.")
-        captureEvent(ANALYTICS_EVENTS.DATA_LOAD_FAILED, {
-          failure_reason: "connection_test_failed",
-          duration_ms: Date.now() - startedAt,
-        })
-        return
-      }
-
       setConnectionStatus("Loading data from database...")
-      const data = await getAllData() as AllDataResult
+      setAccounts([])
+      setCenters([])
+      setFunctions([])
+      setServices([])
+      setTech([])
+      setProspects([])
+
+      const res = await fetch("/api/dashboard")
+      if (!res.ok) throw new Error(`Failed to load data: ${res.status}`)
+      const data = (await res.json()) as AllDataResult
 
       if (data.error) {
         setError(`Database error: ${data.error}`)
@@ -171,7 +112,7 @@ export function useDashboardData({ enabled }: UseDashboardDataOptions) {
     } finally {
       setLoading(false)
     }
-  }, [checkDatabaseStatus, testDatabaseConnection])
+  }, [])
 
   useEffect(() => {
     if (!enabled) return
@@ -188,7 +129,6 @@ export function useDashboardData({ enabled }: UseDashboardDataOptions) {
     loading,
     error,
     connectionStatus,
-    databaseStatus,
     loadData,
   }
 }

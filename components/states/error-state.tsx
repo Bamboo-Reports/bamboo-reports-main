@@ -1,25 +1,16 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle, Info, Database, RefreshCw, ExternalLink, Copy } from "lucide-react"
+import { AlertCircle, Database, ExternalLink, Info, RefreshCw, Copy } from "lucide-react"
 import { copyToClipboard } from "@/lib/utils/helpers"
-
-interface DatabaseStatus {
-  hasUrl: boolean
-  hasConnection: boolean
-  urlLength: number
-  environment: string
-  error?: string
-}
 
 interface ErrorStateProps {
   error: string
-  dbStatus?: DatabaseStatus | null
   onRetry: () => void
 }
 
-export function ErrorState({ error, dbStatus, onRetry }: ErrorStateProps) {
-  const isUrlMissing = dbStatus && !dbStatus.hasUrl
+export function ErrorState({ error, onRetry }: ErrorStateProps) {
+  const isUrlMissing = error.toLowerCase().includes("database") && error.toLowerCase().includes("missing")
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -121,36 +112,6 @@ export function ErrorState({ error, dbStatus, onRetry }: ErrorStateProps) {
                     database → Connection Details → Copy the connection string.
                   </AlertDescription>
                 </Alert>
-              </div>
-            )}
-
-            {dbStatus && (
-              <div className="w-full bg-muted p-4 rounded-lg">
-                <h4 className="font-medium text-foreground mb-2">Debug Information:</h4>
-                <div className="text-sm space-y-1">
-                  <div className="flex justify-between">
-                    <span>Database URL:</span>
-                    <span className={dbStatus.hasUrl ? "text-green-600 dark:text-green-500" : "text-red-600 dark:text-red-500"}>
-                      {dbStatus.hasUrl ? "✓ Configured" : "✗ Missing"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Connection:</span>
-                    <span className={dbStatus.hasConnection ? "text-green-600 dark:text-green-500" : "text-red-600 dark:text-red-500"}>
-                      {dbStatus.hasConnection ? "✓ Initialized" : "✗ Failed"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Environment:</span>
-                    <span className="text-muted-foreground">{dbStatus.environment}</span>
-                  </div>
-                  {dbStatus.urlLength > 0 && (
-                    <div className="flex justify-between">
-                      <span>URL Length:</span>
-                      <span className="text-muted-foreground">{dbStatus.urlLength} chars</span>
-                    </div>
-                  )}
-                </div>
               </div>
             )}
 

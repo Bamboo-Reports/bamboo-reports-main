@@ -36,7 +36,7 @@ export function getSql(): SqlClient {
 /**
  * Retry logic for database operations
  */
-export async function fetchWithRetry<T>(fn: () => Promise<T>, retries = 3, delay = 1000): Promise<T> {
+export async function fetchWithRetry<T>(fn: () => Promise<T>, retries = 2, delay = 500): Promise<T> {
   for (let i = 0; i < retries; i++) {
     try {
       return await fn()
