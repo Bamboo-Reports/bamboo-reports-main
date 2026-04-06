@@ -196,11 +196,12 @@ export const SummaryCards = React.memo(function SummaryCards({
               }
             } : undefined}
             className={cn(
-              'relative overflow-hidden border border-border/70 bg-gradient-to-br from-card via-card to-secondary/20 shadow-[0_14px_42px_-30px_rgba(0,0,0,0.45)] transition-transform duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+              'relative overflow-hidden border bg-gradient-to-br from-card via-card to-secondary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-300 ease-out',
               card.clickable && 'cursor-pointer select-none',
               isActive
-                ? 'ring-2 ring-sidebar-ring border-sidebar-ring/70 shadow-[0_18px_55px_-35px_rgba(0,0,0,0.6)]'
-                : card.clickable ? 'hover:-translate-y-0.5' : ''
+                ? 'ring-2 ring-sidebar-ring border-sidebar-ring/70 shadow-[0_18px_55px_-35px_rgba(0,0,0,0.6)] scale-[1.02]'
+                : 'border-border/70 shadow-[0_14px_42px_-30px_rgba(0,0,0,0.45)] scale-100',
+              !isActive && card.clickable && 'hover:-translate-y-0.5 hover:shadow-[0_16px_48px_-32px_rgba(0,0,0,0.5)]'
             )}
           >
             <div
@@ -237,6 +238,20 @@ export const SummaryCards = React.memo(function SummaryCards({
                 {compact ? formatCompactNumber(card.total) : card.total.toLocaleString()} total
               </span>
             </CardContent>
+            {/* Active indicator bar */}
+            {card.clickable && (
+              <div
+                className="absolute bottom-0 left-0 right-0 h-[2.5px] transition-all duration-300 ease-out"
+                style={{
+                  background: isActive
+                    ? `linear-gradient(90deg, transparent, hsl(var(${card.colorVar})), transparent)`
+                    : 'transparent',
+                  opacity: isActive ? 1 : 0,
+                  transform: isActive ? 'scaleX(1)' : 'scaleX(0)',
+                }}
+                aria-hidden="true"
+              />
+            )}
           </Card>
         )
       })}

@@ -221,7 +221,9 @@ export function FiltersSidebar({
           <AccordionItem value="accounts" className="overflow-hidden rounded-xl border border-border/70 bg-secondary/30 px-3 data-[state=open]:bg-background data-[state=open]:shadow-sm">
             <AccordionTrigger className="py-3 text-sm font-semibold hover:no-underline">
               <div className="flex items-center gap-2.5">
-                <Building className="h-4 w-4 text-primary" />
+                <div className="flex h-5 w-5 shrink-0 items-center justify-center">
+                  <Building className="h-4 w-4 text-primary" />
+                </div>
                 <span className="uppercase tracking-wider text-[12px]">Account Attributes</span>
               </div>
             </AccordionTrigger>
@@ -252,7 +254,9 @@ export function FiltersSidebar({
           <AccordionItem value="centers" className="overflow-hidden rounded-xl border border-border/70 bg-secondary/30 px-3 data-[state=open]:bg-background data-[state=open]:shadow-sm">
             <AccordionTrigger className="py-3 text-sm font-semibold hover:no-underline">
               <div className="flex items-center gap-2.5">
-                <Briefcase className="h-4 w-4 text-[hsl(var(--chart-2))]" />
+                <div className="flex h-5 w-5 shrink-0 items-center justify-center">
+                  <Briefcase className="h-4 w-4 text-[hsl(var(--chart-2))]" />
+                </div>
                 <span className="uppercase tracking-wider text-[12px]">Center Attributes</span>
               </div>
             </AccordionTrigger>
@@ -277,7 +281,9 @@ export function FiltersSidebar({
           <AccordionItem value="prospects" className="overflow-hidden rounded-xl border border-border/70 bg-secondary/30 px-3 data-[state=open]:bg-background data-[state=open]:shadow-sm">
             <AccordionTrigger className="py-3 text-sm font-semibold hover:no-underline">
               <div className="flex items-center gap-2.5">
-                <Users className="h-4 w-4 text-[hsl(var(--chart-3))]" />
+                <div className="flex h-5 w-5 shrink-0 items-center justify-center">
+                  <Users className="h-4 w-4 text-[hsl(var(--chart-3))]" />
+                </div>
                 <span className="uppercase tracking-wider text-[12px]">Prospect Attributes</span>
               </div>
             </AccordionTrigger>

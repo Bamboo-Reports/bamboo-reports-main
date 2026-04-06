@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TabsContent } from "@/components/ui/tabs"
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -50,6 +50,11 @@ export function ProspectsTab({
     direction: null,
   })
   const [dataLayout, setDataLayout] = useState<"table" | "grid">("table")
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    scrollContainerRef.current?.scrollTo({ top: 0 })
+  }, [currentPage])
   const previousDataLayoutRef = React.useRef<"table" | "grid">("table")
   const openedRecordRef = React.useRef<{
     recordId: string
@@ -215,7 +220,7 @@ export function ProspectsTab({
 
       {/* Charts Section */}
       {prospectsView === "chart" && (
-        <div className="w-full mb-6 animate-fade-in">
+        <div className="w-full mb-6 view-content">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <PieChartCard
               title="Department"
@@ -235,7 +240,7 @@ export function ProspectsTab({
 
        {/* Data Table */}
        {prospectsView === "data" && (
-         <Card className="w-full flex flex-col h-[var(--dashboard-panel-height)] border shadow-sm animate-fade-in">
+         <Card className="w-full flex flex-col h-[var(--dashboard-panel-height)] border shadow-sm view-content">
            <CardHeader className="shrink-0 px-6 py-3">
              <div className="flex flex-wrap items-center gap-3">
                <CardTitle className="text-base">Prospects Data</CardTitle>
@@ -263,7 +268,7 @@ export function ProspectsTab({
              </div>
            </CardHeader>
             <CardContent className="p-0 flex flex-col flex-1 overflow-hidden">
-              <div className="flex-1 overflow-auto">
+              <div ref={scrollContainerRef} key={dataLayout} className="flex-1 overflow-auto view-content">
                 {dataLayout === "table" ? (
                   <Table className="table-fixed">
                     <TableHeader>

@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TabsContent } from "@/components/ui/tabs"
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -61,6 +61,11 @@ export function CentersTab({
   })
   const [dataLayout, setDataLayout] = useState<"table" | "grid">("table")
   const [mapMode, setMapMode] = useState<"city" | "state">("state")
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    scrollContainerRef.current?.scrollTo({ top: 0 })
+  }, [currentPage])
   const previousDataLayoutRef = React.useRef<"table" | "grid">("table")
   const previousMapModeRef = React.useRef<"city" | "state">("state")
   const openedRecordRef = React.useRef<{
@@ -235,7 +240,7 @@ export function CentersTab({
 
       {/* Charts Section */}
       {centersView === "chart" && (
-        <div className="w-full mb-6 animate-fade-in">
+        <div className="w-full mb-6 view-content">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <PieChartCard
               title="Center Type"
@@ -267,7 +272,7 @@ export function CentersTab({
 
       {/* Map Section */}
        {centersView === "map" && (
-         <Card data-tour="map-view" className="w-full flex flex-col h-[var(--dashboard-panel-height)] border shadow-sm animate-fade-in">
+         <Card data-tour="map-view" className="w-full flex flex-col h-[var(--dashboard-panel-height)] border shadow-sm view-content">
            <CardHeader className="shrink-0 px-6 py-3">
              <div className="flex items-center gap-3">
                <CardTitle className="text-base">Centers Map</CardTitle>
@@ -304,7 +309,7 @@ export function CentersTab({
 
        {/* Data Table */}
        {centersView === "data" && (
-         <Card className="w-full flex flex-col h-[var(--dashboard-panel-height)] border shadow-sm animate-fade-in">
+         <Card className="w-full flex flex-col h-[var(--dashboard-panel-height)] border shadow-sm view-content">
            <CardHeader className="shrink-0 px-6 py-3">
              <div className="flex flex-wrap items-center gap-3">
                <CardTitle className="text-base">Centers Data</CardTitle>
@@ -332,7 +337,7 @@ export function CentersTab({
              </div>
            </CardHeader>
             <CardContent className="p-0 flex flex-col flex-1 overflow-hidden">
-              <div className="flex-1 overflow-auto">
+              <div ref={scrollContainerRef} key={dataLayout} className="flex-1 overflow-auto view-content">
                 {dataLayout === "table" ? (
                   <Table className="table-fixed">
                     <TableHeader>
