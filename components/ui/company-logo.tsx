@@ -79,19 +79,8 @@ export function CompanyLogo({
     )
   }
 
-  // Construct Logo.dev URL with optimizations
-  const logoUrl = new URL("https://img.logo.dev/" + cleanDomain)
-
-  // Use environment variable for API key, fallback to a placeholder for development
-  const apiToken = process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN || "pk_REPLACE_WITH_YOUR_TOKEN"
-  logoUrl.searchParams.set("token", apiToken)
-  logoUrl.searchParams.set("size", sizeConfig.img.toString())
-  logoUrl.searchParams.set("format", "png") // PNG for better quality with transparency
-
-  // Add theme parameter if not auto
-  if (theme !== "auto") {
-    logoUrl.searchParams.set("theme", theme)
-  }
+  // Construct Hunter.io logo URL (no authentication required)
+  const logoUrl = `https://logos.hunter.io/${cleanDomain}`
 
   return (
     <div
@@ -110,7 +99,7 @@ export function CompanyLogo({
       )}
 
       <Image
-        src={logoUrl.toString()}
+        src={logoUrl}
         alt={`${companyName} logo`}
         fill
         className={cn(
