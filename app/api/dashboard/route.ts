@@ -1,4 +1,5 @@
 import { getDashboardData } from "@/app/actions/data"
+import { resolveAuthenticatedUserId, extractBearerToken } from "@/lib/auth/server"
 import { promisify } from "node:util"
 import { gzip as gzipCb } from "node:zlib"
 
@@ -60,7 +61,29 @@ function revalidateInBackground() {
 // HANDLERS
 // ============================================
 
+async function requireAuth(request: Request): Promise<Response | null> {
+  const token = extractBearerToken(request.headers.get("authorization"))
+  if (!token) {
+    return new Response(JSON.stringify({ error: "Missing authorization token" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    })
+  }
+  try {
+    await resolveAuthenticatedUserId(token)
+    return null // authenticated
+  } catch {
+    return new Response(JSON.stringify({ error: "Invalid or expired token" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    })
+  }
+}
+
 export async function GET(request: Request) {
+  const authError = await requireAuth(request)
+  if (authError) return authError
+
   const start = Date.now()
   const acceptEncoding = request.headers.get("accept-encoding") || ""
   const age = cache.timestamp ? Math.round((Date.now() - cache.timestamp) / 1000) : 0
@@ -92,7 +115,10 @@ export async function GET(request: Request) {
  * POST handler to invalidate the cache.
  * Called by the client before a force-refresh.
  */
-export async function POST() {
+export async function POST(request: Request) {
+  const authError = await requireAuth(request)
+  if (authError) return authError
+
   cache = { gzipped: null, json: null, timestamp: 0, revalidating: false }
   console.log("[Cache] Invalidated via POST")
   return new Response(JSON.stringify({ ok: true }), {

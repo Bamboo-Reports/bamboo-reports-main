@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
+import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import type { Account, Center, Function, Service, Tech, Prospect } from "@/lib/types"
 
 interface UseDashboardDataOptions {
@@ -41,12 +42,30 @@ export function useDashboardData({ enabled }: UseDashboardDataOptions) {
       setTech([])
       setProspects([])
 
+      // Get auth token for API requests
+      const supabase = getSupabaseBrowserClient()
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData.session?.access_token
+      if (!accessToken) {
+        setError("Not authenticated. Please sign in.")
+        setConnectionStatus("Authentication required")
+        setLoading(false)
+        return
+      }
+      const authHeaders = { Authorization: `Bearer ${accessToken}` }
+
       // Invalidate server cache if force-refreshing
       if (forceRefresh) {
-        await fetch("/api/dashboard", { method: "POST" })
+        await fetch("/api/dashboard", { method: "POST", headers: authHeaders })
       }
 
-      const res = await fetch("/api/dashboard")
+      const res = await fetch("/api/dashboard", { headers: authHeaders })
+      if (res.status === 401) {
+        setError("Session expired. Please sign in again.")
+        setConnectionStatus("Authentication failed")
+        setLoading(false)
+        return
+      }
       if (!res.ok) throw new Error(`Failed to load data: ${res.status}`)
       const data = (await res.json()) as AllDataResult
 

@@ -1,6 +1,6 @@
 "use server"
 
-import { createClient } from "@supabase/supabase-js"
+import { resolveAuthenticatedUserId } from "@/lib/auth/server"
 import { getSqlOrThrow, fetchWithRetry } from "@/lib/db/connection"
 
 const DEFAULT_LIMIT = 20
@@ -70,34 +70,6 @@ function normalizeTableName(tableName?: string | null): string | null {
   if (!tableName) return null
   const normalized = tableName.trim().toLowerCase()
   return normalized || null
-}
-
-async function resolveAuthenticatedUserId(accessToken: string): Promise<string> {
-  const token = accessToken?.trim()
-  if (!token) {
-    throw new Error("Missing access token.")
-  }
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error("Supabase environment variables are not configured.")
-  }
-
-  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-    },
-  })
-
-  const { data, error } = await supabase.auth.getUser(token)
-  if (error || !data.user?.id) {
-    throw new Error("Supabase authentication failed.")
-  }
-
-  return data.user.id
 }
 
 /**
