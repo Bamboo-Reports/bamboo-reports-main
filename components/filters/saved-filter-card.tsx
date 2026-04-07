@@ -4,6 +4,13 @@ import { Calendar, Edit, Filter, Share2, Trash2, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu"
 import type { Filters } from "@/lib/types"
 import { calculateActiveFilters } from "@/lib/dashboard/filter-summary"
 import {
@@ -54,133 +61,165 @@ export const SavedFilterCard = memo(({
     minCenterIncYear !== DEFAULT_CENTER_INC_YEAR_RANGE[0] || maxCenterIncYear !== DEFAULT_CENTER_INC_YEAR_RANGE[1]
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">{filter.name}</CardTitle>
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary">{filterCount()} filters</Badge>
-            {!isOwner && filter.owner_email && (
-              <Badge variant="outline" className="text-xs gap-1">
-                <Users className="h-3 w-3" />
-                Shared by {filter.owner_email}
-              </Badge>
-            )}
-            {isOwner && onShare && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => onShare(filter)}
-                aria-label={`Share saved filter ${filter.name}`}
-              >
-                <Share2 className="h-4 w-4" />
-              </Button>
-            )}
-            {isOwner && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => onEdit(filter)}
-                aria-label={`Edit saved filter ${filter.name}`}
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
-            )}
-            {isOwner && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                onClick={() => onDelete(filter)}
-                aria-label={`Delete saved filter ${filter.name}`}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <Calendar className="h-3 w-3" />
-            Created: {new Date(filter.created_at).toLocaleDateString()}
-          </div>
-          {filter.updated_at !== filter.created_at && (
-            <div className="flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
-              Updated: {new Date(filter.updated_at).toLocaleDateString()}
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg">{filter.name}</CardTitle>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">{filterCount()} filters</Badge>
+                {!isOwner && filter.owner_email && (
+                  <Badge variant="outline" className="text-xs gap-1">
+                    <Users className="h-3 w-3" />
+                    Shared by {filter.owner_email}
+                  </Badge>
+                )}
+                {isOwner && onShare && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onShare(filter)}
+                    aria-label={`Share saved filter ${filter.name}`}
+                  >
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                )}
+                {isOwner && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onEdit(filter)}
+                    aria-label={`Edit saved filter ${filter.name}`}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                )}
+                {isOwner && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => onDelete(filter)}
+                    aria-label={`Delete saved filter ${filter.name}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </div>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">Filter Details:</span>
-            <Button variant="outline" size="sm" onClick={() => onLoad(filter)}>
-              <Filter className="h-4 w-4 mr-2" />
-              Load Filters
-            </Button>
-          </div>
-          <div className="flex flex-wrap gap-1">
-            {renderFilterValues(filter.filters.accountGlobalLegalNameKeywords, "Account Name")}
-            {renderFilterValues(filter.filters.accountHqRegionValues, "Region")}
-            {renderFilterValues(filter.filters.accountHqCountryValues, "Country")}
-            {renderFilterValues(filter.filters.accountHqIndustryValues, "Industry")}
-            {renderFilterValues(filter.filters.accountDataCoverageValues, "Data Coverage")}
-            {renderFilterValues(filter.filters.accountSourceValues, "Account Source")}
-            {renderFilterValues(filter.filters.accountTypeValues, "Account Type")}
-            {renderFilterValues(filter.filters.accountPrimaryCategoryValues, "Category")}
-            {renderFilterValues(filter.filters.accountPrimaryNatureValues, "Nature")}
-            {renderFilterValues(filter.filters.accountNasscomStatusValues, "NASSCOM")}
-            {renderFilterValues(filter.filters.accountHqEmployeeRangeValues, "Emp Range")}
-            {renderFilterValues(filter.filters.accountCenterEmployeesRangeValues, "Center Emp")}
-            {renderFilterValues(filter.filters.centerTypeValues, "Type")}
-            {renderFilterValues(filter.filters.centerFocusValues, "Focus")}
-            {renderFilterValues(filter.filters.centerCityValues, "City")}
-            {renderFilterValues(filter.filters.centerStateValues, "State")}
-            {renderFilterValues(filter.filters.centerCountryValues, "Center Country")}
-            {renderFilterValues(filter.filters.centerEmployeesRangeValues, "Center Employees")}
-            {renderFilterValues(filter.filters.centerStatusValues, "Center Status")}
-            {renderFilterValues(filter.filters.functionNameValues, "Function")}
-            {renderFilterValues(filter.filters.techSoftwareInUseKeywords, "Software In Use")}
-            {renderFilterValues(filter.filters.prospectDepartmentValues, "Department")}
-            {renderFilterValues(filter.filters.prospectLevelValues, "Prospect Level")}
-            {renderFilterValues(filter.filters.prospectCityValues, "Prospect City")}
-            {renderFilterValues(filter.filters.prospectTitleKeywords, "Job Title")}
-            {revenueFilterActive && (
-              <FilterBadge
-                filterKey="Revenue"
-                value={`${minRevenue.toLocaleString()} - ${maxRevenue.toLocaleString()}`}
-              />
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <Calendar className="h-3 w-3" />
+                Created: {new Date(filter.created_at).toLocaleDateString()}
+              </div>
+              {filter.updated_at !== filter.created_at && (
+                <div className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  Updated: {new Date(filter.updated_at).toLocaleDateString()}
+                </div>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Filter Details:</span>
+                <Button variant="outline" size="sm" onClick={() => onLoad(filter)}>
+                  <Filter className="h-4 w-4 mr-2" />
+                  Load Filters
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {renderFilterValues(filter.filters.accountGlobalLegalNameKeywords, "Account Name")}
+                {renderFilterValues(filter.filters.accountHqRegionValues, "Region")}
+                {renderFilterValues(filter.filters.accountHqCountryValues, "Country")}
+                {renderFilterValues(filter.filters.accountHqIndustryValues, "Industry")}
+                {renderFilterValues(filter.filters.accountDataCoverageValues, "Data Coverage")}
+                {renderFilterValues(filter.filters.accountSourceValues, "Account Source")}
+                {renderFilterValues(filter.filters.accountTypeValues, "Account Type")}
+                {renderFilterValues(filter.filters.accountPrimaryCategoryValues, "Category")}
+                {renderFilterValues(filter.filters.accountPrimaryNatureValues, "Nature")}
+                {renderFilterValues(filter.filters.accountNasscomStatusValues, "NASSCOM")}
+                {renderFilterValues(filter.filters.accountHqEmployeeRangeValues, "Emp Range")}
+                {renderFilterValues(filter.filters.accountCenterEmployeesRangeValues, "Center Emp")}
+                {renderFilterValues(filter.filters.centerTypeValues, "Type")}
+                {renderFilterValues(filter.filters.centerFocusValues, "Focus")}
+                {renderFilterValues(filter.filters.centerCityValues, "City")}
+                {renderFilterValues(filter.filters.centerStateValues, "State")}
+                {renderFilterValues(filter.filters.centerCountryValues, "Center Country")}
+                {renderFilterValues(filter.filters.centerEmployeesRangeValues, "Center Employees")}
+                {renderFilterValues(filter.filters.centerStatusValues, "Center Status")}
+                {renderFilterValues(filter.filters.functionNameValues, "Function")}
+                {renderFilterValues(filter.filters.techSoftwareInUseKeywords, "Software In Use")}
+                {renderFilterValues(filter.filters.prospectDepartmentValues, "Department")}
+                {renderFilterValues(filter.filters.prospectLevelValues, "Prospect Level")}
+                {renderFilterValues(filter.filters.prospectCityValues, "Prospect City")}
+                {renderFilterValues(filter.filters.prospectTitleKeywords, "Job Title")}
+                {revenueFilterActive && (
+                  <FilterBadge
+                    filterKey="Revenue"
+                    value={`${minRevenue.toLocaleString()} - ${maxRevenue.toLocaleString()}`}
+                  />
+                )}
+                {filter.filters.accountHqRevenueIncludeNull && (
+                  <FilterBadge filterKey="Revenue" value="Include null revenue" />
+                )}
+                {yearsInIndiaFilterActive && (
+                  <FilterBadge
+                    filterKey="Years In India"
+                    value={`${minYearsInIndia.toLocaleString()} - ${maxYearsInIndia.toLocaleString()}`}
+                  />
+                )}
+                {filter.filters.yearsInIndiaIncludeNull && (
+                  <FilterBadge filterKey="Years In India" value="Include null/zero" />
+                )}
+                {centerIncYearFilterActive && (
+                  <FilterBadge
+                    filterKey="Incorporation Timeline"
+                    value={`${minCenterIncYear.toLocaleString()} - ${maxCenterIncYear.toLocaleString()}`}
+                  />
+                )}
+                {filter.filters.centerIncYearIncludeNull && (
+                  <FilterBadge filterKey="Incorporation Timeline" value="Include null/zero" />
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </ContextMenuTrigger>
+      <ContextMenuContent className="w-48">
+        <ContextMenuItem onClick={() => onLoad(filter)}>
+          <Filter className="h-4 w-4" />
+          Load Filters
+        </ContextMenuItem>
+        {isOwner && (
+          <>
+            <ContextMenuSeparator />
+            {onShare && (
+              <ContextMenuItem onClick={() => onShare(filter)}>
+                <Share2 className="h-4 w-4" />
+                Share
+              </ContextMenuItem>
             )}
-            {filter.filters.accountHqRevenueIncludeNull && (
-              <FilterBadge filterKey="Revenue" value="Include null revenue" />
-            )}
-            {yearsInIndiaFilterActive && (
-              <FilterBadge
-                filterKey="Years In India"
-                value={`${minYearsInIndia.toLocaleString()} - ${maxYearsInIndia.toLocaleString()}`}
-              />
-            )}
-            {filter.filters.yearsInIndiaIncludeNull && (
-              <FilterBadge filterKey="Years In India" value="Include null/zero" />
-            )}
-            {centerIncYearFilterActive && (
-              <FilterBadge
-                filterKey="Incorporation Timeline"
-                value={`${minCenterIncYear.toLocaleString()} - ${maxCenterIncYear.toLocaleString()}`}
-              />
-            )}
-            {filter.filters.centerIncYearIncludeNull && (
-              <FilterBadge filterKey="Incorporation Timeline" value="Include null/zero" />
-            )}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+            <ContextMenuItem onClick={() => onEdit(filter)}>
+              <Edit className="h-4 w-4" />
+              Edit
+            </ContextMenuItem>
+            <ContextMenuItem
+              className="text-destructive focus:text-destructive focus:bg-destructive/10"
+              onClick={() => onDelete(filter)}
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete
+            </ContextMenuItem>
+          </>
+        )}
+      </ContextMenuContent>
+    </ContextMenu>
   )
 })
 SavedFilterCard.displayName = "SavedFilterCard"
