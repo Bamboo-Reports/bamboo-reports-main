@@ -28,7 +28,7 @@ export function useDashboardData({ enabled }: UseDashboardDataOptions) {
   const [error, setError] = useState<string | null>(null)
   const [connectionStatus, setConnectionStatus] = useState<string>("")
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (forceRefresh?: boolean) => {
     const startedAt = Date.now()
     try {
       setLoading(true)
@@ -40,6 +40,11 @@ export function useDashboardData({ enabled }: UseDashboardDataOptions) {
       setServices([])
       setTech([])
       setProspects([])
+
+      // Invalidate server cache if force-refreshing
+      if (forceRefresh) {
+        await fetch("/api/dashboard", { method: "POST" })
+      }
 
       const res = await fetch("/api/dashboard")
       if (!res.ok) throw new Error(`Failed to load data: ${res.status}`)

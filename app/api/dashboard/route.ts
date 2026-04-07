@@ -6,41 +6,122 @@ const gzip = promisify(gzipCb)
 
 export const dynamic = "force-dynamic"
 
-export async function GET(request: Request) {
-  const start = Date.now()
-  const acceptEncoding = request.headers.get("accept-encoding") || ""
+// ============================================
+// IN-MEMORY SWR CACHE
+// ============================================
 
+const CACHE_TTL = Number(process.env.DASHBOARD_CACHE_TTL_MS) || 5 * 60 * 1000 // 5 minutes
+
+let cache: {
+  gzipped: Buffer | null
+  json: string | null
+  timestamp: number
+  revalidating: boolean
+} = {
+  gzipped: null,
+  json: null,
+  timestamp: 0,
+  revalidating: false,
+}
+
+async function fetchAndCache() {
   const queryStart = Date.now()
   const data = await getDashboardData()
   const queryMs = Date.now() - queryStart
 
   const json = JSON.stringify(data)
-  const rawSize = json.length
+  const compressStart = Date.now()
+  const gzipped = await gzip(Buffer.from(json))
+  const compressMs = Date.now() - compressStart
 
-  console.log(`[/api/dashboard] DB queries: ${queryMs}ms`)
-  console.log(`[/api/dashboard] Raw JSON: ${(rawSize / 1024 / 1024).toFixed(1)}MB`)
+  cache = {
+    gzipped,
+    json,
+    timestamp: Date.now(),
+    revalidating: false,
+  }
 
-  // Async gzip if client supports it (non-blocking)
+  console.log(`[Cache] Populated: DB ${queryMs}ms, gzip ${compressMs}ms, raw ${(json.length / 1024 / 1024).toFixed(1)}MB, compressed ${(gzipped.length / 1024 / 1024).toFixed(1)}MB`)
+
+  return { gzipped, json }
+}
+
+function revalidateInBackground() {
+  if (cache.revalidating) return
+  cache.revalidating = true
+  console.log("[Cache] Stale — revalidating in background")
+  fetchAndCache().catch((err) => {
+    console.error("[Cache] Background revalidation failed:", err)
+    cache.revalidating = false
+  })
+}
+
+// ============================================
+// HANDLERS
+// ============================================
+
+export async function GET(request: Request) {
+  const start = Date.now()
+  const acceptEncoding = request.headers.get("accept-encoding") || ""
+  const age = cache.timestamp ? Math.round((Date.now() - cache.timestamp) / 1000) : 0
+  const isFresh = cache.timestamp > 0 && Date.now() - cache.timestamp < CACHE_TTL
+  const isStale = cache.timestamp > 0 && !isFresh
+
+  // Cache HIT — fresh data, return immediately
+  if (isFresh && cache.gzipped && cache.json) {
+    console.log(`[Cache] HIT (age: ${age}s, TTL: ${CACHE_TTL / 1000}s) — ${Date.now() - start}ms`)
+    return buildResponse(cache.gzipped, cache.json, acceptEncoding, "HIT", age)
+  }
+
+  // Cache STALE — return stale data immediately, revalidate in background
+  if (isStale && cache.gzipped && cache.json) {
+    console.log(`[Cache] STALE (age: ${age}s, TTL: ${CACHE_TTL / 1000}s) — ${Date.now() - start}ms`)
+    revalidateInBackground()
+    return buildResponse(cache.gzipped, cache.json, acceptEncoding, "STALE", age)
+  }
+
+  // Cache MISS — fetch from DB, cache, return
+  console.log("[Cache] MISS — fetching from database")
+  const { gzipped, json } = await fetchAndCache()
+  console.log(`[Cache] MISS total: ${Date.now() - start}ms`)
+
+  return buildResponse(gzipped, json, acceptEncoding, "MISS", 0)
+}
+
+/**
+ * POST handler to invalidate the cache.
+ * Called by the client before a force-refresh.
+ */
+export async function POST() {
+  cache = { gzipped: null, json: null, timestamp: 0, revalidating: false }
+  console.log("[Cache] Invalidated via POST")
+  return new Response(JSON.stringify({ ok: true }), {
+    headers: { "Content-Type": "application/json" },
+  })
+}
+
+// ============================================
+// HELPERS
+// ============================================
+
+function buildResponse(
+  gzipped: Buffer,
+  json: string,
+  acceptEncoding: string,
+  cacheStatus: "HIT" | "MISS" | "STALE",
+  age: number
+) {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "X-Cache": cacheStatus,
+    "X-Cache-Age": String(age),
+  }
+
   if (acceptEncoding.includes("gzip")) {
-    const compressStart = Date.now()
-    const compressed = await gzip(Buffer.from(json))
-    const compressMs = Date.now() - compressStart
-
-    console.log(`[/api/dashboard] Gzip'd: ${(compressed.length / 1024 / 1024).toFixed(1)}MB (${compressMs}ms to compress)`)
-    console.log(`[/api/dashboard] Total: ${Date.now() - start}ms`)
-
-    return new Response(compressed, {
-      headers: {
-        "Content-Type": "application/json",
-        "Content-Encoding": "gzip",
-      },
+    return new Response(new Uint8Array(gzipped), {
+      headers: { ...headers, "Content-Encoding": "gzip" },
     })
   }
 
-  console.log(`[/api/dashboard] No gzip support, sending raw`)
-  console.log(`[/api/dashboard] Total: ${Date.now() - start}ms`)
-
-  return new Response(json, {
-    headers: { "Content-Type": "application/json" },
-  })
+  return new Response(json, { headers })
 }

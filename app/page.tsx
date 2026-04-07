@@ -493,7 +493,7 @@ function DashboardContent(): JSX.Element | null {
 
   const handleRefresh = useCallback(() => {
     captureEvent(ANALYTICS_EVENTS.DATA_REFRESH_CLICKED)
-    loadData()
+    loadData(true)
   }, [loadData])
 
   const handleErrorRetry = useCallback(() => {
