@@ -2,7 +2,7 @@
 
 A comprehensive breakdown of every technology used in the Bamboo Reports project, organized by category. This document is designed to give both technical and non-technical stakeholders a clear understanding of what powers the application and why each technology was chosen.
 
-> **Last Updated:** March 2026
+> **Last Updated:** April 2026
 > **Audience:** Engineering leads, project managers, and stakeholders
 
 ---
@@ -22,7 +22,8 @@ A comprehensive breakdown of every technology used in the Bamboo Reports project
 - [Utility Libraries](#10-utility-libraries)
 - [Development Tools](#11-development-tools)
 - [Infrastructure and Deployment](#12-infrastructure-and-deployment)
-- [External APIs](#13-external-apis)
+- [AI and Agentic Capabilities](#13-ai-and-agentic-capabilities)
+- [External APIs](#14-external-apis)
 - [Architecture Decisions](#architecture-decisions)
 
 ---
@@ -37,7 +38,7 @@ A comprehensive breakdown of every technology used in the Bamboo Reports project
 | **Maps** | MapLibre GL, MapTiler |
 | **Database** | Neon PostgreSQL (data warehouse), Supabase PostgreSQL (auth/user data) |
 | **Authentication** | Supabase Auth |
-| **Analytics** | PostHog, Vercel Analytics |
+| **Analytics** | PostHog, Vercel Analytics, Vercel Speed Insights |
 | **Export** | ExcelJS |
 | **Deployment** | Vercel |
 
@@ -151,6 +152,7 @@ Technologies responsible for how the application looks and feels.
 | `react-resizable-panels` | Resizable panel layouts |
 | `sonner` | Toast notification component |
 | `vaul` | Drawer/sheet component |
+| `driver.js` (1.4.0) | Guided product tours and onboarding walkthroughs |
 
 ---
 
@@ -214,12 +216,24 @@ Technologies for storing and querying data.
 | | |
 |---|---|
 | **What it is** | A serverless PostgreSQL platform with autoscaling and branching |
+| **Version** | `@neondatabase/serverless` 1.0.x |
 | **Why we use it** | Acts as the primary Business Intelligence data warehouse. Serverless architecture means zero cold-start issues in production. Native support for Vercel Edge functions |
 | **Access pattern** | Read-only SQL queries via `@neondatabase/serverless` driver |
 | **Key features** | Connection pooling, serverless WebSocket connections, parameterized queries (SQL injection safe) |
 | **Tables** | `accounts`, `centers`, `services`, `functions`, `tech`, `prospects`, plus audit tables |
 | **Retry logic** | 3 retries with exponential backoff (1s, 2s, 4s) |
 | **Package** | `@neondatabase/serverless` |
+
+### Dashboard API Route (`/api/dashboard`)
+
+| | |
+|---|---|
+| **What it is** | A Next.js Route Handler that serves the full dashboard dataset to the client on initial load |
+| **Why we use it** | Wraps the underlying Server Action with an in-memory stale-while-revalidate (SWR) cache and gzip compression, so warm requests skip the database round-trip and ship pre-compressed JSON to the browser |
+| **Caching** | In-memory SWR with a 5-minute TTL (configurable via `DASHBOARD_CACHE_TTL_MS`); stale responses are served immediately while a background revalidation refreshes the cache |
+| **Compression** | Pre-gzipped payload returned when the client sends `Accept-Encoding: gzip`; raw JSON otherwise |
+| **Authentication** | Requires a Supabase JWT bearer token in the `Authorization` header, validated server-side before any cached data is returned |
+| **Cache invalidation** | `POST /api/dashboard` (also auth-gated) clears the cache; called by the client before a force-refresh |
 
 ### Supabase PostgreSQL
 
@@ -294,10 +308,19 @@ Technologies for tracking usage and performance.
 
 | | |
 |---|---|
-| **What it is** | Performance monitoring built into the Vercel platform |
+| **What it is** | Page view and visitor analytics built into the Vercel platform |
 | **Version** | 1.3.1 |
-| **Why we use it** | Automatically tracks Core Web Vitals (LCP, FID, CLS) and provides insights into page performance without any additional infrastructure |
+| **Why we use it** | Provides privacy-friendly traffic analytics without any additional infrastructure |
 | **Package** | `@vercel/analytics` |
+
+### Vercel Speed Insights
+
+| | |
+|---|---|
+| **What it is** | Real-user performance monitoring built into the Vercel platform |
+| **Version** | 2.0.x |
+| **Why we use it** | Automatically tracks Core Web Vitals (LCP, INP, CLS) from real users and provides insights into page performance without any additional infrastructure |
+| **Package** | `@vercel/speed-insights` |
 
 ---
 
@@ -375,7 +398,23 @@ How the application is built, deployed, and served.
 
 ---
 
-## 13. External APIs
+## 13. AI and Agentic Capabilities
+
+Runtime AI services that power agentic features in the application.
+
+### OpenRouter
+
+| | |
+|---|---|
+| **What it is** | A unified API gateway that routes requests across many LLM providers (Anthropic, OpenAI, Google, Meta, Mistral, and others) through a single endpoint and billing relationship |
+| **Why we use it** | Powers the application's agentic capabilities. A single integration unlocks access to every major model, so we can pick the best model per task (reasoning, tool use, summarization, cost-sensitive workloads) without maintaining a separate SDK and credential for each provider. Also avoids vendor lock-in — swapping models is a config change, not a code change |
+| **Used for** | Agent loops, tool-calling, and any LLM-driven feature in the dashboard |
+| **Authentication** | API key passed via `Authorization: Bearer` header |
+| **Environment variable** | `OPENROUTER_API_KEY` |
+
+---
+
+## 14. External APIs
 
 Third-party services the application communicates with at runtime.
 
@@ -387,6 +426,7 @@ Third-party services the application communicates with at runtime.
 | **Logo.dev** | Company logo images | No | `NEXT_PUBLIC_LOGO_DEV_TOKEN` |
 | **PostHog** | Product analytics | No | `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST` |
 | **Yahoo Finance** | Stock prices and financial data | No | None (public API) |
+| **OpenRouter** | LLM gateway for agentic capabilities | Yes | `OPENROUTER_API_KEY` |
 
 ---
 
@@ -394,8 +434,8 @@ Third-party services the application communicates with at runtime.
 
 A summary of key technology choices and the reasoning behind them.
 
-### Why Server Actions instead of REST/GraphQL?
-Server Actions eliminate the boilerplate of building and maintaining a separate API layer. Since the dashboard is a single Next.js application, data fetching stays co-located with the UI code. This simplifies the architecture and reduces the attack surface (no public API endpoints to secure).
+### Why Server Actions (with one Route Handler) instead of REST/GraphQL?
+The vast majority of data fetching uses Server Actions, which eliminate the boilerplate of building and maintaining a separate API layer and keep data fetching co-located with the UI code. The one exception is `/api/dashboard`, a Next.js Route Handler that wraps the dashboard Server Action to add an in-memory SWR cache, gzip compression, and explicit bearer-token auth — capabilities that don't fit neatly into the Server Action model. The Route Handler is gated by Supabase JWT validation so the small expansion of attack surface stays bounded.
 
 ### Why raw SQL instead of an ORM (e.g., Prisma)?
 The data warehouse queries are primarily read-only and require fine-grained control over joins, aggregations, and filtering logic. Raw SQL with parameterized queries via `@neondatabase/serverless` provides maximum performance and flexibility without the overhead of an ORM abstraction layer.
