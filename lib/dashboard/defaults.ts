@@ -34,6 +34,7 @@ export function createDefaultFilters(overrides: Partial<Filters> = {}): Filters 
     functionNameValues: overrides.functionNameValues ?? [],
     techSoftwareInUseKeywords: overrides.techSoftwareInUseKeywords ?? [],
     prospectDepartmentValues: overrides.prospectDepartmentValues ?? [],
+    prospectHeadTypeValues: overrides.prospectHeadTypeValues ?? [],
     prospectLevelValues: overrides.prospectLevelValues ?? [],
     prospectCityValues: overrides.prospectCityValues ?? [],
     prospectTitleKeywords: overrides.prospectTitleKeywords ?? [],

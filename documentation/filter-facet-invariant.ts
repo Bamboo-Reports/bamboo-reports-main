@@ -51,6 +51,7 @@ const OPTION_KEYS = [
   "centerStatusValues",
   "functionNameValues",
   "prospectDepartmentValues",
+  "prospectHeadTypeValues",
   "prospectLevelValues",
   "prospectCityValues",
 ] as const
@@ -79,6 +80,7 @@ const FACET_CONFIG: Record<string, { list: string; getValue: (r: any) => any }> 
   centerStatusValues: { list: "filteredCenters", getValue: (r) => r.center_status },
   functionNameValues: { list: "filteredFunctions", getValue: (r) => r.function_name },
   prospectDepartmentValues: { list: "filteredProspects", getValue: (r) => r.prospect_department },
+  prospectHeadTypeValues: { list: "filteredProspects", getValue: (r) => r.head_type },
   prospectLevelValues: { list: "filteredProspects", getValue: (r) => r.prospect_level },
   prospectCityValues: { list: "filteredProspects", getValue: (r) => r.prospect_city },
 }

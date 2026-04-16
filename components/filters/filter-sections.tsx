@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Slider } from "@/components/ui/slider"
+import { Button } from "@/components/ui/button"
 import { EnhancedMultiSelect } from "@/components/enhanced-multi-select"
 import { AccountAutocomplete } from "@/components/filters/account-autocomplete"
 import { TitleKeywordInput } from "@/components/filters/title-keyword-input"
@@ -40,6 +41,23 @@ interface CenterFilterSectionProps extends FilterSectionBaseProps {
 }
 
 interface ProspectFilterSectionProps extends FilterSectionBaseProps {}
+
+const HEAD_TYPE_SWITCH_OPTIONS = [
+  { key: "all", label: "All", values: [] as string[] },
+  { key: "hr", label: "HR Head", values: ["HR Head"] },
+  { key: "gcc", label: "GCC Head", values: ["GCC Head"] },
+  { key: "both", label: "Both", values: ["HR Head", "GCC Head"] },
+] as const
+
+const normalizeHeadType = (value: string) => value.trim().toLowerCase().replace(/\s+/g, " ")
+
+const getHeadTypeCategory = (value: string): "hr" | "gcc" | "others" | null => {
+  const normalized = normalizeHeadType(value)
+  if (normalized.includes("gcc") && normalized.includes("head")) return "gcc"
+  if (normalized.includes("hr") && normalized.includes("head")) return "hr"
+  if (normalized.includes("other")) return "others"
+  return null
+}
 
 export function AccountFiltersSection({
   pendingFilters,
@@ -693,6 +711,57 @@ export function ProspectFiltersSection({
   setPendingFilters,
   setActiveFilter,
 }: ProspectFilterSectionProps) {
+  const availableHeadTypeValues = React.useMemo(
+    () => (availableOptions.prospectHeadTypeValues || []).map((option) => option.value).filter(Boolean),
+    [availableOptions.prospectHeadTypeValues]
+  )
+
+  const selectedHeadTypeOption = React.useMemo(() => {
+    const includeValues = pendingFilters.prospectHeadTypeValues
+      .filter((value) => value.mode === "include")
+      .map((value) => value.value)
+      .filter(Boolean)
+
+    if (includeValues.length === 0) return "all"
+
+    const matchedCategories = new Set(includeValues.map(getHeadTypeCategory).filter(Boolean))
+    if (matchedCategories.size === 1) {
+      if (matchedCategories.has("hr")) return "hr"
+      if (matchedCategories.has("gcc")) return "gcc"
+      if (matchedCategories.has("others")) return "others"
+    }
+
+    if (matchedCategories.size === 2 && matchedCategories.has("hr") && matchedCategories.has("gcc")) {
+      return "both"
+    }
+
+    return "all"
+  }, [pendingFilters.prospectHeadTypeValues])
+
+  const applyHeadTypeSwitch = (key: (typeof HEAD_TYPE_SWITCH_OPTIONS)[number]["key"]) => {
+    const selectedOption = HEAD_TYPE_SWITCH_OPTIONS.find((option) => option.key === key)
+    const desiredValues = selectedOption?.values ?? []
+    const desiredCategories = new Set(desiredValues.map(getHeadTypeCategory).filter(Boolean))
+
+    const matchedFromOptions = availableHeadTypeValues.filter((value) => {
+      const category = getHeadTypeCategory(value)
+      return category ? desiredCategories.has(category) : false
+    })
+
+    const nextValues =
+      key === "all"
+        ? []
+        : matchedFromOptions.length > 0
+          ? Array.from(new Set(matchedFromOptions))
+          : desiredValues
+
+    setPendingFilters((prev) => ({
+      ...prev,
+      prospectHeadTypeValues: nextValues.map((value) => ({ value, mode: "include" })),
+    }))
+    setActiveFilter("prospectHeadTypeValues")
+  }
+
   return (
     <div className="pr-2">
       <div className="space-y-4 pt-2">
@@ -727,6 +796,29 @@ export function ProspectFiltersSection({
               placeholder="Select levels..."
               isApplying={isApplying && activeFilter === "prospectLevelValues"}
             />
+          </div>
+          )}
+          {isFilterEnabled("prospectHeadTypeValues") && (
+          <div className="space-y-2">
+            <Label className="text-xs font-medium">Head Type</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {HEAD_TYPE_SWITCH_OPTIONS.map((option) => {
+                const isActive = selectedHeadTypeOption === option.key
+                return (
+                  <Button
+                    key={option.key}
+                    type="button"
+                    variant={isActive ? "default" : "outline"}
+                    size="sm"
+                    className="h-8 justify-center text-xs"
+                    onClick={() => applyHeadTypeSwitch(option.key)}
+                    disabled={isApplying && activeFilter === "prospectHeadTypeValues"}
+                  >
+                    {option.label}
+                  </Button>
+                )
+              })}
+            </div>
           </div>
           )}
           {isFilterEnabled("prospectCityValues") && (

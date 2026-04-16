@@ -43,7 +43,7 @@ export function ProspectsTab({
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [sort, setSort] = useState<{
-    key: "name" | "location" | "title" | "department"
+    key: "name" | "location" | "title" | "department" | "headType"
     direction: "asc" | "desc" | null
   }>({
     key: "name",
@@ -170,6 +170,8 @@ export function ProspectsTab({
           return [prospect.prospect_city, prospect.prospect_country].filter(Boolean).join(", ")
         case "title":
           return prospect.prospect_title
+        case "headType":
+          return prospect.head_type
         default:
           return prospect.prospect_department
       }
@@ -285,6 +287,9 @@ export function ProspectsTab({
                         </TableHead>
                         <TableHead className="w-[180px]">
                           <SortButton label="Department" sortKey="department" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
+                        </TableHead>
+                        <TableHead className="w-[180px]">
+                          <SortButton label="Head Type" sortKey="headType" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
                       </TableRow>
                     </TableHeader>

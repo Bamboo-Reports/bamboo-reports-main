@@ -218,6 +218,7 @@ export function useDashboardFilters({
       functionNameValues: filters.functionNameValues,
       techSoftwareInUseKeywords: filters.techSoftwareInUseKeywords,
       prospectDepartmentValues: filters.prospectDepartmentValues,
+      prospectHeadTypeValues: filters.prospectHeadTypeValues,
       prospectLevelValues: filters.prospectLevelValues,
       prospectCityValues: filters.prospectCityValues,
       prospectTitleKeywords: filters.prospectTitleKeywords,
@@ -261,6 +262,7 @@ export function useDashboardFilters({
       if (e("functionNameValues")) count += sourceFilters.functionNameValues.length
       if (e("techSoftwareInUseKeywords")) count += sourceFilters.techSoftwareInUseKeywords.length
       if (e("prospectDepartmentValues")) count += sourceFilters.prospectDepartmentValues.length
+      if (e("prospectHeadTypeValues")) count += sourceFilters.prospectHeadTypeValues.length
       if (e("prospectLevelValues")) count += sourceFilters.prospectLevelValues.length
       if (e("prospectCityValues")) count += sourceFilters.prospectCityValues.length
       if (e("prospectTitleKeywords")) count += sourceFilters.prospectTitleKeywords.length

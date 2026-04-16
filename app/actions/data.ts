@@ -166,7 +166,7 @@ async function getDashboardProspects(): Promise<Prospect[]> {
     const sqlClient = getSqlOrThrow()
     return (await fetchWithRetry(
       () => sqlClient`SELECT account_global_legal_name, prospect_full_name, prospect_first_name,
-        prospect_last_name, prospect_title, prospect_department, prospect_level,
+        prospect_last_name, prospect_title, head_type, prospect_department, prospect_level,
         prospect_email, prospect_linkedin_url, prospect_city, prospect_state,
         prospect_country
         FROM prospects ORDER BY prospect_last_name, prospect_first_name`

@@ -64,6 +64,7 @@ type AvailableOptionsFilterState = Pick<
   | "functionNameValues"
   | "techSoftwareInUseKeywords"
   | "prospectDepartmentValues"
+  | "prospectHeadTypeValues"
   | "prospectLevelValues"
   | "prospectCityValues"
   | "prospectTitleKeywords"
@@ -156,6 +157,7 @@ export function getFilteredData(
   const matchCenterSoftwareInUse = createKeywordMatcher(filters.techSoftwareInUseKeywords)
 
   const matchProspectDepartment = createValueMatcher(filters.prospectDepartmentValues)
+  const matchProspectHeadType = createValueMatcher(filters.prospectHeadTypeValues)
   const matchProspectLevel = createValueMatcher(filters.prospectLevelValues)
   const matchProspectCity = createValueMatcher(filters.prospectCityValues)
   const matchProspectTitle = createKeywordMatcher(filters.prospectTitleKeywords)
@@ -182,6 +184,7 @@ export function getFilteredData(
 
   const hasProspectFilters =
     filters.prospectDepartmentValues.length > 0 ||
+    filters.prospectHeadTypeValues.length > 0 ||
     filters.prospectLevelValues.length > 0 ||
     filters.prospectCityValues.length > 0 ||
     filters.prospectTitleKeywords.length > 0
@@ -257,6 +260,7 @@ export function getFilteredData(
     if (hasAccountFilters && !accountNameSet.has(prospect.account_global_legal_name)) continue
     const matchesProspect =
       matchProspectDepartment(prospect.prospect_department) &&
+      matchProspectHeadType(prospect.head_type) &&
       matchProspectLevel(prospect.prospect_level) &&
       matchProspectCity(prospect.prospect_city) &&
       matchProspectTitle(prospect.prospect_title)
@@ -482,6 +486,9 @@ export function getAvailableOptions(
     ),
     prospectDepartmentValues: mapToSortedArray(
       countValues(getFacetData("prospectDepartmentValues").filteredProspects, (prospect) => prospect.prospect_department)
+    ),
+    prospectHeadTypeValues: mapToSortedArray(
+      countValues(getFacetData("prospectHeadTypeValues").filteredProspects, (prospect) => prospect.head_type)
     ),
     prospectLevelValues: mapToSortedArray(
       countValues(getFacetData("prospectLevelValues").filteredProspects, (prospect) => prospect.prospect_level)

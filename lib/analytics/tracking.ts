@@ -102,6 +102,7 @@ export const buildTrackedFiltersSnapshot = (
   pushIfActive("functionNameValues", filters.functionNameValues.length > 0)
   pushIfActive("techSoftwareInUseKeywords", filters.techSoftwareInUseKeywords.length > 0)
   pushIfActive("prospectDepartmentValues", filters.prospectDepartmentValues.length > 0)
+  pushIfActive("prospectHeadTypeValues", filters.prospectHeadTypeValues.length > 0)
   pushIfActive("prospectLevelValues", filters.prospectLevelValues.length > 0)
   pushIfActive("prospectCityValues", filters.prospectCityValues.length > 0)
   pushIfActive("prospectTitleKeywords", filters.prospectTitleKeywords.length > 0)
@@ -140,6 +141,7 @@ export const buildTrackedFiltersSnapshot = (
     function_types: toTrackedFilterValueArray(filters.functionNameValues),
     center_software_in_use_keywords: toTrackedFilterValueArray(filters.techSoftwareInUseKeywords),
     prospect_departments: toTrackedFilterValueArray(filters.prospectDepartmentValues),
+    prospect_head_types: toTrackedFilterValueArray(filters.prospectHeadTypeValues),
     prospect_levels: toTrackedFilterValueArray(filters.prospectLevelValues),
     prospect_cities: toTrackedFilterValueArray(filters.prospectCityValues),
     prospect_title_keywords: toTrackedFilterValueArray(filters.prospectTitleKeywords),

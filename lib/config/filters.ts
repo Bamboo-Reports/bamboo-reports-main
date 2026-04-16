@@ -311,6 +311,14 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
         table: "prospects",
       },
       {
+        key: "prospectHeadTypeValues",
+        label: "Head Type",
+        enabled: true,
+        type: "multi-select",
+        column: "head_type",
+        table: "prospects",
+      },
+      {
         key: "prospectLevelValues",
         label: "Seniority Level",
         enabled: true,

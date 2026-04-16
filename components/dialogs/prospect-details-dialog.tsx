@@ -109,6 +109,11 @@ export function ProspectDetailsDialog({
                 label="Level"
                 value={prospect.prospect_level}
               />
+              <InfoRow
+                icon={Award}
+                label="Head Type"
+                value={prospect.head_type}
+              />
             </div>
           </div>
 

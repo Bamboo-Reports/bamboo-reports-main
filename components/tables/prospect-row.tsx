@@ -75,6 +75,11 @@ export const ProspectRow = memo(({ prospect, onClick }: ProspectRowProps) => {
               {prospect.prospect_department || "N/A"}
             </div>
           </TableCell>
+          <TableCell className="max-w-[180px]">
+            <div className="truncate" title={prospect.head_type || "N/A"}>
+              {prospect.head_type || "N/A"}
+            </div>
+          </TableCell>
         </TableRow>
       </ContextMenuTrigger>
       <ContextMenuContent className="w-48">

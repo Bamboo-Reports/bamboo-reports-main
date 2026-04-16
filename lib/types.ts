@@ -137,6 +137,7 @@ export interface Prospect {
   prospect_first_name: string | null
   prospect_last_name: string | null
   prospect_title: string | null
+  head_type?: string | null
   prospect_department: string | null
   prospect_level: string | null
   prospect_linkedin_url: string | null
@@ -190,6 +191,7 @@ export interface Filters {
   functionNameValues: FilterValue[]
   techSoftwareInUseKeywords: FilterValue[]
   prospectDepartmentValues: FilterValue[]
+  prospectHeadTypeValues: FilterValue[]
   prospectLevelValues: FilterValue[]
   prospectCityValues: FilterValue[]
   prospectTitleKeywords: FilterValue[]
@@ -222,6 +224,7 @@ export interface AvailableOptions {
   centerStatusValues: FilterOption[]
   functionNameValues: FilterOption[]
   prospectDepartmentValues: FilterOption[]
+  prospectHeadTypeValues: FilterOption[]
   prospectLevelValues: FilterOption[]
   prospectCityValues: FilterOption[]
 }

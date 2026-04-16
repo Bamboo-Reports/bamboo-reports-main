@@ -69,6 +69,7 @@ export function calculateActiveFilters(filters: Filters) {
     filters.functionNameValues.length +
     filters.techSoftwareInUseKeywords.length +
     filters.prospectDepartmentValues.length +
+    filters.prospectHeadTypeValues.length +
     filters.prospectLevelValues.length +
     filters.prospectCityValues.length +
     filters.prospectTitleKeywords.length

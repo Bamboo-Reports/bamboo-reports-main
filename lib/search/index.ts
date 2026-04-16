@@ -62,11 +62,12 @@ export function buildSearchIndex(
   const prospectEntries = prospects.map((p) => {
     const fullName = p.prospect_full_name ?? `${p.prospect_first_name ?? ""} ${p.prospect_last_name ?? ""}`.trim()
     const title = p.prospect_title ?? ""
+    const headType = p.head_type ?? ""
     const account = p.account_global_legal_name
     const email = p.prospect_email ?? ""
 
     return {
-      searchText: [fullName, title, account, email].join(" ").toLowerCase(),
+      searchText: [fullName, title, headType, account, email].join(" ").toLowerCase(),
       result: {
         type: "prospect" as const,
         id: `${account}::${fullName}`,
