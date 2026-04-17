@@ -74,7 +74,7 @@ export function FiltersSidebar({
   formatRevenueInMillions,
 }: FiltersSidebarProps): JSX.Element {
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
-  const [openSections, setOpenSections] = useState<string[]>(['accounts'])
+  const [openSection, setOpenSection] = useState<string>('accounts')
   const totalActiveFilters = getTotalActiveFilters()
   const scrollRef = useRef<HTMLDivElement>(null)
   const [canScrollDown, setCanScrollDown] = useState(false)
@@ -89,7 +89,7 @@ export function FiltersSidebar({
 
   useEffect(() => {
     checkScroll()
-  }, [openSections, checkScroll])
+  }, [openSection, checkScroll])
 
   useEffect(() => {
     const el = scrollRef.current
@@ -107,7 +107,7 @@ export function FiltersSidebar({
   }, [checkScroll])
 
   const handleCollapsedIconClick = (section: string) => {
-    setOpenSections([section])
+    setOpenSection(section)
     if (isCollapsed) {
       onToggleCollapse()
     }
@@ -216,7 +216,7 @@ export function FiltersSidebar({
           </div>
         </div>
 
-        <Accordion type="multiple" value={openSections} onValueChange={setOpenSections} className="w-full space-y-2">
+        <Accordion type="single" value={openSection} onValueChange={setOpenSection} className="w-full space-y-2">
           {isSectionVisible("accounts") && (
           <AccordionItem value="accounts" className="overflow-hidden rounded-xl border border-border/70 bg-secondary/30 px-3 data-[state=open]:bg-background data-[state=open]:shadow-sm">
             <AccordionTrigger className="py-3 text-sm font-semibold hover:no-underline">

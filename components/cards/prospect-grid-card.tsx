@@ -75,7 +75,7 @@ export const ProspectGridCard = memo(({ prospect, onClick }: ProspectGridCardPro
                 </span>
               </div>
               <div className="flex items-center justify-between gap-3 min-w-0">
-                <span className="text-muted-foreground">Head Type</span>
+                <span className="text-muted-foreground">Role</span>
                 <span
                   className="font-medium text-foreground text-right truncate max-w-[160px]"
                   title={prospect.head_type || "-"}

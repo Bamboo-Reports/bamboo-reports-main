@@ -156,7 +156,7 @@ export const SavedFilterCard = memo(({
                 {renderFilterValues(filter.filters.functionNameValues, "Function")}
                 {renderFilterValues(filter.filters.techSoftwareInUseKeywords, "Software In Use")}
                 {renderFilterValues(filter.filters.prospectDepartmentValues, "Department")}
-                {renderFilterValues(filter.filters.prospectHeadTypeValues, "Head Type")}
+                {renderFilterValues(filter.filters.prospectHeadTypeValues, "Role")}
                 {renderFilterValues(filter.filters.prospectLevelValues, "Prospect Level")}
                 {renderFilterValues(filter.filters.prospectCityValues, "Prospect City")}
                 {renderFilterValues(filter.filters.prospectTitleKeywords, "Job Title")}

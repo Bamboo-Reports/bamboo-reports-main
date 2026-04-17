@@ -111,7 +111,7 @@ export function ProspectDetailsDialog({
               />
               <InfoRow
                 icon={Award}
-                label="Head Type"
+                label="Role"
                 value={prospect.head_type}
               />
             </div>

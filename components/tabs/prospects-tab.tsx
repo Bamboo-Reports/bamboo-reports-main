@@ -289,7 +289,7 @@ export function ProspectsTab({
                           <SortButton label="Department" sortKey="department" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
                         <TableHead className="w-[180px]">
-                          <SortButton label="Head Type" sortKey="headType" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
+                          <SortButton label="Role" sortKey="headType" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
                       </TableRow>
                     </TableHeader>
