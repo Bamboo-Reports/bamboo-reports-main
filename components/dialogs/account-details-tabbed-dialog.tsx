@@ -17,15 +17,12 @@ import {
 import {
   Building2,
   MapPin,
-  Globe,
-  Briefcase,
   DollarSign,
   Users,
   Award,
   TrendingUp,
   Calendar,
   Package,
-  Info,
   Building,
   UserCircle,
   Layers,
@@ -33,7 +30,6 @@ import {
   Linkedin,
 } from "lucide-react"
 import { formatRevenueInMillions, parseRevenue } from "@/lib/utils/helpers"
-import { InfoRow } from "@/components/ui/info-row"
 import type { Account, AccountFinancialInfo, Center, Prospect, Service, Tech } from "@/lib/types"
 import { CompanyLogo } from "@/components/ui/company-logo"
 import { CenterDetailsDialog } from "./center-details-dialog"
@@ -106,6 +102,61 @@ function QuickFilterGroup({
           </button>
         )
       })}
+    </div>
+  )
+}
+
+function MetaRow({ label, value }: { label: string; value: string | number | null | undefined }) {
+  if (value === null || value === undefined) return null
+  const str = typeof value === "number" ? value.toString() : value
+  if (str.trim() === "") return null
+  return (
+    <div className="flex items-start justify-between gap-4 py-1.5 text-sm border-b border-border/30 last:border-b-0">
+      <span className="text-muted-foreground shrink-0">{label}</span>
+      <span className="font-medium text-right break-words">{str}</span>
+    </div>
+  )
+}
+
+function KPITile({
+  icon: Icon,
+  label,
+  value,
+  caption,
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  label: string
+  value: string | number | null | undefined
+  caption?: string | null
+}) {
+  if (value === null || value === undefined) return null
+  const str = typeof value === "number" ? value.toString() : value
+  if (str.trim() === "") return null
+  return (
+    <div className="rounded-lg border border-border/50 bg-background/40 backdrop-blur-sm p-4 dark:bg-white/5 dark:border-white/10">
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1.5">
+        <Icon className="h-3.5 w-3.5" />
+        <span>{label}</span>
+      </div>
+      <div className="text-xl font-semibold tracking-tight break-words">{str}</div>
+      {caption && caption.trim() !== "" && (
+        <div className="text-xs text-muted-foreground mt-1">{caption}</div>
+      )}
+    </div>
+  )
+}
+
+function SectionHeader({
+  title,
+  children,
+}: {
+  title: string
+  children?: React.ReactNode
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-b border-border/40 pb-2">
+      <h3 className="text-base font-semibold tracking-tight">{title}</h3>
+      {children && <div className="flex items-center gap-2 flex-wrap">{children}</div>}
     </div>
   )
 }
@@ -365,278 +416,184 @@ export function AccountDetailsDialog({
             </TabsList>
 
             {/* Account Info Tab */}
-            <TabsContent value="info" className="space-y-6 mt-4">
-              {/* Tech Stack & Centers Section */}
-              <div>
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
-                  <Info className="h-4 w-4" />
-                  Tech Stack & Centers
-                </h3>
-                <div className={`grid grid-cols-1 ${accountTech.length > 0 ? "lg:grid-cols-2" : ""} gap-4 items-start`}>
-                  {accountTech.length > 0 && (
-                  <div className="rounded-lg border border-border/60 bg-background/40 backdrop-blur-sm shadow-sm overflow-hidden h-[300px] lg:h-[420px]">
+            <TabsContent value="info" className="space-y-8 mt-4">
+              {/* Company Snapshot */}
+              <section className="rounded-xl border border-border/60 bg-background/40 backdrop-blur-sm p-5 lg:p-6 dark:bg-white/5 dark:border-white/10">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="lg:col-span-2 space-y-5">
+                    {account.account_about && account.account_about.trim() !== "" && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5">About</p>
+                        <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-line">{account.account_about}</p>
+                      </div>
+                    )}
+                    {account.account_hq_key_offerings && account.account_hq_key_offerings.trim() !== "" && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
+                          <Package className="h-3.5 w-3.5" />
+                          Key Offerings
+                        </p>
+                        <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-line">{account.account_hq_key_offerings}</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="lg:border-l lg:border-border/50 lg:pl-6">
+                    <MetaRow label="Account Type" value={account.account_hq_company_type} />
+                    <MetaRow label="Stock Ticker" value={account.account_hq_stock_ticker} />
+                    <MetaRow label="HQ Location" value={location} />
+                    <MetaRow label="Region" value={account.account_hq_region} />
+                    <MetaRow label="Industry" value={account.account_hq_industry} />
+                    <MetaRow label="Sub Industry" value={account.account_hq_sub_industry} />
+                    <MetaRow label="Primary Category" value={account.account_primary_category} />
+                    <MetaRow label="Primary Nature" value={account.account_primary_nature} />
+                  </div>
+                </div>
+              </section>
+
+              {/* Scale & Financials */}
+              <section className="space-y-4">
+                <SectionHeader title="Scale & Financials">
+                  {account.account_hq_forbes_2000_rank && (
+                    <Badge variant="outline" className="gap-1 font-normal">
+                      <Award className="h-3 w-3" />
+                      Forbes #{account.account_hq_forbes_2000_rank}
+                    </Badge>
+                  )}
+                  {account.account_hq_fortune_500_rank && (
+                    <Badge variant="outline" className="gap-1 font-normal">
+                      <Award className="h-3 w-3" />
+                      Fortune #{account.account_hq_fortune_500_rank}
+                    </Badge>
+                  )}
+                </SectionHeader>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <KPITile
+                    icon={DollarSign}
+                    label="Revenue"
+                    value={formatRevenueInMillions(parseRevenue(account.account_hq_revenue))}
+                    caption={account.account_hq_revenue_range}
+                  />
+                  <KPITile
+                    icon={Users}
+                    label="Employees"
+                    value={account.account_hq_employee_count}
+                    caption={account.account_hq_employee_range}
+                  />
+                  {financialData && (
+                    <>
+                      <KPITile
+                        icon={TrendingUp}
+                        label="Market Cap"
+                        value={formatCompactNumber(financialData.marketCap)}
+                        caption={[financialData.inputTicker, financialData.exchange].filter(Boolean).join(" • ")}
+                      />
+                      <KPITile
+                        icon={TrendingUp}
+                        label="Net Profit"
+                        value={financialData.netProfit !== null ? formatCompactNumber(financialData.netProfit) : null}
+                        caption={[financialData.inputTicker, financialData.exchange].filter(Boolean).join(" • ")}
+                      />
+                    </>
+                  )}
+                </div>
+
+                {ticker && !financialError && !financialLoading && financialData && financialData.annualRevenueSeries.length > 0 && (
+                  <div className="rounded-lg border border-border/60 bg-background/40 backdrop-blur-sm shadow-sm p-4 dark:bg-white/5 dark:border-white/10">
+                    <div className="text-sm font-semibold text-muted-foreground mb-3">
+                      Annual Revenue (FY)
+                    </div>
+                    <ChartContainer config={revenueChartConfig} className="h-[280px] w-full">
+                      <AreaChart
+                        data={financialData.annualRevenueSeries}
+                        margin={{ left: 8, right: 8, top: 8, bottom: 8 }}
+                      >
+                        <defs>
+                          <linearGradient id="annualRevenueFill" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="var(--color-revenue)" stopOpacity={0.35} />
+                            <stop offset="95%" stopColor="var(--color-revenue)" stopOpacity={0.04} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid vertical={false} />
+                        <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} />
+                        <YAxis
+                          tickLine={false}
+                          axisLine={false}
+                          tickMargin={8}
+                          tickFormatter={formatRevenueAxis}
+                          width={72}
+                        />
+                        <ChartTooltip
+                          cursor={false}
+                          content={
+                            <ChartTooltipContent
+                              formatter={(value) => formatCompactNumber(value as number) ?? "N/A"}
+                            />
+                          }
+                        />
+                        <Area
+                          type="natural"
+                          dataKey="revenue"
+                          fill="url(#annualRevenueFill)"
+                          stroke="var(--color-revenue)"
+                          strokeWidth={2}
+                          dot={{ r: 3 }}
+                          activeDot={{ r: 5 }}
+                        />
+                      </AreaChart>
+                    </ChartContainer>
+                  </div>
+                )}
+              </section>
+
+              {/* India Presence */}
+              {(account.account_first_center_year || account.years_in_india || account.account_center_employees || account.account_center_employees_range || account.account_nasscom_status || accountCenters.length > 0) && (
+                <section className="space-y-4">
+                  <SectionHeader title="India Presence">
+                    {account.account_nasscom_status && (
+                      <Badge variant="outline" className="gap-1 font-normal">
+                        <Award className="h-3 w-3" />
+                        NASSCOM: {account.account_nasscom_status}
+                      </Badge>
+                    )}
+                  </SectionHeader>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <KPITile icon={Calendar} label="First Center" value={account.account_first_center_year} />
+                    <KPITile icon={Calendar} label="Years in India" value={account.years_in_india} />
+                    <KPITile icon={Users} label="Center Employees" value={account.account_center_employees} />
+                    <KPITile icon={Users} label="GCC Headcount (India)" value={account.account_center_employees_range} />
+                  </div>
+                  {accountCenters.length > 0 && (
+                    <div className="rounded-lg border border-border/60 bg-background/40 backdrop-blur-sm shadow-sm overflow-hidden h-[360px] lg:h-[420px] dark:bg-white/5 dark:border-white/10">
+                      <div className="flex h-full flex-col">
+                        <div className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-muted-foreground border-b border-border/40">
+                          <MapPin className="h-4 w-4" />
+                          Centers Map
+                        </div>
+                        <div className="flex-1 min-h-0">
+                          <CentersMap centers={accountCenters} heightClass="h-full" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </section>
+              )}
+
+              {/* Technology Stack */}
+              {accountTech.length > 0 && (
+                <section className="space-y-4">
+                  <SectionHeader title="Technology Stack" />
+                  <div className="rounded-lg border border-border/60 bg-background/40 backdrop-blur-sm shadow-sm overflow-hidden h-[360px] lg:h-[420px] dark:bg-white/5 dark:border-white/10">
                     <div className="flex h-full flex-col">
                       <div className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-muted-foreground border-b border-border/40">
                         <Layers className="h-4 w-4" />
-                        Tech Stack
+                        Detected Stack
                       </div>
                       <div className="flex-1 min-h-0">
                         <TechTreemap tech={accountTech} heightClass="h-full" showTitle={false} />
                       </div>
                     </div>
                   </div>
-                  )}
-                  <div className="rounded-lg border border-border/60 bg-background/40 backdrop-blur-sm shadow-sm overflow-hidden h-[300px] lg:h-[420px]">
-                    <div className="flex h-full flex-col">
-                      <div className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-muted-foreground border-b border-border/40">
-                        <MapPin className="h-4 w-4" />
-                        Centers Map
-                      </div>
-                      <div className="flex-1 min-h-0">
-                        <CentersMap centers={accountCenters} heightClass="h-full" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Company Overview Section */}
-              {(account.account_hq_company_type || account.account_hq_stock_ticker || account.account_about || account.account_hq_key_offerings) && (
-                <div>
-                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
-                    <Info className="h-4 w-4" />
-                    Company Overview
-                  </h3>
-                  <div className="grid grid-cols-1 gap-3">
-                    <InfoRow
-                      icon={Building2}
-                      label="Account Type"
-                      value={account.account_hq_company_type}
-                    />
-                    <InfoRow
-                      icon={Building2}
-                      label="HQ Stock Ticker"
-                      value={account.account_hq_stock_ticker}
-                    />
-                    <InfoRow
-                      icon={Building2}
-                      label="About"
-                      value={account.account_about}
-                    />
-                    <InfoRow
-                      icon={Package}
-                      label="Key Offerings"
-                      value={account.account_hq_key_offerings}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Location Section */}
-              <div>
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
-                  Location
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <InfoRow
-                    icon={MapPin}
-                    label="Location"
-                    value={location}
-                  />
-                  <InfoRow
-                    icon={Globe}
-                    label="Region"
-                    value={account.account_hq_region}
-                  />
-                </div>
-              </div>
-
-              {/* Industry Information Section */}
-              <div>
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
-                  <Briefcase className="h-4 w-4" />
-                  Industry Information
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <InfoRow
-                    icon={Briefcase}
-                    label="Industry"
-                    value={account.account_hq_industry}
-                  />
-                  <InfoRow
-                    icon={Briefcase}
-                    label="Sub Industry"
-                    value={account.account_hq_sub_industry}
-                  />
-                  <InfoRow
-                    icon={TrendingUp}
-                    label="Primary Category"
-                    value={account.account_primary_category}
-                  />
-                  <InfoRow
-                    icon={TrendingUp}
-                    label="Primary Nature"
-                    value={account.account_primary_nature}
-                  />
-                </div>
-              </div>
-
-              {/* Business Metrics Section */}
-              <div>
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
-                  <DollarSign className="h-4 w-4" />
-                  Business Metrics
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <InfoRow
-                    icon={DollarSign}
-                    label="Revenue (in Millions)"
-                    value={formatRevenueInMillions(parseRevenue(account.account_hq_revenue))}
-                  />
-                  <InfoRow
-                    icon={DollarSign}
-                    label="Revenue Range"
-                    value={account.account_hq_revenue_range}
-                  />
-                  <InfoRow
-                    icon={Users}
-                    label="Total Employees"
-                    value={account.account_hq_employee_count}
-                  />
-                  <InfoRow
-                    icon={Users}
-                    label="Employees Range"
-                    value={account.account_hq_employee_range}
-                  />
-                  <InfoRow
-                    icon={Users}
-                    label="Total Center Employees"
-                    value={account.account_center_employees}
-                  />
-                  <InfoRow
-                    icon={Users}
-                    label="GCC Aggregate Headcount (India)"
-                    value={account.account_center_employees_range}
-                  />
-                </div>
-              </div>
-
-              {/* Financials Section */}
-              {ticker && !financialError && !financialLoading && financialData && <div>
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
-                  <DollarSign className="h-4 w-4" />
-                  Financials
-                </h3>
-
-                <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-                      <InfoRow icon={Building2} label="Stock Ticker" value={financialData.inputTicker} />
-                      <InfoRow icon={Building2} label="Exchange" value={financialData.exchange} />
-                      <InfoRow icon={DollarSign} label="Market Cap" value={formatCompactNumber(financialData.marketCap)} />
-                      <InfoRow
-                        icon={TrendingUp}
-                        label="Net Profit"
-                        value={financialData.netProfit !== null ? formatCompactNumber(financialData.netProfit) : "Not available"}
-                      />
-                    </div>
-
-                    <div className="rounded-lg border border-border/60 bg-background/40 backdrop-blur-sm shadow-sm p-4">
-                      <div className="text-sm font-semibold text-muted-foreground mb-3">
-                        Annual Revenue (FY)
-                      </div>
-                      {financialData.annualRevenueSeries.length > 0 ? (
-                        <ChartContainer config={revenueChartConfig} className="h-[280px] w-full">
-                          <AreaChart
-                            data={financialData.annualRevenueSeries}
-                            margin={{ left: 8, right: 8, top: 8, bottom: 8 }}
-                          >
-                            <defs>
-                              <linearGradient id="annualRevenueFill" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="var(--color-revenue)" stopOpacity={0.35} />
-                                <stop offset="95%" stopColor="var(--color-revenue)" stopOpacity={0.04} />
-                              </linearGradient>
-                            </defs>
-                            <CartesianGrid vertical={false} />
-                            <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} />
-                            <YAxis
-                              tickLine={false}
-                              axisLine={false}
-                              tickMargin={8}
-                              tickFormatter={formatRevenueAxis}
-                              width={72}
-                            />
-                            <ChartTooltip
-                              cursor={false}
-                              content={
-                                <ChartTooltipContent
-                                  formatter={(value) => formatCompactNumber(value as number) ?? "N/A"}
-                                />
-                              }
-                            />
-                            <Area
-                              type="natural"
-                              dataKey="revenue"
-                              fill="url(#annualRevenueFill)"
-                              stroke="var(--color-revenue)"
-                              strokeWidth={2}
-                              dot={{ r: 3 }}
-                              activeDot={{ r: 5 }}
-                            />
-                          </AreaChart>
-                        </ChartContainer>
-                      ) : null}
-                    </div>
-                  </div>
-              </div>}
-
-              {/* Rankings & Recognition Section */}
-              {(account.account_hq_forbes_2000_rank || account.account_hq_fortune_500_rank || account.account_nasscom_status) && (
-                <div>
-                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
-                    <Award className="h-4 w-4" />
-                    Rankings & Recognition
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <InfoRow
-                      icon={Award}
-                      label="Forbes Ranking"
-                      value={account.account_hq_forbes_2000_rank}
-                    />
-                    <InfoRow
-                      icon={Award}
-                      label="Fortune Ranking"
-                      value={account.account_hq_fortune_500_rank}
-                    />
-                    <InfoRow
-                      icon={Award}
-                      label="NASSCOM GCC Listing Status"
-                      value={account.account_nasscom_status}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* India Operations Section */}
-              {(account.account_first_center_year || account.years_in_india) && (
-                <div>
-                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    India Operations
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <InfoRow
-                      icon={Calendar}
-                      label="First Center Established"
-                      value={account.account_first_center_year}
-                    />
-                    <InfoRow
-                      icon={Calendar}
-                      label="Years in India"
-                      value={account.years_in_india}
-                    />
-                  </div>
-                </div>
+                </section>
               )}
             </TabsContent>
 
