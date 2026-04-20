@@ -30,6 +30,7 @@ import {
 import type { Center, Service } from "@/lib/types"
 import { CompanyLogo } from "@/components/ui/company-logo"
 import { InfoRow } from "@/components/ui/info-row"
+import { DialogBreadcrumb } from "@/components/ui/dialog-breadcrumb"
 
 interface CenterDetailsDialogProps {
   center: Center | null
@@ -108,6 +109,13 @@ export function CenterDetailsDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-y-auto glassmorphism-dialog">
         <DialogHeader>
+          <DialogBreadcrumb
+            items={[
+              { label: center.account_global_legal_name, onClick: () => onOpenChange(false) },
+              { label: "Centers", onClick: () => onOpenChange(false) },
+              { label: center.center_name },
+            ]}
+          />
           <DialogTitle className="text-2xl font-bold flex items-center gap-3">
             <CompanyLogo
               domain={center.center_account_website}

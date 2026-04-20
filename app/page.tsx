@@ -749,6 +749,8 @@ function DashboardContent(): JSX.Element | null {
                   totalAccountsCount={accounts.length}
                   filteredCentersCount={filteredData.filteredCenters.length}
                   totalCentersCount={centers.length}
+                  filteredUpcomingCentersCount={filteredData.filteredCenters.filter((c) => c.center_status === "Upcoming").length}
+                  totalUpcomingCentersCount={centers.filter((c) => c.center_status === "Upcoming").length}
                   filteredProspectsCount={filteredData.filteredProspects.length}
                   totalProspectsCount={prospects.length}
                   filteredHeadcount={filteredData.filteredCenters.reduce((sum, c) => sum + (c.center_employees ?? 0), 0)}

@@ -11,6 +11,7 @@ import { Mail, Linkedin, MapPin, Building2, Briefcase, Users, Award, Copy } from
 import type { Prospect } from "@/lib/types"
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard"
 import { Badge } from "@/components/ui/badge"
+import { DialogBreadcrumb, type DialogBreadcrumbItem } from "@/components/ui/dialog-breadcrumb"
 
 interface ProspectDetailsDialogProps {
   prospect: Prospect | null
@@ -53,10 +54,24 @@ export function ProspectDetailsDialog({
     )
   }
 
+  const fullName = [prospect.prospect_first_name, prospect.prospect_last_name]
+    .filter(Boolean)
+    .join(" ")
+    .trim()
+
+  const breadcrumbItems: DialogBreadcrumbItem[] = [
+    ...(prospect.account_global_legal_name
+      ? [{ label: prospect.account_global_legal_name, onClick: () => onOpenChange(false) }]
+      : []),
+    { label: "Prospects", onClick: () => onOpenChange(false) },
+    { label: fullName || "Prospect" },
+  ]
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto glassmorphism-dialog">
         <DialogHeader>
+          <DialogBreadcrumb items={breadcrumbItems} />
           <DialogTitle className="text-2xl font-bold flex items-center gap-3">
             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
               <span className="text-lg font-bold text-primary">

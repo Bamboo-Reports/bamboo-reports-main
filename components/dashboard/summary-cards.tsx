@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Briefcase, Building, UserCheck, Users } from 'lucide-react'
+import { Briefcase, Building, Clock, UserCheck, Users } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
@@ -88,6 +88,8 @@ interface SummaryCardsProps {
   totalAccountsCount: number
   filteredCentersCount: number
   totalCentersCount: number
+  filteredUpcomingCentersCount: number
+  totalUpcomingCentersCount: number
   filteredProspectsCount: number
   totalProspectsCount: number
   filteredHeadcount: number
@@ -101,6 +103,8 @@ export const SummaryCards = React.memo(function SummaryCards({
   totalAccountsCount,
   filteredCentersCount,
   totalCentersCount,
+  filteredUpcomingCentersCount,
+  totalUpcomingCentersCount,
   filteredProspectsCount,
   totalProspectsCount,
   filteredHeadcount,
@@ -156,6 +160,16 @@ export const SummaryCards = React.memo(function SummaryCards({
       clickable: true,
     },
     {
+      id: 'upcoming-centers' as const,
+      title: 'Upcoming Centers',
+      value: filteredUpcomingCentersCount,
+      total: totalUpcomingCentersCount,
+      colorVar: '--chart-5',
+      icon: Clock,
+      iconClassName: 'text-[hsl(var(--chart-5))]',
+      clickable: false,
+    },
+    {
       id: 'prospects' as const,
       title: 'Prospects',
       value: filteredProspectsCount,
@@ -178,7 +192,7 @@ export const SummaryCards = React.memo(function SummaryCards({
   ]
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6" aria-label="Dashboard sections" data-tour="summary-cards">
+    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6" aria-label="Dashboard sections" data-tour="summary-cards">
       {cards.map((card) => {
         const Icon = card.icon
         const isActive = card.clickable && activeView === card.id
