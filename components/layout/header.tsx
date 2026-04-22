@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { Compass, LogOut, Mail, Phone, RefreshCw, Search, ShieldCheck, Terminal, UserRound } from 'lucide-react'
+import { Compass, FileArchive, LogOut, Mail, Phone, RefreshCw, Search, ShieldCheck, Terminal, UserRound } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Button } from '@/components/ui/button'
 import {
@@ -26,10 +26,11 @@ interface HeaderProps {
   onRefresh: () => void
   onStartTour?: () => void
   onOpenSearch?: () => void
+  onOpenExports?: () => void
 }
 
 
-export const Header = React.memo(function Header({ onRefresh, onStartTour, onOpenSearch }: HeaderProps): JSX.Element {
+export const Header = React.memo(function Header({ onRefresh, onStartTour, onOpenSearch, onOpenExports }: HeaderProps): JSX.Element {
   const environmentLabel = getEnvironmentLabel()
   const router = useRouter()
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -213,6 +214,15 @@ export const Header = React.memo(function Header({ onRefresh, onStartTour, onOpe
 
                 <DropdownMenuSeparator />
                 <div className="p-2 space-y-1.5">
+                  {onOpenExports && (
+                    <DropdownMenuItem
+                      className="h-9 cursor-pointer rounded-md font-medium"
+                      onSelect={() => onOpenExports()}
+                    >
+                      <FileArchive className="h-4 w-4" />
+                      My exports
+                    </DropdownMenuItem>
+                  )}
                   {onStartTour && (
                     <DropdownMenuItem
                       className="h-9 cursor-pointer rounded-md font-medium"

@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTheme } from "next-themes"
 import { ExportDialog } from "@/components/export/export-dialog"
+import { ExportsDialog } from "@/components/exports/exports-dialog"
 import { FiltersSidebar } from "@/components/filters/filters-sidebar"
 import { Header } from "@/components/layout/header"
 import { GlobalSearch } from "@/components/search/global-search"
@@ -97,6 +98,7 @@ function DashboardContent(): JSX.Element | null {
   const [prospectsView, setProspectsView] = useState<"chart" | "data">("chart")
   const [activeSection, setActiveSection] = useState<"accounts" | "centers" | "prospects">("accounts")
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
+  const [exportsDialogOpen, setExportsDialogOpen] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const canExport = canExportData(userRole)
 
@@ -657,7 +659,8 @@ function DashboardContent(): JSX.Element | null {
       >
         Skip to main content
       </a>
-      <Header onRefresh={handleRefresh} onStartTour={startTour} onOpenSearch={handleSearchOpen} />
+      <Header onRefresh={handleRefresh} onStartTour={startTour} onOpenSearch={handleSearchOpen} onOpenExports={() => setExportsDialogOpen(true)} />
+      <ExportsDialog open={exportsDialogOpen} onOpenChange={setExportsDialogOpen} />
 
       <GlobalSearch
         open={isSearchOpen}
@@ -710,6 +713,21 @@ function DashboardContent(): JSX.Element | null {
               prospects: filteredData.filteredProspects,
             }}
             isFiltered={activeFiltersCount > 0}
+            filtersSnapshot={filters}
+            accountNames={Array.from(
+              new Set(
+                filteredData.filteredAccounts
+                  .map((a) => a.account_global_legal_name)
+                  .filter((name): name is string => Boolean(name))
+              )
+            )}
+            centerKeys={Array.from(
+              new Set(
+                filteredData.filteredCenters
+                  .map((c) => c.cn_unique_key)
+                  .filter((key): key is string => Boolean(key))
+              )
+            )}
             onExportCompleted={handleExportCompleted}
           />
           <FiltersSidebar

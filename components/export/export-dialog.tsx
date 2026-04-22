@@ -13,12 +13,8 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Building2, Briefcase, Users, Sparkles } from "lucide-react"
-import {
-  exportSelectedDataZip,
-  type ExportDatasetKey,
-  type ExportProgressHandler,
-  type RowRecord,
-} from "@/lib/utils/export-helpers"
+import type { ExportDatasetKey } from "@/lib/utils/export-helpers"
+import { requestServerExport } from "@/lib/exports/request-client"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { toTrackedStringArray } from "@/lib/analytics/tracking"
@@ -36,6 +32,11 @@ interface ExportDialogProps {
   onOpenChange: (open: boolean) => void
   data: ExportData
   isFiltered: boolean
+  filtersSnapshot?: unknown
+  /** Account global legal names to include; null = all accounts. */
+  accountNames?: string[] | null
+  /** Center cn_unique_keys to include; null = all centers. */
+  centerKeys?: string[] | null
   onExportCompleted?: () => void
 }
 
@@ -76,7 +77,7 @@ const DATASET_META: Array<{
   },
 ]
 
-export function ExportDialog({ open, onOpenChange, data, isFiltered, onExportCompleted }: ExportDialogProps) {
+export function ExportDialog({ open, onOpenChange, data, isFiltered, filtersSnapshot, accountNames, centerKeys, onExportCompleted }: ExportDialogProps) {
   const [selection, setSelection] = useState<Record<ExportDatasetKey, boolean>>({
     accounts: true,
     centers: true,
@@ -85,9 +86,46 @@ export function ExportDialog({ open, onOpenChange, data, isFiltered, onExportCom
   })
   const [isExporting, setIsExporting] = useState(false)
   const [progress, setProgress] = useState(0)
+  const [displayedProgress, setDisplayedProgress] = useState(0)
   const [stage, setStage] = useState("Preparing export...")
   const [error, setError] = useState<string | null>(null)
   const wasOpenRef = useRef(false)
+  const rafRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current)
+      rafRef.current = null
+    }
+
+    let last = performance.now()
+    const tick = (now: number) => {
+      const dt = now - last
+      last = now
+      setDisplayedProgress((current) => {
+        if (current === progress) {
+          rafRef.current = null
+          return current
+        }
+        // Tween at ~140%/second — helper emits ramped ticks so we just
+        // need to glide the last pixels between them.
+        const step = (dt / 1000) * 140
+        const diff = progress - current
+        if (Math.abs(diff) <= step) return progress
+        const next = current + Math.sign(diff) * step
+        rafRef.current = requestAnimationFrame(tick)
+        return next
+      })
+    }
+    rafRef.current = requestAnimationFrame(tick)
+
+    return () => {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current)
+        rafRef.current = null
+      }
+    }
+  }, [progress])
 
   const getSelectedDatasets = (currentSelection: Record<ExportDatasetKey, boolean>) =>
     (Object.keys(currentSelection) as ExportDatasetKey[]).filter((dataset) => currentSelection[dataset])
@@ -111,6 +149,7 @@ export function ExportDialog({ open, onOpenChange, data, isFiltered, onExportCom
     setSelection(initialSelection)
     setIsExporting(false)
     setProgress(0)
+    setDisplayedProgress(0)
     setStage("Preparing export...")
     setError(null)
 
@@ -166,14 +205,10 @@ export function ExportDialog({ open, onOpenChange, data, isFiltered, onExportCom
     setIsExporting(true)
     setError(null)
     setProgress(0)
-    setStage("Preparing export...")
+    setDisplayedProgress(0)
+    setStage("Requesting export...")
     const startedAt = Date.now()
     const selectedDatasets = getSelectedDatasets(selection)
-
-    const onProgress: ExportProgressHandler = (value, nextStage) => {
-      setProgress(value)
-      if (nextStage) setStage(nextStage)
-    }
 
     captureEvent(ANALYTICS_EVENTS.EXPORT_STARTED, {
       selected_datasets: selectedDatasets,
@@ -185,17 +220,54 @@ export function ExportDialog({ open, onOpenChange, data, isFiltered, onExportCom
       row_count_prospects: selection.prospects ? data.prospects.length : 0,
     })
 
+    // Fake but plausible progress ramp while the server is working. The
+    // real work (DB fetch → XLSX → upload) is opaque to the client, so
+    // we advance toward 90% gradually and jump to 100% on response.
+    let rampCancelled = false
+    const ramp = async () => {
+      const stages: Array<{ to: number; stage: string; duration: number }> = [
+        { to: 25, stage: "Fetching data from database", duration: 900 },
+        { to: 65, stage: "Generating spreadsheet", duration: 2200 },
+        { to: 88, stage: "Uploading archive", duration: 1400 },
+      ]
+      let current = 0
+      for (const s of stages) {
+        const steps = Math.max(6, Math.round(s.duration / 80))
+        const stepDelay = s.duration / steps
+        setStage(s.stage)
+        for (let i = 1; i <= steps; i++) {
+          if (rampCancelled) return
+          const next = current + ((s.to - current) * i) / steps
+          setProgress(next)
+          await new Promise((r) => setTimeout(r, stepDelay))
+        }
+        current = s.to
+      }
+    }
+
     try {
-      await exportSelectedDataZip({
-        selection: {
-          accounts: selection.accounts ? (data.accounts as RowRecord[]) : undefined,
-          centers: selection.centers ? (data.centers as RowRecord[]) : undefined,
-          services: selection.services ? (data.services as RowRecord[]) : undefined,
-          prospects: selection.prospects ? (data.prospects as RowRecord[]) : undefined,
-        },
-        onProgress,
+      const rampPromise = ramp()
+      const result = await requestServerExport({
+        datasets: selectedDatasets,
+        accountNames: isFiltered ? accountNames ?? null : null,
+        centerKeys: isFiltered ? centerKeys ?? null : null,
+        isFiltered,
+        filtersApplied: filtersSnapshot ?? null,
       })
+      rampCancelled = true
+      await rampPromise.catch(() => undefined)
+
+      setProgress(95)
+      setStage("Starting download")
+
+      // Trigger the download via the signed-URL redirect route.
+      const token = result.accessToken
+      const url = `${result.downloadPath}?access_token=${encodeURIComponent(token)}`
+      window.open(url, "_self")
+
+      setProgress(100)
       setStage("Export ready")
+
       captureEvent(ANALYTICS_EVENTS.EXPORT_COMPLETED, {
         selected_datasets: selectedDatasets,
         selected_dataset_count: selectedDatasets.length,
@@ -204,8 +276,10 @@ export function ExportDialog({ open, onOpenChange, data, isFiltered, onExportCom
       })
       onExportCompleted?.()
     } catch (err) {
+      rampCancelled = true
       console.error("Export failed:", err)
-      setError("Export failed. Please try again.")
+      const message = err instanceof Error ? err.message : "Export failed. Please try again."
+      setError(message)
       captureEvent(ANALYTICS_EVENTS.EXPORT_FAILED, {
         selected_datasets: selectedDatasets,
         selected_dataset_count: selectedDatasets.length,
@@ -317,12 +391,12 @@ export function ExportDialog({ open, onOpenChange, data, isFiltered, onExportCom
                 <>
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span>{stage}</span>
-                    <span>{progress}%</span>
+                    <span className="tabular-nums">{Math.round(displayedProgress)}%</span>
                   </div>
                   <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
                     <div
-                      className="h-full rounded-full bg-primary transition-all duration-300"
-                      style={{ width: `${progress}%` }}
+                      className="h-full rounded-full bg-primary"
+                      style={{ width: `${displayedProgress}%` }}
                     />
                   </div>
                 </>

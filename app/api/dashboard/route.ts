@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic"
 // IN-MEMORY SWR CACHE
 // ============================================
 
-const CACHE_TTL = Number(process.env.DASHBOARD_CACHE_TTL_MS) || 5 * 60 * 1000 // 5 minutes
+const CACHE_TTL = Number(process.env.DASHBOARD_CACHE_TTL_MS) || 60 * 60 * 1000 // 1 hour
 
 let cache: {
   gzipped: Buffer | null
