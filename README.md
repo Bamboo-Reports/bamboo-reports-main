@@ -71,10 +71,13 @@ Bamboo Reports provides a unified view of business entities (**Accounts**, **Cen
 - **Type Safety:** Shared TypeScript definitions ensuring consistency from database to UI.
 
 ### Export and Integrations
-- **Excel Exports:** Native `.xlsx` generation using ExcelJS with ZIP compression.
-- **Multi-Sheet Support:** Export all filtered entities into separate sheets in a single file.
+- **Server-Side `.xlsx` Exports:** ExcelJS builds multi-sheet workbooks on the server against a full-schema `SELECT *`, so exports include every database column regardless of what the dashboard renders.
+- **Filter-Aware:** The client sends account / center identifier lists so filtered exports only include matching rows; unfiltered exports pull the full tables.
+- **Audit Log + Re-Download:** Every export is archived to a private Supabase Storage bucket and logged in `public.user_exports` with IP, user-agent, filters snapshot, and row counts. Users re-download past exports from the **My exports** dialog via short-lived signed URLs.
 - **Logo Integration:** Automated company logo fetching via Logo.dev API with fallback initials.
 - **Financial Data:** Stock information and financial metrics via Yahoo Finance integration.
+
+> **Details:** See [User Exports & Audit Log](documentation/user-exports.md) for the architecture, setup steps, and troubleshooting.
 
 ### Notifications
 - **Recently Updated Accounts:** Tracks account-level changes with grouped notifications.
@@ -285,6 +288,8 @@ bamboo-reports-nextjs/
 | `DATABASE_URL` | **Yes** | Neon PostgreSQL connection string. |
 | `NEXT_PUBLIC_SUPABASE_URL` | **Yes** | Your Supabase project URL. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | **Yes** | Supabase public anon key (safe for client). |
+| `SUPABASE_SERVICE_ROLE_KEY` | **Yes** | Supabase service-role secret. Server-only — used to write/read `user_exports` and upload archived exports to Storage. |
+| `DASHBOARD_CACHE_TTL_MS` | No | Override for the in-memory dashboard cache TTL. Default: `3600000` (1 hour). |
 | `NEXT_PUBLIC_MAPTILER_KEY` | **Yes** | MapTiler public key for rendering map tiles. |
 | `NEXT_PUBLIC_MAPTILER_STATE_STYLE_ID` | No | MapTiler style ID for state choropleth view. |
 | `NEXT_PUBLIC_MAPTILER_CITY_STYLE_ID` | No | MapTiler style ID for city-level view. |
@@ -310,9 +315,12 @@ The app delegates identity management to **Supabase Auth**.
 - **User Data:**
   - **`public.profiles`**: Stores user metadata (First Name, Last Name, Email, Role).
   - **`public.saved_filters`**: Stores JSON blobs of user's filter configurations.
+  - **`public.user_exports`**: Audit log of exports with metadata (IP, user-agent, row counts, filters snapshot). Pairs with the private `user-exports` Storage bucket for the archived `.xlsx` files.
 - **Security:** Row-Level Security (RLS) ensures full data isolation between users.
 
-> **Setup Guide:** Follow the [Supabase Auth Setup](documentation/supabase-auth-setup.md) guide to initialize your Supabase project tables.
+> **Setup Guides:**
+> - Auth & profiles: [Supabase Auth Setup](documentation/supabase-auth-setup.md)
+> - Exports audit log + bucket: [User Exports & Audit Log](documentation/user-exports.md)
 
 ---
 
@@ -392,6 +400,9 @@ Subsequent pushes to the `main` branch trigger automatic deployments.
 | **Charts not rendering** | Data issue | Check browser console for errors. Ensure data is being returned from server actions. |
 | **Choropleth seams visible** | MapTiler style | Disable disputed boundary layers in your MapTiler style. See [Map Disputed Boundaries](documentation/map-disputed-boundaries.md). |
 | **Export button disabled** | User role | Only `admin` users can export. Update the role in the `profiles` table. |
+| **Export fails with "Failed to archive export"** | `user-exports` Storage bucket missing | Create a **private** bucket named exactly `user-exports` in the Supabase dashboard. |
+| **Export fails with "Failed to record export: relation 'public.user_exports' does not exist"** | Schema SQL not run | Execute `documentation/user-exports-schema.sql` against your Supabase project. |
+| **"My exports" dialog is empty after a successful export** | Dev-server module cache | Hard-refresh the page; restart `next dev`. |
 
 ---
 
@@ -408,6 +419,7 @@ Detailed documentation for specific subsystems lives in the `documentation/` fol
 | [**Developer Workflow**](documentation/developer-workflow.md) | Guide for common tasks, coding standards, and troubleshooting |
 | [**Supabase Auth**](documentation/supabase-auth-setup.md) | Setting up the `profiles` table, RLS policies, and auth triggers |
 | [**Saved Filters**](documentation/supabase-saved-filters.md) | Technical spec for the saved filters JSON structure |
+| [**User Exports & Audit Log**](documentation/user-exports.md) | Server-side export generation, Storage archive, and audit table |
 | [**Logo Integration**](documentation/logo-integration.md) | Setup and usage guide for the Logo.dev integration |
 | [**Map Disputed Boundaries**](documentation/map-disputed-boundaries.md) | State choropleth disputed-boundary behavior and alias rules |
 
