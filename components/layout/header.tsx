@@ -119,7 +119,7 @@ export const Header = React.memo(function Header({ onRefresh, onStartTour, onOpe
   })()
   const roleLabel = normalizedRole === 'admin' ? 'Admin' : 'Viewer'
 
-  const environmentBadgeLabel = environmentLabel === "DEV" ? "</> DEV" : null
+  const environmentBadgeLabel = environmentLabel === "DEV" ? "DEV" : null
 
   return (
     <div className="sticky top-0 z-20 border-b border-border/80 bg-background/95 backdrop-blur-md">
@@ -143,7 +143,7 @@ export const Header = React.memo(function Header({ onRefresh, onStartTour, onOpe
                   <div className="inline-flex shrink-0 items-center gap-1 rounded-md border border-amber-500/25 bg-amber-500/8 px-2 py-0.5 dark:border-amber-400/20 dark:bg-amber-500/10">
                     <Terminal className="h-3 w-3 shrink-0 text-amber-600 dark:text-amber-400" />
                     <span className="font-mono text-[10px] font-bold uppercase leading-none tracking-widest text-amber-700 dark:text-amber-300">
-                      dev
+                      {environmentBadgeLabel}
                     </span>
                   </div>
                 ) : null}
