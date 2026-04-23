@@ -175,7 +175,7 @@ function SignInForm() {
           </Alert>
         ) : null}
         {signupStatus === "success" ? (
-          <Alert className="border-blue-500/30 bg-blue-500/10 text-foreground">
+          <Alert className="border-emerald-500/30 bg-emerald-500/10 text-foreground">
             <AlertDescription>Account created. Please sign in to continue.</AlertDescription>
           </Alert>
         ) : null}

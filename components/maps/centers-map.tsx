@@ -11,6 +11,7 @@ import "maplibre-gl/dist/maplibre-gl.css"
 interface CentersMapProps {
   centers: Center[]
   heightClass?: string
+  showAccountsCount?: boolean
 }
 
 interface CityCluster {
@@ -52,7 +53,7 @@ interface CityFeatureCollection {
 const HALO_RADIUS_SCALE = 1.5
 const OVERLAP_PADDING = 0.5
 
-export function CentersMap({ centers, heightClass = "h-[750px]" }: CentersMapProps) {
+export function CentersMap({ centers, heightClass = "h-[750px]", showAccountsCount = true }: CentersMapProps) {
   const [hoveredCity, setHoveredCity] = useState<string | null>(null)
   const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -509,32 +510,6 @@ export function CentersMap({ centers, heightClass = "h-[750px]" }: CentersMapPro
         {/* Fullscreen Control */}
         <FullscreenControl position="top-left" />
 
-        {/* Recenter Button */}
-        <div className="absolute top-[152px] left-2 z-10">
-          <button
-            type="button"
-            onClick={handleRecenter}
-            className="h-8 w-8 bg-background hover:bg-muted border rounded-sm shadow-lg transition-colors flex items-center justify-center"
-            title="Recenter map"
-            aria-label="Recenter map"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <circle cx="12" cy="12" r="3" />
-            </svg>
-          </button>
-        </div>
-
         <Source id="centers" type="geojson" data={visibleGeojsonData ?? geojsonData}>
           {/* Outer halo layer - crisp, flat, and rendered below core for clean overlap */}
           <Layer
@@ -590,53 +565,48 @@ export function CentersMap({ centers, heightClass = "h-[750px]" }: CentersMapPro
                 left: `${(tooltipPosition?.x ?? mousePosition.x + 15)}px`,
                 top: `${(tooltipPosition?.y ?? mousePosition.y + 15)}px`,
                 fontFamily:
-                  "'Google Sans', 'Poppins', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                  "'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
               }}
             >
-              <div className="bg-background border-2 border-orange-500/20 rounded-xl shadow-2xl min-w-[280px] overflow-hidden">
-                {/* Header */}
-                <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-3">
-                  <h3 className="font-bold text-white text-base leading-tight">
-                    {cityInfo.city}
-                  </h3>
-                  <p className="text-orange-100 text-xs mt-0.5">
-                    {cityInfo.country}
-                  </p>
-                </div>
-
-                {/* Content */}
-                <div className="px-4 py-3 space-y-2.5">
-                  {/* Accounts Count */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                      <span className="text-sm text-muted-foreground font-medium">Accounts</span>
+              <div className="flex min-w-[220px] overflow-hidden rounded-lg border border-border/80 bg-popover/95 text-popover-foreground shadow-[0_12px_40px_-12px_rgba(0,0,0,0.35)] backdrop-blur-md animate-in fade-in-0 zoom-in-95 duration-150">
+                <div className="w-0.5 bg-orange-500/80" aria-hidden="true" />
+                <div className="flex-1 space-y-3 p-3.5">
+                  {/* Location */}
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase leading-tight tracking-[0.14em] text-foreground">
+                      {cityInfo.city}
                     </div>
-                    <span className="text-sm font-bold text-foreground">
-                      {cityInfo.accounts.size.toLocaleString()}
-                    </span>
+                    <div className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                      {cityInfo.country}
+                    </div>
                   </div>
 
-                  {/* Centers Count */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-orange-500"></div>
-                      <span className="text-sm text-muted-foreground font-medium">Centers</span>
-                    </div>
-                    <span className="text-sm font-bold text-foreground">
+                  {/* Hero metric: centers count */}
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-2xl font-semibold leading-none tabular-nums text-foreground">
                       {cityInfo.count.toLocaleString()}
                     </span>
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                      {cityInfo.count === 1 ? 'center' : 'centers'}
+                    </span>
                   </div>
 
-                  {/* Headcount */}
-                  <div className="flex items-center justify-between pt-1.5 border-t">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                      <span className="text-sm text-muted-foreground font-medium">Headcount</span>
+                  {/* Secondary metrics */}
+                  <div className="space-y-1 border-t border-border/60 pt-2 text-xs">
+                    {showAccountsCount && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Accounts</span>
+                        <span className="font-medium tabular-nums text-foreground">
+                          {cityInfo.accounts.size.toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Headcount</span>
+                      <span className="font-medium tabular-nums text-foreground">
+                        {cityInfo.headcount.toLocaleString()}
+                      </span>
                     </div>
-                    <span className="text-sm font-bold text-green-600">
-                      {cityInfo.headcount.toLocaleString()}
-                    </span>
                   </div>
                 </div>
               </div>

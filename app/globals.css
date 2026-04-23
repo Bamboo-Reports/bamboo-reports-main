@@ -94,7 +94,7 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Google Sans', 'Poppins', system-ui, -apple-system, BlinkMacSystemFont,
+    font-family: 'DM Sans', system-ui, -apple-system, BlinkMacSystemFont,
       'Segoe UI', sans-serif;
     line-height: 1.55;
   }

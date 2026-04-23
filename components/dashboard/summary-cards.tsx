@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Briefcase, Building, Clock, UserCheck, Users } from 'lucide-react'
+import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
@@ -168,6 +169,7 @@ export const SummaryCards = React.memo(function SummaryCards({
       icon: Clock,
       iconClassName: 'text-[hsl(var(--chart-5))]',
       clickable: false,
+      readOnlyMessage: "Upcoming Centers is an overview stat. Only Accounts, Centers, and Prospects open as views.",
     },
     {
       id: 'prospects' as const,
@@ -188,6 +190,7 @@ export const SummaryCards = React.memo(function SummaryCards({
       icon: UserCheck,
       iconClassName: 'text-[hsl(var(--chart-4))]',
       clickable: false,
+      readOnlyMessage: "Headcount is an overview stat. Only Accounts, Centers, and Prospects open as views.",
     },
   ]
 
@@ -202,7 +205,14 @@ export const SummaryCards = React.memo(function SummaryCards({
             role={card.clickable ? "button" : undefined}
             tabIndex={card.clickable ? 0 : undefined}
             aria-pressed={card.clickable ? activeView === card.id : undefined}
-            onClick={card.clickable ? () => onSelect(card.id as "accounts" | "centers" | "prospects") : undefined}
+            onClick={(() => {
+              if (card.clickable) {
+                return () => onSelect(card.id as "accounts" | "centers" | "prospects")
+              }
+              const message = card.readOnlyMessage
+              if (!message) return undefined
+              return () => toast.info(message, { id: `summary-readonly-${card.id}` })
+            })()}
             onKeyDown={card.clickable ? (event) => {
               if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault()
@@ -212,6 +222,7 @@ export const SummaryCards = React.memo(function SummaryCards({
             className={cn(
               'relative overflow-hidden border bg-gradient-to-br from-card via-card to-secondary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-300 ease-out',
               card.clickable && 'cursor-pointer select-none',
+              !card.clickable && card.readOnlyMessage && 'cursor-help',
               isActive
                 ? 'ring-2 ring-sidebar-ring border-sidebar-ring/70 shadow-[0_18px_55px_-35px_rgba(0,0,0,0.6)] scale-[1.02]'
                 : 'border-border/70 shadow-[0_14px_42px_-30px_rgba(0,0,0,0.45)] scale-100',

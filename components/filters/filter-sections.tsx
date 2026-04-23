@@ -342,7 +342,7 @@ export function AccountFiltersSection({
               size="sm"
               onClick={() => setShowMoreAccountFilters((prev) => !prev)}
               aria-expanded={showMoreAccountFilters}
-              className="group h-9 rounded-full border-primary/30 bg-primary/5 px-4 text-xs font-semibold text-primary shadow-sm transition-all hover:border-primary/50 hover:bg-primary/10 hover:shadow-md"
+              className="group h-9 rounded-full border-border/70 bg-muted/40 px-4 text-xs font-medium text-foreground shadow-sm transition-all hover:border-border hover:bg-muted/70 hover:shadow-md"
             >
               {showMoreAccountFilters ? "Show Less Filters" : "Show More Filters"}
               {showMoreAccountFilters ? (
@@ -694,7 +694,7 @@ export function CenterFiltersSection({
               size="sm"
               onClick={() => setShowMoreCenterFilters((prev) => !prev)}
               aria-expanded={showMoreCenterFilters}
-              className="group h-9 rounded-full border-primary/30 bg-primary/5 px-4 text-xs font-semibold text-primary shadow-sm transition-all hover:border-primary/50 hover:bg-primary/10 hover:shadow-md"
+              className="group h-9 rounded-full border-border/70 bg-muted/40 px-4 text-xs font-medium text-foreground shadow-sm transition-all hover:border-border hover:bg-muted/70 hover:shadow-md"
             >
               {showMoreCenterFilters ? "Show Less" : "Show More"}
               {showMoreCenterFilters ? (

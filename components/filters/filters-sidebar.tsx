@@ -310,8 +310,8 @@ export function FiltersSidebar({
         )}
       >
         <div className="bg-gradient-to-t from-sidebar/90 to-transparent w-full pt-6 pb-3 flex justify-center">
-          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/20 border border-primary/40 animate-bounce">
-            <ChevronDown className="h-3.5 w-3.5 text-primary shrink-0 translate-y-[0.5px]" />
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-muted/80 border border-border/70 animate-bounce">
+            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0 translate-y-[0.5px]" />
           </div>
         </div>
       </div>

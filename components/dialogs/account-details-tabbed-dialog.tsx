@@ -25,7 +25,6 @@ import {
   Package,
   Building,
   UserCircle,
-  Layers,
   ExternalLink,
   Linkedin,
 } from "lucide-react"
@@ -446,38 +445,22 @@ export function AccountDetailsDialog({
                     <MetaRow label="Sub Industry" value={account.account_hq_sub_industry} />
                     <MetaRow label="Primary Category" value={account.account_primary_category} />
                     <MetaRow label="Primary Nature" value={account.account_primary_nature} />
+                    <MetaRow label="NASSCOM GCC Listing Status" value={account.account_nasscom_status} />
+                    <MetaRow label="Forbes 2000 Rank" value={account.account_hq_forbes_2000_rank ? `#${account.account_hq_forbes_2000_rank}` : null} />
+                    <MetaRow label="Fortune 500 Rank" value={account.account_hq_fortune_500_rank ? `#${account.account_hq_fortune_500_rank}` : null} />
                   </div>
                 </div>
               </section>
 
               {/* Scale & Financials */}
               <section className="space-y-4">
-                <SectionHeader title="Scale & Financials">
-                  {account.account_hq_forbes_2000_rank && (
-                    <Badge variant="outline" className="gap-1 font-normal">
-                      <Award className="h-3 w-3" />
-                      Forbes #{account.account_hq_forbes_2000_rank}
-                    </Badge>
-                  )}
-                  {account.account_hq_fortune_500_rank && (
-                    <Badge variant="outline" className="gap-1 font-normal">
-                      <Award className="h-3 w-3" />
-                      Fortune #{account.account_hq_fortune_500_rank}
-                    </Badge>
-                  )}
-                </SectionHeader>
+                <SectionHeader title="Scale & Financials" />
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <KPITile
                     icon={DollarSign}
                     label="Revenue"
                     value={formatRevenueInMillions(parseRevenue(account.account_hq_revenue))}
                     caption={account.account_hq_revenue_range}
-                  />
-                  <KPITile
-                    icon={Users}
-                    label="Employees"
-                    value={account.account_hq_employee_count}
-                    caption={account.account_hq_employee_range}
                   />
                   {financialData && (
                     <>
@@ -495,6 +478,12 @@ export function AccountDetailsDialog({
                       />
                     </>
                   )}
+                  <KPITile
+                    icon={Users}
+                    label="Employees"
+                    value={account.account_hq_employee_count}
+                    caption={account.account_hq_employee_range}
+                  />
                 </div>
 
                 {ticker && !financialError && !financialLoading && financialData && financialData.annualRevenueSeries.length > 0 && (
@@ -548,19 +537,12 @@ export function AccountDetailsDialog({
               {/* India Presence */}
               {(account.account_first_center_year || account.years_in_india || account.account_center_employees || account.account_center_employees_range || account.account_nasscom_status || accountCenters.length > 0) && (
                 <section className="space-y-4">
-                  <SectionHeader title="India Presence">
-                    {account.account_nasscom_status && (
-                      <Badge variant="outline" className="gap-1 font-normal">
-                        <Award className="h-3 w-3" />
-                        NASSCOM: {account.account_nasscom_status}
-                      </Badge>
-                    )}
-                  </SectionHeader>
+                  <SectionHeader title="India Presence" />
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <KPITile icon={Calendar} label="First Center" value={account.account_first_center_year} />
                     <KPITile icon={Calendar} label="Years in India" value={account.years_in_india} />
                     <KPITile icon={Users} label="Center Employees" value={account.account_center_employees} />
-                    <KPITile icon={Users} label="GCC Headcount (India)" value={account.account_center_employees_range} />
+                    <KPITile icon={Users} label="GCC Aggregate Headcount (India)" value={account.account_center_employees_range} />
                   </div>
                   {accountCenters.length > 0 && (
                     <div className="rounded-lg border border-border/60 bg-background/40 backdrop-blur-sm shadow-sm overflow-hidden h-[360px] lg:h-[420px] dark:bg-white/5 dark:border-white/10">
@@ -570,7 +552,7 @@ export function AccountDetailsDialog({
                           Centers Map
                         </div>
                         <div className="flex-1 min-h-0">
-                          <CentersMap centers={accountCenters} heightClass="h-full" />
+                          <CentersMap centers={accountCenters} heightClass="h-full" showAccountsCount={false} />
                         </div>
                       </div>
                     </div>
@@ -583,15 +565,7 @@ export function AccountDetailsDialog({
                 <section className="space-y-4">
                   <SectionHeader title="Technology Stack" />
                   <div className="rounded-lg border border-border/60 bg-background/40 backdrop-blur-sm shadow-sm overflow-hidden h-[360px] lg:h-[420px] dark:bg-white/5 dark:border-white/10">
-                    <div className="flex h-full flex-col">
-                      <div className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-muted-foreground border-b border-border/40">
-                        <Layers className="h-4 w-4" />
-                        Detected Stack
-                      </div>
-                      <div className="flex-1 min-h-0">
-                        <TechTreemap tech={accountTech} heightClass="h-full" showTitle={false} />
-                      </div>
-                    </div>
+                    <TechTreemap tech={accountTech} heightClass="h-full" showTitle={false} />
                   </div>
                 </section>
               )}

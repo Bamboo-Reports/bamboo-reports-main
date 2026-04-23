@@ -32,7 +32,7 @@ export function ViewSwitcher<V extends string>({
           <TabsTrigger
             key={optionValue}
             value={optionValue}
-            className="gap-2 border border-transparent data-[state=active]:border-primary/15 data-[state=active]:bg-background"
+            className="gap-2 border border-transparent data-[state=active]:bg-background data-[state=active]:ring-1 data-[state=active]:ring-black/10 dark:data-[state=active]:ring-white/15"
           >
             {icon}
             {label}

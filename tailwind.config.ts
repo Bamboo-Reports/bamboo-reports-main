@@ -13,8 +13,7 @@ const config: Config = {
   		extend: {
   		fontFamily: {
   			sans: [
-  				'"Google Sans"',
-  				'Poppins',
+  				'"DM Sans"',
   				'system-ui',
   				'-apple-system',
   				'BlinkMacSystemFont',

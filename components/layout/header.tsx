@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { Compass, FileArchive, LogOut, Mail, Phone, RefreshCw, Search, ShieldCheck, Terminal, UserRound } from 'lucide-react'
+import { Compass, FileArchive, LogOut, RefreshCw, Search, Terminal, UserRound } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Button } from '@/components/ui/button'
 import {
@@ -110,10 +110,14 @@ export const Header = React.memo(function Header({ onRefresh, onStartTour, onOpe
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join('') || 'U'
-  const formattedLastSignIn =
-    lastSignInAt && !Number.isNaN(Date.parse(lastSignInAt))
-      ? new Date(lastSignInAt).toLocaleString()
-      : 'Unknown'
+  const formattedLastSignIn = (() => {
+    if (!lastSignInAt || Number.isNaN(Date.parse(lastSignInAt))) return 'Unknown'
+    const d = new Date(lastSignInAt)
+    const date = d.toLocaleDateString(undefined, { day: '2-digit', month: 'short' })
+    const time = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false })
+    return `${date} · ${time}`
+  })()
+  const roleLabel = normalizedRole === 'admin' ? 'Admin' : 'Viewer'
 
   const environmentBadgeLabel = environmentLabel === "DEV" ? "</> DEV" : null
 
@@ -171,70 +175,66 @@ export const Header = React.memo(function Header({ onRefresh, onStartTour, onOpe
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-80 p-0 overflow-hidden">
-                <div className="border-b border-border/60 bg-gradient-to-r from-blue-500/10 via-sky-500/5 to-background p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-blue-500/30 bg-blue-500/15 text-sm font-semibold text-blue-700 dark:text-blue-300">
-                      {userInitials}
+                <div className="flex items-start gap-3 px-4 pt-4 pb-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold text-foreground">
+                    {userInitials}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="truncate text-sm font-semibold text-foreground">{displayName}</div>
+                      <span
+                        className={
+                          normalizedRole === 'admin'
+                            ? 'shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-primary'
+                            : 'shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground'
+                        }
+                      >
+                        {roleLabel}
+                      </span>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate font-semibold text-foreground">{displayName}</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-2 p-3 text-xs">
-                  <div className="flex items-center justify-between rounded-md border border-border/60 bg-muted/20 px-2.5 py-2">
-                    <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-                      <Mail className="h-3.5 w-3.5" />
-                      Email
-                    </span>
-                    <span className="max-w-[180px] truncate text-foreground">{displayEmail}</span>
-                  </div>
-                  <div className="flex items-center justify-between rounded-md border border-border/60 bg-muted/20 px-2.5 py-2">
-                    <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-                      <Phone className="h-3.5 w-3.5" />
-                      Phone
-                    </span>
-                    <span className="text-foreground">{profile?.phone ?? 'Not set'}</span>
-                  </div>
-                  <div className="flex items-center justify-between rounded-md border border-border/60 bg-muted/20 px-2.5 py-2">
-                    <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-                      <ShieldCheck className="h-3.5 w-3.5" />
-                      Access Role
-                    </span>
-                    <span className="font-medium text-foreground">{normalizedRole === 'admin' ? 'Admin' : 'Viewer'}</span>
-                  </div>
-                  <div className="flex items-center justify-between rounded-md border border-border/60 bg-muted/20 px-2.5 py-2">
-                    <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-                      Last Sign In
-                    </span>
-                    <span className="text-foreground">{formattedLastSignIn}</span>
+                    <div className="mt-0.5 truncate text-xs text-muted-foreground">{displayEmail}</div>
                   </div>
                 </div>
 
                 <DropdownMenuSeparator />
-                <div className="p-2 space-y-1.5">
+
+                <div className="px-4 py-3 space-y-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Phone</span>
+                    <span className={profile?.phone ? 'text-foreground' : 'text-muted-foreground'}>
+                      {profile?.phone ?? 'Not set'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Last sign in</span>
+                    <span className="text-foreground tabular-nums">{formattedLastSignIn}</span>
+                  </div>
+                </div>
+
+                <DropdownMenuSeparator />
+
+                <div className="flex items-stretch gap-1 p-1.5">
                   {onOpenExports && (
                     <DropdownMenuItem
-                      className="h-9 cursor-pointer rounded-md font-medium"
+                      className="flex flex-1 flex-col items-center justify-center gap-1 cursor-pointer rounded-md border border-border/60 bg-muted/20 px-2 py-2.5 text-[11px] font-medium text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 focus:border-border focus:bg-muted/60 focus:text-foreground"
                       onSelect={() => onOpenExports()}
                     >
                       <FileArchive className="h-4 w-4" />
-                      My exports
+                      Exports
                     </DropdownMenuItem>
                   )}
                   {onStartTour && (
                     <DropdownMenuItem
-                      className="h-9 cursor-pointer rounded-md font-medium"
+                      className="flex flex-1 flex-col items-center justify-center gap-1 cursor-pointer rounded-md border border-border/60 bg-muted/20 px-2 py-2.5 text-[11px] font-medium text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 focus:border-border focus:bg-muted/60 focus:text-foreground"
                       onSelect={() => onStartTour()}
                     >
                       <Compass className="h-4 w-4" />
-                      Take a tour
+                      Tour
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem
                     disabled={isLoadingProfile}
-                    className="h-9 cursor-pointer rounded-md border border-destructive/25 bg-destructive/10 font-medium text-destructive focus:bg-destructive/15 focus:text-destructive"
+                    className="flex flex-1 flex-col items-center justify-center gap-1 cursor-pointer rounded-md border border-destructive/25 bg-destructive/5 px-2 py-2.5 text-[11px] font-medium text-destructive transition-colors hover:border-destructive/40 hover:bg-destructive/10 focus:border-destructive/40 focus:bg-destructive/10 focus:text-destructive"
                     onSelect={(event) => {
                       event.preventDefault()
                       handleSignOut()
