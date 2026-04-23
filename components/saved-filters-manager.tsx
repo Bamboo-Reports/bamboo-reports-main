@@ -4,7 +4,6 @@ import { useState, useCallback, useEffect, useMemo, memo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
   DialogContent,
@@ -12,15 +11,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,7 +22,20 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Save, FolderOpen, Settings, X, ChevronDown, ShieldAlert, Share2, Users, Trash2 } from "lucide-react"
+import {
+  BookmarkCheck,
+  Download,
+  Edit2,
+  FolderOpen,
+  RotateCcw,
+  Save,
+  Settings2,
+  Share2,
+  ShieldAlert,
+  Trash2,
+  Users,
+  X,
+} from "lucide-react"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { buildTrackedFiltersSnapshot, normalizeTrackedText, toTrackedStringArray } from "@/lib/analytics/tracking"
@@ -73,7 +77,6 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
 
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   const [manageDialogOpen, setManageDialogOpen] = useState(false)
-  const [savedFiltersDropdownOpen, setSavedFiltersDropdownOpen] = useState(false)
   const [filterName, setFilterName] = useState("")
 
   const [editingFilter, setEditingFilter] = useState<SavedFilter | null>(null)
@@ -83,7 +86,6 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
   const [filterToDelete, setFilterToDelete] = useState<SavedFilter | null>(null)
   const [exportAccessError, setExportAccessError] = useState<string | null>(null)
 
-  // Share dialog state
   const [shareDialogOpen, setShareDialogOpen] = useState(false)
   const [filterToShare, setFilterToShare] = useState<SavedFilter | null>(null)
   const [shareEmail, setShareEmail] = useState("")
@@ -91,7 +93,6 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
   const [shareSuccess, setShareSuccess] = useState<string | null>(null)
   const [currentShares, setCurrentShares] = useState<FilterShare[]>([])
 
-  // Split filters into own and shared
   const myFilters = useMemo(
     () => savedFilters.filter((f) => f.user_id === userId),
     [savedFilters, userId]
@@ -100,6 +101,8 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
     () => savedFilters.filter((f) => f.user_id !== userId),
     [savedFilters, userId]
   )
+
+  const totalCount = myFilters.length + sharedWithMeFilters.length
 
   const handleSaveFilter = useCallback(async () => {
     const success = await saveFilter(filterName, currentFilters)
@@ -142,25 +145,17 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
     }
   }, [editingFilter, editName, updateFilter])
 
-  const getFilterSummary = useCallback((filters: Filters) => {
-    return calculateActiveFilters(filters)
-  }, [])
-
   const handleEdit = useCallback((filter: SavedFilter) => {
     setEditingFilter(filter)
     setEditName(filter.name)
   }, [])
 
   const handleExportAction = useCallback(() => {
-    if (!onExport) {
-      return
-    }
-
+    if (!onExport) return
     if (!canExport) {
       setExportAccessError(exportBlockedMessage)
       return
     }
-
     setExportAccessError(null)
     onExport()
   }, [onExport, canExport, exportBlockedMessage])
@@ -169,7 +164,6 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
     setExportAccessError(null)
   }, [])
 
-  // Share handlers
   const handleOpenShareDialog = useCallback(async (filter: SavedFilter) => {
     setFilterToShare(filter)
     setShareEmail("")
@@ -177,27 +171,22 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
     setShareSuccess(null)
     setCurrentShares([])
     setShareDialogOpen(true)
-
     captureEvent(ANALYTICS_EVENTS.SAVED_FILTER_SHARE_DIALOG_OPENED, {
       saved_filter_id: filter.id,
       saved_filter_name: normalizeTrackedText(filter.name),
     })
-
     const shares = await getFilterShares(filter.id)
     setCurrentShares(shares)
   }, [getFilterShares])
 
   const handleShareFilter = useCallback(async () => {
     if (!filterToShare || !shareEmail.trim()) return
-
     setShareError(null)
     setShareSuccess(null)
-
     const result = await shareFilter(filterToShare.id, shareEmail)
     if (result.success) {
-      setShareSuccess(`Shared with ${shareEmail.trim()}!`)
+      setShareSuccess(`Shared with ${shareEmail.trim()}`)
       setShareEmail("")
-      // Refresh shares list
       const shares = await getFilterShares(filterToShare.id)
       setCurrentShares(shares)
     } else {
@@ -214,15 +203,6 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
   }, [filterToShare, unshareFilter])
 
   useEffect(() => {
-    if (!savedFiltersDropdownOpen) return
-    captureEvent(ANALYTICS_EVENTS.SAVED_FILTERS_DROPDOWN_OPENED, {
-      saved_filter_count: savedFilters.length,
-      saved_filter_ids: toTrackedStringArray(savedFilters.map((filter) => filter.id)),
-      saved_filter_names: toTrackedStringArray(savedFilters.map((filter) => filter.name)),
-    })
-  }, [savedFiltersDropdownOpen, savedFilters])
-
-  useEffect(() => {
     if (!saveDialogOpen) return
     captureEvent(ANALYTICS_EVENTS.SAVED_FILTER_SAVE_DIALOG_OPENED, {
       total_active_filters: totalActiveFilters,
@@ -234,8 +214,8 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
     if (!manageDialogOpen) return
     captureEvent(ANALYTICS_EVENTS.SAVED_FILTERS_MANAGE_OPENED, {
       saved_filter_count: savedFilters.length,
-      saved_filter_ids: toTrackedStringArray(savedFilters.map((filter) => filter.id)),
-      saved_filter_names: toTrackedStringArray(savedFilters.map((filter) => filter.name)),
+      saved_filter_ids: toTrackedStringArray(savedFilters.map((f) => f.id)),
+      saved_filter_names: toTrackedStringArray(savedFilters.map((f) => f.name)),
     })
   }, [manageDialogOpen, savedFilters])
 
@@ -250,216 +230,208 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
   }, [deleteConfirmOpen, filterToDelete])
 
   useEffect(() => {
-    if (canExport && exportAccessError) {
-      setExportAccessError(null)
-    }
+    if (canExport && exportAccessError) setExportAccessError(null)
   }, [canExport, exportAccessError])
 
   return (
-    <div className="flex flex-col gap-3 w-full bg-sidebar-accent/5 p-3 rounded-lg border border-sidebar-border/50">
-      <div className="flex items-center gap-2 w-full">
-        <DropdownMenu open={savedFiltersDropdownOpen} onOpenChange={setSavedFiltersDropdownOpen}>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1 justify-between h-9"
-            >
-              <div className="flex items-center gap-2 truncate">
-                <FolderOpen className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <span className="truncate">Saved Filters</span>
-              </div>
-              <ChevronDown className="h-3.5 w-3.5 opacity-50 ml-2 shrink-0" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width] min-w-[220px]" align="start">
-            {/* My Filters Section */}
-            <div className="px-2 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              My Saved Filters
-            </div>
-            <DropdownMenuSeparator />
-            {myFilters.length === 0 ? (
-              <div className="px-4 py-3 text-sm text-center text-muted-foreground italic">
-                No saved filters yet
-              </div>
-            ) : (
-              myFilters.slice(0, 5).map((filter) => (
-                <DropdownMenuItem key={filter.id} className="flex items-center p-0 group">
-                  <button
-                    type="button"
-                    className="flex-1 px-2 py-2 hover:bg-accent/40 rounded-sm text-left transition-colors duration-150 truncate"
-                    onClick={() => handleLoadFilter(filter)}
-                    title={filter.name}
-                  >
-                    <span className="font-medium text-sm">{filter.name}</span>
-                  </button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 mr-2 shrink-0 text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors duration-150"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleOpenShareDialog(filter)
-                    }}
-                    aria-label={`Share saved filter ${filter.name}`}
-                  >
-                    <Share2 className="h-3.5 w-3.5" />
-                  </Button>
-                </DropdownMenuItem>
-              ))
-            )}
+    <div className="w-full overflow-hidden rounded-lg border border-sidebar-border/50 bg-sidebar-accent/5">
 
-            {/* Shared with me Section */}
-            {sharedWithMeFilters.length > 0 && (
-              <>
-                <DropdownMenuSeparator />
-                <div className="px-2 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                  <Users className="h-3 w-3" />
-                  Shared with me
-                </div>
-                <DropdownMenuSeparator />
-                {sharedWithMeFilters.slice(0, 5).map((filter) => (
-                  <DropdownMenuItem key={filter.id} className="flex items-center p-0 group">
-                    <button
-                      type="button"
-                      className="flex-1 px-2 py-2 hover:bg-accent/40 rounded-sm text-left transition-colors duration-150 truncate"
-                      onClick={() => handleLoadFilter(filter)}
-                      title={filter.name}
-                    >
-                      <span className="font-medium text-sm">{filter.name}</span>
-                    </button>
-                  </DropdownMenuItem>
-                ))}
-              </>
+      {/* Header: mirrors user info avatar row */}
+      <div className="flex items-center gap-3 px-3 pt-3 pb-2.5">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+          <BookmarkCheck className="h-3.5 w-3.5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm font-semibold text-foreground">Saved Filters</span>
+            {totalCount > 0 && (
+              <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                {totalCount} saved
+              </span>
             )}
-
-            {(myFilters.length > 0 || sharedWithMeFilters.length > 0) && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="p-0">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-start text-xs h-8 font-normal text-muted-foreground hover:text-foreground"
-                    onClick={() => setManageDialogOpen(true)}
-                  >
-                    <Settings className="h-3.5 w-3.5 mr-2" />
-                    {myFilters.length > 5 || sharedWithMeFilters.length > 5
-                      ? `Manage all filters (${myFilters.length + sharedWithMeFilters.length})...`
-                      : "Manage all filters..."}
-                  </Button>
-                </DropdownMenuItem>
-              </>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
-          <DialogTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              disabled={totalActiveFilters === 0}
-              className="h-9 w-9 rounded-full shrink-0"
-              title="Save current filters"
-              aria-label="Save current filters"
-            >
-              <Save className="h-4 w-4" />
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Save Filter Configuration</DialogTitle>
-              <DialogDescription>
-                Save your current layout of {totalActiveFilters} active filters to easily access them later.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-2">
-              <div className="space-y-2">
-                <Label htmlFor="filter-name">Name</Label>
-                <Input
-                  id="filter-name"
-                  placeholder="e.g., Q4 Prospect List, Tech Hiring..."
-                  value={filterName}
-                  onChange={(e) => setFilterName(e.target.value)}
-                  className="col-span-3"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="ghost" onClick={() => setSaveDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSaveFilter} disabled={!filterName.trim() || loading}>
-                {loading ? "Saving..." : "Save List"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          </div>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {totalCount === 0 ? "No filters saved yet" : `${myFilters.length} mine, ${sharedWithMeFilters.length} shared`}
+          </p>
+        </div>
       </div>
 
-      {(onReset || onExport) && (
-        <div className="grid grid-cols-2 gap-2 w-full">
-          {onReset && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onReset}
-              className="w-full h-8 text-xs font-medium"
-            >
-              Reset
-            </Button>
+      <div className="mx-3 border-t border-border/50" />
+
+      {/* Filter rows */}
+      {totalCount === 0 ? (
+        <div className="px-3 py-3 text-center text-xs text-muted-foreground italic">
+          Save your current filters to reuse them later.
+        </div>
+      ) : (
+        <div className="py-1.5">
+
+          {myFilters.length > 0 && (
+            <>
+              <div className="px-3 pb-1 pt-1.5">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  My Filters
+                </span>
+              </div>
+              {myFilters.slice(0, 5).map((filter) => (
+                <FilterRow
+                  key={filter.id}
+                  filter={filter}
+                  isOwner={true}
+                  onLoad={handleLoadFilter}
+                  onShare={handleOpenShareDialog}
+                  onEdit={handleEdit}
+                  onDelete={handleDeleteFilter}
+                />
+              ))}
+            </>
           )}
-          {onExport && (
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleExportAction}
-              className="w-full h-8 text-xs font-medium"
-              aria-label={canExport ? "Export data" : "Export data (admin only)"}
-              title={canExport ? "Export data" : "Only admins can export data"}
-              data-tour="export-button"
-            >
-              Export
-            </Button>
+
+          {sharedWithMeFilters.length > 0 && (
+            <>
+              {myFilters.length > 0 && <div className="mx-3 my-1.5 border-t border-border/50" />}
+              <div className="px-3 pb-1 pt-1.5">
+                <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <Users className="h-2.5 w-2.5" />
+                  Shared with me
+                </span>
+              </div>
+              {sharedWithMeFilters.slice(0, 5).map((filter) => (
+                <FilterRow
+                  key={filter.id}
+                  filter={filter}
+                  isOwner={false}
+                  onLoad={handleLoadFilter}
+                />
+              ))}
+            </>
           )}
         </div>
       )}
 
-      {exportAccessError ? (
-        <div
-          role="status"
-          aria-live="polite"
-          className="relative overflow-hidden rounded-lg border border-amber-400/40 bg-[linear-gradient(135deg,rgba(251,191,36,0.12),rgba(251,191,36,0.04))] p-2.5 dark:border-amber-300/30 dark:bg-[linear-gradient(135deg,rgba(245,158,11,0.2),rgba(120,53,15,0.28))]"
-        >
-          <div className="absolute inset-y-0 left-0 w-1 bg-amber-500/80" />
-          <div className="flex items-start gap-2.5 pl-2">
-            <div className="mt-0.5 rounded-md bg-amber-500/15 p-1 text-amber-700 dark:bg-amber-400/20 dark:text-amber-200">
-              <ShieldAlert className="h-3.5 w-3.5" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-amber-700 dark:text-amber-200">
-                Export restricted
-              </p>
-              <p className="text-xs text-amber-900/90 dark:text-amber-100/95">{exportAccessError}</p>
-            </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 text-amber-800 hover:bg-amber-500/10 hover:text-amber-900 dark:text-amber-200 dark:hover:bg-amber-400/20 dark:hover:text-amber-50"
-              onClick={handleDismissExportAccessError}
-              aria-label="Dismiss export access warning"
-            >
-              <X className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-        </div>
-      ) : null}
+      <div className="mx-3 border-t border-border/50" />
 
-      {/* Manage Saved Filters Dialog */}
+      {/* Export access error */}
+      {exportAccessError && (
+        <>
+          <div
+            role="status"
+            aria-live="polite"
+            className="relative mx-3 mt-2.5 overflow-hidden rounded-md border border-amber-400/40 bg-[linear-gradient(135deg,rgba(251,191,36,0.12),rgba(251,191,36,0.04))] p-2 dark:border-amber-300/30 dark:bg-[linear-gradient(135deg,rgba(245,158,11,0.2),rgba(120,53,15,0.28))]"
+          >
+            <div className="absolute inset-y-0 left-0 w-0.5 rounded-l-md bg-amber-500/80" />
+            <div className="flex items-start gap-2 pl-2">
+              <div className="mt-0.5 rounded bg-amber-500/15 p-0.5 text-amber-700 dark:bg-amber-400/20 dark:text-amber-200">
+                <ShieldAlert className="h-3 w-3" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-amber-700 dark:text-amber-200">
+                  Export restricted
+                </p>
+                <p className="text-[11px] leading-tight text-amber-900/90 dark:text-amber-100/95">{exportAccessError}</p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-5 w-5 shrink-0 text-amber-800 hover:bg-amber-500/10 hover:text-amber-900 dark:text-amber-200 dark:hover:bg-amber-400/20"
+                onClick={handleDismissExportAccessError}
+                aria-label="Dismiss export access warning"
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+          <div className="mx-3 mt-2.5 border-t border-border/50" />
+        </>
+      )}
+
+      {/* Action grid: mirrors header dropdown buttons */}
+      <div className="flex items-stretch gap-1 p-1.5">
+        <button
+          type="button"
+          disabled={totalActiveFilters === 0 || loading}
+          onClick={() => setSaveDialogOpen(true)}
+          className="flex flex-1 flex-col items-center justify-center gap-1 cursor-pointer rounded-md border border-border/60 bg-muted/20 px-2 py-2 text-[11px] font-medium text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+          title="Save current filters"
+          aria-label="Save current filters"
+        >
+          <Save className="h-3.5 w-3.5" />
+          Save
+        </button>
+
+        {totalCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setManageDialogOpen(true)}
+            className="flex flex-1 flex-col items-center justify-center gap-1 cursor-pointer rounded-md border border-border/60 bg-muted/20 px-2 py-2 text-[11px] font-medium text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 hover:text-foreground"
+            title="Manage all saved filters"
+            aria-label="Manage saved filters"
+          >
+            <Settings2 className="h-3.5 w-3.5" />
+            Manage
+          </button>
+        )}
+
+        {onReset && (
+          <button
+            type="button"
+            onClick={onReset}
+            className="flex flex-1 flex-col items-center justify-center gap-1 cursor-pointer rounded-md border border-border/60 bg-muted/20 px-2 py-2 text-[11px] font-medium text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 hover:text-foreground"
+            title="Reset all filters"
+            aria-label="Reset all filters"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            Reset
+          </button>
+        )}
+
+        {onExport && (
+          <button
+            type="button"
+            onClick={handleExportAction}
+            className="flex flex-1 flex-col items-center justify-center gap-1 cursor-pointer rounded-md border border-primary/25 bg-primary/5 px-2 py-2 text-[11px] font-medium text-primary transition-colors hover:border-primary/40 hover:bg-primary/10"
+            data-tour="export-button"
+            aria-label={canExport ? "Export data" : "Export data (admin only)"}
+            title={canExport ? "Export data" : "Only admins can export data"}
+          >
+            <Download className="h-3.5 w-3.5" />
+            Export
+          </button>
+        )}
+      </div>
+
+      {/* Save Dialog */}
+      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save Filter Configuration</DialogTitle>
+            <DialogDescription>
+              Save your current layout of {totalActiveFilters} active filters to easily access them later.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="filter-name">Name</Label>
+              <Input
+                id="filter-name"
+                placeholder="e.g., Q4 Prospect List, Tech Hiring..."
+                value={filterName}
+                onChange={(e) => setFilterName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleSaveFilter() }}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setSaveDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveFilter} disabled={!filterName.trim() || loading}>
+              {loading ? "Saving..." : "Save List"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manage Dialog */}
       <Dialog open={manageDialogOpen} onOpenChange={setManageDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
@@ -473,16 +445,13 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
               <>
                 {myFilters.length > 0 && (
                   <>
-                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">My Filters</h3>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">My Filters</p>
                     {myFilters.map((filter) => (
                       <SavedFilterCard
                         key={filter.id}
                         filter={filter}
                         isOwner={true}
-                        onLoad={(f) => {
-                          handleLoadFilter(f)
-                          setManageDialogOpen(false)
-                        }}
+                        onLoad={(f) => { handleLoadFilter(f); setManageDialogOpen(false) }}
                         onEdit={handleEdit}
                         onDelete={handleDeleteFilter}
                         onShare={handleOpenShareDialog}
@@ -492,19 +461,16 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
                 )}
                 {sharedWithMeFilters.length > 0 && (
                   <>
-                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 mt-6">
-                      <Users className="h-3.5 w-3.5" />
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mt-6">
+                      <Users className="h-3 w-3" />
                       Shared with me
-                    </h3>
+                    </p>
                     {sharedWithMeFilters.map((filter) => (
                       <SavedFilterCard
                         key={filter.id}
                         filter={filter}
                         isOwner={false}
-                        onLoad={(f) => {
-                          handleLoadFilter(f)
-                          setManageDialogOpen(false)
-                        }}
+                        onLoad={(f) => { handleLoadFilter(f); setManageDialogOpen(false) }}
                         onEdit={handleEdit}
                         onDelete={handleDeleteFilter}
                       />
@@ -517,7 +483,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Confirmation */}
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -539,15 +505,10 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Rename Filter Dialog */}
+      {/* Rename Dialog */}
       <Dialog
         open={!!editingFilter}
-        onOpenChange={(open) => {
-          if (!open) {
-            setEditingFilter(null)
-            setEditName("")
-          }
-        }}
+        onOpenChange={(open) => { if (!open) { setEditingFilter(null); setEditName("") } }}
       >
         <DialogContent>
           <DialogHeader>
@@ -556,13 +517,16 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label htmlFor="edit-name">Name</Label>
-              <Input id="edit-name" value={editName} onChange={(e) => setEditName(e.target.value)} />
+              <Input
+                id="edit-name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleUpdateFilter() }}
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setEditingFilter(null)}>
-              Cancel
-            </Button>
+            <Button variant="ghost" onClick={() => setEditingFilter(null)}>Cancel</Button>
             <Button onClick={handleUpdateFilter} disabled={!editName.trim() || loading}>
               {loading ? "Updating..." : "Update Name"}
             </Button>
@@ -570,7 +534,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
         </DialogContent>
       </Dialog>
 
-      {/* Share Filter Dialog */}
+      {/* Share Dialog */}
       <Dialog
         open={shareDialogOpen}
         onOpenChange={(open) => {
@@ -605,45 +569,22 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
                   type="email"
                   placeholder="teammate@company.com"
                   value={shareEmail}
-                  onChange={(e) => {
-                    setShareEmail(e.target.value)
-                    setShareError(null)
-                    setShareSuccess(null)
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault()
-                      handleShareFilter()
-                    }
-                  }}
+                  onChange={(e) => { setShareEmail(e.target.value); setShareError(null); setShareSuccess(null) }}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleShareFilter() } }}
                 />
-                <Button
-                  onClick={handleShareFilter}
-                  disabled={!shareEmail.trim() || loading}
-                  size="sm"
-                  className="shrink-0"
-                >
+                <Button onClick={handleShareFilter} disabled={!shareEmail.trim() || loading} size="sm" className="shrink-0">
                   {loading ? "Sharing..." : "Share"}
                 </Button>
               </div>
-              {shareError && (
-                <p className="text-sm text-destructive">{shareError}</p>
-              )}
-              {shareSuccess && (
-                <p className="text-sm text-green-600 dark:text-green-400">{shareSuccess}</p>
-              )}
+              {shareError && <p className="text-sm text-destructive">{shareError}</p>}
+              {shareSuccess && <p className="text-sm text-green-600 dark:text-green-400">{shareSuccess}</p>}
             </div>
-
-            {/* Current shares list */}
-            {currentShares.length > 0 ? (
+            {currentShares.length > 0 && (
               <div className="space-y-2">
                 <Label className="text-muted-foreground">Currently shared with</Label>
                 <div className="space-y-1.5">
                   {currentShares.map((share) => (
-                    <div
-                      key={share.id}
-                      className="flex items-center justify-between px-3 py-2 rounded-md bg-muted/50 text-sm"
-                    >
+                    <div key={share.id} className="flex items-center justify-between px-3 py-2 rounded-md bg-muted/50 text-sm">
                       <span className="truncate">{share.shared_with_email}</span>
                       <Button
                         type="button"
@@ -659,10 +600,92 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
                   ))}
                 </div>
               </div>
-            ) : null}
+            )}
           </div>
         </DialogContent>
       </Dialog>
     </div>
   )
 })
+
+// Filter row: a single saved filter entry
+const FilterRow = memo(({
+  filter,
+  isOwner,
+  onLoad,
+  onShare,
+  onEdit,
+  onDelete,
+}: {
+  filter: SavedFilter
+  isOwner: boolean
+  onLoad: (f: SavedFilter) => void
+  onShare?: (f: SavedFilter) => void
+  onEdit?: (f: SavedFilter) => void
+  onDelete?: (f: SavedFilter) => void
+}) => {
+  const count = calculateActiveFilters(filter.filters)
+  return (
+    <div className="group flex items-center gap-2 px-3 py-1.5 hover:bg-muted/40 transition-colors">
+      <button
+        type="button"
+        className="min-w-0 flex-1 text-left"
+        onClick={() => onLoad(filter)}
+        title={`Load: ${filter.name}`}
+      >
+        <span className="block truncate text-xs font-medium text-foreground group-hover:text-foreground/90">
+          {filter.name}
+        </span>
+      </button>
+      <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-muted-foreground">
+        {count}
+      </span>
+      <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+        {isOwner && onShare && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onShare(filter) }}
+            className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            aria-label={`Share ${filter.name}`}
+            title="Share"
+          >
+            <Share2 className="h-3 w-3" />
+          </button>
+        )}
+        {isOwner && onEdit && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onEdit(filter) }}
+            className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            aria-label={`Rename ${filter.name}`}
+            title="Rename"
+          >
+            <Edit2 className="h-3 w-3" />
+          </button>
+        )}
+        {isOwner && onDelete && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onDelete(filter) }}
+            className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+            aria-label={`Delete ${filter.name}`}
+            title="Delete"
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onLoad(filter) }}
+          className="flex h-5 items-center gap-0.5 rounded px-1.5 border border-border/60 bg-muted/20 text-[10px] font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
+          aria-label={`Load ${filter.name}`}
+          title="Load"
+        >
+          <FolderOpen className="h-2.5 w-2.5" />
+          Load
+        </button>
+      </div>
+    </div>
+  )
+})
+FilterRow.displayName = "FilterRow"
