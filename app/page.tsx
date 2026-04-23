@@ -689,11 +689,13 @@ function DashboardContent(): JSX.Element | null {
       <CenterDetailsDialog
         center={searchSelectedCenter}
         services={services}
+        tech={tech}
         open={searchCenterDialogOpen}
         onOpenChange={setSearchCenterDialogOpen}
       />
       <ProspectDetailsDialog
         prospect={searchSelectedProspect}
+        allProspects={prospects}
         open={searchProspectDialogOpen}
         onOpenChange={setSearchProspectDialogOpen}
       />
@@ -798,6 +800,7 @@ function DashboardContent(): JSX.Element | null {
                     allCenters={centers}
                     functions={functions}
                     services={filteredData.filteredServices}
+                    tech={tech}
                     centerChartData={centerChartData}
                     centersView={centersView}
                     setCentersView={setCentersView}
@@ -808,6 +811,7 @@ function DashboardContent(): JSX.Element | null {
 
                   <ProspectsTab
                     prospects={filteredData.filteredProspects}
+                    allProspects={prospects}
                     prospectChartData={prospectChartData}
                     prospectsView={prospectsView}
                     setProspectsView={setProspectsView}

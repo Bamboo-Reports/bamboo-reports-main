@@ -219,8 +219,7 @@ export function AccountDetailsDialog({
     ? tech.filter((item) => item.account_global_legal_name === account.account_global_legal_name)
     : []
 
-  // Merge city and country for location
-  const location = [account?.account_hq_city, account?.account_hq_country]
+  const location = [account?.account_hq_city, account?.account_hq_state]
     .filter(Boolean)
     .join(", ")
 
@@ -382,7 +381,7 @@ export function AccountDetailsDialog({
                   </div>
                 </div>
                 <p className="text-sm font-normal text-muted-foreground mt-1">
-                  {location || account.account_hq_region}
+                  {[account.account_hq_city, account.account_hq_state, account.account_hq_country].filter(Boolean).join(", ") || account.account_hq_region}
                 </p>
               </div>
             </DialogTitle>
@@ -451,6 +450,7 @@ export function AccountDetailsDialog({
                     <MetaRow label="Account Type" value={account.account_hq_company_type} />
                     <MetaRow label="Stock Ticker" value={account.account_hq_stock_ticker} />
                     <MetaRow label="HQ Location" value={location} />
+                    <MetaRow label="Country" value={account.account_hq_country} />
                     <MetaRow label="Region" value={account.account_hq_region} />
                     <MetaRow label="Industry" value={account.account_hq_industry} />
                     <MetaRow label="Sub Industry" value={account.account_hq_sub_industry} />
@@ -660,6 +660,7 @@ export function AccountDetailsDialog({
       <CenterDetailsDialog
         center={selectedCenter}
         services={services}
+        tech={tech}
         open={isCenterDialogOpen}
         onOpenChange={setIsCenterDialogOpen}
       />
@@ -667,6 +668,7 @@ export function AccountDetailsDialog({
       {/* Prospect Details Dialog */}
       <ProspectDetailsDialog
         prospect={selectedProspect}
+        allProspects={prospects}
         open={isProspectDialogOpen}
         onOpenChange={setIsProspectDialogOpen}
       />

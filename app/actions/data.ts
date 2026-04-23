@@ -84,7 +84,7 @@ async function getDashboardAccounts(): Promise<Account[]> {
       () => sqlClient`SELECT account_nasscom_status, account_nasscom_member_status, account_data_coverage,
         account_source, account_type, account_global_legal_name, account_hq_stock_ticker,
         account_hq_company_type, account_about, account_hq_key_offerings,
-        account_hq_city, account_hq_country, account_hq_region,
+        account_hq_city, account_hq_state, account_hq_country, account_hq_region,
         account_hq_sub_industry, account_hq_industry, account_hq_linkedin_link,
         account_primary_category, account_primary_nature, account_hq_revenue,
         account_hq_revenue_range, account_hq_employee_count, account_hq_employee_range,

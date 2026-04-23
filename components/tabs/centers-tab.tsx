@@ -19,13 +19,14 @@ import { SortButton } from "@/components/ui/sort-button"
 import { PaginationControls } from "@/components/ui/pagination-controls"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
-import type { Center, Function, Service } from "@/lib/types"
+import type { Center, Function, Service, Tech } from "@/lib/types"
 
 interface CentersTabProps {
   centers: Center[]
   allCenters: Center[]
   functions: Function[]
   services: Service[]
+  tech: Tech[]
   centerChartData: {
     centerTypeData: Array<{ name: string; value: number; fill?: string }>
     employeesRangeData: Array<{ name: string; value: number; fill?: string }>
@@ -43,6 +44,7 @@ export function CentersTab({
   centers,
   allCenters,
   services,
+  tech,
   centerChartData,
   centersView,
   setCentersView,
@@ -418,6 +420,7 @@ export function CentersTab({
       <CenterDetailsDialog
         center={selectedCenter}
         services={services}
+        tech={tech}
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
       />

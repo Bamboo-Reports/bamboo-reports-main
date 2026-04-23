@@ -21,16 +21,19 @@ import {
   UserCog,
   Users,
 } from "lucide-react"
-import type { Center, Service } from "@/lib/types"
+import type { Center, Service, Tech } from "@/lib/types"
 import { CompanyLogo } from "@/components/ui/company-logo"
 import { DialogBreadcrumb } from "@/components/ui/dialog-breadcrumb"
+import { TechTreemap } from "@/components/charts/tech-treemap"
 
 interface CenterDetailsDialogProps {
   center: Center | null
   services: Service[]
+  tech: Tech[]
   open: boolean
   onOpenChange: (open: boolean) => void
 }
+
 
 function MetaRow({ label, value }: { label: string; value: string | number | null | undefined }) {
   if (value === null || value === undefined) return null
@@ -82,14 +85,34 @@ function SectionHeader({ title, children }: { title: string; children?: React.Re
 export function CenterDetailsDialog({
   center,
   services,
+  tech,
   open,
   onOpenChange,
 }: CenterDetailsDialogProps) {
+
   if (!center) return null
 
   const centerServices = services.find(
     (service) => service.cn_unique_key === center.cn_unique_key,
   )
+
+  const centerTech = tech.filter((item) => item.cn_unique_key === center.cn_unique_key)
+
+  const parseLines = (content: string | null | undefined) =>
+    content
+      ? content.split(/\r?\n/).map((l) => l.trim()).filter((l) => l && l !== "-")
+      : []
+
+  const serviceCategories = [
+    { key: "it",          icon: Code,          title: "IT Services",          items: parseLines(centerServices?.service_it)              },
+    { key: "erd",         icon: Lightbulb,     title: "ER&D Services",        items: parseLines(centerServices?.service_erd)             },
+    { key: "finance",     icon: DollarSign,    title: "Finance & Accounting", items: parseLines(centerServices?.service_fna)             },
+    { key: "hr",          icon: UserCog,       title: "HR Services",          items: parseLines(centerServices?.service_hr)              },
+    { key: "procurement", icon: ShoppingCart,  title: "Procurement",          items: parseLines(centerServices?.service_procurement)     },
+    { key: "sales",       icon: TrendingUp,    title: "Sales & Marketing",    items: parseLines(centerServices?.service_sales_marketing) },
+    { key: "support",     icon: Headphones,    title: "Customer Support",     items: parseLines(centerServices?.service_customer_support)},
+    { key: "other",       icon: MoreHorizontal,title: "Other Services",       items: parseLines(centerServices?.service_others)          },
+  ].filter((cat) => cat.items.length > 0)
 
   const getStatusColor = (status: string) => {
     if (status === "Active Center") return "bg-emerald-500"
@@ -123,38 +146,6 @@ export function CenterDetailsDialog({
     .map((part) => (typeof part === "string" ? part.trim() : part))
     .filter(Boolean)
     .join(", ")
-
-  const ServiceSection = ({
-    icon: Icon,
-    title,
-    content,
-  }: {
-    icon: React.ComponentType<{ className?: string }>
-    title: string
-    content: string | undefined
-  }) => {
-    if (!content || content.trim() === "" || content === "-") return null
-    const lines = content
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean)
-    return (
-      <div className="rounded-lg border border-border/60 bg-background/40 p-4 backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
-        <div className="mb-2 flex items-center gap-2">
-          <Icon className="h-4 w-4 text-muted-foreground" />
-          <h4 className="text-sm font-semibold">{title}</h4>
-        </div>
-        <ul className="space-y-1 text-sm leading-relaxed text-muted-foreground">
-          {lines.map((line, idx) => (
-            <li key={idx} className="flex gap-2">
-              <span className="mt-[0.55em] h-1 w-1 shrink-0 rounded-full bg-muted-foreground/70" aria-hidden="true" />
-              <span>{line}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-    )
-  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -214,7 +205,6 @@ export function CenterDetailsDialog({
                   aria-label={center.center_status}
                   title={center.center_status}
                 />
-
               </div>
               <p className="mt-1 text-sm font-normal text-muted-foreground">
                 {center.account_global_legal_name}
@@ -324,18 +314,38 @@ export function CenterDetailsDialog({
           </section>
 
           {/* Services Offered */}
-          {centerServices ? (
+          {centerServices && serviceCategories.length > 0 ? (
             <section className="space-y-4">
               <SectionHeader title="Services Offered" />
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <ServiceSection icon={Code} title="IT Services" content={centerServices.service_it} />
-                <ServiceSection icon={Lightbulb} title="ER&D Services" content={centerServices.service_erd} />
-                <ServiceSection icon={DollarSign} title="Finance & Accounting" content={centerServices.service_fna} />
-                <ServiceSection icon={UserCog} title="HR Services" content={centerServices.service_hr} />
-                <ServiceSection icon={ShoppingCart} title="Procurement" content={centerServices.service_procurement} />
-                <ServiceSection icon={TrendingUp} title="Sales & Marketing" content={centerServices.service_sales_marketing} />
-                <ServiceSection icon={Headphones} title="Customer Support" content={centerServices.service_customer_support} />
-                <ServiceSection icon={MoreHorizontal} title="Other Services" content={centerServices.service_others} />
+              <div className="divide-y divide-border/30 rounded-lg border border-border/50 dark:border-white/10 overflow-hidden">
+                {serviceCategories.map((cat) => (
+                  <div key={cat.key} className="flex items-start gap-4 px-4 py-3 bg-background/40 dark:bg-white/5">
+                    <div className="flex items-center gap-2 shrink-0 w-40 pt-0.5">
+                      <cat.icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      <span className="text-xs font-medium leading-tight text-muted-foreground">{cat.title}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {cat.items.map((item, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs border border-border/60 bg-background/60 text-foreground/80 dark:border-white/10 dark:bg-white/5"
+                        >
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {/* Technology Stack */}
+          {centerTech.length > 0 ? (
+            <section className="space-y-4">
+              <SectionHeader title="Technology Stack" />
+              <div className="rounded-lg border border-border/60 bg-background/40 backdrop-blur-sm shadow-sm overflow-hidden h-[360px] lg:h-[420px] dark:bg-white/5 dark:border-white/10">
+                <TechTreemap tech={centerTech} heightClass="h-full" showTitle={false} />
               </div>
             </section>
           ) : null}

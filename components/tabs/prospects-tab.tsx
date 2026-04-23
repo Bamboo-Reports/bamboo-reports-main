@@ -20,6 +20,7 @@ import type { Prospect } from "@/lib/types"
 
 interface ProspectsTabProps {
   prospects: Prospect[]
+  allProspects: Prospect[]
   prospectChartData: {
     departmentData: Array<{ name: string; value: number; fill?: string }>
     levelData: Array<{ name: string; value: number; fill?: string }>
@@ -33,6 +34,7 @@ interface ProspectsTabProps {
 
 export function ProspectsTab({
   prospects,
+  allProspects,
   prospectChartData,
   prospectsView,
   setProspectsView,
@@ -351,6 +353,7 @@ export function ProspectsTab({
       {/* Prospect Details Dialog */}
       <ProspectDetailsDialog
         prospect={selectedProspect}
+        allProspects={allProspects}
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
       />
