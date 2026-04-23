@@ -90,7 +90,7 @@ Key components:
 |-----------|---------------|
 | `analytics/` | PostHog client initialization, event definitions, tracking helpers |
 | `auth/` | Role-based access control (`UserRole`, `canExportData()`) |
-| `config/` | Environment label, MapTiler configuration, notification settings |
+| `config/` | Environment label, dashboard access, premium filter reveal, MapTiler configuration, notification settings |
 | `dashboard/` | Dashboard-specific data transformation utilities |
 | `db/` | Neon PostgreSQL connection client with retry logic |
 | `finance/` | Financial data transformation utilities |
@@ -107,6 +107,7 @@ Key components:
 The filter state is a complex object defined in `lib/types.ts` (`Filters` interface).
 -   **Source of Truth:** The top-level `DashboardContent` component in `app/page.tsx`.
 -   **Management:** `useDashboardFilters` hook handles all filter logic including include/exclude modes, range calculations, keyword debouncing, and filter counting.
+-   **Configuration:** `lib/config/filters.ts` controls filter availability per section, including premium `Show More` behavior for Accounts and Centers.
 -   **Persistence:**
     -   **Short-term:** React `useState`.
     -   **Long-term:** Saved to Supabase via `SavedFiltersManager` with `withFilterDefaults` for backward compatibility.
@@ -121,7 +122,13 @@ Managed by Supabase Auth.
 -   **Guard:** `useAuthGuard` hook redirects unauthenticated users.
 -   **Profile:** Fetched from `public.profiles` table; provides role-based access (`viewer` / `admin`).
 
-### 3.3 Notification State
+### 3.3 Deployment Capability State
+Deployment-level packaging is config-driven.
+-   **Top-level sections:** `lib/config/dashboard-access.ts` controls whether Accounts, Centers, and Prospects are accessible.
+-   **Enforcement:** The same access config is consumed by the dashboard page, search flows, export workflow, and server-side export route.
+-   **Goal:** Support client-specific packaging without branching the main dashboard implementation.
+
+### 3.4 Notification State
 Managed by `useNotifications` hook.
 -   **Data source:** `audit.field_change_events` and `audit.notification_reads` tables.
 -   **Feature flag:** Controlled by `NEXT_PUBLIC_NOTIFICATIONS_ENABLED` environment variable.

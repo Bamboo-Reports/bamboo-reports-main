@@ -87,7 +87,23 @@ To add a new filter (e.g., "Founded Year") to the sidebar:
 5. **Update Saved Filters (if applicable):**
     If users should be able to save this filter, ensure the key is included in the filter serialization logic in `components/saved-filters-manager.tsx`.
 
-### 2.2 Adding a New Chart
+### 2.2 Adjusting Deployment Access or Premium Filters
+
+Prefer config changes over dashboard forks for client-specific packaging.
+
+1. **Top-level section access:**
+    Edit `lib/config/dashboard-access.ts`.
+    - Use this to enable or disable `accounts`, `centers`, and `prospects`.
+
+2. **Filter availability and premium reveal:**
+    Edit `lib/config/filters.ts`.
+    - Use `enabled` on individual filters to turn them on or off.
+    - Use `showMoreEnabled` and `premiumFilterKeys` on `accounts` / `centers` to control premium `Show More` filters.
+
+3. **Saved-filter behavior:**
+    Disabled section filters and premium-disabled filters are sanitized out at load/runtime, so these changes do not require saved-filter migrations.
+
+### 2.3 Adding a New Chart
 
 1. **Create Component:**
     Create `components/charts/my-new-chart.tsx`.
@@ -100,7 +116,7 @@ To add a new filter (e.g., "Founded Year") to the sidebar:
 3. **Integrate:**
     Import and place the chart in the appropriate tab file (`components/tabs/accounts-tab.tsx`, etc.).
 
-### 2.3 Adding a New Tab
+### 2.4 Adding a New Tab
 
 1. **Create Tab Component:**
     Create `components/tabs/my-new-tab.tsx` following the pattern of existing tabs.
@@ -114,7 +130,7 @@ To add a new filter (e.g., "Founded Year") to the sidebar:
 4. **Update Summary Cards:**
     If the tab has its own entity count, add it to `components/dashboard/summary-cards.tsx`.
 
-### 2.4 Database Schema Changes
+### 2.5 Database Schema Changes
 
 If you modify the database schema (e.g., rename a column):
 
@@ -125,7 +141,7 @@ If you modify the database schema (e.g., rename a column):
 5. **Update filter helpers** in `lib/utils/filter-helpers.ts` if filters reference the changed columns.
 6. **Update `documentation/filter-column-ui-label-map.json`** if UI labels changed.
 
-### 2.5 Adjusting Dashboard Panel Height
+### 2.6 Adjusting Dashboard Panel Height
 
 When changing map/data card heights, keep the bottom edge aligned with the left filters sidebar.
 
@@ -145,7 +161,7 @@ If UI alignment needs tuning:
 2. Refresh Accounts/Centers/Prospects views and confirm the sidebar and panel bottoms end on the same line.
 3. Keep header compaction consistent (`CardHeader` `py-3`, `CardTitle` `text-base`) unless a redesign is intended.
 
-### 2.6 Adding Analytics Events
+### 2.7 Adding Analytics Events
 
 1. **Define the event** in `lib/analytics/events.ts`.
 2. **Track it** using helpers from `lib/analytics/tracking.ts`.
@@ -180,6 +196,7 @@ If UI alignment needs tuning:
 - **Shared types** go in `lib/types.ts`.
 - **Configuration** goes in `lib/config/`.
 - **Validation schemas** go in `lib/validators/`.
+- **Deployment packaging config** goes in `lib/config/dashboard-access.ts` and `lib/config/filters.ts`.
 
 ---
 

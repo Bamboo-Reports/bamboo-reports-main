@@ -53,6 +53,7 @@ Bamboo Reports provides a unified view of business entities (**Accounts**, **Cen
 - **Smart Summary Cards:** Real-time filtered vs. total counts per entity.
 - **Interactive Charts:** Recharts-powered Pie/Donut charts and Highcharts treemaps for categorical breakdowns (Region, Nature, Revenue, Employees, Technology).
 - **Tabbed Navigation:** Seamless switching between Accounts, Centers, Prospects, and Services contexts.
+- **Deployment-Level Access Control:** Accounts, Centers, and Prospects can be enabled or disabled per deployment via `lib/config/dashboard-access.ts`.
 - **Geospatial Analytics:**
   - MapTiler (MapLibre) cluster map optimized for 5000+ center points.
   - State-level choropleth map with disputed boundary handling (configurable per geopolitical viewpoint).
@@ -61,6 +62,7 @@ Bamboo Reports provides a unified view of business entities (**Accounts**, **Cen
 - **Multi-Select Filters:** Country, Region, Industry, Category, Nature, Technology, Functions, and more.
 - **Precision Slicing:** "Include" vs. "Exclude" toggle per filter group.
 - **Range Sliders:** Revenue, Employee count, and Years in India sliders with logarithmic scaling.
+- **Premium Filter Reveal:** Accounts and Centers support config-driven `Show More` premium filters via `lib/config/filters.ts`.
 - **Saved Filters:** Persist complex filter sets to Supabase with Row-Level Security isolation.
 - **Debounced Search:** 300ms debounce on keyword inputs to optimize performance.
 - **Active Filter Count:** Visual badge indicator showing the number of applied filters.
@@ -208,7 +210,7 @@ bamboo-reports-nextjs/
 ├── lib/                            # Utilities & Configuration
 │   ├── analytics/                  # PostHog client, events, tracking
 │   ├── auth/                       # Role-based access control
-│   ├── config/                     # Environment, MapTiler, notifications
+│   ├── config/                     # Environment, dashboard access, filters, MapTiler, notifications
 │   ├── dashboard/                  # Dashboard utility functions
 │   ├── db/                         # Neon PostgreSQL client + retry logic
 │   ├── finance/                    # Financial data utilities
@@ -300,6 +302,26 @@ bamboo-reports-nextjs/
 | `NEXT_PUBLIC_POSTHOG_HOST` | No | PostHog host URL (defaults to PostHog cloud). |
 | `NEXT_PUBLIC_NOTIFICATIONS_ENABLED` | No | Feature flag: `enabled` or `disabled`. |
 | `NEXT_PUBLIC_ENVIRONMENT_LABEL` | No | Environment tag displayed in the UI: `DEV`, `PROD`, or empty. |
+
+---
+
+## Deployment Config
+
+Two local config files control client-specific packaging without changing the core dashboard:
+
+- `lib/config/dashboard-access.ts`
+  - Controls whether top-level sections like `accounts`, `centers`, and `prospects` are accessible.
+  - The same config is respected by dashboard navigation, search, exports, and server-side export enforcement.
+- `lib/config/filters.ts`
+  - Controls which individual filters are enabled.
+  - Also controls premium `Show More` behavior for Account and Center filters via `showMoreEnabled` and `premiumFilterKeys`.
+
+Typical use cases:
+
+- Client only needs Accounts + Prospects:
+  - Set `centers` to `"disabled"` in `lib/config/dashboard-access.ts`
+- Client has standard filters only:
+  - Set `showMoreEnabled: false` for the relevant filter section in `lib/config/filters.ts`
 
 ---
 
