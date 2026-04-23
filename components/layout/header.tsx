@@ -45,7 +45,7 @@ export const Header = React.memo(function Header({ onRefresh, onStartTour, onOpe
     const loadProfile = async (userId: string) => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, user_id, first_name, last_name, email, phone, role')
+        .select('id, user_id, first_name, last_name, email, phone, role, credits_remaining')
         .eq('user_id', userId)
         .single()
 
@@ -214,27 +214,35 @@ export const Header = React.memo(function Header({ onRefresh, onStartTour, onOpe
                 <DropdownMenuSeparator />
 
                 {/* Credits tracker */}
-                <div className="px-4 py-3 space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Credits</span>
-                    <span className="tabular-nums text-foreground">
-                      <span className="font-medium">250</span>
-                      <span className="text-muted-foreground"> / 1,000 used</span>
-                    </span>
-                  </div>
-                  <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                    <div
-                      className="h-full rounded-full bg-primary transition-all duration-500"
-                      style={{ width: "25%" }}
-                      role="progressbar"
-                      aria-valuenow={250}
-                      aria-valuemin={0}
-                      aria-valuemax={1000}
-                      aria-label="Credits used"
-                    />
-                  </div>
-                  <p className="text-[11px] text-muted-foreground">750 credits remaining</p>
-                </div>
+                {profile?.credits_remaining != null && (() => {
+                  const total = 1000
+                  const remaining = profile.credits_remaining
+                  const used = total - remaining
+                  const pct = Math.min(100, Math.max(0, (used / total) * 100))
+                  return (
+                    <div className="px-4 py-3 space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">Credits</span>
+                        <span className="tabular-nums text-foreground">
+                          <span className="font-medium">{used.toLocaleString()}</span>
+                          <span className="text-muted-foreground"> / {total.toLocaleString()} used</span>
+                        </span>
+                      </div>
+                      <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-primary transition-all duration-500"
+                          style={{ width: `${pct}%` }}
+                          role="progressbar"
+                          aria-valuenow={used}
+                          aria-valuemin={0}
+                          aria-valuemax={total}
+                          aria-label="Credits used"
+                        />
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">{remaining.toLocaleString()} credits remaining</p>
+                    </div>
+                  )
+                })()}
 
                 <DropdownMenuSeparator />
 

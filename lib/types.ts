@@ -155,6 +155,7 @@ export interface Profile {
   email: string
   phone: string | null
   role?: UserRole | null
+  credits_remaining?: number | null
 }
 
 export interface FilterValue {
