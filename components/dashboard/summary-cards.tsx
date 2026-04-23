@@ -263,20 +263,6 @@ export const SummaryCards = React.memo(function SummaryCards({
                 {compact ? formatCompactNumber(card.total) : card.total.toLocaleString()} total
               </span>
             </CardContent>
-            {/* Active indicator bar */}
-            {card.clickable && (
-              <div
-                className="absolute bottom-0 left-0 right-0 h-[2.5px] transition-all duration-300 ease-out"
-                style={{
-                  background: isActive
-                    ? `linear-gradient(90deg, transparent, hsl(var(${card.colorVar})), transparent)`
-                    : 'transparent',
-                  opacity: isActive ? 1 : 0,
-                  transform: isActive ? 'scaleX(1)' : 'scaleX(0)',
-                }}
-                aria-hidden="true"
-              />
-            )}
           </Card>
         )
       })}
