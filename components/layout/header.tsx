@@ -213,6 +213,31 @@ export const Header = React.memo(function Header({ onRefresh, onStartTour, onOpe
 
                 <DropdownMenuSeparator />
 
+                {/* Credits tracker */}
+                <div className="px-4 py-3 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Credits</span>
+                    <span className="tabular-nums text-foreground">
+                      <span className="font-medium">250</span>
+                      <span className="text-muted-foreground"> / 1,000 used</span>
+                    </span>
+                  </div>
+                  <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all duration-500"
+                      style={{ width: "25%" }}
+                      role="progressbar"
+                      aria-valuenow={250}
+                      aria-valuemin={0}
+                      aria-valuemax={1000}
+                      aria-label="Credits used"
+                    />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">750 credits remaining</p>
+                </div>
+
+                <DropdownMenuSeparator />
+
                 <div className="flex items-stretch gap-1 p-1.5">
                   {onOpenExports && (
                     <DropdownMenuItem
