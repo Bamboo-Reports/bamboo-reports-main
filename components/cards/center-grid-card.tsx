@@ -48,10 +48,7 @@ export const CenterGridCard = memo(({ center, onClick }: CenterGridCardProps) =>
                   title={center.center_status ? `${centerName} — ${center.center_status}` : centerName}
                 >
                   <span className="truncate">{centerName}</span>
-                  <span className="relative inline-flex h-2 w-2 shrink-0" aria-label={center.center_status ?? "Unknown status"}>
-                    <span className={`absolute inline-flex h-full w-full rounded-full opacity-60 animate-ping ${statusColor}`} />
-                    <span className={`relative inline-flex h-2 w-2 rounded-full ${statusColor}`} />
-                  </span>
+                  <span className={`inline-flex h-2.5 w-2.5 shrink-0 rounded-full ${statusColor}`} aria-label={center.center_status ?? "Unknown status"} />
                 </h3>
                 <p
                   className="text-sm text-muted-foreground mt-1 truncate"
