@@ -432,7 +432,18 @@ export function AccountDetailsDialog({
                           <Package className="h-3.5 w-3.5" />
                           Key Offerings
                         </p>
-                        <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-line">{account.account_hq_key_offerings}</p>
+                        <ul className="space-y-1 text-sm leading-relaxed text-foreground/90">
+                          {account.account_hq_key_offerings
+                            .split(/\r?\n/)
+                            .map((line) => line.trim())
+                            .filter(Boolean)
+                            .map((line, idx) => (
+                              <li key={idx} className="flex gap-2">
+                                <span className="mt-[0.55em] h-1 w-1 shrink-0 rounded-full bg-muted-foreground/70" aria-hidden="true" />
+                                <span>{line}</span>
+                              </li>
+                            ))}
+                        </ul>
                       </div>
                     )}
                   </div>

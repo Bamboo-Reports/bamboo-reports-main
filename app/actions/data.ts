@@ -110,7 +110,7 @@ async function getDashboardCenters(): Promise<Center[]> {
         center_city, center_state, center_country, center_country_iso2,
         center_region, center_employees, center_employees_range,
         center_business_segment, center_business_sub_segment,
-        center_boardline, center_account_website, lat, lng
+        center_boardline, center_account_website, center_timeline, center_address, center_zip_code, lat, lng
         FROM centers ORDER BY center_name`
     )) as Center[]
   } catch (error) {
