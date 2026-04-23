@@ -115,14 +115,14 @@ export function CenterDetailsDialog({
   ].filter((cat) => cat.items.length > 0)
 
   const getStatusColor = (status: string) => {
-    if (status === "Active Center") return "bg-emerald-500"
+    if (status === "Active Center") return "bg-green-500"
     if (status === "Upcoming") return "bg-amber-500"
     if (status === "Non Operational") return "bg-destructive"
     return "bg-muted-foreground"
   }
 
   const getStatusGlow = (status: string) => {
-    if (status === "Active Center") return "shadow-[0_0_10px_rgba(16,185,129,0.55)]"
+    if (status === "Active Center") return "shadow-[0_0_10px_rgba(34,197,94,0.55)]"
     if (status === "Upcoming") return "shadow-[0_0_10px_rgba(245,158,11,0.55)]"
     if (status === "Non Operational") return "shadow-[0_0_10px_rgba(239,68,68,0.55)]"
     return ""
