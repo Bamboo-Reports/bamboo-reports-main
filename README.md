@@ -138,7 +138,7 @@ For a comprehensive breakdown of every technology used in this project, see the 
 | **shadcn/ui** | Accessible component primitives (Radix UI) |
 | **Lucide React** | Consistent iconography |
 | **next-themes** | Dark/Light mode support |
-| **Geist** | Font and design system |
+| **DM Sans** | Primary typeface (Google Fonts, variable) |
 
 ### Data Visualization
 | Technology | Purpose |

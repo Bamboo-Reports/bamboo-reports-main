@@ -92,7 +92,7 @@ Technologies responsible for how the application looks and feels.
 | **Version** | 3.4.17 |
 | **Why we use it** | Enables rapid UI development with consistent spacing, colors, and responsive design. Eliminates CSS naming conflicts and dead code through tree-shaking |
 | **Key features used** | Custom theme with HSL color variables, dark mode (class-based), custom animations (accordion, fade-in, slide-in, shimmer, pulse), responsive breakpoints |
-| **Fonts** | Google Sans, Poppins (with system fallbacks) |
+| **Fonts** | DM Sans (with system fallbacks) |
 | **Plugins** | `tailwindcss-animate` for animation utilities |
 | **Package** | `tailwindcss`, `tailwind-merge`, `tailwindcss-animate`, `autoprefixer`, `postcss` |
 
@@ -122,14 +122,13 @@ Technologies responsible for how the application looks and feels.
 | **Why we use it** | Provides dark/light mode switching with system preference detection and zero flash on page load |
 | **Package** | `next-themes` |
 
-### Geist
+### DM Sans
 
 | | |
 |---|---|
-| **What it is** | A font family and design system by Vercel |
-| **Version** | 1.3.1 |
-| **Why we use it** | Clean, modern typography optimized for web applications |
-| **Package** | `geist` |
+| **What it is** | Low-contrast geometric sans-serif designed by Colophon Foundry, served from Google Fonts |
+| **Why we use it** | Clean, modern typography with good legibility at small sizes; variable font provides fine-grained weight and optical-size control in a single file |
+| **Loaded via** | `<link>` to `fonts.googleapis.com` in `app/layout.tsx`; applied as the first entry in the Tailwind `sans` stack and the `body` font-family in `app/globals.css` |
 
 ### Class Variance Authority (CVA)
 
