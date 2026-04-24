@@ -816,6 +816,8 @@ function DashboardContent(): JSX.Element | null {
             getTotalActiveFilters={getTotalActiveFilters}
             handleLoadSavedFilters={handleLoadSavedFilters}
             formatRevenueInMillions={formatRevenueInMillions}
+            recentItems={recentItems}
+            onRecentItemSelect={handleSearchRecentItemSelect}
           />
 
           <div className="flex-1 overflow-hidden flex flex-col">
@@ -852,6 +854,7 @@ function DashboardContent(): JSX.Element | null {
                       currentPage={accountsPage}
                       setCurrentPage={setAccountsPage}
                       itemsPerPage={itemsPerPage}
+                      onRecordOpened={addRecentItem}
                     />
                   )}
 
@@ -868,6 +871,7 @@ function DashboardContent(): JSX.Element | null {
                       currentPage={centersPage}
                       setCurrentPage={setCentersPage}
                       itemsPerPage={itemsPerPage}
+                      onRecordOpened={addRecentItem}
                     />
                   )}
 
@@ -882,6 +886,7 @@ function DashboardContent(): JSX.Element | null {
                       currentPage={prospectsPage}
                       setCurrentPage={setProspectsPage}
                       itemsPerPage={itemsPerPage}
+                      onRecordOpened={addRecentItem}
                     />
                   )}
                 </Tabs>

@@ -32,6 +32,7 @@ interface ProspectsTabProps {
   currentPage: number
   setCurrentPage: (page: number | ((prev: number) => number)) => void
   itemsPerPage: number
+  onRecordOpened?: (item: { type: "prospect"; id: string; title: string; subtitle: string }) => void
 }
 
 export function ProspectsTab({
@@ -44,6 +45,7 @@ export function ProspectsTab({
   currentPage,
   setCurrentPage,
   itemsPerPage,
+  onRecordOpened,
 }: ProspectsTabProps) {
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -90,6 +92,12 @@ export function ProspectsTab({
     setIsDialogOpen(true)
     const prospectName = getProspectDisplayName(prospect)
     const recordId = `${prospect.account_global_legal_name}-${prospectName}-${prospect.prospect_title ?? ""}`
+    onRecordOpened?.({
+      type: "prospect",
+      id: `${prospect.account_global_legal_name}::${prospectName}`,
+      title: prospectName,
+      subtitle: prospect.prospect_title || prospect.prospect_department || prospect.account_global_legal_name || "",
+    })
     openedRecordRef.current = {
       recordId,
       openedAt: Date.now(),

@@ -51,6 +51,7 @@ interface AccountsTabProps {
   currentPage: number
   setCurrentPage: (page: number | ((prev: number) => number)) => void
   itemsPerPage: number
+  onRecordOpened?: (item: { type: "account"; id: string; title: string; subtitle: string }) => void
 }
 
 export function AccountsTab({
@@ -66,6 +67,7 @@ export function AccountsTab({
   currentPage,
   setCurrentPage,
   itemsPerPage,
+  onRecordOpened,
 }: AccountsTabProps) {
   const allowMapView = canAccessAccountsMapView()
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null)
@@ -116,6 +118,12 @@ export function AccountsTab({
       openedFrom,
       account,
     }
+    onRecordOpened?.({
+      type: "account",
+      id: account.account_global_legal_name ?? "",
+      title: account.account_global_legal_name ?? "Unknown Account",
+      subtitle: [account.account_hq_city, account.account_hq_country].filter(Boolean).join(", "),
+    })
     captureEvent(ANALYTICS_EVENTS.RECORD_OPENED, {
       entity: "account",
       record_id: account.account_global_legal_name,

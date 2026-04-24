@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { Briefcase, Building, ChevronDown, ChevronLeft, ChevronRight, Filter, Users } from 'lucide-react'
+import { Briefcase, Building, ChevronDown, ChevronLeft, ChevronRight, Clock, Filter, Users } from 'lucide-react'
 import { SavedFiltersManager } from '@/components/saved-filters-manager'
 import {
   AccountFiltersSection,
@@ -14,6 +14,7 @@ import { getSectionUnavailableMessage, isSectionEnabled } from '@/lib/config/das
 import { cn } from '@/lib/utils'
 import { isSectionVisible } from '@/lib/config/filters'
 import type { AvailableOptions, Filters } from '@/lib/types'
+import type { RecentItem } from '@/hooks/use-recent-items'
 
 interface FiltersSidebarProps {
   filters: Filters
@@ -44,6 +45,8 @@ interface FiltersSidebarProps {
   getTotalActiveFilters: () => number
   handleLoadSavedFilters: (savedFilters: Filters) => void
   formatRevenueInMillions: (value: number) => string
+  recentItems?: RecentItem[]
+  onRecentItemSelect?: (item: RecentItem) => void
 }
 
 export function FiltersSidebar({
@@ -73,9 +76,12 @@ export function FiltersSidebar({
   getTotalActiveFilters,
   handleLoadSavedFilters,
   formatRevenueInMillions,
+  recentItems,
+  onRecentItemSelect,
 }: FiltersSidebarProps): JSX.Element {
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
   const [openSection, setOpenSection] = useState<string>('accounts')
+  const [recentlyViewedOpen, setRecentlyViewedOpen] = useState(true)
   const totalActiveFilters = getTotalActiveFilters()
   const scrollRef = useRef<HTMLDivElement>(null)
   const [canScrollDown, setCanScrollDown] = useState(false)
@@ -217,6 +223,48 @@ export function FiltersSidebar({
             />
           </div>
         </div>
+
+        {recentItems && recentItems.length > 0 && (
+          <div className="mb-3 pb-3 border-b border-sidebar-border">
+            <button
+              type="button"
+              onClick={() => setRecentlyViewedOpen((v) => !v)}
+              className="flex w-full items-center justify-between gap-2 mb-1.5"
+            >
+              <div className="flex items-center gap-2">
+                <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Recently Viewed
+                </span>
+              </div>
+              <ChevronDown className={cn('h-3.5 w-3.5 text-muted-foreground transition-transform duration-200', recentlyViewedOpen && 'rotate-180')} />
+            </button>
+            {recentlyViewedOpen && (
+              <div className="space-y-0.5">
+                {recentItems.map((item) => {
+                  const Icon = item.type === 'account' ? Building : item.type === 'center' ? Briefcase : Users
+                  const iconClass = item.type === 'account' ? 'text-primary' : item.type === 'center' ? 'text-[hsl(var(--chart-2))]' : 'text-[hsl(var(--chart-3))]'
+                  return (
+                    <button
+                      key={`${item.type}:${item.id}`}
+                      type="button"
+                      onClick={() => onRecentItemSelect?.(item)}
+                      className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-muted/50 transition-colors"
+                    >
+                      <Icon className={cn('h-3.5 w-3.5 shrink-0', iconClass)} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-medium leading-tight">{item.title}</p>
+                        {item.subtitle && (
+                          <p className="truncate text-[10px] text-muted-foreground leading-tight">{item.subtitle}</p>
+                        )}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         <Accordion type="single" collapsible value={openSection} onValueChange={setOpenSection} className="w-full space-y-2">
           {isSectionVisible("accounts") && (

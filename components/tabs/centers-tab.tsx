@@ -38,6 +38,7 @@ interface CentersTabProps {
   currentPage: number
   setCurrentPage: (page: number | ((prev: number) => number)) => void
   itemsPerPage: number
+  onRecordOpened?: (item: { type: "center"; id: string; title: string; subtitle: string }) => void
 }
 
 export function CentersTab({
@@ -51,6 +52,7 @@ export function CentersTab({
   currentPage,
   setCurrentPage,
   itemsPerPage,
+  onRecordOpened,
 }: CentersTabProps) {
   const [selectedCenter, setSelectedCenter] = useState<Center | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -94,6 +96,12 @@ export function CentersTab({
       openedFrom,
       center,
     }
+    onRecordOpened?.({
+      type: "center",
+      id: center.cn_unique_key ?? "",
+      title: center.center_name ?? "Unknown Center",
+      subtitle: [center.center_city, center.center_country].filter(Boolean).join(", "),
+    })
     captureEvent(ANALYTICS_EVENTS.RECORD_OPENED, {
       entity: "center",
       record_id: center.cn_unique_key,
