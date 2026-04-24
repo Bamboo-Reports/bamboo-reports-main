@@ -135,8 +135,8 @@ Each tab in the dashboard displays a paginated data table. Tables show 50 rows p
 | Column Header | Database Column | Table | Display Type | Notes |
 |---------------|----------------|-------|-------------|-------|
 | *(Logo)* | `center_account_website` | `centers` | Company logo image | Logo.dev lookup by parent account domain |
-| Center Name | `center_name` | `centers` | Clickable text | Opens Center Details dialog on click |
-| Location | `center_city` + `center_country` | `centers` | Computed text | Format: "City, Country" |
+| Center Name | `center_name` | `centers` | Clickable text | Opens Center Details dialog on click; secondary line shows `account_global_legal_name` |
+| Location | `center_city` + `center_state` | `centers` | Computed text | Format: "City, State" |
 | Center Type | `center_type` | `centers` | Text | — |
 | Center Headcount | `center_employees_range` | `centers` | Text | Bucketed range string |
 
@@ -154,8 +154,8 @@ Each tab in the dashboard displays a paginated data table. Tables show 50 rows p
 | Column Header | Database Column | Table | Display Type | Notes |
 |---------------|----------------|-------|-------------|-------|
 | *(Avatar)* | `prospect_first_name`, `prospect_last_name` | `prospects` | Initials badge | Colored circle with first letters of first + last name |
-| Name | `prospect_full_name` or `prospect_first_name` + `prospect_last_name` | `prospects` | Clickable text | Opens Prospect Details dialog on click |
-| Location | `prospect_city` + `prospect_country` | `prospects` | Computed text | Format: "City, Country" |
+| Name | `prospect_full_name` or `prospect_first_name` + `prospect_last_name` | `prospects` | Clickable text | Opens Prospect Details dialog on click; secondary line shows `account_global_legal_name` |
+| Location | `prospect_city` + `prospect_state` + `prospect_country` | `prospects` | Computed text | Format: "City, State"; fall back to `Country` when city/state is missing |
 | Job Title | `prospect_title` | `prospects` | Text | — |
 | Department | `prospect_department` | `prospects` | Text | — |
 
@@ -303,11 +303,13 @@ Shows a list of prospects/contacts for this account, each displaying:
 
 | UI Label | Database Column | Table |
 |----------|----------------|-------|
-| Name | `prospect_first_name` + `prospect_last_name` | `prospects` |
-| Job Title | `prospect_title` | `prospects` |
+| Name | `prospect_full_name` or `prospect_first_name` + `prospect_last_name` | `prospects` |
+| Account Name | `account_global_legal_name` | `prospects` |
+| Location | `prospect_city` + `prospect_state` + `prospect_country` | `prospects` |
 | Department | `prospect_department` | `prospects` |
 | Seniority Level | `prospect_level` | `prospects` |
-| Center | `center_name` | `prospects` |
+
+When prospect packaging is active, additional locked teaser contacts may appear in the same surface. Those rows/cards intentionally omit real name, title, email, and LinkedIn details.
 
 ---
 

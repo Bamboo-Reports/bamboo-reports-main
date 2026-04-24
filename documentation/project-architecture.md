@@ -125,6 +125,7 @@ Managed by Supabase Auth.
 ### 3.3 Deployment Capability State
 Deployment-level packaging is config-driven.
 -   **Top-level sections:** `lib/config/dashboard-access.ts` controls whether Accounts, Centers, and Prospects are accessible.
+-   **Prospect packaging:** `limits.prospectsPerAccount` can cap visible prospects per account. The capped remainder is represented in the UI as locked teaser contacts only.
 -   **Enforcement:** The same access config is consumed by the dashboard page, search flows, export workflow, and server-side export route.
 -   **Goal:** Support client-specific packaging without branching the main dashboard implementation.
 

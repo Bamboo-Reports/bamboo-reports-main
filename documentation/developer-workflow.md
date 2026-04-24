@@ -95,6 +95,7 @@ Prefer config changes over dashboard forks for client-specific packaging.
     Edit `lib/config/dashboard-access.ts`.
     - Use this to enable or disable `accounts`, `centers`, and `prospects`.
     - Use `limits.prospectsPerAccount` to package only the first `N` prospects per account for a deployment. `null` means unlimited.
+    - When the prospect limit is set, the UI keeps the remaining contacts as locked teaser cards/rows. Those teaser records are display-only and are excluded from search, exports, and real contact dialogs.
 
 2. **Filter availability and premium reveal:**
     Edit `lib/config/filters.ts`.
