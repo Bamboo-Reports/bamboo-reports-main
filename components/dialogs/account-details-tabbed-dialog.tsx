@@ -29,12 +29,13 @@ import {
   Linkedin,
 } from "lucide-react"
 import { formatRevenueInMillions, parseRevenue } from "@/lib/utils/helpers"
-import type { Account, AccountFinancialInfo, Center, Prospect, Service, Tech } from "@/lib/types"
+import type { Account, AccountFinancialInfo, Center, Prospect, Service, Tech, LockedProspectTeaser } from "@/lib/types"
 import { CompanyLogo } from "@/components/ui/company-logo"
 import { CenterDetailsDialog } from "./center-details-dialog"
 import { ProspectDetailsDialog } from "./prospect-details-dialog"
 import { CenterGridCard } from "@/components/cards/center-grid-card"
 import { ProspectGridCard } from "@/components/cards/prospect-grid-card"
+import { LockedProspectTeaserCard } from "@/components/prospects/locked-prospect-teaser-section"
 import { Badge } from "@/components/ui/badge"
 import { TechTreemap } from "@/components/charts/tech-treemap"
 import { getAccountFinancialInfo } from "@/app/actions"
@@ -172,6 +173,7 @@ interface AccountDetailsDialogProps {
   account: Account | null
   centers: Center[]
   prospects: Prospect[]
+  lockedProspectTeasers: LockedProspectTeaser[]
   services: Service[]
   tech: Tech[]
   open: boolean
@@ -182,6 +184,7 @@ export function AccountDetailsDialog({
   account,
   centers,
   prospects,
+  lockedProspectTeasers,
   services,
   tech,
   open,
@@ -217,6 +220,9 @@ export function AccountDetailsDialog({
           const nameB = `${b.prospect_first_name ?? ""} ${b.prospect_last_name ?? ""}`.trim().toLowerCase()
           return nameA.localeCompare(nameB)
         })
+    : []
+  const accountLockedProspectTeasers = account && canViewProspects
+    ? lockedProspectTeasers.filter((teaser) => teaser.account_global_legal_name === account.account_global_legal_name)
     : []
   const accountTech = account
     ? tech.filter((item) => item.account_global_legal_name === account.account_global_legal_name)
@@ -268,6 +274,7 @@ export function AccountDetailsDialog({
       return true
     })
   }, [accountProspects, prospectDeptFilter, prospectLevelFilter])
+  const lockedTeaserCountForAccount = accountLockedProspectTeasers.length
 
   const toggleInSet = (setter: React.Dispatch<React.SetStateAction<Set<string>>>, value: string) => {
     setter((prev) => {
@@ -391,7 +398,7 @@ export function AccountDetailsDialog({
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
-            <TabsList className={`grid w-full ${accountCenters.length > 0 && accountProspects.length > 0 ? "grid-cols-3" : accountCenters.length > 0 || accountProspects.length > 0 ? "grid-cols-2" : "grid-cols-1"}`}>
+            <TabsList className={`grid w-full ${accountCenters.length > 0 && (accountProspects.length > 0 || accountLockedProspectTeasers.length > 0) ? "grid-cols-3" : accountCenters.length > 0 || accountProspects.length > 0 || accountLockedProspectTeasers.length > 0 ? "grid-cols-2" : "grid-cols-1"}`}>
               <TabsTrigger value="info" className="flex items-center gap-2">
                 <Building2 className="h-4 w-4" />
                 Account Info
@@ -405,7 +412,7 @@ export function AccountDetailsDialog({
                 </Badge>
               </TabsTrigger>
               )}
-              {accountProspects.length > 0 && (
+              {(accountProspects.length > 0 || accountLockedProspectTeasers.length > 0) && (
               <TabsTrigger value="prospects" className="flex items-center gap-2">
                 <UserCircle className="h-4 w-4" />
                 Prospects
@@ -621,7 +628,7 @@ export function AccountDetailsDialog({
             )}
 
             {/* Prospects Tab */}
-            {accountProspects.length > 0 && (
+            {(accountProspects.length > 0 || accountLockedProspectTeasers.length > 0) && (
             <TabsContent value="prospects" className="mt-4 space-y-4">
                 <div className="space-y-2">
                   <QuickFilterGroup
@@ -646,6 +653,25 @@ export function AccountDetailsDialog({
                         key={`${prospect.prospect_first_name}-${prospect.prospect_last_name}-${index}`}
                         prospect={prospect}
                         onClick={() => handleProspectClick(prospect)}
+                      />
+                    ))}
+                    {accountLockedProspectTeasers.map((teaser) => (
+                      <LockedProspectTeaserCard
+                        key={teaser.id}
+                        teaser={teaser}
+                        remainingCount={lockedTeaserCountForAccount}
+                        accountContext={account.account_global_legal_name}
+                      />
+                    ))}
+                  </div>
+                ) : accountLockedProspectTeasers.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {accountLockedProspectTeasers.map((teaser) => (
+                      <LockedProspectTeaserCard
+                        key={teaser.id}
+                        teaser={teaser}
+                        remainingCount={lockedTeaserCountForAccount}
+                        accountContext={account.account_global_legal_name}
                       />
                     ))}
                   </div>

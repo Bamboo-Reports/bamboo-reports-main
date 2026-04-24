@@ -1,7 +1,8 @@
 "use server"
 
-import type { Account, Center, Function, Service, Tech, Prospect } from "@/lib/types"
-import { isSectionEnabled } from "@/lib/config/dashboard-access"
+import type { Account, Center, Function, Service, Tech, Prospect, LockedProspectTeaser } from "@/lib/types"
+import { getProspectsPerAccountLimit, isSectionEnabled } from "@/lib/config/dashboard-access"
+import { partitionProspectsByAccess } from "@/lib/dashboard/prospect-access"
 import { getSqlOrThrow, fetchWithRetry } from "@/lib/db/connection"
 
 export type DashboardSummaryMetrics = {
@@ -240,6 +241,7 @@ export type AllDataResult = {
   services: Service[]
   tech: Tech[]
   prospects: Prospect[]
+  lockedProspectTeasers: LockedProspectTeaser[]
   summary: DashboardSummaryMetrics
   error: string | null
 }
@@ -256,6 +258,7 @@ export async function getAllData(): Promise<AllDataResult> {
         services: [],
         tech: [],
         prospects: [],
+        lockedProspectTeasers: [],
         summary: {
           totalAccountsCount: 0,
           totalCentersCount: 0,
@@ -279,6 +282,7 @@ export async function getAllData(): Promise<AllDataResult> {
           services: [],
           tech: [],
           prospects: [],
+          lockedProspectTeasers: [],
           summary: {
             totalAccountsCount: 0,
             totalCentersCount: 0,
@@ -307,6 +311,7 @@ export async function getAllData(): Promise<AllDataResult> {
       services,
       tech,
       prospects,
+      lockedProspectTeasers: [],
       summary: {
         totalAccountsCount: accounts.length,
         totalCentersCount: centers.length,
@@ -325,6 +330,7 @@ export async function getAllData(): Promise<AllDataResult> {
       services: [],
       tech: [],
       prospects: [],
+      lockedProspectTeasers: [],
       summary: {
         totalAccountsCount: 0,
         totalCentersCount: 0,
@@ -351,6 +357,7 @@ export async function getDashboardData(): Promise<AllDataResult> {
         services: [],
         tech: [],
         prospects: [],
+        lockedProspectTeasers: [],
         summary: {
           totalAccountsCount: 0,
           totalCentersCount: 0,
@@ -372,6 +379,7 @@ export async function getDashboardData(): Promise<AllDataResult> {
         services: [],
         tech: [],
         prospects: [],
+        lockedProspectTeasers: [],
         summary: {
           totalAccountsCount: 0,
           totalCentersCount: 0,
@@ -386,8 +394,9 @@ export async function getDashboardData(): Promise<AllDataResult> {
     const accountsEnabled = isSectionEnabled("accounts")
     const centersEnabled = isSectionEnabled("centers")
     const prospectsEnabled = isSectionEnabled("prospects")
+    const prospectsPerAccountLimit = getProspectsPerAccountLimit()
 
-    const [accounts, centers, functions, services, tech, prospects, summary] = await Promise.all([
+    const [accounts, centers, functions, services, tech, rawProspects, summary] = await Promise.all([
       accountsEnabled ? getDashboardAccounts() : Promise.resolve([]),
       centersEnabled ? getDashboardCenters() : Promise.resolve([]),
       centersEnabled ? getDashboardFunctions() : Promise.resolve([]),
@@ -397,11 +406,23 @@ export async function getDashboardData(): Promise<AllDataResult> {
       getDashboardSummaryMetrics(),
     ])
 
-    return { accounts, centers, functions, services, tech, prospects, summary, error: null } satisfies AllDataResult
+    const { visibleProspects, lockedProspectTeasers } = partitionProspectsByAccess(rawProspects, prospectsPerAccountLimit)
+
+    return {
+      accounts,
+      centers,
+      functions,
+      services,
+      tech,
+      prospects: visibleProspects,
+      lockedProspectTeasers,
+      summary,
+      error: null,
+    } satisfies AllDataResult
   } catch (error) {
     console.error("Error fetching dashboard data:", error)
     return {
-      accounts: [], centers: [], functions: [], services: [], tech: [], prospects: [],
+      accounts: [], centers: [], functions: [], services: [], tech: [], prospects: [], lockedProspectTeasers: [],
       summary: {
         totalAccountsCount: 0,
         totalCentersCount: 0,

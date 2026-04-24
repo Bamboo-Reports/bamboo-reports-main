@@ -22,13 +22,14 @@ export const ProspectRow = memo(({ prospect, onClick }: ProspectRowProps) => {
   const fullName =
     prospect.prospect_full_name ||
     [prospect.prospect_first_name, prospect.prospect_last_name].filter(Boolean).join(" ")
+  const accountName = prospect.account_global_legal_name || "N/A"
   const initials = fullName
     .split(" ")
     .filter(Boolean)
     .slice(0, 2)
     .map((part) => part[0])
     .join("")
-  const location = [prospect.prospect_city, prospect.prospect_country].filter(Boolean).join(", ")
+  const location = [prospect.prospect_city, prospect.prospect_state].filter(Boolean).join(", ") || prospect.prospect_country || ""
 
   return (
     <ContextMenu>
@@ -53,8 +54,13 @@ export const ProspectRow = memo(({ prospect, onClick }: ProspectRowProps) => {
             </div>
           </TableCell>
           <TableCell className="font-medium max-w-[220px]">
-            <div className="min-w-0 truncate" title={fullName || "N/A"}>
-              {fullName || "N/A"}
+            <div className="min-w-0">
+              <div className="truncate" title={fullName || "N/A"}>
+                {fullName || "N/A"}
+              </div>
+              <div className="truncate text-xs font-normal text-muted-foreground" title={accountName}>
+                {accountName}
+              </div>
             </div>
           </TableCell>
           <TableCell className="max-w-[200px]">
@@ -65,7 +71,7 @@ export const ProspectRow = memo(({ prospect, onClick }: ProspectRowProps) => {
               {location || "N/A"}
             </div>
           </TableCell>
-          <TableCell className="max-w-[220px]">
+          <TableCell className="max-w-[180px]">
             <div className="truncate" title={prospect.prospect_title || "N/A"}>
               {prospect.prospect_title || "N/A"}
             </div>

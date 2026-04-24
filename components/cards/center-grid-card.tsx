@@ -26,8 +26,8 @@ const getStatusDotColor = (status: string | null | undefined) => {
 
 export const CenterGridCard = memo(({ center, onClick }: CenterGridCardProps) => {
   const centerName = center.center_name || "Center"
-  const location = [center.center_city, center.center_country].filter(Boolean).join(", ")
   const accountName = center.account_global_legal_name || "Account"
+  const location = [center.center_city, center.center_state].filter(Boolean).join(", ")
   const statusColor = getStatusDotColor(center.center_status)
 
   return (
@@ -52,9 +52,9 @@ export const CenterGridCard = memo(({ center, onClick }: CenterGridCardProps) =>
                 </h3>
                 <p
                   className="text-sm text-muted-foreground mt-1 truncate"
-                  title={location || center.center_country || "-"}
+                  title={accountName}
                 >
-                  {location || center.center_country || "-"}
+                  {accountName}
                 </p>
               </div>
             </div>
@@ -66,6 +66,15 @@ export const CenterGridCard = memo(({ center, onClick }: CenterGridCardProps) =>
                   title={center.center_type || "-"}
                 >
                   {center.center_type || "-"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-3 min-w-0">
+                <span className="text-muted-foreground">Location</span>
+                <span
+                  className="font-medium text-foreground text-right truncate max-w-[160px]"
+                  title={location || center.center_state || center.center_city || "-"}
+                >
+                  {location || center.center_state || center.center_city || "-"}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-3 min-w-0">

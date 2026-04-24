@@ -17,6 +17,7 @@ interface CenterRowProps {
 }
 
 export const CenterRow = memo(({ center, onClick }: CenterRowProps) => {
+  const location = [center.center_city, center.center_state].filter(Boolean).join(", ")
 
   return (
     <ContextMenu>
@@ -41,17 +42,25 @@ export const CenterRow = memo(({ center, onClick }: CenterRowProps) => {
                 size="sm"
                 theme="auto"
               />
-              <div className="min-w-0 truncate" title={center.center_name || "N/A"}>
-                {center.center_name || "N/A"}
+              <div className="min-w-0">
+                <div className="truncate" title={center.center_name || "N/A"}>
+                  {center.center_name || "N/A"}
+                </div>
+                <div
+                  className="truncate text-xs font-normal text-muted-foreground"
+                  title={center.account_global_legal_name || "N/A"}
+                >
+                  {center.account_global_legal_name || "N/A"}
+                </div>
               </div>
             </div>
           </TableCell>
           <TableCell className="max-w-[200px]">
             <div
               className="truncate"
-              title={[center.center_city, center.center_country].filter(Boolean).join(", ") || "N/A"}
+              title={location || "N/A"}
             >
-              {[center.center_city, center.center_country].filter(Boolean).join(", ") || "N/A"}
+              {location || "N/A"}
             </div>
           </TableCell>
           <TableCell className="max-w-[200px]">

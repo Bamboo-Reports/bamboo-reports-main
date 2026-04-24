@@ -1,5 +1,7 @@
 import ExcelJS from "exceljs"
 import { getSqlOrThrow } from "@/lib/db/connection"
+import { getProspectsPerAccountLimit } from "@/lib/config/dashboard-access"
+import { partitionProspectsByAccess } from "@/lib/dashboard/prospect-access"
 import type { Account, Center, Prospect, Service } from "@/lib/types"
 
 export type ServerExportDatasetKey = "accounts" | "centers" | "services" | "prospects"
@@ -93,13 +95,15 @@ export async function buildServerExport(
   selection: ServerExportSelection
 ): Promise<ServerExportResult> {
   const { datasets, accountNames, centerKeys } = selection
+  const prospectsPerAccountLimit = getProspectsPerAccountLimit()
 
-  const [accounts, centers, services, prospects] = await Promise.all([
+  const [accounts, centers, services, rawProspects] = await Promise.all([
     datasets.includes("accounts") ? fetchAccounts(accountNames) : Promise.resolve([] as Account[]),
     datasets.includes("centers") ? fetchCenters(centerKeys) : Promise.resolve([] as Center[]),
     datasets.includes("services") ? fetchServices(centerKeys) : Promise.resolve([] as Service[]),
     datasets.includes("prospects") ? fetchProspects(accountNames) : Promise.resolve([] as Prospect[]),
   ])
+  const { visibleProspects: prospects } = partitionProspectsByAccess(rawProspects, prospectsPerAccountLimit)
 
   const workbook = new ExcelJS.Workbook()
 

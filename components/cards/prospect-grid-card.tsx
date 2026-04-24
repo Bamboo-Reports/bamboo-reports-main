@@ -30,7 +30,8 @@ export const ProspectGridCard = memo(({ prospect, onClick }: ProspectGridCardPro
     .slice(0, 2)
     .map((part) => part[0])
     .join("")
-  const location = [prospect.prospect_city, prospect.prospect_country].filter(Boolean).join(", ")
+  const accountName = prospect.account_global_legal_name || "Account"
+  const location = [prospect.prospect_city, prospect.prospect_state].filter(Boolean).join(", ") || prospect.prospect_country || ""
 
   return (
     <ContextMenu>
@@ -50,9 +51,9 @@ export const ProspectGridCard = memo(({ prospect, onClick }: ProspectGridCardPro
                 </h3>
                 <p
                   className="text-sm text-muted-foreground mt-1 truncate"
-                  title={location || prospect.prospect_country || "-"}
+                  title={accountName}
                 >
-                  {location || prospect.prospect_country || "-"}
+                  {accountName}
                 </p>
               </div>
               {prospect.head_type === "GCC Head" && (
@@ -71,6 +72,15 @@ export const ProspectGridCard = memo(({ prospect, onClick }: ProspectGridCardPro
               )}
             </div>
             <div className="space-y-2 text-sm">
+              <div className="flex items-center justify-between gap-3 min-w-0">
+                <span className="text-muted-foreground">Location</span>
+                <span
+                  className="font-medium text-foreground text-right truncate max-w-[160px]"
+                  title={location || "-"}
+                >
+                  {location || "-"}
+                </span>
+              </div>
               <div className="flex items-center justify-between gap-3 min-w-0">
                 <span className="text-muted-foreground">Department</span>
                 <span

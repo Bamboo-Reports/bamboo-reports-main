@@ -180,7 +180,7 @@ export function CentersTab({
         case "name":
           return center.center_name
         case "location":
-          return [center.center_city, center.center_country].filter(Boolean).join(", ")
+          return [center.center_city, center.center_state].filter(Boolean).join(", ")
         case "type":
           return center.center_type
         case "employees":

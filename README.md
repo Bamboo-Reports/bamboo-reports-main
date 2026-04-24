@@ -311,6 +311,7 @@ Two local config files control client-specific packaging without changing the co
 
 - `lib/config/dashboard-access.ts`
   - Controls whether top-level sections like `accounts`, `centers`, and `prospects` are accessible.
+  - Also supports deployment-level `prospectsPerAccount` packaging, so a client can see only the first `N` contacts per account while the total prospects badge still reflects the full platform count.
   - The same config is respected by dashboard navigation, search, exports, and server-side export enforcement.
 - `lib/config/filters.ts`
   - Controls which individual filters are enabled.
@@ -320,6 +321,8 @@ Typical use cases:
 
 - Client only needs Accounts + Prospects:
   - Set `centers` to `"disabled"` in `lib/config/dashboard-access.ts`
+- Client bought only 2 contacts per account:
+  - Set `limits.prospectsPerAccount` to `2` in `lib/config/dashboard-access.ts`
 - Client has standard filters only:
   - Set `showMoreEnabled: false` for the relevant filter section in `lib/config/filters.ts`
 

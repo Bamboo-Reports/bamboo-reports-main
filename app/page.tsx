@@ -60,6 +60,7 @@ function DashboardContent(): JSX.Element | null {
     services,
     tech,
     prospects,
+    lockedProspectTeasers,
     summary,
     loading,
     error,
@@ -167,6 +168,15 @@ function DashboardContent(): JSX.Element | null {
   const previousSidebarCollapsedRef = useRef<boolean | null>(null)
 
   const activeFiltersCount = getTotalActiveFilters()
+  const filteredLockedProspectTeasers = useMemo(() => {
+    const visibleAccountNames = new Set(
+      filteredData.filteredAccounts
+        .map((account) => account.account_global_legal_name)
+        .filter((name): name is string => Boolean(name))
+    )
+
+    return lockedProspectTeasers.filter((teaser) => visibleAccountNames.has(teaser.account_global_legal_name))
+  }, [filteredData.filteredAccounts, lockedProspectTeasers])
 
   const currentScreenView = useMemo(() => {
     if (activeSection === "accounts") {
@@ -722,6 +732,7 @@ function DashboardContent(): JSX.Element | null {
           account={searchSelectedAccount}
           centers={centers}
           prospects={prospects}
+          lockedProspectTeasers={lockedProspectTeasers}
           services={services}
           tech={tech}
           open={searchAccountDialogOpen}
@@ -831,6 +842,7 @@ function DashboardContent(): JSX.Element | null {
                       accounts={filteredData.filteredAccounts}
                       centers={filteredData.filteredCenters}
                       prospects={filteredData.filteredProspects}
+                      lockedProspectTeasers={filteredLockedProspectTeasers}
                       services={filteredData.filteredServices}
                       tech={tech}
                       functions={functions}
@@ -863,6 +875,7 @@ function DashboardContent(): JSX.Element | null {
                     <ProspectsTab
                       prospects={filteredData.filteredProspects}
                       allProspects={prospects}
+                      lockedProspectTeasers={filteredLockedProspectTeasers}
                       prospectChartData={prospectChartData}
                       prospectsView={prospectsView}
                       setProspectsView={setProspectsView}

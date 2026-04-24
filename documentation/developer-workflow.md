@@ -94,6 +94,7 @@ Prefer config changes over dashboard forks for client-specific packaging.
 1. **Top-level section access:**
     Edit `lib/config/dashboard-access.ts`.
     - Use this to enable or disable `accounts`, `centers`, and `prospects`.
+    - Use `limits.prospectsPerAccount` to package only the first `N` prospects per account for a deployment. `null` means unlimited.
 
 2. **Filter availability and premium reveal:**
     Edit `lib/config/filters.ts`.
@@ -102,6 +103,7 @@ Prefer config changes over dashboard forks for client-specific packaging.
 
 3. **Saved-filter behavior:**
     Disabled section filters and premium-disabled filters are sanitized out at load/runtime, so these changes do not require saved-filter migrations.
+    Prospect packaging limits are also runtime-only; no saved-filter migration is required because the limit is applied to the accessible prospects dataset before filtering, search, dialogs, and exports.
 
 ### 2.3 Adding a New Chart
 

@@ -100,6 +100,10 @@ interface SummaryCardsProps {
   onSelect: (view: "accounts" | "centers" | "prospects") => void
 }
 
+function getCardStatusLabel(cardId: string, interactive: boolean): string {
+  return interactive ? "Currently visible" : "Not Procured"
+}
+
 export const SummaryCards = React.memo(function SummaryCards({
   filteredAccountsCount,
   totalAccountsCount,
@@ -270,7 +274,7 @@ export const SummaryCards = React.memo(function SummaryCards({
                   className="text-sidebar-foreground"
                 />
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  {card.interactive ? "Currently visible" : "Not Procured"}
+                  {getCardStatusLabel(card.id, card.interactive)}
                 </p>
               </div>
               <span className="inline-flex items-center rounded-full border border-border/60 bg-secondary/70 px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground backdrop-blur-sm whitespace-nowrap">
