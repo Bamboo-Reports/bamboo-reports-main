@@ -88,7 +88,7 @@ export function CompanyLogo({
   const renderFallback = () => (
     <div
       className={cn(
-        "rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden",
+        "rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden",
         sizeConfig.container,
         className
       )}
@@ -124,7 +124,7 @@ export function CompanyLogo({
   return (
     <div
       className={cn(
-        "rounded-lg bg-background border border-border/50 flex items-center justify-center overflow-hidden flex-shrink-0 relative",
+        "rounded-xl bg-background border border-border/50 flex items-center justify-center overflow-hidden flex-shrink-0 relative",
         sizeConfig.container,
         className
       )}

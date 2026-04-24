@@ -19,6 +19,8 @@ export const ANALYTICS_EVENTS = {
   SECTION_VIEW_CHANGED: "section_view_changed",
   MAP_MODE_CHANGED: "map_mode_changed",
   DATA_LAYOUT_CHANGED: "data_layout_changed",
+  TABLE_COLUMN_VISIBILITY_CHANGED: "table_column_visibility_changed",
+  TABLE_COLUMNS_RESET: "table_columns_reset",
   SORT_CHANGED: "sort_changed",
   PAGE_CHANGED: "page_changed",
   RECORD_OPENED: "record_opened",

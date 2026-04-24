@@ -3,8 +3,8 @@
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { Clock, Compass, FileArchive, LogOut, RefreshCw, Search, Terminal, UserRound } from 'lucide-react'
-import { ThemeToggle } from '@/components/theme-toggle'
+import { Clock, Compass, FileArchive, LogOut, Monitor, Moon, RefreshCw, Search, Sun, Terminal, UserRound } from 'lucide-react'
+import { useTheme } from 'next-themes'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -30,6 +30,67 @@ interface HeaderProps {
   onOpenHistory?: () => void
 }
 
+type ThemeMode = 'light' | 'dark' | 'system'
+
+const THEME_OPTIONS: Array<{
+  value: ThemeMode
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+}> = [
+  { value: 'light', label: 'Light', icon: Sun },
+  { value: 'dark', label: 'Dark', icon: Moon },
+  { value: 'system', label: 'System', icon: Monitor },
+]
+
+function ProfileThemeSwitcher() {
+  const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const activeTheme = mounted ? (theme as ThemeMode | undefined) ?? 'light' : 'light'
+  const selectedLabel = THEME_OPTIONS.find((option) => option.value === activeTheme)?.label ?? 'Light'
+
+  return (
+    <div className="px-4 py-3">
+      <div className="mb-2 flex items-center justify-between">
+        <span className="text-xs font-medium text-muted-foreground">Theme</span>
+        <span className="text-[11px] text-muted-foreground">{selectedLabel}</span>
+      </div>
+      <div
+        className="grid grid-cols-3 gap-1 rounded-xl border border-border/70 bg-muted/35 p-1"
+        role="tablist"
+        aria-label="Theme preference"
+      >
+        {THEME_OPTIONS.map((option) => {
+          const Icon = option.icon
+          const isActive = activeTheme === option.value
+
+          return (
+            <button
+              key={option.value}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              disabled={!mounted}
+              onClick={() => setTheme(option.value)}
+              className={
+                isActive
+                  ? "inline-flex items-center justify-center gap-1.5 rounded-lg bg-background px-2 py-1.5 text-xs font-semibold text-foreground shadow-sm ring-1 ring-border/60 transition-colors"
+                  : "inline-flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-background/50 hover:text-foreground disabled:pointer-events-none disabled:opacity-60"
+              }
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {option.label}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 export const Header = React.memo(function Header({ onRefresh, onStartTour, onOpenSearch, onOpenExports, onOpenHistory }: HeaderProps): JSX.Element {
   const environmentLabel = getEnvironmentLabel()
@@ -168,7 +229,6 @@ export const Header = React.memo(function Header({ onRefresh, onStartTour, onOpe
               <RefreshCw className="h-4 w-4 group-hover:rotate-180 transition-transform duration-300" />
             </Button>
             {NOTIFICATIONS_ENABLED ? <NotificationDropdown /> : null}
-            <ThemeToggle />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8" title="Profile" aria-label="Open profile menu">
@@ -244,6 +304,10 @@ export const Header = React.memo(function Header({ onRefresh, onStartTour, onOpe
                     </div>
                   )
                 })()}
+
+                <DropdownMenuSeparator />
+
+                <ProfileThemeSwitcher />
 
                 <DropdownMenuSeparator />
 

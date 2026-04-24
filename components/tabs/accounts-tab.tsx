@@ -26,6 +26,8 @@ import { MapErrorBoundary } from "@/components/maps/map-error-boundary"
 import { ViewSwitcher } from "@/components/ui/view-switcher"
 import { SortButton } from "@/components/ui/sort-button"
 import { PaginationControls } from "@/components/ui/pagination-controls"
+import { TableColumnMenu } from "@/components/tables/table-column-menu"
+import { useTableColumnPreferences } from "@/hooks/use-table-column-preferences"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { canAccessAccountsMapView } from "@/lib/config/dashboard-access"
@@ -81,6 +83,13 @@ export function AccountsTab({
   })
   const [dataLayout, setDataLayout] = useState<"table" | "grid">("table")
   const [mapMode, setMapMode] = useState<"city" | "state">("state")
+  const {
+    columns,
+    visibleColumnSet,
+    isColumnVisible,
+    setColumnVisible,
+    resetColumns,
+  } = useTableColumnPreferences("accounts")
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -344,6 +353,14 @@ export function AccountsTab({
           <CardHeader className="shrink-0 px-6 py-3">
             <div className="flex flex-wrap items-center gap-3">
               <CardTitle className="text-base">Accounts Data</CardTitle>
+              {dataLayout === "table" && (
+                <TableColumnMenu
+                  columns={columns}
+                  visibleColumnSet={visibleColumnSet}
+                  onToggleColumn={setColumnVisible}
+                  onReset={resetColumns}
+                />
+              )}
               <ViewSwitcher
                 value={dataLayout}
                 onValueChange={(value) => setDataLayout(value as "table" | "grid")}
@@ -373,18 +390,26 @@ export function AccountsTab({
                 <Table className="table-fixed">
                   <TableHeader>
                     <TableRow>
+                      {isColumnVisible("name") && (
                       <TableHead className="w-[280px]">
                         <SortButton label="Account Name" sortKey="name" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                       </TableHead>
+                      )}
+                      {isColumnVisible("industry") && (
                       <TableHead className="w-[220px]">
                         <SortButton label="Sub Industry" sortKey="industry" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                       </TableHead>
+                      )}
+                      {isColumnVisible("revenue") && (
                       <TableHead className="w-[140px]">
                         <SortButton label="Revenue Range" sortKey="revenue" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                       </TableHead>
+                      )}
+                      {isColumnVisible("employees") && (
                       <TableHead className="w-[200px]">
                         <SortButton label="GCC Aggregate Headcount (India)" sortKey="employees" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                       </TableHead>
+                      )}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -394,6 +419,7 @@ export function AccountsTab({
                           key={`${account.account_global_legal_name}-${index}`}
                           account={account}
                           onClick={() => handleAccountClick(account, "table_row")}
+                          visibleColumns={visibleColumnSet}
                         />
                       )
                     )}

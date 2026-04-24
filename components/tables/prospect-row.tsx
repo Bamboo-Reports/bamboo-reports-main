@@ -11,13 +11,15 @@ import {
 import type { Prospect } from "@/lib/types"
 import { ensureAbsoluteUrl } from "@/lib/utils"
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard"
+import type { ProspectTableColumnKey } from "@/lib/dashboard/table-column-preferences"
 
 interface ProspectRowProps {
   prospect: Prospect
   onClick: () => void
+  visibleColumns: Set<ProspectTableColumnKey>
 }
 
-export const ProspectRow = memo(({ prospect, onClick }: ProspectRowProps) => {
+export const ProspectRow = memo(({ prospect, onClick, visibleColumns }: ProspectRowProps) => {
   const copy = useCopyToClipboard()
   const fullName =
     prospect.prospect_full_name ||
@@ -46,6 +48,7 @@ export const ProspectRow = memo(({ prospect, onClick }: ProspectRowProps) => {
           tabIndex={0}
           aria-label={`View prospect details for ${fullName || "prospect"}`}
         >
+          {visibleColumns.has("avatar") && (
           <TableCell>
             <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
               <span className="text-sm font-bold text-primary">
@@ -53,6 +56,8 @@ export const ProspectRow = memo(({ prospect, onClick }: ProspectRowProps) => {
               </span>
             </div>
           </TableCell>
+          )}
+          {visibleColumns.has("name") && (
           <TableCell className="font-medium max-w-[220px]">
             <div className="min-w-0">
               <div className="truncate" title={fullName || "N/A"}>
@@ -63,6 +68,8 @@ export const ProspectRow = memo(({ prospect, onClick }: ProspectRowProps) => {
               </div>
             </div>
           </TableCell>
+          )}
+          {visibleColumns.has("location") && (
           <TableCell className="max-w-[200px]">
             <div
               className="truncate"
@@ -71,16 +78,21 @@ export const ProspectRow = memo(({ prospect, onClick }: ProspectRowProps) => {
               {location || "N/A"}
             </div>
           </TableCell>
+          )}
+          {visibleColumns.has("title") && (
           <TableCell className="max-w-[180px]">
             <div className="truncate" title={prospect.prospect_title || "N/A"}>
               {prospect.prospect_title || "N/A"}
             </div>
           </TableCell>
+          )}
+          {visibleColumns.has("department") && (
           <TableCell className="max-w-[180px]">
             <div className="truncate" title={prospect.prospect_department || "N/A"}>
               {prospect.prospect_department || "N/A"}
             </div>
           </TableCell>
+          )}
         </TableRow>
       </ContextMenuTrigger>
       <ContextMenuContent className="w-48">

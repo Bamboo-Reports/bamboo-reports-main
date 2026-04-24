@@ -11,12 +11,14 @@ import {
 import type { Account } from "@/lib/types"
 import { ensureAbsoluteUrl } from "@/lib/utils"
 import { CompanyLogo } from "@/components/ui/company-logo"
+import type { AccountTableColumnKey } from "@/lib/dashboard/table-column-preferences"
 interface AccountRowProps {
   account: Account
   onClick: () => void
+  visibleColumns: Set<AccountTableColumnKey>
 }
 
-export const AccountRow = memo(({ account, onClick }: AccountRowProps) => {
+export const AccountRow = memo(({ account, onClick, visibleColumns }: AccountRowProps) => {
   const location = [account.account_hq_city, account.account_hq_country]
     .filter(Boolean)
     .join(", ")
@@ -38,6 +40,7 @@ export const AccountRow = memo(({ account, onClick }: AccountRowProps) => {
           tabIndex={0}
           aria-label={`View account details for ${accountName}`}
         >
+          {visibleColumns.has("name") && (
           <TableCell className="font-medium max-w-[280px]">
             <div className="flex items-center gap-3">
               <CompanyLogo
@@ -64,21 +67,28 @@ export const AccountRow = memo(({ account, onClick }: AccountRowProps) => {
               </div>
             </div>
           </TableCell>
+          )}
+          {visibleColumns.has("industry") && (
           <TableCell className="max-w-[220px]">
             <div className="truncate" title={account.account_hq_industry || "N/A"}>
               {account.account_hq_industry || "N/A"}
             </div>
           </TableCell>
+          )}
+          {visibleColumns.has("revenue") && (
           <TableCell className="max-w-[140px]">
             <div className="truncate" title={account.account_hq_revenue_range || "N/A"}>
               {account.account_hq_revenue_range || "N/A"}
             </div>
           </TableCell>
+          )}
+          {visibleColumns.has("employees") && (
           <TableCell className="max-w-[200px]">
             <div className="truncate" title={account.account_center_employees_range || "N/A"}>
               {account.account_center_employees_range || "N/A"}
             </div>
           </TableCell>
+          )}
         </TableRow>
       </ContextMenuTrigger>
       <ContextMenuContent className="w-48">

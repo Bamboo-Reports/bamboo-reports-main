@@ -17,6 +17,8 @@ import { MapErrorBoundary } from "@/components/maps/map-error-boundary"
 import { ViewSwitcher } from "@/components/ui/view-switcher"
 import { SortButton } from "@/components/ui/sort-button"
 import { PaginationControls } from "@/components/ui/pagination-controls"
+import { TableColumnMenu } from "@/components/tables/table-column-menu"
+import { useTableColumnPreferences } from "@/hooks/use-table-column-preferences"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import type { Center, Function, Service, Tech } from "@/lib/types"
@@ -65,6 +67,13 @@ export function CentersTab({
   })
   const [dataLayout, setDataLayout] = useState<"table" | "grid">("table")
   const [mapMode, setMapMode] = useState<"city" | "state">("state")
+  const {
+    columns,
+    visibleColumnSet,
+    isColumnVisible,
+    setColumnVisible,
+    resetColumns,
+  } = useTableColumnPreferences("centers")
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -323,6 +332,14 @@ export function CentersTab({
            <CardHeader className="shrink-0 px-6 py-3">
              <div className="flex flex-wrap items-center gap-3">
                <CardTitle className="text-base">Centers Data</CardTitle>
+               {dataLayout === "table" && (
+                 <TableColumnMenu
+                   columns={columns}
+                   visibleColumnSet={visibleColumnSet}
+                   onToggleColumn={setColumnVisible}
+                   onReset={resetColumns}
+                 />
+               )}
                <ViewSwitcher
                  value={dataLayout}
                  onValueChange={(value) => setDataLayout(value as "table" | "grid")}
@@ -352,18 +369,26 @@ export function CentersTab({
                   <Table className="table-fixed">
                     <TableHeader>
                       <TableRow>
+                        {isColumnVisible("name") && (
                         <TableHead className="w-[260px]">
                           <SortButton label="Center Name" sortKey="name" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
+                        )}
+                        {isColumnVisible("location") && (
                         <TableHead className="w-[200px]">
                           <SortButton label="Location" sortKey="location" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
+                        )}
+                        {isColumnVisible("type") && (
                         <TableHead className="w-[200px]">
                           <SortButton label="Center Type" sortKey="type" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
+                        )}
+                        {isColumnVisible("employees") && (
                         <TableHead className="w-[160px]">
                           <SortButton label="Center Headcount" sortKey="employees" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
+                        )}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -373,6 +398,7 @@ export function CentersTab({
                             key={`${center.cn_unique_key}-${index}`}
                             center={center}
                             onClick={() => handleCenterClick(center, "table_row")}
+                            visibleColumns={visibleColumnSet}
                           />
                         )
                       )}

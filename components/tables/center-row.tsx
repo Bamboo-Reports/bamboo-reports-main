@@ -11,12 +11,14 @@ import {
 import type { Center } from "@/lib/types"
 import { ensureAbsoluteUrl } from "@/lib/utils"
 import { CompanyLogo } from "@/components/ui/company-logo"
+import type { CenterTableColumnKey } from "@/lib/dashboard/table-column-preferences"
 interface CenterRowProps {
   center: Center
   onClick: () => void
+  visibleColumns: Set<CenterTableColumnKey>
 }
 
-export const CenterRow = memo(({ center, onClick }: CenterRowProps) => {
+export const CenterRow = memo(({ center, onClick, visibleColumns }: CenterRowProps) => {
   const location = [center.center_city, center.center_state].filter(Boolean).join(", ")
 
   return (
@@ -34,6 +36,7 @@ export const CenterRow = memo(({ center, onClick }: CenterRowProps) => {
           tabIndex={0}
           aria-label={`View center details for ${center.center_name || "center"}`}
         >
+          {visibleColumns.has("name") && (
           <TableCell className="font-medium max-w-[260px]">
             <div className="flex items-center gap-3">
               <CompanyLogo
@@ -55,6 +58,8 @@ export const CenterRow = memo(({ center, onClick }: CenterRowProps) => {
               </div>
             </div>
           </TableCell>
+          )}
+          {visibleColumns.has("location") && (
           <TableCell className="max-w-[200px]">
             <div
               className="truncate"
@@ -63,16 +68,21 @@ export const CenterRow = memo(({ center, onClick }: CenterRowProps) => {
               {location || "N/A"}
             </div>
           </TableCell>
+          )}
+          {visibleColumns.has("type") && (
           <TableCell className="max-w-[200px]">
             <div className="truncate" title={center.center_type || "N/A"}>
               {center.center_type || "N/A"}
             </div>
           </TableCell>
+          )}
+          {visibleColumns.has("employees") && (
           <TableCell className="max-w-[160px]">
             <div className="truncate" title={center.center_employees_range || "N/A"}>
               {center.center_employees_range || "N/A"}
             </div>
           </TableCell>
+          )}
         </TableRow>
       </ContextMenuTrigger>
       <ContextMenuContent className="w-48">

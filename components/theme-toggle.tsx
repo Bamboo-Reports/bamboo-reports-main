@@ -11,7 +11,7 @@ type DocumentWithViewTransition = Document & {
 }
 
 export function ThemeToggle() {
-  const { theme, setTheme } = useTheme()
+  const { resolvedTheme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
 
   // Avoid hydration mismatch
@@ -28,7 +28,7 @@ export function ThemeToggle() {
   }
 
   const toggleTheme = (event: MouseEvent<HTMLButtonElement>) => {
-    const nextTheme: ThemeName = theme === 'dark' ? 'light' : 'dark'
+    const nextTheme: ThemeName = resolvedTheme === 'dark' ? 'light' : 'dark'
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const documentWithTransition = document as DocumentWithViewTransition
     const root = document.documentElement
@@ -56,10 +56,10 @@ export function ThemeToggle() {
       size="sm"
       onClick={toggleTheme}
       className="h-8 w-8 px-0 relative overflow-hidden group"
-      title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+      title={`Switch to ${resolvedTheme === 'dark' ? 'light' : 'dark'} mode`}
     >
       <div className="relative">
-        {theme === 'dark' ? (
+        {resolvedTheme === 'dark' ? (
           <Sun className="h-4 w-4 rotate-0 scale-100 transition-all duration-300 group-hover:rotate-90 group-hover:scale-110" />
         ) : (
           <Moon className="h-4 w-4 rotate-0 scale-100 transition-all duration-300 group-hover:-rotate-12 group-hover:scale-110" />

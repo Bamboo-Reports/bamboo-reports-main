@@ -15,6 +15,8 @@ import { getPaginatedData } from "@/lib/utils/helpers"
 import { ViewSwitcher } from "@/components/ui/view-switcher"
 import { SortButton } from "@/components/ui/sort-button"
 import { PaginationControls } from "@/components/ui/pagination-controls"
+import { TableColumnMenu } from "@/components/tables/table-column-menu"
+import { useTableColumnPreferences } from "@/hooks/use-table-column-preferences"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import type { Prospect, LockedProspectTeaser } from "@/lib/types"
@@ -57,6 +59,13 @@ export function ProspectsTab({
     direction: null,
   })
   const [dataLayout, setDataLayout] = useState<"table" | "grid">("table")
+  const {
+    columns,
+    visibleColumnSet,
+    isColumnVisible,
+    setColumnVisible,
+    resetColumns,
+  } = useTableColumnPreferences("prospects")
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -280,6 +289,14 @@ export function ProspectsTab({
            <CardHeader className="shrink-0 px-6 py-3">
              <div className="flex flex-wrap items-center gap-3">
                <CardTitle className="text-base">Prospects Data</CardTitle>
+               {dataLayout === "table" && (
+                 <TableColumnMenu
+                   columns={columns}
+                   visibleColumnSet={visibleColumnSet}
+                   onToggleColumn={setColumnVisible}
+                   onReset={resetColumns}
+                 />
+               )}
                <ViewSwitcher
                  value={dataLayout}
                  onValueChange={(value) => setDataLayout(value as "table" | "grid")}
@@ -309,19 +326,29 @@ export function ProspectsTab({
                   <Table className="table-fixed">
                     <TableHeader>
                       <TableRow>
+                        {isColumnVisible("avatar") && (
                         <TableHead className="w-16"></TableHead>
+                        )}
+                        {isColumnVisible("name") && (
                         <TableHead className="w-[220px]">
                           <SortButton label="Name" sortKey="name" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
+                        )}
+                        {isColumnVisible("location") && (
                         <TableHead className="w-[200px]">
                           <SortButton label="Location" sortKey="location" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
+                        )}
+                        {isColumnVisible("title") && (
                         <TableHead className="w-[180px]">
                           <SortButton label="Job Title" sortKey="title" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
+                        )}
+                        {isColumnVisible("department") && (
                         <TableHead className="w-[180px]">
                           <SortButton label="Department" sortKey="department" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
+                        )}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -331,12 +358,14 @@ export function ProspectsTab({
                             key={`${item.prospect.prospect_email}-${index}`}
                             prospect={item.prospect}
                             onClick={() => handleProspectClick(item.prospect, "table_row")}
+                            visibleColumns={visibleColumnSet}
                           />
                         ) : (
                           <LockedProspectTeaserRow
                             key={item.teaser.id}
                             teaser={item.teaser}
                             remainingCount={lockedTeaserCountsByAccount.get(item.teaser.account_global_legal_name) ?? 0}
+                            visibleColumns={visibleColumnSet}
                           />
                         )
                       )}

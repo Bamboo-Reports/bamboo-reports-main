@@ -39,8 +39,8 @@ export default function RootLayout({
         <AppProviders>
           <ThemeProvider
             attribute="class"
-            defaultTheme="light"
-            enableSystem={false}
+            defaultTheme="system"
+            enableSystem
             disableTransitionOnChange
           >
             {isMaintenanceMode ? <MaintenancePage /> : children}

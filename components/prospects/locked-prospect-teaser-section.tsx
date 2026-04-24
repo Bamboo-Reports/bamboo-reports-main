@@ -15,6 +15,7 @@ import { TableCell, TableRow } from "@/components/ui/table"
 import { Lock, ShieldAlert, Sparkles } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { LockedProspectTeaser } from "@/lib/types"
+import type { ProspectTableColumnKey } from "@/lib/dashboard/table-column-preferences"
 
 interface LockedProspectTeaserSectionProps {
   teasers: LockedProspectTeaser[]
@@ -35,6 +36,7 @@ interface LockedProspectTeaserRowProps {
   teaser: LockedProspectTeaser
   remainingCount: number
   accountContext?: string
+  visibleColumns: Set<ProspectTableColumnKey>
 }
 
 export function LockedProspectTeaserCard({
@@ -159,6 +161,7 @@ export function LockedProspectTeaserRow({
   teaser,
   remainingCount,
   accountContext,
+  visibleColumns,
 }: LockedProspectTeaserRowProps) {
   const [isOpen, setIsOpen] = useState(false)
   const location = [teaser.prospect_city, teaser.prospect_state].filter(Boolean).join(", ") || teaser.prospect_country || ""
@@ -177,11 +180,14 @@ export function LockedProspectTeaserRow({
         tabIndex={0}
         aria-label={`View locked contact details for ${accountContext ?? teaser.account_global_legal_name}`}
       >
+        {visibleColumns.has("avatar") && (
         <TableCell>
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground">
             <Lock className="h-4 w-4" />
           </div>
         </TableCell>
+        )}
+        {visibleColumns.has("name") && (
         <TableCell className="font-medium max-w-[220px]">
           <div className="min-w-0">
             <div className="truncate">Locked Contact</div>
@@ -193,21 +199,28 @@ export function LockedProspectTeaserRow({
             </div>
           </div>
         </TableCell>
+        )}
+        {visibleColumns.has("location") && (
         <TableCell className="max-w-[200px]">
           <div className="truncate" title={location || "-"}>
             {location || "-"}
           </div>
         </TableCell>
+        )}
+        {visibleColumns.has("title") && (
         <TableCell className="max-w-[180px]">
           <div className="truncate" title="-">
             -
           </div>
         </TableCell>
+        )}
+        {visibleColumns.has("department") && (
         <TableCell className="max-w-[180px]">
           <div className="truncate" title={teaser.prospect_department || "-"}>
             {teaser.prospect_department || "-"}
           </div>
         </TableCell>
+        )}
       </TableRow>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
