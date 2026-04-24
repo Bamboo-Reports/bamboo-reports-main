@@ -13,7 +13,7 @@ To enable logo fetching, you must provide a publishable API token.
 
 | Variable | Required | Description |
 | :--- | :--- | :--- |
-| `NEXT_PUBLIC_LOGO_DEV_TOKEN` | **Yes** | The **publishable** key (starts with `pk_`) from your Logo.dev dashboard. Safe for client-side use. |
+| `NEXT_PUBLIC_LOGO_DEV_KEY` | **Yes** | The **publishable** key (starts with `pk_`) from your Logo.dev dashboard. Safe for client-side use. |
 
 ### 1.2 Data Requirements
 The component relies on specific database columns to extract the domain name for the logo lookup.
@@ -87,7 +87,7 @@ The `CompanyLogo` component is currently integrated in:
 
 | Issue | Check | Solution |
 | :--- | :--- | :--- |
-| **Logos are 403 Forbidden** | Environment Variable | Ensure `NEXT_PUBLIC_LOGO_DEV_TOKEN` is set in Vercel/local `.env`. |
+| **Logos are 403 Forbidden** | Environment Variable | Ensure `NEXT_PUBLIC_LOGO_DEV_KEY` is set in Vercel/local `.env`. |
 | **Building Icon Shows (No Logo)** | Domain Quality | Check if the database field (`account_hq_website`) is empty or invalid. |
 | **Building Icon Shows (Valid Domain)** | Logo Coverage | The company might not be in the Logo.dev index. This is expected behavior. |
 | **Logo is blurry** | Size Prop | Ensure you aren't using `size="sm"` in a large container. Upgrade to `md` or `lg`. |

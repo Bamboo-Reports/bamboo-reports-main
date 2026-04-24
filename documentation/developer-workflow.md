@@ -36,7 +36,7 @@ This guide is for developers maintaining or extending the Bamboo Reports applica
 
     Optional variables:
     - `NEXT_PUBLIC_POSTHOG_KEY` / `NEXT_PUBLIC_POSTHOG_HOST` — Analytics
-    - `NEXT_PUBLIC_LOGO_DEV_TOKEN` — Company logos
+    - `NEXT_PUBLIC_LOGO_DEV_KEY` — Company logos
     - `NEXT_PUBLIC_NOTIFICATIONS_ENABLED` — Set to `enabled` to activate notifications
     - `NEXT_PUBLIC_ENVIRONMENT_LABEL` — Set to `DEV` or `PROD` for environment badge
     - `NEXT_PUBLIC_MAPTILER_STATE_STYLE_ID` / `NEXT_PUBLIC_MAPTILER_CITY_STYLE_ID` — Custom map styles
@@ -231,5 +231,5 @@ If UI alignment needs tuning:
 | **Choropleth seams** | Map style | Disable disputed boundary layers in your MapTiler style. See `documentation/map-disputed-boundaries.md`. |
 | **Export button disabled** | User role | Only `admin` role can export. Update the `role` column in `public.profiles`. |
 | **PostHog events missing** | Environment variables | Verify `NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_POSTHOG_HOST` are set. Check that `providers.tsx` is wrapping the app. |
-| **Company logos not loading** | Logo.dev token | Set `NEXT_PUBLIC_LOGO_DEV_TOKEN`. If the company isn't in Logo.dev's index, the fallback icon is expected. |
+| **Company logos not loading** | Logo.dev key | Set `NEXT_PUBLIC_LOGO_DEV_KEY`. If the company isn't in Logo.dev's index, the fallback icon is expected. |
 | **Financial data missing** | Yahoo Finance | The Yahoo Finance API can be rate-limited. Check server action logs for errors. |

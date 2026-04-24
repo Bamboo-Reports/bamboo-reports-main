@@ -297,7 +297,7 @@ bamboo-reports-nextjs/
 | `NEXT_PUBLIC_MAPTILER_CITY_STYLE_ID` | No | MapTiler style ID for city-level view. |
 | `NEXT_PUBLIC_MAPTILER_STYLE_ID` | No | Legacy fallback style ID (used if mode-specific IDs are not set). |
 | `NEXT_PUBLIC_MAP_VIEWPOINT_ISO2` | No | Geopolitical viewpoint for choropleth (e.g., `IN` for India). |
-| `NEXT_PUBLIC_LOGO_DEV_TOKEN` | No | Logo.dev publishable token for company logos. |
+| `NEXT_PUBLIC_LOGO_DEV_KEY` | No | Logo.dev publishable key for company logos. |
 | `NEXT_PUBLIC_POSTHOG_KEY` | No | PostHog project API key for analytics. |
 | `NEXT_PUBLIC_POSTHOG_HOST` | No | PostHog host URL (defaults to PostHog cloud). |
 | `NEXT_PUBLIC_NOTIFICATIONS_ENABLED` | No | Feature flag: `enabled` or `disabled`. |
@@ -423,7 +423,7 @@ Subsequent pushes to the `main` branch trigger automatic deployments.
 | **Map not loading** | Invalid MapTiler Key | Check `NEXT_PUBLIC_MAPTILER_KEY`. Ensure the key is active and has map tile access. |
 | **"Database connection failed"** | Neon scaling / network | The Neon instance might be sleeping. Retry after a few seconds. Verify `DATABASE_URL`. |
 | **Auth errors (401/403)** | Supabase config | Verify `NEXT_PUBLIC_SUPABASE_URL` and `ANON_KEY`. Check RLS policies in Supabase dashboard. |
-| **Missing logos** | Logo.dev token | Ensure `NEXT_PUBLIC_LOGO_DEV_TOKEN` is set. If omitted, fallback initials are used. |
+| **Missing logos** | Logo.dev key | Ensure `NEXT_PUBLIC_LOGO_DEV_KEY` is set. If omitted, fallback initials are used. |
 | **Notifications not showing** | Feature flag | Set `NEXT_PUBLIC_NOTIFICATIONS_ENABLED=enabled` in your environment. |
 | **Charts not rendering** | Data issue | Check browser console for errors. Ensure data is being returned from server actions. |
 | **Choropleth seams visible** | MapTiler style | Disable disputed boundary layers in your MapTiler style. See [Map Disputed Boundaries](documentation/map-disputed-boundaries.md). |

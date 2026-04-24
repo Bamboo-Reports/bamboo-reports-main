@@ -3,14 +3,24 @@
 import React, { useState } from "react"
 import Image from "next/image"
 import { Building2 } from "lucide-react"
+import { useTheme } from "next-themes"
+import { getLogoDevPublicKey } from "@/lib/config/environment"
 import { cn } from "@/lib/utils"
+
+type LogoFormat = "jpg" | "png" | "webp"
+type LogoTheme = "light" | "dark" | "auto"
+type LogoFallbackMode = "monogram" | "icon"
 
 interface CompanyLogoProps {
   domain?: string
   companyName: string
   size?: "sm" | "md" | "lg" | "xl"
   className?: string
-  theme?: "light" | "dark" | "auto"
+  theme?: LogoTheme
+  format?: LogoFormat
+  fallbackMode?: LogoFallbackMode
+  retina?: boolean
+  priority?: boolean
 }
 
 const sizeMap = {
@@ -20,13 +30,20 @@ const sizeMap = {
   xl: { container: "h-24 w-24", icon: "h-12 w-12", img: 150 },
 }
 
+const LOGO_DEV_PUBLIC_KEY = getLogoDevPublicKey() || "pk_GAZeDBqlSWS8CSE3PZ8WeA"
+
 export function CompanyLogo({
   domain,
   companyName,
   size = "md",
   className,
   theme = "auto",
+  format,
+  fallbackMode = "monogram",
+  retina = true,
+  priority = false,
 }: CompanyLogoProps) {
+  const { resolvedTheme } = useTheme()
   const [imageError, setImageError] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
 
@@ -62,25 +79,47 @@ export function CompanyLogo({
 
   const cleanDomain = getCleanDomain(domain)
   const sizeConfig = sizeMap[size]
+  const companyMonogram = companyName.trim().charAt(0).toUpperCase() || "?"
+  const effectiveTheme: LogoTheme =
+    theme === "auto" ? (resolvedTheme === "dark" ? "dark" : resolvedTheme === "light" ? "light" : "auto") : theme
+  const effectiveFormat: LogoFormat =
+    format ?? (effectiveTheme === "auto" ? "webp" : "png")
 
-  // If no valid domain or image failed to load, show fallback
-  if (!cleanDomain || imageError) {
-    return (
-      <div
-        className={cn(
-          "rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0",
-          sizeConfig.container,
-          className
-        )}
-        title={companyName}
-      >
+  const renderFallback = () => (
+    <div
+      className={cn(
+        "rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden",
+        sizeConfig.container,
+        className
+      )}
+      title={companyName}
+      aria-label={`${companyName} logo fallback`}
+    >
+      {fallbackMode === "monogram" ? (
+        <span className={cn("font-semibold text-primary", size === "sm" ? "text-xs" : size === "xl" ? "text-3xl" : "text-sm")}>
+          {companyMonogram}
+        </span>
+      ) : (
         <Building2 className={cn("text-primary", sizeConfig.icon)} />
-      </div>
-    )
+      )}
+    </div>
+  )
+
+  if (!cleanDomain || imageError) {
+    return renderFallback()
   }
 
-  // Construct Hunter.io logo URL (no authentication required)
-  const logoUrl = `https://logos.hunter.io/${cleanDomain}`
+  const logoUrl = new URL(`https://img.logo.dev/${cleanDomain}`)
+  logoUrl.searchParams.set("token", LOGO_DEV_PUBLIC_KEY)
+  logoUrl.searchParams.set("size", String(sizeConfig.img))
+  logoUrl.searchParams.set("format", effectiveFormat)
+  logoUrl.searchParams.set("fallback", "404")
+  if (effectiveTheme !== "auto") {
+    logoUrl.searchParams.set("theme", effectiveTheme)
+  }
+  if (retina) {
+    logoUrl.searchParams.set("retina", "true")
+  }
 
   return (
     <div
@@ -99,7 +138,7 @@ export function CompanyLogo({
       )}
 
       <Image
-        src={logoUrl}
+        src={logoUrl.toString()}
         alt={`${companyName} logo`}
         fill
         className={cn(
@@ -107,14 +146,15 @@ export function CompanyLogo({
           imageLoaded ? "opacity-100" : "opacity-0"
         )}
         sizes={`${sizeConfig.img}px`}
+        loading={priority ? "eager" : "lazy"}
+        priority={priority}
         onLoadingComplete={() => setImageLoaded(true)}
         onError={() => {
           setImageError(true)
           setImageLoaded(false)
         }}
         style={{
-          padding: "8%",
-          transform: "scale(1.2)",
+          padding: "1%",
         }}
       />
     </div>

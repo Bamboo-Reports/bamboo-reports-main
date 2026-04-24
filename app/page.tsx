@@ -506,8 +506,10 @@ function DashboardContent(): JSX.Element | null {
 
   const dataLoaded = !loading && !error
 
-  const hasMapView = (accountsMapEnabled && accountsView === "map") || (centersEnabled && centersView === "map")
-  const { startTour } = useProductTour({ userId, dataLoaded, hasMapView })
+  const hasMapView =
+    (activeSection === "accounts" && accountsMapEnabled && accountsView === "map") ||
+    (activeSection === "centers" && centersEnabled && centersView === "map")
+  const { startTour } = useProductTour({ userId, dataLoaded, hasMapView, isSidebarCollapsed })
 
   useEffect(() => {
     if (!dataLoaded || hasTrackedDashboardLoadRef.current) {

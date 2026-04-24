@@ -11,17 +11,20 @@ interface UseProductTourOptions {
   userId: string | null
   dataLoaded: boolean
   hasMapView: boolean
+  isSidebarCollapsed: boolean
 }
 
-export function useProductTour({ userId, dataLoaded, hasMapView }: UseProductTourOptions) {
+export function useProductTour({ userId, dataLoaded, hasMapView, isSidebarCollapsed }: UseProductTourOptions) {
   const { isCompleted, isLoading, markCompleted } = useTourPersistence(userId)
   const [isRunning, setIsRunning] = useState(false)
   const driverRef = useRef<Driver | null>(null)
   const hasAutoStartedRef = useRef(false)
   const stepIndexRef = useRef(0)
+  const isRefreshingRef = useRef(false)
+  const tourLayoutRef = useRef<{ hasMapView: boolean; isSidebarCollapsed: boolean } | null>(null)
 
   const createDriver = useCallback(() => {
-    const steps = getDashboardTourSteps({ hasMapView })
+    const steps = getDashboardTourSteps({ hasMapView, isSidebarCollapsed })
 
     const instance = driver({
       showProgress: true,
@@ -45,6 +48,12 @@ export function useProductTour({ userId, dataLoaded, hasMapView }: UseProductTou
         })
       },
       onDestroyStarted: (_element, _step, opts) => {
+        if (isRefreshingRef.current) {
+          document.documentElement.classList.remove("tour-active")
+          instance.destroy()
+          return
+        }
+
         const totalSteps = steps.length
         const isLastStep = (opts.state.activeIndex ?? 0) === totalSteps - 1
 
@@ -67,7 +76,27 @@ export function useProductTour({ userId, dataLoaded, hasMapView }: UseProductTou
     })
 
     return instance
-  }, [hasMapView, markCompleted])
+  }, [hasMapView, isSidebarCollapsed, markCompleted])
+
+  const driveTour = useCallback(
+    (startIndex = 0, trackStart = true) => {
+      const instance = createDriver()
+      driverRef.current = instance
+
+      document.documentElement.classList.add("tour-active")
+
+      if (trackStart) {
+        captureEvent(ANALYTICS_EVENTS.TOUR_STARTED, {
+          is_replay: isCompleted,
+        })
+      }
+
+      tourLayoutRef.current = { hasMapView, isSidebarCollapsed }
+      setIsRunning(true)
+      instance.drive(startIndex)
+    },
+    [createDriver, isCompleted, hasMapView, isSidebarCollapsed]
+  )
 
   const startTour = useCallback(() => {
     if (isRunning) return
@@ -76,18 +105,32 @@ export function useProductTour({ userId, dataLoaded, hasMapView }: UseProductTou
       driverRef.current.destroy()
     }
 
-    const instance = createDriver()
-    driverRef.current = instance
+    driveTour()
+  }, [isRunning, driveTour])
 
-    document.documentElement.classList.add("tour-active")
+  useEffect(() => {
+    if (!isRunning || !driverRef.current) {
+      return
+    }
 
-    captureEvent(ANALYTICS_EVENTS.TOUR_STARTED, {
-      is_replay: isCompleted,
-    })
+    const previousLayout = tourLayoutRef.current
+    if (
+      previousLayout &&
+      previousLayout.hasMapView === hasMapView &&
+      previousLayout.isSidebarCollapsed === isSidebarCollapsed
+    ) {
+      return
+    }
 
-    setIsRunning(true)
-    instance.drive()
-  }, [isRunning, createDriver, isCompleted])
+    const nextSteps = getDashboardTourSteps({ hasMapView, isSidebarCollapsed })
+    const nextIndex = Math.min(stepIndexRef.current, Math.max(nextSteps.length - 1, 0))
+
+    isRefreshingRef.current = true
+    driverRef.current.destroy()
+    isRefreshingRef.current = false
+
+    driveTour(nextIndex, false)
+  }, [isRunning, hasMapView, isSidebarCollapsed, driveTour])
 
   // Auto-start for first-time users
   useEffect(() => {
