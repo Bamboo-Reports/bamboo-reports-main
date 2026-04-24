@@ -332,35 +332,36 @@ export function CentersTab({
            <CardHeader className="shrink-0 px-6 py-3">
              <div className="flex flex-wrap items-center gap-3">
                <CardTitle className="text-base">Centers Data</CardTitle>
-               {dataLayout === "table" && (
-                 <TableColumnMenu
-                   columns={columns}
-                   visibleColumnSet={visibleColumnSet}
-                   onToggleColumn={setColumnVisible}
-                   onReset={resetColumns}
+               <div className="ml-auto flex items-center gap-2">
+                 {dataLayout === "table" && (
+                   <TableColumnMenu
+                     columns={columns}
+                     visibleColumnSet={visibleColumnSet}
+                     onToggleColumn={setColumnVisible}
+                     onReset={resetColumns}
+                   />
+                 )}
+                 <ViewSwitcher
+                   value={dataLayout}
+                   onValueChange={(value) => setDataLayout(value as "table" | "grid")}
+                   options={[
+                     {
+                       value: "table",
+                       label: <span className="text-[hsl(var(--chart-2))]">Table</span>,
+                       icon: (
+                         <TableIcon className="h-4 w-4 text-[hsl(var(--chart-2))]" />
+                       ),
+                     },
+                     {
+                       value: "grid",
+                       label: <span className="text-[hsl(var(--chart-3))]">Grid</span>,
+                       icon: (
+                         <LayoutGrid className="h-4 w-4 text-[hsl(var(--chart-3))]" />
+                       ),
+                     },
+                   ]}
                  />
-               )}
-               <ViewSwitcher
-                 value={dataLayout}
-                 onValueChange={(value) => setDataLayout(value as "table" | "grid")}
-                 options={[
-                   {
-                     value: "table",
-                     label: <span className="text-[hsl(var(--chart-2))]">Table</span>,
-                     icon: (
-                       <TableIcon className="h-4 w-4 text-[hsl(var(--chart-2))]" />
-                     ),
-                   },
-                   {
-                     value: "grid",
-                     label: <span className="text-[hsl(var(--chart-3))]">Grid</span>,
-                     icon: (
-                       <LayoutGrid className="h-4 w-4 text-[hsl(var(--chart-3))]" />
-                     ),
-                   },
-                 ]}
-                 className="ml-auto"
-               />
+               </div>
              </div>
            </CardHeader>
             <CardContent className="p-0 flex flex-col flex-1 overflow-hidden">

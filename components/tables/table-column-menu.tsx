@@ -33,12 +33,11 @@ export function TableColumnMenu<ColumnKey extends string>({
           type="button"
           variant="outline"
           size="sm"
-          className="h-8 gap-1.5 px-2.5 text-xs"
+          className="h-10 w-10 rounded-xl px-0"
           aria-label="Customize table columns"
           title="Customize table columns"
         >
           <Settings2 className="h-3.5 w-3.5" />
-          Columns
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" side="bottom" sideOffset={6} alignOffset={-32} className="w-64">
