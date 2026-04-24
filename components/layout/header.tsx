@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { Compass, FileArchive, LogOut, RefreshCw, Search, Terminal, UserRound } from 'lucide-react'
+import { Clock, Compass, FileArchive, LogOut, RefreshCw, Search, Terminal, UserRound } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Button } from '@/components/ui/button'
 import {
@@ -27,10 +27,11 @@ interface HeaderProps {
   onStartTour?: () => void
   onOpenSearch?: () => void
   onOpenExports?: () => void
+  onOpenHistory?: () => void
 }
 
 
-export const Header = React.memo(function Header({ onRefresh, onStartTour, onOpenSearch, onOpenExports }: HeaderProps): JSX.Element {
+export const Header = React.memo(function Header({ onRefresh, onStartTour, onOpenSearch, onOpenExports, onOpenHistory }: HeaderProps): JSX.Element {
   const environmentLabel = getEnvironmentLabel()
   const router = useRouter()
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -254,6 +255,15 @@ export const Header = React.memo(function Header({ onRefresh, onStartTour, onOpe
                     >
                       <FileArchive className="h-4 w-4" />
                       Exports
+                    </DropdownMenuItem>
+                  )}
+                  {onOpenHistory && (
+                    <DropdownMenuItem
+                      className="flex flex-1 flex-col items-center justify-center gap-1 cursor-pointer rounded-md border border-border/60 bg-muted/20 px-2 py-2.5 text-[11px] font-medium text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 focus:border-border focus:bg-muted/60 focus:text-foreground"
+                      onSelect={() => onOpenHistory()}
+                    >
+                      <Clock className="h-4 w-4" />
+                      History
                     </DropdownMenuItem>
                   )}
                   {onStartTour && (

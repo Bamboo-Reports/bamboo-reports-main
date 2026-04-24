@@ -5,6 +5,7 @@ import { useTheme } from "next-themes"
 import { toast } from "sonner"
 import { ExportDialog } from "@/components/export/export-dialog"
 import { ExportsDialog } from "@/components/exports/exports-dialog"
+import { HistoryDialog } from "@/components/history/history-dialog"
 import { FiltersSidebar } from "@/components/filters/filters-sidebar"
 import { Header } from "@/components/layout/header"
 import { GlobalSearch } from "@/components/search/global-search"
@@ -113,6 +114,7 @@ function DashboardContent(): JSX.Element | null {
   const [activeSection, setActiveSection] = useState<"accounts" | "centers" | "prospects">(defaultSection)
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
   const [exportsDialogOpen, setExportsDialogOpen] = useState(false)
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const canExport = canExportData(userRole)
 
@@ -137,6 +139,7 @@ function DashboardContent(): JSX.Element | null {
     recentSearches,
     addRecentItem,
     addRecentSearch,
+    clearRecentItems,
   } = useRecentItems()
 
   // Search-triggered detail dialogs (separate from tab-level dialogs)
@@ -709,8 +712,15 @@ function DashboardContent(): JSX.Element | null {
       >
         Skip to main content
       </a>
-      <Header onRefresh={handleRefresh} onStartTour={startTour} onOpenSearch={handleSearchOpen} onOpenExports={() => setExportsDialogOpen(true)} />
+      <Header onRefresh={handleRefresh} onStartTour={startTour} onOpenSearch={handleSearchOpen} onOpenExports={() => setExportsDialogOpen(true)} onOpenHistory={() => setHistoryDialogOpen(true)} />
       <ExportsDialog open={exportsDialogOpen} onOpenChange={setExportsDialogOpen} />
+      <HistoryDialog
+        open={historyDialogOpen}
+        onOpenChange={setHistoryDialogOpen}
+        recentItems={recentItems}
+        onItemSelect={handleSearchRecentItemSelect}
+        onClearHistory={clearRecentItems}
+      />
 
       <GlobalSearch
         open={isSearchOpen}
@@ -816,8 +826,6 @@ function DashboardContent(): JSX.Element | null {
             getTotalActiveFilters={getTotalActiveFilters}
             handleLoadSavedFilters={handleLoadSavedFilters}
             formatRevenueInMillions={formatRevenueInMillions}
-            recentItems={recentItems}
-            onRecentItemSelect={handleSearchRecentItemSelect}
           />
 
           <div className="flex-1 overflow-hidden flex flex-col">
