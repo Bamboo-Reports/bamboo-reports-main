@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { Briefcase, Building2, Clock, Trash2, Users } from "lucide-react"
 import {
   Dialog,
@@ -10,8 +11,12 @@ import {
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { PaginationControls } from "@/components/ui/pagination-controls"
 import { cn } from "@/lib/utils"
+import { getPaginatedData } from "@/lib/utils/helpers"
 import type { RecentItem } from "@/hooks/use-recent-items"
+
+const ITEMS_PER_PAGE = 10
 
 function timeAgo(ts: number): string {
   const diff = Date.now() - ts
@@ -62,8 +67,11 @@ export function HistoryDialog({
   onItemSelect,
   onClearHistory,
 }: HistoryDialogProps) {
+  const [page, setPage] = useState(1)
+  const paginated = getPaginatedData(recentItems, page, ITEMS_PER_PAGE) as RecentItem[]
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(next) => { onOpenChange(next); if (!next) setPage(1) }}>
       <DialogContent className="h-screen w-screen max-w-none overflow-hidden rounded-none p-0 sm:max-w-none glassmorphism-dialog flex flex-col">
         <DialogHeader className="border-b border-border/60 px-6 py-5 shrink-0">
           <div className="flex items-start justify-between pr-10">
@@ -104,7 +112,7 @@ export function HistoryDialog({
           ) : (
             <div className="overflow-hidden rounded-xl border border-border/60 bg-background/40 backdrop-blur-sm dark:bg-white/5 dark:border-white/10">
               <div className="divide-y divide-border/40">
-                {recentItems.map((item) => {
+                {paginated.map((item) => {
                   const meta = TYPE_META[item.type]
                   const Icon = meta.icon
                   return (
@@ -139,6 +147,13 @@ export function HistoryDialog({
                   )
                 })}
               </div>
+              <PaginationControls
+                currentPage={page}
+                totalItems={recentItems.length}
+                itemsPerPage={ITEMS_PER_PAGE}
+                onPageChange={setPage}
+                dataLength={paginated.length}
+              />
             </div>
           )}
         </div>

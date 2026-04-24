@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { Download, Eye, FileArchive, Loader2, MoreHorizontal } from "lucide-react"
+import { PaginationControls } from "@/components/ui/pagination-controls"
+import { getPaginatedData } from "@/lib/utils/helpers"
 import {
   Dialog,
   DialogContent,
@@ -63,12 +65,15 @@ interface ExportsDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
+const ITEMS_PER_PAGE = 10
+
 export function ExportsDialog({ open, onOpenChange }: ExportsDialogProps) {
   const [exports, setExports] = useState<ExportRow[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
   const [detailsRow, setDetailsRow] = useState<ExportRow | null>(null)
+  const [page, setPage] = useState(1)
 
   const fetchExports = useCallback(async () => {
     setLoading(true)
@@ -102,7 +107,7 @@ export function ExportsDialog({ open, onOpenChange }: ExportsDialogProps) {
   }, [])
 
   useEffect(() => {
-    if (!open) return
+    if (!open) { setPage(1); return }
     void fetchExports()
   }, [open, fetchExports])
 
@@ -177,7 +182,7 @@ export function ExportsDialog({ open, onOpenChange }: ExportsDialogProps) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {exports.map((row) => (
+                    {(getPaginatedData(exports, page, ITEMS_PER_PAGE) as ExportRow[]).map((row) => (
                       <TableRow key={row.id}>
                         <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
                           {formatDate(row.created_at)}
@@ -238,6 +243,13 @@ export function ExportsDialog({ open, onOpenChange }: ExportsDialogProps) {
                     ))}
                   </TableBody>
                 </Table>
+                <PaginationControls
+                  currentPage={page}
+                  totalItems={exports.length}
+                  itemsPerPage={ITEMS_PER_PAGE}
+                  onPageChange={setPage}
+                  dataLength={exports.length}
+                />
               </div>
             )}
           </div>
