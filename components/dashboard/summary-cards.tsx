@@ -100,8 +100,8 @@ interface SummaryCardsProps {
   onSelect: (view: "accounts" | "centers" | "prospects") => void
 }
 
-function getCardStatusLabel(cardId: string, interactive: boolean): string {
-  return interactive ? "Currently visible" : "Not Procured"
+function getCardStatusLabel(procured: boolean): string {
+  return procured ? "Currently visible" : "Not Procured"
 }
 
 export const SummaryCards = React.memo(function SummaryCards({
@@ -157,6 +157,7 @@ export const SummaryCards = React.memo(function SummaryCards({
       icon: Building,
       iconClassName: 'text-primary',
       interactive: accountsEnabled,
+      procured: accountsEnabled,
       message: accountsEnabled ? null : getSectionUnavailableMessage("accounts"),
     },
     {
@@ -168,6 +169,7 @@ export const SummaryCards = React.memo(function SummaryCards({
       icon: Briefcase,
       iconClassName: 'text-[hsl(var(--chart-2))]',
       interactive: centersEnabled,
+      procured: centersEnabled,
       message: centersEnabled ? null : getSectionUnavailableMessage("centers"),
     },
     {
@@ -179,6 +181,7 @@ export const SummaryCards = React.memo(function SummaryCards({
       icon: Clock,
       iconClassName: 'text-[hsl(var(--chart-5))]',
       interactive: false,
+      procured: centersEnabled,
       message: centersEnabled
         ? "Upcoming Centers is an overview stat. Only Accounts, Centers, and Prospects open as views."
         : getSectionUnavailableMessage("centers"),
@@ -192,6 +195,7 @@ export const SummaryCards = React.memo(function SummaryCards({
       icon: Users,
       iconClassName: 'text-[hsl(var(--chart-3))]',
       interactive: prospectsEnabled,
+      procured: prospectsEnabled,
       message: prospectsEnabled ? null : getSectionUnavailableMessage("prospects"),
     },
     {
@@ -203,6 +207,7 @@ export const SummaryCards = React.memo(function SummaryCards({
       icon: UserCheck,
       iconClassName: 'text-[hsl(var(--chart-4))]',
       interactive: false,
+      procured: centersEnabled,
       message: centersEnabled
         ? "Headcount is an overview stat. Only Accounts, Centers, and Prospects open as views."
         : getSectionUnavailableMessage("centers"),
@@ -274,7 +279,7 @@ export const SummaryCards = React.memo(function SummaryCards({
                   className="text-sidebar-foreground"
                 />
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  {getCardStatusLabel(card.id, card.interactive)}
+                  {getCardStatusLabel(card.procured)}
                 </p>
               </div>
               <span className="inline-flex items-center rounded-full border border-border/60 bg-secondary/70 px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground backdrop-blur-sm whitespace-nowrap">
