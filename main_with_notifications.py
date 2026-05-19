@@ -19,6 +19,7 @@ import json
 import logging
 import math
 import os
+import re
 import sys
 import time
 from decimal import Decimal
@@ -408,8 +409,7 @@ def clean_dataframe(df: pd.DataFrame, table_schema: Dict) -> pd.DataFrame:
             elif ctype == "TIMESTAMP":
                 df[col_name] = pd.to_datetime(series, errors="coerce")
             else:
-                df[col_name] = series.astype(str).replace({"nan": None, "None": None}).str.strip()
-                df[col_name] = df[col_name].replace({"": None})
+                df[col_name] = series.map(lambda value: normalize_text_value(value, col_name))
         except Exception as e:
             logger.warning(f"Error cleaning '{col_name}': {e}")
 
@@ -450,6 +450,26 @@ def normalize_change_value(value: Any) -> Optional[str]:
     if value_str.lower() in {"nan", "none", "null", "nat"}:
         return None
     return value_str if value_str else None
+
+
+INTEGER_FLOAT_TEXT_RE = re.compile(r"^([+-]?\d+)\.0+$")
+INTEGER_FLOAT_TEXT_COLUMNS = ("zip", "postal", "postcode")
+
+
+def normalize_text_value(value: Any, col_name: str) -> Optional[str]:
+    if any(marker in col_name.lower() for marker in INTEGER_FLOAT_TEXT_COLUMNS):
+        normalized = normalize_change_value(value)
+        if normalized is None:
+            return None
+        match = INTEGER_FLOAT_TEXT_RE.fullmatch(normalized.replace(",", ""))
+        if match:
+            return match.group(1)
+        return normalized
+
+    value_str = str(value).strip()
+    if value_str.lower() in {"nan", "none", "null", "nat", ""}:
+        return None
+    return value_str
 
 
 def prepare_table_identity_index(df: pd.DataFrame, table: str) -> pd.DataFrame:
@@ -579,9 +599,25 @@ def ensure_notification_tables(engine: Engine):
             last_read_at TIMESTAMPTZ NOT NULL DEFAULT '1970-01-01T00:00:00Z'
         );
         """,
+        f"""
+        DO $$ BEGIN
+            IF to_regclass('{NOTIFICATION_READS_TABLE}') IS NOT NULL THEN
+                INSERT INTO {USER_NOTIFICATION_STATE_TABLE} (user_id, last_read_at)
+                SELECT user_id, MAX(read_at)
+                FROM {NOTIFICATION_READS_TABLE}
+                GROUP BY user_id
+                ON CONFLICT (user_id)
+                DO UPDATE SET last_read_at = GREATEST(
+                    {USER_NOTIFICATION_STATE_TABLE}.last_read_at,
+                    EXCLUDED.last_read_at
+                );
+            END IF;
+        END $$;
+        """,
         f"CREATE INDEX IF NOT EXISTS field_change_events_changed_at_idx ON {CHANGE_EVENTS_TABLE} (changed_at DESC);",
         f"CREATE INDEX IF NOT EXISTS field_change_events_identity_field_idx ON {CHANGE_EVENTS_TABLE} (table_name, record_identity, field_name, changed_at DESC);",
         f"CREATE INDEX IF NOT EXISTS field_change_events_table_changed_idx ON {CHANGE_EVENTS_TABLE} (table_name, changed_at DESC);",
+        f"CREATE INDEX IF NOT EXISTS field_change_events_table_changed_at_idx ON {CHANGE_EVENTS_TABLE} (table_name, changed_at DESC);",
         f"CREATE INDEX IF NOT EXISTS field_change_events_record_uuid_idx ON {CHANGE_EVENTS_TABLE} (record_uuid, changed_at DESC);",
         f"CREATE INDEX IF NOT EXISTS notification_reads_user_read_at_idx ON {NOTIFICATION_READS_TABLE} (user_id, read_at DESC);",
     ]
