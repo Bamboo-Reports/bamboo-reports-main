@@ -1,4 +1,77 @@
 {
+  "alias": {
+    "columns": [
+      {
+        "Table": "alias",
+        "Column": "uuid",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "alias",
+        "Column": "account_global_legal_name",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "alias",
+        "Column": "short_legal_name",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "alias",
+        "Column": "brand_name",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "alias",
+        "Column": "abbreviated_name",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "alias",
+        "Column": "flagship_products",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "alias",
+        "Column": "currently_known_as",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "alias",
+        "Column": "notes",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      }
+    ],
+    "statistics": {
+      "Table": "alias",
+      "Rows": 0,
+      "Size (MB)": 0
+    }
+  },
   "functions": {
     "columns": [
       {
@@ -983,7 +1056,23 @@
       },
       {
         "Table": "prospects",
+        "Column": "head_type",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "prospects",
         "Column": "prospect_linkedin_url",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "prospects",
+        "Column": "prospect_other_source_url",
         "Type": "TEXT",
         "Nullable": "YES",
         "Default": "",
