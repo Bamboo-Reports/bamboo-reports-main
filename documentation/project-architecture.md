@@ -164,6 +164,19 @@ const results = await fetchWithRetry(() => sql`
 -   **Security:** Row-Level Security (RLS) policies ensure users can only access their own data.
 -   **Client:** Singleton Supabase client in `lib/supabase/client.ts`.
 
+### 4.3 Account Visibility (`account_visibility` / `account_visibility_note`)
+
+Two columns on `accounts` control whether an account is included by default in dashboard counts and tables.
+
+-   `account_visibility`: `'include'` (default) or `'exclude'`. Excluded accounts are records we keep but do not want to surface by default (for example, companies with only sales, manufacturing, or distribution presence in India, not full GCC operations).
+-   `account_visibility_note`: short, human-readable reason for the exclusion. Surfaced as a chip alongside the NASSCOM chip on the accounts table row (`components/tables/account-row.tsx`) and grid card (`components/cards/account-grid-card.tsx`).
+
+**Default behavior (no search):** excluded accounts and their centers/prospects are dropped from `filteredAccounts` / `filteredCenters` / `filteredProspects`, so they disappear from tables, charts, and summary card numerators. The summary card denominators always show the full universe (e.g., 2657 accounts) so the user can see "2349 visible / 2657 total". This is implemented in `lib/dashboard/filtering.ts` (`getFilteredData`) and `app/page.tsx` (summary card props use the `*Full` totals from `DashboardSummaryMetrics`).
+
+**Search bypass:** if the user explicitly searches an excluded account by name (i.e., `filters.accountGlobalLegalNameKeywords` is non-empty), excluded accounts that match the keyword reappear in the filtered set. This lets a user pull up an excluded account when they specifically ask for it without exposing the full excluded population.
+
+**Server-side totals:** `getDashboardSummaryMetrics` in `app/actions/data.ts` returns BOTH a visible universe (`totalAccountsCount`, etc.) and a full universe (`totalAccountsCountFull`, etc.) for accounts, centers, upcoming centers, prospects, and headcount. Centers and prospects join `accounts` on `account_global_legal_name` to compute the visible variants.
+
 ---
 
 ## 5. External Integrations
