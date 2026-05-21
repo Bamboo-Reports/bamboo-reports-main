@@ -43,6 +43,7 @@ bamboo-reports-*.json
 # Logs
 /logs/
 /import_logs/
+/etl/import_logs/
 *.log
 
 # Generated files
@@ -54,6 +55,10 @@ __pycache__/
 *.pyo
 venv/
 .venv/
+
+# ETL
+/etl/.venv/
+/etl/__pycache__/
 
 # Misc
 .eslintcache
