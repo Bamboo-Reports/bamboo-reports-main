@@ -5,12 +5,12 @@
 Unified Data Manager (Import, Validate, Schema Snapshot)
 
 Usage:
-  python main_with_notifications.py                  # Default: Import -> Snapshot -> Validate
-  python main_with_notifications.py --import         # Import -> Snapshot
-  python main_with_notifications.py --dry-run        # Validate import flow without DB writes
-  python main_with_notifications.py --validate       # Just Validate
-  python main_with_notifications.py --schema         # Just Snapshot
-  python main_with_notifications.py --check-headers  # Diff Google Sheet headers vs schema
+  python etl/main.py                  # Default: Import -> Snapshot -> Validate
+  python etl/main.py --import         # Import -> Snapshot
+  python etl/main.py --dry-run        # Validate import flow without DB writes
+  python etl/main.py --validate       # Just Validate
+  python etl/main.py --schema         # Just Snapshot
+  python etl/main.py --check-headers  # Diff Google Sheet headers vs schema
 """
 
 import argparse
@@ -41,7 +41,13 @@ from sqlalchemy import create_engine, text, inspect
 from sqlalchemy.engine import Engine
 from sqlalchemy.types import Integer, BigInteger, Text, Float, Boolean, TIMESTAMP
 
-load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.dirname(BASE_DIR)
+
+for _env_path in (os.path.join(BASE_DIR, ".env"), os.path.join(REPO_ROOT, ".env")):
+    if os.path.exists(_env_path):
+        load_dotenv(_env_path)
+        break
 
 # ── Rich Console ─────────────────────────────────────────────────────────────
 
@@ -57,8 +63,6 @@ theme = Theme({
 console = Console(theme=theme)
 
 # ── Config ───────────────────────────────────────────────────────────────────
-
-BASE_DIR = os.path.dirname(__file__)
 
 CONN_STRING = os.getenv("NEON_DSN") or os.getenv("DATABASE_URL")
 if not CONN_STRING:
@@ -111,6 +115,7 @@ TABLE_DEFS: Dict[str, Dict[str, Any]] = {
             "CREATE INDEX IF NOT EXISTS accounts_hq_revenue_idx ON public.accounts (account_hq_revenue);",
             "CREATE INDEX IF NOT EXISTS accounts_years_in_india_idx ON public.accounts (years_in_india);",
             "CREATE INDEX IF NOT EXISTS accounts_first_center_year_idx ON public.accounts (account_first_center_year);",
+            "CREATE INDEX IF NOT EXISTS accounts_visibility_idx ON public.accounts (account_visibility);",
             "CREATE INDEX IF NOT EXISTS accounts_name_trgm_idx ON public.accounts USING gin (account_global_legal_name gin_trgm_ops);",
         ],
     },
@@ -291,7 +296,13 @@ def get_gspread_client() -> gspread.Client:
     sa_filename = os.getenv("GOOGLE_SA_FILE")
     if not sa_filename:
         raise ValueError("GOOGLE_SA_FILE not set in .env")
-    key_path = sa_filename if os.path.isabs(sa_filename) else os.path.join(BASE_DIR, sa_filename)
+    if os.path.isabs(sa_filename):
+        key_path = sa_filename
+    else:
+        key_path = next(
+            (p for p in (os.path.join(BASE_DIR, sa_filename), os.path.join(REPO_ROOT, sa_filename)) if os.path.exists(p)),
+            os.path.join(REPO_ROOT, sa_filename),
+        )
     if not os.path.exists(key_path):
         raise FileNotFoundError(f"Service account file needed at: {key_path}")
     creds = Credentials.from_service_account_file(

@@ -1,6 +1,6 @@
 # Schema Migration & Reference Guide (2026-02)
 
-This guide documents the migration from the legacy column naming (uppercase, space-separated) to the new snake_case schema and provides a comprehensive reference for the current database structure (`documentation/database/master-schema.json`).
+This guide documents the migration from the legacy column naming (uppercase, space-separated) to the new snake_case schema and provides a comprehensive reference for the current database structure (`etl/master-schema.json`).
 
 > Target Audience: Backend engineers, Data engineers, and Frontend developers wiring up UI components.
 > Source of Truth: The database schema definitions below are derived from the master schema JSON.

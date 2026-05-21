@@ -1,0 +1,8 @@
+pandas
+gspread
+gspread-dataframe
+google-auth
+python-dotenv
+rich
+sqlalchemy
+psycopg2-binary
