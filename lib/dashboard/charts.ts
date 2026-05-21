@@ -8,8 +8,8 @@ import {
 
 export function getAccountChartData(accounts: Account[]) {
   return {
-    regionData: calculateChartData(accounts, "account_hq_region"),
-    primaryNatureData: calculateChartData(accounts, "account_primary_nature"),
+    regionData: calculateChartData(accounts, "account_hq_country"),
+    primaryNatureData: calculateChartData(accounts, "account_primary_category"),
     revenueRangeData: calculateChartData(accounts, "account_hq_revenue_range"),
     employeesRangeData: calculateChartData(accounts, "account_center_employees_range"),
   }

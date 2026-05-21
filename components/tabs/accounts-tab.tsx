@@ -283,13 +283,13 @@ export function AccountsTab({
         <div className="w-full mb-6 view-content">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <PieChartCard
-              title="Region"
+              title="Country"
               data={accountChartData.regionData}
               countLabel="Total Accounts"
               showBigPercentage
             />
             <PieChartCard
-              title="Primary Nature"
+              title="Industry"
               data={accountChartData.primaryNatureData}
               countLabel="Total Accounts"
               showBigPercentage

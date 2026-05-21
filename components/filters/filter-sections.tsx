@@ -308,7 +308,7 @@ export function AccountFiltersSection({
                 setPendingFilters((prev) => ({ ...prev, accountPrimaryCategoryValues: selected }))
                 setActiveFilter("accountPrimaryCategoryValues")
               }}
-              placeholder="Select categories..."
+              placeholder="Select industries..."
               isApplying={isApplying && activeFilter === "accountPrimaryCategoryValues"}
             />
           </div>
