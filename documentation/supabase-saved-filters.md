@@ -54,6 +54,7 @@ interface FilterValue {
 
 interface Filters {
   // Accounts
+  accountVisibilityMode: "all" | "gcc" | "nonGcc";
   accountHqCountryValues: FilterValue[];
   accountHqIndustryValues: FilterValue[];
   accountDataCoverageValues: FilterValue[];

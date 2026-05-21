@@ -10,6 +10,7 @@ import { ProspectGridCard } from "@/components/cards/prospect-grid-card"
 import { PieChartCard } from "@/components/charts/pie-chart-card"
 import { EmptyState } from "@/components/states/empty-state"
 import { ProspectDetailsDialog } from "@/components/dialogs/prospect-details-dialog"
+import { AccountDetailsDialog } from "@/components/dialogs/account-details-tabbed-dialog"
 import { LockedProspectTeaserCard, LockedProspectTeaserRow } from "@/components/prospects/locked-prospect-teaser-section"
 import { getPaginatedData } from "@/lib/utils/helpers"
 import { ViewSwitcher } from "@/components/ui/view-switcher"
@@ -19,12 +20,16 @@ import { TableColumnMenu } from "@/components/tables/table-column-menu"
 import { useTableColumnPreferences } from "@/hooks/use-table-column-preferences"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
-import type { Prospect, LockedProspectTeaser } from "@/lib/types"
+import type { Account, Center, LockedProspectTeaser, Prospect, Service, Tech } from "@/lib/types"
 
 interface ProspectsTabProps {
+  accounts: Account[]
+  centers: Center[]
   prospects: Prospect[]
   allProspects: Prospect[]
   lockedProspectTeasers: LockedProspectTeaser[]
+  services: Service[]
+  tech: Tech[]
   prospectChartData: {
     departmentData: Array<{ name: string; value: number; fill?: string }>
     levelData: Array<{ name: string; value: number; fill?: string }>
@@ -34,13 +39,17 @@ interface ProspectsTabProps {
   currentPage: number
   setCurrentPage: (page: number | ((prev: number) => number)) => void
   itemsPerPage: number
-  onRecordOpened?: (item: { type: "prospect"; id: string; title: string; subtitle: string }) => void
+  onRecordOpened?: (item: { type: "prospect" | "account"; id: string; title: string; subtitle: string }) => void
 }
 
 export function ProspectsTab({
+  accounts,
+  centers,
   prospects,
   allProspects,
   lockedProspectTeasers,
+  services,
+  tech,
   prospectChartData,
   prospectsView,
   setProspectsView,
@@ -51,6 +60,8 @@ export function ProspectsTab({
 }: ProspectsTabProps) {
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null)
+  const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false)
   const [sort, setSort] = useState<{
     key: "name" | "location" | "title" | "department"
     direction: "asc" | "desc" | null
@@ -121,6 +132,30 @@ export function ProspectsTab({
       source_layout: prospectsView === "data" ? dataLayout : null,
       opened_from: openedFrom,
       has_contact_field: Boolean(prospect.prospect_email),
+    })
+  }
+
+  const handleAccountOpen = (accountName: string) => {
+    const account = accounts.find((item) => item.account_global_legal_name === accountName)
+    if (!account) return
+
+    setIsDialogOpen(false)
+    setSelectedAccount(account)
+    setIsAccountDialogOpen(true)
+    onRecordOpened?.({
+      type: "account",
+      id: account.account_global_legal_name,
+      title: account.account_global_legal_name,
+      subtitle: [account.account_hq_city, account.account_hq_country].filter(Boolean).join(", "),
+    })
+    captureEvent(ANALYTICS_EVENTS.RECORD_OPENED, {
+      entity: "account",
+      record_id: account.account_global_legal_name,
+      record_label: account.account_global_legal_name,
+      source_view: "prospect_details",
+      source_layout: prospectsView === "data" ? dataLayout : null,
+      opened_from: "related_account_link",
+      has_website: Boolean(account.account_hq_website),
     })
   }
 
@@ -430,6 +465,18 @@ export function ProspectsTab({
         allProspects={allProspects}
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
+        onAccountOpen={handleAccountOpen}
+      />
+
+      <AccountDetailsDialog
+        account={selectedAccount}
+        centers={centers}
+        prospects={allProspects}
+        lockedProspectTeasers={lockedProspectTeasers}
+        services={services}
+        tech={tech}
+        open={isAccountDialogOpen}
+        onOpenChange={setIsAccountDialogOpen}
       />
     </TabsContent>
   )

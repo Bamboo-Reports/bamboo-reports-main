@@ -26,6 +26,7 @@ import {
   Building,
   UserCircle,
   ExternalLink,
+  Globe,
   Linkedin,
 } from "lucide-react"
 import { formatRevenueInMillions, parseRevenue } from "@/lib/utils/helpers"
@@ -374,7 +375,7 @@ export function AccountDetailsDialog({
                         className="text-muted-foreground hover:text-primary transition-colors"
                         title={account.account_hq_website}
                       >
-                        <ExternalLink className="h-4 w-4" />
+                        <Globe className="h-4 w-4" />
                       </a>
                     )}
                     {account.account_hq_linkedin_link && (
@@ -692,6 +693,10 @@ export function AccountDetailsDialog({
         tech={tech}
         open={isCenterDialogOpen}
         onOpenChange={setIsCenterDialogOpen}
+        onAccountOpen={() => {
+          setIsCenterDialogOpen(false)
+          setActiveTab("info")
+        }}
       />
 
       {/* Prospect Details Dialog */}
@@ -700,6 +705,10 @@ export function AccountDetailsDialog({
         allProspects={prospects}
         open={isProspectDialogOpen}
         onOpenChange={setIsProspectDialogOpen}
+        onAccountOpen={() => {
+          setIsProspectDialogOpen(false)
+          setActiveTab("info")
+        }}
       />
     </>
   )

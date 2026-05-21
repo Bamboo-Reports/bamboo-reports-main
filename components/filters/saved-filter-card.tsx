@@ -23,6 +23,12 @@ import {
 } from "@/lib/dashboard/defaults"
 import { FilterBadge, renderFilterValues } from "@/components/filters/filter-badge"
 
+const ACCOUNT_VISIBILITY_LABELS = {
+  all: "ALL",
+  gcc: "GCCs",
+  nonGcc: "NON-GCCs",
+} as const
+
 export interface SavedFilter {
   id: string
   name: string
@@ -60,6 +66,8 @@ export const SavedFilterCard = memo(({
   const [minCenterIncYear, maxCenterIncYear] = filter.filters.centerIncYearRange || DEFAULT_CENTER_INC_YEAR_RANGE
   const centerIncYearFilterActive =
     minCenterIncYear !== DEFAULT_CENTER_INC_YEAR_RANGE[0] || maxCenterIncYear !== DEFAULT_CENTER_INC_YEAR_RANGE[1]
+  const accountVisibilityMode = filter.filters.accountVisibilityMode ?? "gcc"
+  const accountVisibilityFilterActive = accountVisibilityMode !== "gcc"
 
   const createdDate = new Date(filter.created_at).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })
   const updatedDate = filter.updated_at !== filter.created_at
@@ -113,6 +121,12 @@ export const SavedFilterCard = memo(({
               </AccordionTrigger>
               <AccordionContent className="px-4 pb-3">
                 <div className="flex flex-wrap gap-1">
+                  {accountVisibilityFilterActive && (
+                    <FilterBadge
+                      filterKey="Account Visibility"
+                      value={ACCOUNT_VISIBILITY_LABELS[accountVisibilityMode]}
+                    />
+                  )}
                   {renderFilterValues(filter.filters.accountGlobalLegalNameKeywords, "Account Name")}
                   {renderFilterValues(filter.filters.accountHqRegionValues, "Region")}
                   {renderFilterValues(filter.filters.accountHqCountryValues, "Country")}

@@ -45,6 +45,8 @@ export interface Account {
   account_center_employees_range?: string | null
   account_comments?: string | null
   account_coverage?: string | null
+  account_visibility?: "include" | "exclude" | null
+  account_visibility_note?: string | null
 }
 
 export interface Center {
@@ -186,7 +188,10 @@ export interface FilterValue {
   mode: 'include' | 'exclude'
 }
 
+export type AccountVisibilityMode = "all" | "gcc" | "nonGcc"
+
 export interface Filters {
+  accountVisibilityMode: AccountVisibilityMode
   accountHqRegionValues: FilterValue[]
   accountHqCountryValues: FilterValue[]
   accountHqIndustryValues: FilterValue[]

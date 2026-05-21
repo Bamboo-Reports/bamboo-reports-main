@@ -37,10 +37,15 @@ export function useDashboardData({ enabled }: UseDashboardDataOptions) {
   const [lockedProspectTeasers, setLockedProspectTeasers] = useState<LockedProspectTeaser[]>([])
   const [summary, setSummary] = useState<DashboardSummaryMetrics>({
     totalAccountsCount: 0,
+    totalAccountsCountFull: 0,
     totalCentersCount: 0,
+    totalCentersCountFull: 0,
     totalUpcomingCentersCount: 0,
+    totalUpcomingCentersCountFull: 0,
     totalProspectsCount: 0,
+    totalProspectsCountFull: 0,
     totalHeadcount: 0,
+    totalHeadcountFull: 0,
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -62,10 +67,15 @@ export function useDashboardData({ enabled }: UseDashboardDataOptions) {
       setLockedProspectTeasers([])
       setSummary({
         totalAccountsCount: 0,
+        totalAccountsCountFull: 0,
         totalCentersCount: 0,
+        totalCentersCountFull: 0,
         totalUpcomingCentersCount: 0,
+        totalUpcomingCentersCountFull: 0,
         totalProspectsCount: 0,
+        totalProspectsCountFull: 0,
         totalHeadcount: 0,
+        totalHeadcountFull: 0,
       })
 
       // Get auth token for API requests
@@ -115,12 +125,26 @@ export function useDashboardData({ enabled }: UseDashboardDataOptions) {
       const aliasesData = Array.isArray(data.aliases) ? data.aliases : []
       const lockedProspectTeasersData = Array.isArray(data.lockedProspectTeasers) ? data.lockedProspectTeasers : []
       const fallbackCentersData = centersData as Center[]
+      const accountsList = accountsData as Account[]
+      const excludedAccountNamesFallback = new Set(
+        accountsList
+          .filter((a) => a.account_visibility === "exclude")
+          .map((a) => a.account_global_legal_name)
+      )
+      const fallbackCenterVisible = (c: Center) => !excludedAccountNamesFallback.has(c.account_global_legal_name)
+      const fallbackProspectVisible = (p: Prospect) => !excludedAccountNamesFallback.has(p.account_global_legal_name)
+      const fallbackProspectsData = prospectsData as Prospect[]
       const summaryData: DashboardSummaryMetrics = data.summary ?? {
-        totalAccountsCount: accountsData.length,
-        totalCentersCount: fallbackCentersData.length,
-        totalUpcomingCentersCount: fallbackCentersData.filter((center) => center.center_status === "Upcoming").length,
-        totalProspectsCount: prospectsData.length,
-        totalHeadcount: fallbackCentersData.reduce((sum, center) => sum + (center.center_employees ?? 0), 0),
+        totalAccountsCount: accountsList.length - excludedAccountNamesFallback.size,
+        totalAccountsCountFull: accountsList.length,
+        totalCentersCount: fallbackCentersData.filter(fallbackCenterVisible).length,
+        totalCentersCountFull: fallbackCentersData.length,
+        totalUpcomingCentersCount: fallbackCentersData.filter((c) => c.center_status === "Upcoming" && fallbackCenterVisible(c)).length,
+        totalUpcomingCentersCountFull: fallbackCentersData.filter((c) => c.center_status === "Upcoming").length,
+        totalProspectsCount: fallbackProspectsData.filter(fallbackProspectVisible).length,
+        totalProspectsCountFull: fallbackProspectsData.length,
+        totalHeadcount: fallbackCentersData.reduce((sum, c) => sum + (fallbackCenterVisible(c) ? (c.center_employees ?? 0) : 0), 0),
+        totalHeadcountFull: fallbackCentersData.reduce((sum, c) => sum + (c.center_employees ?? 0), 0),
       }
 
       const enabledPrimaryData = {

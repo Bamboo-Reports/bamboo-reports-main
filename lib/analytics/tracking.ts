@@ -60,6 +60,7 @@ export const buildTrackedFiltersSnapshot = (
   }
 
   pushIfActive("accountHqRegionValues", filters.accountHqRegionValues.length > 0)
+  pushIfActive("accountVisibilityMode", (filters.accountVisibilityMode ?? "gcc") !== "gcc")
   pushIfActive("accountHqCountryValues", filters.accountHqCountryValues.length > 0)
   pushIfActive("accountHqIndustryValues", filters.accountHqIndustryValues.length > 0)
   pushIfActive("accountDataCoverageValues", filters.accountDataCoverageValues.length > 0)
@@ -110,6 +111,7 @@ export const buildTrackedFiltersSnapshot = (
   return {
     active_filters_count: calculateActiveFilters(filters),
     active_filter_keys: activeFilterKeys,
+    account_visibility_mode: filters.accountVisibilityMode ?? "gcc",
     account_regions: toTrackedFilterValueArray(filters.accountHqRegionValues),
     account_countries: toTrackedFilterValueArray(filters.accountHqCountryValues),
     account_industries: toTrackedFilterValueArray(filters.accountHqIndustryValues),

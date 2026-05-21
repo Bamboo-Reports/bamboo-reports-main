@@ -24,10 +24,12 @@ export type FilteredData = {
   filteredFunctions: Function[]
   filteredServices: Service[]
   filteredProspects: Prospect[]
+  explicitExcludedSelected: boolean
 }
 
 export type RevenueRangeFilterState = Pick<
   Filters,
+  | "accountVisibilityMode"
   | "accountHqRegionValues"
   | "accountHqCountryValues"
   | "accountHqIndustryValues"
@@ -45,6 +47,7 @@ export type RevenueRangeFilterState = Pick<
 
 type AvailableOptionsFilterState = Pick<
   Filters,
+  | "accountVisibilityMode"
   | "accountHqRegionValues"
   | "accountHqCountryValues"
   | "accountHqIndustryValues"
@@ -117,6 +120,16 @@ const buildCenterSoftwareIndex = (tech: Tech[]) => {
   return centerSoftwareIndex
 }
 
+const matchAccountVisibility = (
+  visibility: Account["account_visibility"],
+  mode: Filters["accountVisibilityMode"]
+) => {
+  const resolvedMode = mode ?? "gcc"
+  if (resolvedMode === "all") return true
+  if (resolvedMode === "nonGcc") return visibility === "exclude"
+  return visibility === "include"
+}
+
 export function getAccountNames(accounts: Account[]) {
   return Array.from(
     new Set(accounts.map((account) => account.account_global_legal_name).filter(Boolean))
@@ -149,6 +162,8 @@ export function getFilteredData(
   const matchAccountEmployeesRange = createValueMatcher(filters.accountHqEmployeeRangeValues)
   const matchAccountCenterEmployees = createValueMatcher(filters.accountCenterEmployeesRangeValues)
   const matchAccountName = createKeywordMatcher(filters.accountGlobalLegalNameKeywords)
+  const matchVisibility = (value: Account["account_visibility"]) =>
+    matchAccountVisibility(value, filters.accountVisibilityMode)
   const matchAccountRevenue = (value: number | string | null | undefined) =>
     rangeFilterMatch(filters.accountHqRevenueRange, value, filters.accountHqRevenueIncludeNull, parseRevenueValue)
   const matchAccountYearsInIndia = (value: number | string | null | undefined) =>
@@ -172,6 +187,7 @@ export function getFilteredData(
   const matchProspectLevel = createValueMatcher(filters.prospectLevelValues)
   const matchProspectCity = createValueMatcher(filters.prospectCityValues)
   const matchProspectTitle = createKeywordMatcher(filters.prospectTitleKeywords)
+  const hasExplicitAccountNameSearch = filters.accountGlobalLegalNameKeywords.length > 0
 
   const hasAccountFilters =
     filters.accountHqRegionValues.length > 0 ||
@@ -185,6 +201,7 @@ export function getFilteredData(
     filters.accountNasscomStatusValues.length > 0 ||
     filters.accountHqEmployeeRangeValues.length > 0 ||
     filters.accountCenterEmployeesRangeValues.length > 0 ||
+    (filters.accountVisibilityMode ?? "gcc") !== "all" ||
     filters.accountHqRevenueRange[0] > 0 ||
     filters.accountHqRevenueRange[1] < Number.MAX_SAFE_INTEGER ||
     filters.accountHqRevenueIncludeNull ||
@@ -228,6 +245,7 @@ export function getFilteredData(
     if (!matchAccountRevenue(account.account_hq_revenue)) continue
     if (!matchAccountYearsInIndia(account.years_in_india)) continue
     if (!matchAccountName(account.account_global_legal_name)) continue
+    if (!hasExplicitAccountNameSearch && !matchVisibility(account.account_visibility)) continue
 
     filteredAccounts.push(account)
     accountNameSet.add(account.account_global_legal_name)
@@ -342,17 +360,25 @@ export function getFilteredData(
     ? filteredProspects.filter((prospect) => finalAccountNameSet.has(prospect.account_global_legal_name))
     : []
 
+  const resolvedFilteredAccounts = accountsEnabled ? finalFilteredAccounts : []
+  const explicitExcludedSelected = resolvedFilteredAccounts.some(
+    (account) => account.account_visibility === "exclude"
+  )
+
   return {
-    filteredAccounts: accountsEnabled ? finalFilteredAccounts : [],
+    filteredAccounts: resolvedFilteredAccounts,
     filteredCenters: filteredCenters,
     filteredFunctions: finalFilteredFunctions,
     filteredServices: filteredServices,
     filteredProspects: finalFilteredProspects,
+    explicitExcludedSelected,
   }
 }
 
 export function getDynamicRevenueRange(accounts: Account[], filters: RevenueRangeFilterState) {
   const matchRegion = createValueMatcher(filters.accountHqRegionValues)
+  const matchVisibility = (value: Account["account_visibility"]) =>
+    matchAccountVisibility(value, filters.accountVisibilityMode)
   const matchCountry = createValueMatcher(filters.accountHqCountryValues)
   const matchIndustry = createValueMatcher(filters.accountHqIndustryValues)
   const matchDataCoverage = createValueMatcher(filters.accountDataCoverageValues)
@@ -379,6 +405,7 @@ export function getDynamicRevenueRange(accounts: Account[], filters: RevenueRang
       matchNasscom(account.account_nasscom_status) &&
       matchEmployeesRange(account.account_hq_employee_range) &&
       matchCenterEmployees(account.account_center_employees_range || "") &&
+      matchVisibility(account.account_visibility) &&
       matchYearsInIndiaRange(account.years_in_india)
     )
   })

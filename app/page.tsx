@@ -760,6 +760,13 @@ function DashboardContent(): JSX.Element | null {
           tech={tech}
           open={searchCenterDialogOpen}
           onOpenChange={setSearchCenterDialogOpen}
+          onAccountOpen={(accountName) => {
+            const account = accounts.find((item) => item.account_global_legal_name === accountName)
+            if (!account) return
+            setSearchCenterDialogOpen(false)
+            setSearchSelectedAccount(account)
+            setSearchAccountDialogOpen(true)
+          }}
         />
       )}
       {prospectsEnabled && (
@@ -768,6 +775,13 @@ function DashboardContent(): JSX.Element | null {
           allProspects={prospects}
           open={searchProspectDialogOpen}
           onOpenChange={setSearchProspectDialogOpen}
+          onAccountOpen={(accountName) => {
+            const account = accounts.find((item) => item.account_global_legal_name === accountName)
+            if (!account) return
+            setSearchProspectDialogOpen(false)
+            setSearchSelectedAccount(account)
+            setSearchAccountDialogOpen(true)
+          }}
         />
       )}
 
@@ -839,15 +853,15 @@ function DashboardContent(): JSX.Element | null {
               <div className="px-6 pt-[var(--dashboard-content-top-gap)] pb-[var(--dashboard-content-bottom-gap)]">
                 <SummaryCards
                   filteredAccountsCount={filteredData.filteredAccounts.length}
-                  totalAccountsCount={summary.totalAccountsCount}
+                  totalAccountsCount={summary.totalAccountsCountFull}
                   filteredCentersCount={filteredData.filteredCenters.length}
-                  totalCentersCount={summary.totalCentersCount}
+                  totalCentersCount={summary.totalCentersCountFull}
                   filteredUpcomingCentersCount={filteredData.filteredCenters.filter((c) => c.center_status === "Upcoming").length}
-                  totalUpcomingCentersCount={summary.totalUpcomingCentersCount}
+                  totalUpcomingCentersCount={summary.totalUpcomingCentersCountFull}
                   filteredProspectsCount={filteredData.filteredProspects.length}
-                  totalProspectsCount={summary.totalProspectsCount}
+                  totalProspectsCount={summary.totalProspectsCountFull}
                   filteredHeadcount={filteredData.filteredCenters.reduce((sum, c) => sum + (c.center_employees ?? 0), 0)}
-                  totalHeadcount={summary.totalHeadcount}
+                  totalHeadcount={summary.totalHeadcountFull}
                   activeView={activeSection}
                   onSelect={handleSectionSelect}
                 />
@@ -874,8 +888,11 @@ function DashboardContent(): JSX.Element | null {
 
                   {centersEnabled && (
                     <CentersTab
+                      accounts={filteredData.filteredAccounts}
                       centers={filteredData.filteredCenters}
                       allCenters={centers}
+                      prospects={filteredData.filteredProspects}
+                      lockedProspectTeasers={filteredLockedProspectTeasers}
                       functions={functions}
                       services={filteredData.filteredServices}
                       tech={tech}
@@ -891,9 +908,13 @@ function DashboardContent(): JSX.Element | null {
 
                   {prospectsEnabled && (
                     <ProspectsTab
+                      accounts={filteredData.filteredAccounts}
+                      centers={filteredData.filteredCenters}
                       prospects={filteredData.filteredProspects}
                       allProspects={prospects}
                       lockedProspectTeasers={filteredLockedProspectTeasers}
+                      services={filteredData.filteredServices}
+                      tech={tech}
                       prospectChartData={prospectChartData}
                       prospectsView={prospectsView}
                       setProspectsView={setProspectsView}

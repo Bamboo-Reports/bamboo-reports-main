@@ -12,11 +12,13 @@ import {
   Code,
   DollarSign,
   ExternalLink,
+  Globe,
   Headphones,
   Lightbulb,
   Linkedin,
   MoreHorizontal,
   ShoppingCart,
+  SquareArrowOutUpRight,
   TrendingUp,
   UserCog,
   Users,
@@ -32,6 +34,7 @@ interface CenterDetailsDialogProps {
   tech: Tech[]
   open: boolean
   onOpenChange: (open: boolean) => void
+  onAccountOpen?: (accountName: string) => void
 }
 
 
@@ -88,6 +91,7 @@ export function CenterDetailsDialog({
   tech,
   open,
   onOpenChange,
+  onAccountOpen,
 }: CenterDetailsDialogProps) {
 
   if (!center) return null
@@ -181,7 +185,7 @@ export function CenterDetailsDialog({
                       className="text-muted-foreground transition-colors hover:text-primary"
                       title={center.center_website}
                     >
-                      <ExternalLink className="h-4 w-4" />
+                      <Globe className="h-4 w-4" />
                     </a>
                   ) : null}
                   {center.center_linkedin ? (
@@ -208,6 +212,17 @@ export function CenterDetailsDialog({
               </div>
               <p className="mt-1 text-sm font-normal text-muted-foreground">
                 {center.account_global_legal_name}
+                {onAccountOpen ? (
+                  <button
+                    type="button"
+                    onClick={() => onAccountOpen(center.account_global_legal_name)}
+                    className="ml-1.5 inline-flex h-5 w-5 translate-y-0.5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    aria-label={`Open account details for ${center.account_global_legal_name}`}
+                    title={`Open account details for ${center.account_global_legal_name}`}
+                  >
+                    <SquareArrowOutUpRight className="h-3.5 w-3.5" />
+                  </button>
+                ) : null}
               </p>
             </div>
           </DialogTitle>

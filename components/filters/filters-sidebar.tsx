@@ -12,8 +12,14 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Button } from '@/components/ui/button'
 import { getSectionUnavailableMessage, isSectionEnabled } from '@/lib/config/dashboard-access'
 import { cn } from '@/lib/utils'
-import { isSectionVisible } from '@/lib/config/filters'
-import type { Alias, AvailableOptions, Filters } from '@/lib/types'
+import { isFilterEnabled, isSectionVisible } from '@/lib/config/filters'
+import type { AccountVisibilityMode, Alias, AvailableOptions, Filters } from '@/lib/types'
+
+const ACCOUNT_VISIBILITY_OPTIONS: Array<{ value: AccountVisibilityMode; label: string }> = [
+  { value: "all", label: "ALL" },
+  { value: "gcc", label: "GCCs" },
+  { value: "nonGcc", label: "NON-GCCs" },
+]
 
 interface FiltersSidebarProps {
   filters: Filters
@@ -81,6 +87,10 @@ export function FiltersSidebar({
   const totalActiveFilters = getTotalActiveFilters()
   const scrollRef = useRef<HTMLDivElement>(null)
   const [canScrollDown, setCanScrollDown] = useState(false)
+  const [optimisticVisibilityMode, setOptimisticVisibilityMode] = useState(pendingFilters.accountVisibilityMode)
+  const visibilityModeIndex = ACCOUNT_VISIBILITY_OPTIONS.findIndex(
+    (option) => option.value === optimisticVisibilityMode
+  )
 
   const checkScroll = useCallback(() => {
     requestAnimationFrame(() => {
@@ -93,6 +103,10 @@ export function FiltersSidebar({
   useEffect(() => {
     checkScroll()
   }, [openSection, checkScroll])
+
+  useEffect(() => {
+    setOptimisticVisibilityMode(pendingFilters.accountVisibilityMode)
+  }, [pendingFilters.accountVisibilityMode])
 
   useEffect(() => {
     const el = scrollRef.current
@@ -219,6 +233,43 @@ export function FiltersSidebar({
             />
           </div>
         </div>
+
+        {isFilterEnabled("accountVisibilityMode") && (
+          <div className="rounded-xl bg-secondary/30 p-2">
+            <div className="relative grid grid-cols-3 rounded-lg border border-border/70 bg-muted/30 p-1" aria-label="Account Visibility">
+              <span
+                aria-hidden="true"
+                className="absolute inset-y-1 left-1 w-[calc((100%-0.5rem)/3)] rounded-md bg-primary shadow-sm transition-transform duration-200 ease-out"
+                style={{ transform: `translateX(${Math.max(visibilityModeIndex, 0) * 100}%)` }}
+              />
+              {ACCOUNT_VISIBILITY_OPTIONS.map((option) => {
+                const isSelected = optimisticVisibilityMode === option.value
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    aria-pressed={isSelected}
+                    onClick={() => {
+                      setOptimisticVisibilityMode(option.value)
+                      setActiveFilter("accountVisibilityMode")
+                      React.startTransition(() => {
+                        setPendingFilters((prev) => ({ ...prev, accountVisibilityMode: option.value }))
+                      })
+                    }}
+                    className={cn(
+                      "relative z-10 inline-flex h-8 items-center justify-center rounded-md px-2 text-[11px] font-semibold leading-none transition-transform duration-200 ease-out active:scale-[0.98]",
+                      isSelected
+                        ? "text-primary-foreground"
+                        : "text-muted-foreground"
+                    )}
+                  >
+                    {option.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         <Accordion type="single" collapsible value={openSection} onValueChange={setOpenSection} className="w-full space-y-2">
           {isSectionVisible("accounts") && (

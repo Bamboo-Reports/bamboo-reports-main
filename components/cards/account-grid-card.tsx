@@ -1,5 +1,5 @@
 import { memo } from "react"
-import { ArrowUpRight, CircleCheck, Eye, ExternalLink } from "lucide-react"
+import { ArrowUpRight, CircleCheck, Eye, ExternalLink, Globe } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CompanyLogo } from "@/components/ui/company-logo"
@@ -23,6 +23,11 @@ export const AccountGridCard = memo(({ account, onClick }: AccountGridCardProps)
     .join(", ")
   const accountName = account.account_global_legal_name || "Account"
   const isNasscomVerified = account.account_nasscom_status?.toLowerCase() === "yes"
+  const visibilityNote =
+    account.account_visibility === "exclude" && account.account_visibility_note
+      ? account.account_visibility_note
+      : null
+  const showChipRow = isNasscomVerified || visibilityNote !== null
 
   return (
     <ContextMenu>
@@ -55,15 +60,25 @@ export const AccountGridCard = memo(({ account, onClick }: AccountGridCardProps)
                 >
                   {location || account.account_hq_country || "-"}
                 </p>
-                {isNasscomVerified && (
+                {showChipRow && (
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                    <div
-                      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold bg-[#C03430]/15 text-[#C03430]"
-                      title="NASSCOM listed"
-                    >
-                      <CircleCheck className="h-3 w-3 animate-pulse" aria-hidden="true" />
-                      NASSCOM
-                    </div>
+                    {isNasscomVerified && (
+                      <div
+                        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold bg-[#C03430]/15 text-[#C03430]"
+                        title="NASSCOM listed"
+                      >
+                        <CircleCheck className="h-3 w-3" aria-hidden="true" />
+                        NASSCOM
+                      </div>
+                    )}
+                    {visibilityNote && (
+                      <div
+                        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 max-w-[220px]"
+                        title={visibilityNote}
+                      >
+                        <span className="truncate">{visibilityNote}</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -91,10 +106,10 @@ export const AccountGridCard = memo(({ account, onClick }: AccountGridCardProps)
               </div>
               <Button
                 type="button"
-                variant="outline"
+                variant="default"
                 size="sm"
                 onClick={onClick}
-                className="w-full justify-between bg-foreground text-background border-foreground hover:bg-foreground/90 hover:text-background"
+                className="w-full justify-between border border-border/70 bg-background text-foreground hover:bg-accent hover:text-accent-foreground"
               >
                 View Details
                 <ArrowUpRight className="h-4 w-4" />
@@ -112,7 +127,7 @@ export const AccountGridCard = memo(({ account, onClick }: AccountGridCardProps)
           <>
             <ContextMenuSeparator />
             <ContextMenuItem onClick={() => window.open(ensureAbsoluteUrl(account.account_hq_website!), "_blank", "noopener,noreferrer")}>
-              <ExternalLink className="h-4 w-4" />
+              <Globe className="h-4 w-4" />
               Open Website
             </ContextMenuItem>
           </>
