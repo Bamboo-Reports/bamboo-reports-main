@@ -23,6 +23,11 @@ export const AccountGridCard = memo(({ account, onClick }: AccountGridCardProps)
     .join(", ")
   const accountName = account.account_global_legal_name || "Account"
   const isNasscomVerified = account.account_nasscom_status?.toLowerCase() === "yes"
+  const visibilityNote =
+    account.account_visibility === "exclude" && account.account_visibility_note
+      ? account.account_visibility_note
+      : null
+  const showChipRow = isNasscomVerified || visibilityNote !== null
 
   return (
     <ContextMenu>
@@ -55,15 +60,25 @@ export const AccountGridCard = memo(({ account, onClick }: AccountGridCardProps)
                 >
                   {location || account.account_hq_country || "-"}
                 </p>
-                {isNasscomVerified && (
+                {showChipRow && (
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                    <div
-                      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold bg-[#C03430]/15 text-[#C03430]"
-                      title="NASSCOM listed"
-                    >
-                      <CircleCheck className="h-3 w-3 animate-pulse" aria-hidden="true" />
-                      NASSCOM
-                    </div>
+                    {isNasscomVerified && (
+                      <div
+                        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold bg-[#C03430]/15 text-[#C03430]"
+                        title="NASSCOM listed"
+                      >
+                        <CircleCheck className="h-3 w-3" aria-hidden="true" />
+                        NASSCOM
+                      </div>
+                    )}
+                    {visibilityNote && (
+                      <div
+                        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 max-w-[220px]"
+                        title={visibilityNote}
+                      >
+                        <span className="truncate">{visibilityNote}</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

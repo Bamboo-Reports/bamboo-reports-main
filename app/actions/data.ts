@@ -7,10 +7,28 @@ import { getSqlOrThrow, fetchWithRetry } from "@/lib/db/connection"
 
 export type DashboardSummaryMetrics = {
   totalAccountsCount: number
+  totalAccountsCountFull: number
   totalCentersCount: number
+  totalCentersCountFull: number
   totalUpcomingCentersCount: number
+  totalUpcomingCentersCountFull: number
   totalProspectsCount: number
+  totalProspectsCountFull: number
   totalHeadcount: number
+  totalHeadcountFull: number
+}
+
+const EMPTY_SUMMARY_METRICS: DashboardSummaryMetrics = {
+  totalAccountsCount: 0,
+  totalAccountsCountFull: 0,
+  totalCentersCount: 0,
+  totalCentersCountFull: 0,
+  totalUpcomingCentersCount: 0,
+  totalUpcomingCentersCountFull: 0,
+  totalProspectsCount: 0,
+  totalProspectsCountFull: 0,
+  totalHeadcount: 0,
+  totalHeadcountFull: 0,
 }
 
 // ============================================
@@ -114,7 +132,8 @@ async function getDashboardAccounts(): Promise<Account[]> {
         account_hq_revenue_range, account_hq_employee_count, account_hq_employee_range,
         account_hq_forbes_2000_rank, account_hq_fortune_500_rank,
         account_first_center_year, years_in_india, account_hq_website,
-        account_center_employees, account_center_employees_range
+        account_center_employees, account_center_employees_range,
+        account_visibility, account_visibility_note
         FROM accounts ORDER BY account_global_legal_name`
     )) as Account[]
   } catch (error) {
@@ -206,41 +225,58 @@ async function getDashboardSummaryMetrics(): Promise<DashboardSummaryMetrics> {
     const sqlClient = getSqlOrThrow()
 
     const [accountsCountRows, centersSummaryRows, prospectsCountRows] = await Promise.all([
-      fetchWithRetry(() => sqlClient`SELECT COUNT(*)::int AS count FROM accounts`),
       fetchWithRetry(() => sqlClient`
         SELECT
-          COUNT(*)::int AS total_centers_count,
-          COUNT(*) FILTER (WHERE center_status = 'Upcoming')::int AS total_upcoming_centers_count,
-          COALESCE(SUM(center_employees), 0)::int AS total_headcount
-        FROM centers
+          COUNT(*)::int AS total_full,
+          COUNT(*) FILTER (WHERE account_visibility IS DISTINCT FROM 'exclude')::int AS total_visible
+        FROM accounts
       `),
-      fetchWithRetry(() => sqlClient`SELECT COUNT(*)::int AS count FROM prospects`),
+      fetchWithRetry(() => sqlClient`
+        SELECT
+          COUNT(*)::int AS total_centers_full,
+          COUNT(*) FILTER (WHERE a.account_visibility IS DISTINCT FROM 'exclude')::int AS total_centers_visible,
+          COUNT(*) FILTER (WHERE c.center_status = 'Upcoming')::int AS total_upcoming_full,
+          COUNT(*) FILTER (WHERE c.center_status = 'Upcoming' AND a.account_visibility IS DISTINCT FROM 'exclude')::int AS total_upcoming_visible,
+          COALESCE(SUM(c.center_employees), 0)::int AS total_headcount_full,
+          COALESCE(SUM(c.center_employees) FILTER (WHERE a.account_visibility IS DISTINCT FROM 'exclude'), 0)::int AS total_headcount_visible
+        FROM centers c
+        LEFT JOIN accounts a ON a.account_global_legal_name = c.account_global_legal_name
+      `),
+      fetchWithRetry(() => sqlClient`
+        SELECT
+          COUNT(*)::int AS total_full,
+          COUNT(*) FILTER (WHERE a.account_visibility IS DISTINCT FROM 'exclude')::int AS total_visible
+        FROM prospects p
+        LEFT JOIN accounts a ON a.account_global_legal_name = p.account_global_legal_name
+      `),
     ])
 
-    const accountsCount = Number((accountsCountRows as Array<{ count: number }>)[0]?.count ?? 0)
+    const accountsRow = (accountsCountRows as Array<{ total_full: number; total_visible: number }>)[0]
     const centersSummary = (centersSummaryRows as Array<{
-      total_centers_count: number
-      total_upcoming_centers_count: number
-      total_headcount: number
+      total_centers_full: number
+      total_centers_visible: number
+      total_upcoming_full: number
+      total_upcoming_visible: number
+      total_headcount_full: number
+      total_headcount_visible: number
     }>)[0]
-    const prospectsCount = Number((prospectsCountRows as Array<{ count: number }>)[0]?.count ?? 0)
+    const prospectsRow = (prospectsCountRows as Array<{ total_full: number; total_visible: number }>)[0]
 
     return {
-      totalAccountsCount: accountsCount,
-      totalCentersCount: Number(centersSummary?.total_centers_count ?? 0),
-      totalUpcomingCentersCount: Number(centersSummary?.total_upcoming_centers_count ?? 0),
-      totalProspectsCount: prospectsCount,
-      totalHeadcount: Number(centersSummary?.total_headcount ?? 0),
+      totalAccountsCount: Number(accountsRow?.total_visible ?? 0),
+      totalAccountsCountFull: Number(accountsRow?.total_full ?? 0),
+      totalCentersCount: Number(centersSummary?.total_centers_visible ?? 0),
+      totalCentersCountFull: Number(centersSummary?.total_centers_full ?? 0),
+      totalUpcomingCentersCount: Number(centersSummary?.total_upcoming_visible ?? 0),
+      totalUpcomingCentersCountFull: Number(centersSummary?.total_upcoming_full ?? 0),
+      totalProspectsCount: Number(prospectsRow?.total_visible ?? 0),
+      totalProspectsCountFull: Number(prospectsRow?.total_full ?? 0),
+      totalHeadcount: Number(centersSummary?.total_headcount_visible ?? 0),
+      totalHeadcountFull: Number(centersSummary?.total_headcount_full ?? 0),
     }
   } catch (error) {
     console.error("Error fetching dashboard summary metrics:", error)
-    return {
-      totalAccountsCount: 0,
-      totalCentersCount: 0,
-      totalUpcomingCentersCount: 0,
-      totalProspectsCount: 0,
-      totalHeadcount: 0,
-    }
+    return { ...EMPTY_SUMMARY_METRICS }
   }
 }
 
@@ -275,13 +311,7 @@ export async function getAllData(): Promise<AllDataResult> {
         prospects: [],
         aliases: [],
         lockedProspectTeasers: [],
-        summary: {
-          totalAccountsCount: 0,
-          totalCentersCount: 0,
-          totalUpcomingCentersCount: 0,
-          totalProspectsCount: 0,
-          totalHeadcount: 0,
-        },
+        summary: { ...EMPTY_SUMMARY_METRICS },
         error: "Database configuration missing",
       }
     }
@@ -299,13 +329,7 @@ export async function getAllData(): Promise<AllDataResult> {
           tech: [],
           prospects: [],
           lockedProspectTeasers: [],
-          summary: {
-            totalAccountsCount: 0,
-            totalCentersCount: 0,
-            totalUpcomingCentersCount: 0,
-            totalProspectsCount: 0,
-            totalHeadcount: 0,
-          },
+          summary: { ...EMPTY_SUMMARY_METRICS },
           error: "Database connection failed",
         }
     }
@@ -321,6 +345,25 @@ export async function getAllData(): Promise<AllDataResult> {
       getAliases(),
     ])
 
+    const excludedAccountNames = new Set(
+      accounts
+        .filter((account) => account.account_visibility === "exclude")
+        .map((account) => account.account_global_legal_name)
+    )
+    const isCenterVisible = (center: Center) => !excludedAccountNames.has(center.account_global_legal_name)
+    const isProspectVisible = (prospect: Prospect) => !excludedAccountNames.has(prospect.account_global_legal_name)
+
+    const totalAccountsCountFull = accounts.length
+    const totalAccountsCount = accounts.length - excludedAccountNames.size
+    const totalCentersCountFull = centers.length
+    const totalCentersCount = centers.filter(isCenterVisible).length
+    const totalUpcomingCentersCountFull = centers.filter((c) => c.center_status === "Upcoming").length
+    const totalUpcomingCentersCount = centers.filter((c) => c.center_status === "Upcoming" && isCenterVisible(c)).length
+    const totalProspectsCountFull = prospects.length
+    const totalProspectsCount = prospects.filter(isProspectVisible).length
+    const totalHeadcountFull = centers.reduce((sum, c) => sum + (c.center_employees ?? 0), 0)
+    const totalHeadcount = centers.reduce((sum, c) => sum + (isCenterVisible(c) ? (c.center_employees ?? 0) : 0), 0)
+
     return {
       accounts,
       centers,
@@ -331,11 +374,16 @@ export async function getAllData(): Promise<AllDataResult> {
       aliases,
       lockedProspectTeasers: [],
       summary: {
-        totalAccountsCount: accounts.length,
-        totalCentersCount: centers.length,
-        totalUpcomingCentersCount: centers.filter((center) => center.center_status === "Upcoming").length,
-        totalProspectsCount: prospects.length,
-        totalHeadcount: centers.reduce((sum, center) => sum + (center.center_employees ?? 0), 0),
+        totalAccountsCount,
+        totalAccountsCountFull,
+        totalCentersCount,
+        totalCentersCountFull,
+        totalUpcomingCentersCount,
+        totalUpcomingCentersCountFull,
+        totalProspectsCount,
+        totalProspectsCountFull,
+        totalHeadcount,
+        totalHeadcountFull,
       },
       error: null,
     } satisfies AllDataResult
@@ -349,13 +397,7 @@ export async function getAllData(): Promise<AllDataResult> {
       tech: [],
       prospects: [],
       lockedProspectTeasers: [],
-      summary: {
-        totalAccountsCount: 0,
-        totalCentersCount: 0,
-        totalUpcomingCentersCount: 0,
-        totalProspectsCount: 0,
-        totalHeadcount: 0,
-      },
+      summary: { ...EMPTY_SUMMARY_METRICS },
       error: error instanceof Error ? error.message : "Unknown database error",
     }
   }
@@ -377,13 +419,7 @@ export async function getDashboardData(): Promise<AllDataResult> {
         prospects: [],
         aliases: [],
         lockedProspectTeasers: [],
-        summary: {
-          totalAccountsCount: 0,
-          totalCentersCount: 0,
-          totalUpcomingCentersCount: 0,
-          totalProspectsCount: 0,
-          totalHeadcount: 0,
-        },
+        summary: { ...EMPTY_SUMMARY_METRICS },
         error: "Database configuration missing",
       }
     }
@@ -400,13 +436,7 @@ export async function getDashboardData(): Promise<AllDataResult> {
         prospects: [],
         aliases: [],
         lockedProspectTeasers: [],
-        summary: {
-          totalAccountsCount: 0,
-          totalCentersCount: 0,
-          totalUpcomingCentersCount: 0,
-          totalProspectsCount: 0,
-          totalHeadcount: 0,
-        },
+        summary: { ...EMPTY_SUMMARY_METRICS },
         error: "Database connection failed",
       }
     }
@@ -445,13 +475,7 @@ export async function getDashboardData(): Promise<AllDataResult> {
     console.error("Error fetching dashboard data:", error)
     return {
       accounts: [], centers: [], functions: [], services: [], tech: [], prospects: [], aliases: [], lockedProspectTeasers: [],
-      summary: {
-        totalAccountsCount: 0,
-        totalCentersCount: 0,
-        totalUpcomingCentersCount: 0,
-        totalProspectsCount: 0,
-        totalHeadcount: 0,
-      },
+      summary: { ...EMPTY_SUMMARY_METRICS },
       error: error instanceof Error ? error.message : "Unknown database error",
     }
   }

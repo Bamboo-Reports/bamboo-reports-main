@@ -24,6 +24,7 @@ export type FilteredData = {
   filteredFunctions: Function[]
   filteredServices: Service[]
   filteredProspects: Prospect[]
+  explicitExcludedSelected: boolean
 }
 
 export type RevenueRangeFilterState = Pick<
@@ -202,6 +203,7 @@ export function getFilteredData(
 
   const hasFunctionFilters = filters.functionNameValues.length > 0
   const hasCenterSoftwareFilters = filters.techSoftwareInUseKeywords.length > 0
+  const hasExplicitAccountNameSearch = filters.accountGlobalLegalNameKeywords.length > 0
 
   let filteredAccounts: Account[] = []
   let filteredCenters: Center[] = []
@@ -229,13 +231,24 @@ export function getFilteredData(
     if (!matchAccountYearsInIndia(account.years_in_india)) continue
     if (!matchAccountName(account.account_global_legal_name)) continue
 
+    const isExcluded = account.account_visibility === "exclude"
+    if (isExcluded && !hasExplicitAccountNameSearch) continue
+
     filteredAccounts.push(account)
     accountNameSet.add(account.account_global_legal_name)
+  }
+
+  const hiddenAccountNameSet = new Set<string>()
+  for (const account of accounts) {
+    if (account.account_visibility !== "exclude") continue
+    if (accountNameSet.has(account.account_global_legal_name)) continue
+    hiddenAccountNameSet.add(account.account_global_legal_name)
   }
 
   if (centersEnabled) {
     for (const center of centers) {
       if (hasAccountFilters && !accountNameSet.has(center.account_global_legal_name)) continue
+      if (hiddenAccountNameSet.has(center.account_global_legal_name)) continue
       if (!matchCenterType(center.center_type)) continue
       if (!matchCenterFocus(center.center_focus)) continue
       if (!matchCenterCity(center.center_city)) continue
@@ -272,6 +285,7 @@ export function getFilteredData(
   if (prospectsEnabled) {
     for (const prospect of prospects) {
       if (hasAccountFilters && !accountNameSet.has(prospect.account_global_legal_name)) continue
+      if (hiddenAccountNameSet.has(prospect.account_global_legal_name)) continue
       const matchesProspect =
         matchProspectDepartment(prospect.prospect_department) &&
         matchProspectHeadType(prospect.head_type) &&
@@ -342,12 +356,18 @@ export function getFilteredData(
     ? filteredProspects.filter((prospect) => finalAccountNameSet.has(prospect.account_global_legal_name))
     : []
 
+  const resolvedFilteredAccounts = accountsEnabled ? finalFilteredAccounts : []
+  const explicitExcludedSelected = resolvedFilteredAccounts.some(
+    (account) => account.account_visibility === "exclude"
+  )
+
   return {
-    filteredAccounts: accountsEnabled ? finalFilteredAccounts : [],
+    filteredAccounts: resolvedFilteredAccounts,
     filteredCenters: filteredCenters,
     filteredFunctions: finalFilteredFunctions,
     filteredServices: filteredServices,
     filteredProspects: finalFilteredProspects,
+    explicitExcludedSelected,
   }
 }
 

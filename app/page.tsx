@@ -839,15 +839,15 @@ function DashboardContent(): JSX.Element | null {
               <div className="px-6 pt-[var(--dashboard-content-top-gap)] pb-[var(--dashboard-content-bottom-gap)]">
                 <SummaryCards
                   filteredAccountsCount={filteredData.filteredAccounts.length}
-                  totalAccountsCount={summary.totalAccountsCount}
+                  totalAccountsCount={summary.totalAccountsCountFull}
                   filteredCentersCount={filteredData.filteredCenters.length}
-                  totalCentersCount={summary.totalCentersCount}
+                  totalCentersCount={summary.totalCentersCountFull}
                   filteredUpcomingCentersCount={filteredData.filteredCenters.filter((c) => c.center_status === "Upcoming").length}
-                  totalUpcomingCentersCount={summary.totalUpcomingCentersCount}
+                  totalUpcomingCentersCount={summary.totalUpcomingCentersCountFull}
                   filteredProspectsCount={filteredData.filteredProspects.length}
-                  totalProspectsCount={summary.totalProspectsCount}
+                  totalProspectsCount={summary.totalProspectsCountFull}
                   filteredHeadcount={filteredData.filteredCenters.reduce((sum, c) => sum + (c.center_employees ?? 0), 0)}
-                  totalHeadcount={summary.totalHeadcount}
+                  totalHeadcount={summary.totalHeadcountFull}
                   activeView={activeSection}
                   onSelect={handleSectionSelect}
                 />
