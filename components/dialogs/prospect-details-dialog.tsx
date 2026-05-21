@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Check, Copy, Linkedin, Mail, SlidersHorizontal } from "lucide-react"
+import { Check, Copy, Linkedin, Mail, SlidersHorizontal, SquareArrowOutUpRight } from "lucide-react"
 import type { Prospect } from "@/lib/types"
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard"
 import { Badge } from "@/components/ui/badge"
@@ -19,6 +19,7 @@ interface ProspectDetailsDialogProps {
   allProspects: Prospect[]
   open: boolean
   onOpenChange: (open: boolean) => void
+  onAccountOpen?: (accountName: string) => void
 }
 
 function MetaRow({ label, value }: { label: string; value: string | number | null | undefined }) {
@@ -90,6 +91,7 @@ export function ProspectDetailsDialog({
   allProspects,
   open,
   onOpenChange,
+  onAccountOpen,
 }: ProspectDetailsDialogProps) {
   const copy = useCopyToClipboard()
   const [copied, setCopied] = useState(false)
@@ -189,6 +191,17 @@ export function ProspectDetailsDialog({
                 {p.account_global_legal_name ? (
                   <p className="mt-1 text-sm font-normal text-muted-foreground">
                     {p.account_global_legal_name}
+                    {onAccountOpen ? (
+                      <button
+                        type="button"
+                        onClick={() => onAccountOpen(p.account_global_legal_name)}
+                        className="ml-1.5 inline-flex h-5 w-5 translate-y-0.5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        aria-label={`Open account details for ${p.account_global_legal_name}`}
+                        title={`Open account details for ${p.account_global_legal_name}`}
+                      >
+                        <SquareArrowOutUpRight className="h-3.5 w-3.5" />
+                      </button>
+                    ) : null}
                   </p>
                 ) : null}
               </div>

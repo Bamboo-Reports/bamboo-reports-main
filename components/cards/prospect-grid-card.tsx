@@ -108,10 +108,10 @@ export const ProspectGridCard = memo(({ prospect, onClick }: ProspectGridCardPro
             </div>
             <Button
               type="button"
-              variant="outline"
+              variant="default"
               size="sm"
               onClick={onClick}
-              className="w-full justify-between bg-foreground text-background border-foreground hover:bg-foreground/90 hover:text-background"
+              className="w-full justify-between border border-border/70 bg-background text-foreground hover:bg-accent hover:text-accent-foreground"
             >
               View Details
               <ArrowUpRight className="h-4 w-4" />

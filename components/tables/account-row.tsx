@@ -1,5 +1,5 @@
 import { memo } from "react"
-import { CircleCheck, Eye, ExternalLink } from "lucide-react"
+import { CircleCheck, Eye, ExternalLink, Globe } from "lucide-react"
 import { TableRow, TableCell } from "@/components/ui/table"
 import {
   ContextMenu,
@@ -115,7 +115,7 @@ export const AccountRow = memo(({ account, onClick, visibleColumns }: AccountRow
           <>
             <ContextMenuSeparator />
             <ContextMenuItem onClick={() => window.open(ensureAbsoluteUrl(account.account_hq_website!), "_blank", "noopener,noreferrer")}>
-              <ExternalLink className="h-4 w-4" />
+              <Globe className="h-4 w-4" />
               Open Website
             </ContextMenuItem>
           </>

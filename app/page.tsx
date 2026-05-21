@@ -760,6 +760,13 @@ function DashboardContent(): JSX.Element | null {
           tech={tech}
           open={searchCenterDialogOpen}
           onOpenChange={setSearchCenterDialogOpen}
+          onAccountOpen={(accountName) => {
+            const account = accounts.find((item) => item.account_global_legal_name === accountName)
+            if (!account) return
+            setSearchCenterDialogOpen(false)
+            setSearchSelectedAccount(account)
+            setSearchAccountDialogOpen(true)
+          }}
         />
       )}
       {prospectsEnabled && (
@@ -768,6 +775,13 @@ function DashboardContent(): JSX.Element | null {
           allProspects={prospects}
           open={searchProspectDialogOpen}
           onOpenChange={setSearchProspectDialogOpen}
+          onAccountOpen={(accountName) => {
+            const account = accounts.find((item) => item.account_global_legal_name === accountName)
+            if (!account) return
+            setSearchProspectDialogOpen(false)
+            setSearchSelectedAccount(account)
+            setSearchAccountDialogOpen(true)
+          }}
         />
       )}
 
@@ -874,8 +888,11 @@ function DashboardContent(): JSX.Element | null {
 
                   {centersEnabled && (
                     <CentersTab
+                      accounts={filteredData.filteredAccounts}
                       centers={filteredData.filteredCenters}
                       allCenters={centers}
+                      prospects={filteredData.filteredProspects}
+                      lockedProspectTeasers={filteredLockedProspectTeasers}
                       functions={functions}
                       services={filteredData.filteredServices}
                       tech={tech}
@@ -891,9 +908,13 @@ function DashboardContent(): JSX.Element | null {
 
                   {prospectsEnabled && (
                     <ProspectsTab
+                      accounts={filteredData.filteredAccounts}
+                      centers={filteredData.filteredCenters}
                       prospects={filteredData.filteredProspects}
                       allProspects={prospects}
                       lockedProspectTeasers={filteredLockedProspectTeasers}
+                      services={filteredData.filteredServices}
+                      tech={tech}
                       prospectChartData={prospectChartData}
                       prospectsView={prospectsView}
                       setProspectsView={setProspectsView}

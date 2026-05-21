@@ -22,7 +22,7 @@ import type { Filters } from "@/lib/types"
 // Types
 // ---------------------------------------------------------------------------
 
-export type FilterType = "multi-select" | "keyword" | "range" | "boolean"
+export type FilterType = "multi-select" | "keyword" | "range" | "boolean" | "single-select"
 
 export interface FilterConfig {
   /** The key matching the Filters interface in lib/types.ts */
@@ -78,6 +78,15 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       "accountDataCoverageValues",
     ],
     filters: [
+      {
+        key: "accountVisibilityMode",
+        label: "Account Visibility",
+        enabled: true,
+        type: "single-select",
+        column: "account_visibility",
+        table: "accounts",
+        description: "Switches between all accounts, GCC accounts, and non-GCC accounts",
+      },
       {
         key: "accountGlobalLegalNameKeywords",
         label: "Account Name",

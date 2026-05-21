@@ -41,6 +41,7 @@ export function calculateActiveFilters(filters: Filters) {
     minCenterIncYear !== DEFAULT_CENTER_INC_YEAR_RANGE[0] || maxCenterIncYear !== DEFAULT_CENTER_INC_YEAR_RANGE[1]
 
   return (
+    ((filters.accountVisibilityMode ?? "gcc") !== "gcc" ? 1 : 0) +
     filters.accountHqRegionValues.length +
     filters.accountHqCountryValues.length +
     filters.accountHqIndustryValues.length +

@@ -1,7 +1,6 @@
 import {
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -98,7 +97,7 @@ export function useDashboardFilters({
     }))
   }, [baseRanges])
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     setIsApplying(true)
     setFilters(pendingFilters)
     setIsApplying(false)
@@ -129,6 +128,7 @@ export function useDashboardFilters({
   const filterStateForRevenue: RevenueRangeFilterState = useMemo(
     () => ({
       accountHqRegionValues: filters.accountHqRegionValues,
+      accountVisibilityMode: filters.accountVisibilityMode,
       accountHqCountryValues: filters.accountHqCountryValues,
       accountHqIndustryValues: filters.accountHqIndustryValues,
       accountDataCoverageValues: filters.accountDataCoverageValues,
@@ -144,6 +144,7 @@ export function useDashboardFilters({
     }),
     [
       filters.accountHqRegionValues,
+      filters.accountVisibilityMode,
       filters.accountHqCountryValues,
       filters.accountHqIndustryValues,
       filters.accountDataCoverageValues,
@@ -199,6 +200,7 @@ export function useDashboardFilters({
   const filterStateForOptions = useMemo(
     () => ({
       accountHqRegionValues: filters.accountHqRegionValues,
+      accountVisibilityMode: filters.accountVisibilityMode,
       accountHqCountryValues: filters.accountHqCountryValues,
       accountHqIndustryValues: filters.accountHqIndustryValues,
       accountDataCoverageValues: filters.accountDataCoverageValues,
@@ -246,6 +248,7 @@ export function useDashboardFilters({
 
       // Multi-select filters: count selected values for enabled filters
       if (e("accountHqRegionValues")) count += sourceFilters.accountHqRegionValues.length
+      if (e("accountVisibilityMode") && (sourceFilters.accountVisibilityMode ?? "gcc") !== "gcc") count += 1
       if (e("accountHqCountryValues")) count += sourceFilters.accountHqCountryValues.length
       if (e("accountHqIndustryValues")) count += sourceFilters.accountHqIndustryValues.length
       if (e("accountDataCoverageValues")) count += sourceFilters.accountDataCoverageValues.length
@@ -492,6 +495,17 @@ export function useDashboardFilters({
             change_type: "toggle",
             null_toggle_value: currentValue,
             previous_null_toggle_value: typeof previousValue === "boolean" ? previousValue : null,
+            active_filters_count: currentActiveFiltersCount,
+          })
+          continue
+        }
+
+        if (typeof currentValue === "string") {
+          captureEvent(ANALYTICS_EVENTS.FILTER_CHANGED, {
+            filter_key: filterKey,
+            change_type: "select",
+            selected_value: currentValue,
+            previous_selected_value: typeof previousValue === "string" ? previousValue : null,
             active_filters_count: currentActiveFiltersCount,
           })
           continue

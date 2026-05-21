@@ -50,6 +50,7 @@ The filter sidebar is located on the left side of the dashboard. Filters are gro
 
 | UI Label | Filter State Key | Database Column | Table | Filter Type |
 |----------|-----------------|-----------------|-------|-------------|
+| Account Visibility | `accountVisibilityMode` | `account_visibility` | `accounts` | Single-select (`ALL`, `GCCs`, `NON-GCCs`) |
 | Account Name | `accountGlobalLegalNameKeywords` | `account_global_legal_name` | `accounts` | Keyword (include/exclude) |
 | Region | `accountHqRegionValues` | `account_hq_region` | `accounts` | Multi-select (include/exclude) |
 | Country | `accountHqCountryValues` | `account_hq_country` | `accounts` | Multi-select (include/exclude) |

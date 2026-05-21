@@ -188,7 +188,10 @@ export interface FilterValue {
   mode: 'include' | 'exclude'
 }
 
+export type AccountVisibilityMode = "all" | "gcc" | "nonGcc"
+
 export interface Filters {
+  accountVisibilityMode: AccountVisibilityMode
   accountHqRegionValues: FilterValue[]
   accountHqCountryValues: FilterValue[]
   accountHqIndustryValues: FilterValue[]

@@ -10,6 +10,7 @@ import { CenterGridCard } from "@/components/cards/center-grid-card"
 import { PieChartCard } from "@/components/charts/pie-chart-card"
 import { EmptyState } from "@/components/states/empty-state"
 import { CenterDetailsDialog } from "@/components/dialogs/center-details-dialog"
+import { AccountDetailsDialog } from "@/components/dialogs/account-details-tabbed-dialog"
 import { getPaginatedData } from "@/lib/utils/helpers"
 import { CentersMap } from "@/components/maps/centers-map"
 import { CentersChoroplethMap } from "@/components/maps/centers-choropleth-map"
@@ -21,11 +22,14 @@ import { TableColumnMenu } from "@/components/tables/table-column-menu"
 import { useTableColumnPreferences } from "@/hooks/use-table-column-preferences"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
-import type { Center, Function, Service, Tech } from "@/lib/types"
+import type { Account, Center, Function, LockedProspectTeaser, Prospect, Service, Tech } from "@/lib/types"
 
 interface CentersTabProps {
+  accounts: Account[]
   centers: Center[]
   allCenters: Center[]
+  prospects: Prospect[]
+  lockedProspectTeasers: LockedProspectTeaser[]
   functions: Function[]
   services: Service[]
   tech: Tech[]
@@ -40,12 +44,15 @@ interface CentersTabProps {
   currentPage: number
   setCurrentPage: (page: number | ((prev: number) => number)) => void
   itemsPerPage: number
-  onRecordOpened?: (item: { type: "center"; id: string; title: string; subtitle: string }) => void
+  onRecordOpened?: (item: { type: "center" | "account"; id: string; title: string; subtitle: string }) => void
 }
 
 export function CentersTab({
+  accounts,
   centers,
   allCenters,
+  prospects,
+  lockedProspectTeasers,
   services,
   tech,
   centerChartData,
@@ -58,6 +65,8 @@ export function CentersTab({
 }: CentersTabProps) {
   const [selectedCenter, setSelectedCenter] = useState<Center | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null)
+  const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false)
   const [sort, setSort] = useState<{
     key: "name" | "location" | "type" | "employees"
     direction: "asc" | "desc" | null
@@ -119,6 +128,30 @@ export function CentersTab({
       source_layout: centersView === "data" ? dataLayout : null,
       opened_from: openedFrom,
       has_center_key: Boolean(center.cn_unique_key),
+    })
+  }
+
+  const handleAccountOpen = (accountName: string) => {
+    const account = accounts.find((item) => item.account_global_legal_name === accountName)
+    if (!account) return
+
+    setIsDialogOpen(false)
+    setSelectedAccount(account)
+    setIsAccountDialogOpen(true)
+    onRecordOpened?.({
+      type: "account",
+      id: account.account_global_legal_name,
+      title: account.account_global_legal_name,
+      subtitle: [account.account_hq_city, account.account_hq_country].filter(Boolean).join(", "),
+    })
+    captureEvent(ANALYTICS_EVENTS.RECORD_OPENED, {
+      entity: "account",
+      record_id: account.account_global_legal_name,
+      record_label: account.account_global_legal_name,
+      source_view: "center_details",
+      source_layout: centersView === "data" ? dataLayout : null,
+      opened_from: "related_account_link",
+      has_website: Boolean(account.account_hq_website),
     })
   }
 
@@ -458,6 +491,18 @@ export function CentersTab({
         tech={tech}
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
+        onAccountOpen={handleAccountOpen}
+      />
+
+      <AccountDetailsDialog
+        account={selectedAccount}
+        centers={centers}
+        prospects={prospects}
+        lockedProspectTeasers={lockedProspectTeasers}
+        services={services}
+        tech={tech}
+        open={isAccountDialogOpen}
+        onOpenChange={setIsAccountDialogOpen}
       />
     </TabsContent>
   )

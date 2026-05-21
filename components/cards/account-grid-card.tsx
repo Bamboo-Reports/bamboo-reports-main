@@ -1,5 +1,5 @@
 import { memo } from "react"
-import { ArrowUpRight, CircleCheck, Eye, ExternalLink } from "lucide-react"
+import { ArrowUpRight, CircleCheck, Eye, ExternalLink, Globe } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CompanyLogo } from "@/components/ui/company-logo"
@@ -106,10 +106,10 @@ export const AccountGridCard = memo(({ account, onClick }: AccountGridCardProps)
               </div>
               <Button
                 type="button"
-                variant="outline"
+                variant="default"
                 size="sm"
                 onClick={onClick}
-                className="w-full justify-between bg-foreground text-background border-foreground hover:bg-foreground/90 hover:text-background"
+                className="w-full justify-between border border-border/70 bg-background text-foreground hover:bg-accent hover:text-accent-foreground"
               >
                 View Details
                 <ArrowUpRight className="h-4 w-4" />
@@ -127,7 +127,7 @@ export const AccountGridCard = memo(({ account, onClick }: AccountGridCardProps)
           <>
             <ContextMenuSeparator />
             <ContextMenuItem onClick={() => window.open(ensureAbsoluteUrl(account.account_hq_website!), "_blank", "noopener,noreferrer")}>
-              <ExternalLink className="h-4 w-4" />
+              <Globe className="h-4 w-4" />
               Open Website
             </ContextMenuItem>
           </>
