@@ -55,15 +55,16 @@ async function fetchExportRow(id: string): Promise<ExportRow | null> {
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   const auth = await authenticateFromQueryOrHeader(request)
   if (auth instanceof Response) return auth
   const userId = auth
 
   let exportRow: ExportRow | null
   try {
-    exportRow = await fetchExportRow(params.id)
+    exportRow = await fetchExportRow(id)
   } catch (err) {
     console.error("[exports] download lookup failed:", err)
     return jsonError(500, "Failed to look up export")

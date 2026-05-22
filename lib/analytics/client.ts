@@ -30,8 +30,16 @@ type AnalyticsContext = Partial<{
 let analyticsContext: AnalyticsContext = {}
 let isInitialized = false
 
+const shouldEnableAnalytics = () =>
+  process.env.NODE_ENV === "production" || process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true"
+
+const shouldEnablePostHogExtensions = () =>
+  process.env.NEXT_PUBLIC_POSTHOG_ENABLE_RECORDING === "true"
+
 const isAnalyticsEnabled = () =>
-  typeof window !== "undefined" && Boolean(process.env.NEXT_PUBLIC_POSTHOG_KEY)
+  typeof window !== "undefined" &&
+  shouldEnableAnalytics() &&
+  Boolean(process.env.NEXT_PUBLIC_POSTHOG_KEY)
 
 const isSensitiveKey = (key: string) => {
   const normalized = key.toLowerCase()
@@ -64,6 +72,8 @@ export const initAnalytics = () => {
     autocapture: true,
     capture_pageview: false,
     capture_pageleave: true,
+    capture_dead_clicks: shouldEnablePostHogExtensions(),
+    disable_session_recording: !shouldEnablePostHogExtensions(),
     before_send: (event) => {
       if (!event || typeof event !== "object") {
         return event
@@ -89,7 +99,7 @@ export const initAnalytics = () => {
       }
     },
     loaded: (client) => {
-      if (process.env.NODE_ENV === "development") {
+      if (process.env.NEXT_PUBLIC_POSTHOG_DEBUG === "true") {
         client.debug()
       }
     },

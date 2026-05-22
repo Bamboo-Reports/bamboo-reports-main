@@ -84,7 +84,7 @@ export function FiltersSidebar({
   getTotalActiveFilters,
   handleLoadSavedFilters,
   formatRevenueInMillions,
-}: FiltersSidebarProps): JSX.Element {
+}: FiltersSidebarProps): React.JSX.Element {
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
   const [openSection, setOpenSection] = useState<string>('accounts')
   const totalActiveFilters = getTotalActiveFilters()
@@ -139,7 +139,7 @@ export function FiltersSidebar({
       data-tour="filters-sidebar"
       className={cn(
         'bg-sidebar/90 backdrop-blur-sm overflow-hidden shrink-0 relative ml-6 mt-[var(--dashboard-content-top-gap)] mb-[var(--dashboard-content-bottom-gap)] rounded-2xl border border-sidebar-border shadow-[0_24px_60px_-45px_rgba(0,0,0,0.55)]',
-        'transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
+        'transition-[width] duration-300 ease-[cubic-bezier(0.22_1_0.36_1)] motion-reduce:transition-none',
         isCollapsed ? 'w-16' : 'w-[320px]'
       )}
       aria-label="Filters sidebar"

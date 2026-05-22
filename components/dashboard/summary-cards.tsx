@@ -25,7 +25,7 @@ const AnimatedNumber = React.memo(function AnimatedNumber({
   value: number
   compact?: boolean
   className?: string
-}): JSX.Element {
+}): React.JSX.Element {
   const [displayValue, setDisplayValue] = useState(value)
   const [reduceMotion, setReduceMotion] = useState(false)
   const frameRef = useRef<number | null>(null)
@@ -117,7 +117,7 @@ export const SummaryCards = React.memo(function SummaryCards({
   totalHeadcount,
   activeView,
   onSelect,
-}: SummaryCardsProps): JSX.Element {
+}: SummaryCardsProps): React.JSX.Element {
   const accountsEnabled = isSectionEnabled("accounts")
   const centersEnabled = isSectionEnabled("centers")
   const prospectsEnabled = isSectionEnabled("prospects")
