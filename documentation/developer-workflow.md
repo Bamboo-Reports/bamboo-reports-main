@@ -7,7 +7,7 @@ This guide is for developers maintaining or extending the Bamboo Reports applica
 ## 1. Setup & Installation
 
 ### Prerequisites
-- Node.js 18.17+
+- Node.js 20.9+
 - npm (v9+)
 - Access to the Neon DB connection string
 - Access to the Supabase project credentials
