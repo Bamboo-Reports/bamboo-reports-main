@@ -38,6 +38,7 @@ This guide is for developers maintaining or extending the Bamboo Reports applica
     - `NEXT_PUBLIC_POSTHOG_KEY` / `NEXT_PUBLIC_POSTHOG_HOST` — Analytics
     - `NEXT_PUBLIC_LOGO_DEV_KEY` — Company logos
     - `NEXT_PUBLIC_NOTIFICATIONS_ENABLED` — Set to `enabled` to activate notifications
+    - `NEXT_PUBLIC_MAINTENANCE_MODE`: set to `true` to show a maintenance page instead of the dashboard
     - `NEXT_PUBLIC_ENVIRONMENT_LABEL` — Set to `DEV` or `PROD` for environment badge
     - `NEXT_PUBLIC_MAPTILER_STATE_STYLE_ID` / `NEXT_PUBLIC_MAPTILER_CITY_STYLE_ID` — Custom map styles
     - `NEXT_PUBLIC_MAP_VIEWPOINT_ISO2` — Geopolitical boundary viewpoint (e.g., `IN`)
@@ -56,6 +57,7 @@ This guide is for developers maintaining or extending the Bamboo Reports applica
 | `npm run build` | Create production build |
 | `npm run start` | Start production server |
 | `npm run lint` | Run ESLint checks |
+| `npm run benchmark` | Benchmark dashboard data loading (`scripts/benchmark-loading.mjs`) |
 
 ---
 
@@ -110,8 +112,8 @@ Prefer config changes over dashboard forks for client-specific packaging.
 
 1. **Create Component:**
     Create `components/charts/my-new-chart.tsx`.
-    - Use `recharts` for pie/donut/bar charts.
-    - Use `highcharts` for treemaps or other advanced visualizations.
+    - Use `highcharts` for donut charts, treemaps, and other categorical visualizations (see `components/charts/pie-chart-card.tsx`).
+    - Use `recharts` via the shadcn `components/ui/chart.tsx` wrapper for line/area trend charts.
 
 2. **Prepare Data:**
     Create a helper in `lib/utils/chart-helpers.ts` to transform raw data into the format required by the chart library.

@@ -51,7 +51,7 @@ Bamboo Reports provides a unified view of business entities (**Accounts**, **Cen
 
 ### Dashboard and Insights
 - **Smart Summary Cards:** Real-time filtered vs. total counts per entity.
-- **Interactive Charts:** Recharts-powered Pie/Donut charts and Highcharts treemaps for categorical breakdowns (Region, Nature, Revenue, Employees, Technology).
+- **Interactive Charts:** Highcharts donut charts and a technology treemap for categorical breakdowns (Country, Industry, Revenue, Headcount, Technology), plus a Recharts revenue trend chart in the Account details dialog.
 - **Tabbed Navigation:** Seamless switching between Accounts, Centers, Prospects, and Services contexts.
 - **Deployment-Level Access Control:** Accounts, Centers, and Prospects can be enabled or disabled per deployment via `lib/config/dashboard-access.ts`.
 - **Geospatial Analytics:**
@@ -60,6 +60,8 @@ Bamboo Reports provides a unified view of business entities (**Accounts**, **Cen
 
 ### Advanced Filtering Engine
 - **Multi-Select Filters:** Country, Region, Industry, Category, Nature, Technology, Functions, and more.
+- **Account Visibility Filter:** `ALL` / `GCCs` / `NON-GCCs` toggle (default `GCCs`) constrains tables, charts, and exports to the chosen account set, while summary cards still report the full universe.
+- **Alias-Aware Account Search:** Global search and the account filter autocomplete match accounts by alternate names (short legal name, brand, abbreviation, flagship products, "currently known as") and show a "Known as" hint on alias matches.
 - **Precision Slicing:** "Include" vs. "Exclude" toggle per filter group.
 - **Range Sliders:** Revenue, Employee count, and Years in India sliders with logarithmic scaling.
 - **Premium Filter Reveal:** Accounts and Centers support config-driven `Show More` premium filters via `lib/config/filters.ts`.
@@ -115,10 +117,10 @@ graph TD
 ```
 
 ### Data Fetching Strategy
-1. **Initial Load:** `Promise.all` fetches metadata (filters, counts) and initial page data concurrently via Server Actions.
+1. **Initial Load:** The client fetches the full dashboard dataset from the `GET /api/dashboard` Route Handler, which wraps the underlying Server Action with an in-memory SWR cache and gzip compression.
 2. **Filtering:** User actions update React state; client-side filtering and chart aggregation run locally for responsiveness.
-3. **Server Actions:** Modular action files (`app/actions/data.ts`, `app/actions/saved-filters.ts`, `app/actions/financial.ts`, `app/actions/notifications.ts`) handle all database communication.
-4. **Runtime Behavior:** No custom in-memory cross-request cache; server actions fetch fresh data with retry logic (3 retries, exponential backoff).
+3. **Server Actions:** Modular action files (`app/actions/data.ts`, `app/actions/saved-filters.ts`, `app/actions/financial.ts`, `app/actions/notifications.ts`, `app/actions/system.ts`) handle database communication.
+4. **Runtime Behavior:** Server Actions keep no cross-request cache and fetch fresh data with retry logic (3 retries, exponential backoff). The `/api/dashboard` Route Handler adds an in-memory stale-while-revalidate cache on top. See [API Caching](documentation/api-caching-swr.md).
 
 ---
 
@@ -129,7 +131,7 @@ For a comprehensive breakdown of every technology used in this project, see the 
 ### Core Framework
 | Technology | Version | Purpose |
 |------------|---------|---------|
-| **Next.js** | 16.2.x | App Router, Server Actions, SSR |
+| **Next.js** | 16.2.x | App Router, Server Actions, Route Handlers, SSR |
 | **React** | 19.2.x | Component Library, Hooks |
 | **TypeScript** | 5.x | Strict Type Safety |
 
@@ -145,8 +147,8 @@ For a comprehensive breakdown of every technology used in this project, see the 
 ### Data Visualization
 | Technology | Purpose |
 |------------|---------|
-| **Recharts** | Pie/Donut charts for categorical breakdowns |
-| **Highcharts** | Advanced treemap visualizations (Technology) |
+| **Highcharts** | Donut charts for categorical breakdowns and the Technology treemap |
+| **Recharts** | Revenue trend area chart in the Account details dialog |
 | **MapLibre GL + MapTiler** | Cluster maps and state choropleth |
 
 ### Backend and Data
@@ -177,7 +179,10 @@ bamboo-reports-nextjs/
 │   │   ├── saved-filters.ts        # Saved filter CRUD operations
 │   │   ├── financial.ts            # Financial data queries
 │   │   ├── notifications.ts        # Notification logic
-│   │   └── system.ts              # System diagnostics
+│   │   └── system.ts               # System diagnostics
+│   ├── api/                        # Route Handlers
+│   │   ├── dashboard/              # SWR-cached dashboard dataset endpoint
+│   │   └── exports/                # Export generation, listing, and re-download
 │   ├── actions.ts                  # Central server action re-exports
 │   ├── layout.tsx                  # Root layout with providers
 │   ├── page.tsx                    # Main dashboard entry point
@@ -190,9 +195,14 @@ bamboo-reports-nextjs/
 │   ├── dashboard/                  # Summary cards and hero stats
 │   ├── dialogs/                    # Detail views (Account, Center, Prospect)
 │   ├── export/                     # Excel export workflow
+│   ├── exports/                    # My exports dialog (audit log re-download)
 │   ├── filters/                    # Sidebar filter UI and controls
+│   ├── history/                    # Recently viewed history dialog
 │   ├── layout/                     # Header and Footer
 │   ├── maps/                       # MapLibre cluster + choropleth maps
+│   ├── notifications/              # Notification bell dropdown
+│   ├── prospects/                  # Locked prospect teaser cards
+│   ├── search/                     # Global search with alias-aware matching
 │   ├── states/                     # Loading and error state components
 │   ├── tables/                     # Data grid row components
 │   ├── tabs/                       # Tab views (Accounts, Centers, etc.)
@@ -202,10 +212,13 @@ bamboo-reports-nextjs/
 │   ├── use-auth-guard.ts           # Authentication guard
 │   ├── use-dashboard-data.ts       # Data fetching and loading state
 │   ├── use-dashboard-filters.ts    # Complex filter state management
+│   ├── use-global-search.ts        # Alias-aware global search
 │   ├── use-notifications.ts        # Notification tracking
+│   ├── use-product-tour.ts         # Guided product tour
 │   ├── use-range-filter.ts         # Range slider logic
-│   ├── use-recently-updated-*.ts   # Recently updated tracking
-│   └── use-saved-filters.ts        # Saved filter persistence
+│   ├── use-recent-items.ts         # Recently viewed history tracking
+│   ├── use-saved-filters.ts        # Saved filter persistence
+│   └── use-table-column-preferences.ts  # Table column visibility prefs
 │
 ├── lib/                            # Utilities & Configuration
 │   ├── analytics/                  # PostHog client, events, tracking
@@ -213,24 +226,40 @@ bamboo-reports-nextjs/
 │   ├── config/                     # Environment, dashboard access, filters, MapTiler, notifications
 │   ├── dashboard/                  # Dashboard utility functions
 │   ├── db/                         # Neon PostgreSQL client + retry logic
+│   ├── exports/                    # Export request client + server-side workbook builder
 │   ├── finance/                    # Financial data utilities
+│   ├── notifications/              # Notification formatting helpers
+│   ├── request/                    # Request metadata helpers (IP, user-agent)
+│   ├── search/                     # Account search index + alias matching
 │   ├── supabase/                   # Supabase client factory
+│   ├── tour/                       # Guided product tour steps and config
 │   ├── utils/                      # Helpers (chart, export, filter, general)
 │   ├── validators/                 # Zod validation schemas
 │   └── types.ts                    # Shared TypeScript interfaces
 │
+├── contexts/                       # React context providers
+│
+├── etl/                            # Python ETL pipeline (data import)
+│   ├── main.py                     # Import script with change notifications
+│   ├── master-schema.json          # Source-of-truth database schema export
+│   ├── requirements.txt            # Python dependencies
+│   └── run.sh                      # ETL runner script
+│
 ├── documentation/                  # Technical documentation
-│   ├── database/                   # SQL migrations and master schema
-│   ├── sql/                        # SQL utility scripts
+│   ├── sql/                        # Supabase migration scripts
 │   ├── tech-stack.md               # Detailed tech stack reference
 │   ├── project-architecture.md     # Architecture and data flow
 │   ├── schema-migration-guide.md   # Database schema reference
 │   ├── developer-workflow.md       # Developer guide and coding standards
+│   ├── api-caching-swr.md          # Dashboard API SWR cache reference
 │   ├── supabase-auth-setup.md      # Auth setup guide
 │   ├── supabase-saved-filters.md   # Saved filters spec
+│   ├── user-exports.md             # Export audit log and Storage archive
+│   ├── ui-column-mapping.md        # UI label to database column mapping
 │   ├── logo-integration.md         # Logo.dev integration guide
 │   └── map-disputed-boundaries.md  # Choropleth boundary handling
 │
+├── scripts/                        # Standalone scripts (e.g. load benchmark)
 ├── types/                          # Additional type definitions
 ├── public/                         # Static assets (logos, images, data)
 └── styles/                         # Additional stylesheets
@@ -280,6 +309,7 @@ bamboo-reports-nextjs/
 | `npm run build` | Create production build |
 | `npm run start` | Start production server |
 | `npm run lint` | Run ESLint checks |
+| `npm run benchmark` | Benchmark dashboard data loading (`scripts/benchmark-loading.mjs`) |
 
 ---
 
@@ -301,6 +331,7 @@ bamboo-reports-nextjs/
 | `NEXT_PUBLIC_POSTHOG_KEY` | No | PostHog project API key for analytics. |
 | `NEXT_PUBLIC_POSTHOG_HOST` | No | PostHog host URL (defaults to PostHog cloud). |
 | `NEXT_PUBLIC_NOTIFICATIONS_ENABLED` | No | Feature flag: `enabled` or `disabled`. |
+| `NEXT_PUBLIC_MAINTENANCE_MODE` | No | Set to `true` to show a maintenance page instead of the dashboard. |
 | `NEXT_PUBLIC_ENVIRONMENT_LABEL` | No | Environment tag displayed in the UI: `DEV`, `PROD`, or empty. |
 
 ---
@@ -365,6 +396,7 @@ The core BI data resides in **Neon PostgreSQL**. All tables follow strict `snake
 | `functions` | Function rows linked to centers | `uuid` |
 | `tech` | Technology stack rows (software, vendors, categories) | `uuid` |
 | `prospects` | Contact/lead rows linked to accounts | `uuid` |
+| `alias` | Alternate account names (brand, abbreviation, flagship products) | `uuid` |
 
 ### Audit Tables (in `audit` schema)
 - `audit.import_runs` — Data import tracking
@@ -374,7 +406,7 @@ The core BI data resides in **Neon PostgreSQL**. All tables follow strict `snake
 ### Key Relationships
 - `centers` link to `accounts` via `account_global_legal_name`
 - `services`, `functions`, and `tech` link to `centers` via `cn_unique_key`
-- `prospects` link to `accounts` via `account_global_legal_name`
+- `prospects` and `alias` link to `accounts` via `account_global_legal_name`
 
 > **Reference:** See the [Schema Migration Guide](documentation/schema-migration-guide.md) for complete column definitions and table relationships.
 
@@ -410,9 +442,9 @@ This project is optimized for Vercel.
 Subsequent pushes to the `main` branch trigger automatic deployments.
 
 ### Build Configuration
-- ESLint errors are ignored during builds (`eslint.ignoreDuringBuilds: true`)
 - TypeScript errors are ignored during builds (`typescript.ignoreBuildErrors: true`)
-- Images are unoptimized (static export compatible)
+- Images are unoptimized (`images.unoptimized: true`); `img.logo.dev` is the only allowed remote pattern
+- HTTP response compression is enabled (`compress: true`)
 
 ---
 
@@ -445,6 +477,7 @@ Detailed documentation for specific subsystems lives in the `documentation/` fol
 | [**Project Architecture**](documentation/project-architecture.md) | High-level design, server actions, state management, and integrations |
 | [**Schema Guide**](documentation/schema-migration-guide.md) | Deep dive into the data model, table relationships, and migration paths |
 | [**Developer Workflow**](documentation/developer-workflow.md) | Guide for common tasks, coding standards, and troubleshooting |
+| [**API Caching (SWR)**](documentation/api-caching-swr.md) | Stale-while-revalidate cache behavior for the `/api/dashboard` route |
 | [**Supabase Auth**](documentation/supabase-auth-setup.md) | Setting up the `profiles` table, RLS policies, and auth triggers |
 | [**Saved Filters**](documentation/supabase-saved-filters.md) | Technical spec for the saved filters JSON structure |
 | [**User Exports & Audit Log**](documentation/user-exports.md) | Server-side export generation, Storage archive, and audit table |

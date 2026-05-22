@@ -2,7 +2,7 @@
 
 A comprehensive breakdown of every technology used in the Bamboo Reports project, organized by category. This document is designed to give both technical and non-technical stakeholders a clear understanding of what powers the application and why each technology was chosen.
 
-> **Last Updated:** April 2026
+> **Last Updated:** May 2026
 > **Audience:** Engineering leads, project managers, and stakeholders
 
 ---
@@ -22,8 +22,7 @@ A comprehensive breakdown of every technology used in the Bamboo Reports project
 - [Utility Libraries](#10-utility-libraries)
 - [Development Tools](#11-development-tools)
 - [Infrastructure and Deployment](#12-infrastructure-and-deployment)
-- [AI and Agentic Capabilities](#13-ai-and-agentic-capabilities)
-- [External APIs](#14-external-apis)
+- [External APIs](#13-external-apis)
 - [Architecture Decisions](#architecture-decisions)
 
 ---
@@ -34,7 +33,7 @@ A comprehensive breakdown of every technology used in the Bamboo Reports project
 |----------|-------------|
 | **Frontend** | Next.js 16, React 19, TypeScript 5, Tailwind CSS |
 | **Component Library** | shadcn/ui (built on Radix UI primitives) |
-| **Charts** | Recharts, Highcharts |
+| **Charts** | Highcharts, Recharts |
 | **Maps** | MapLibre GL, MapTiler |
 | **Database** | Neon PostgreSQL (data warehouse), Supabase PostgreSQL (auth/user data) |
 | **Authentication** | Supabase Auth |
@@ -55,7 +54,7 @@ These are the foundational technologies that the entire application is built on.
 | **What it is** | A React framework for building full-stack web applications |
 | **Version** | 16.2.x |
 | **Why we use it** | Provides the App Router for file-based routing, Server Actions for secure server-side data fetching without a separate API layer, server-side rendering (SSR) for initial page loads, and automatic code splitting for performance |
-| **Key features used** | App Router, Server Actions, Server Components, file-based routing, Turbopack |
+| **Key features used** | App Router, Server Actions, Server Components, Route Handlers, file-based routing, Turbopack |
 | **Package** | `next` |
 
 ### React 19.2
@@ -64,7 +63,7 @@ These are the foundational technologies that the entire application is built on.
 |---|---|
 | **What it is** | A JavaScript library for building user interfaces |
 | **Version** | 19.2.x |
-| **Why we use it** | Industry-standard UI library with a rich ecosystem. React 19 brings improved Server Components support, the new Actions APIs, and concurrent rendering for better performance |
+| **Why we use it** | Industry-standard UI library with a rich ecosystem. React 19 adds Actions, the `use` hook, ref as a regular prop, and improved Server Components and concurrent rendering for better performance |
 | **Key features used** | Hooks (`useState`, `useMemo`, `useCallback`, `useEffect`), `React.memo` for performance optimization, custom hooks pattern |
 | **Package** | `react`, `react-dom` |
 
@@ -164,9 +163,9 @@ Technologies for rendering charts, graphs, and data insights.
 | | |
 |---|---|
 | **What it is** | A composable charting library built on React and D3 |
-| **Version** | 2.15.4 |
-| **Why we use it** | Provides declarative, React-native chart components. Simple API for common chart types (pie, donut, bar) with responsive containers |
-| **Used for** | Pie charts and donut charts for categorical breakdowns (Region, Nature, Revenue ranges, Employee ranges) |
+| **Version** | 3.8.1 |
+| **Why we use it** | Provides declarative, React-native chart components with responsive containers. Used through the shadcn/ui `chart.tsx` wrapper |
+| **Used for** | The annual revenue trend area chart in the Account details dialog |
 | **Package** | `recharts` |
 
 ### Highcharts
@@ -175,8 +174,8 @@ Technologies for rendering charts, graphs, and data insights.
 |---|---|
 | **What it is** | A professional-grade charting library for interactive visualizations |
 | **Version** | 12.1.2 |
-| **Why we use it** | Handles advanced visualization needs (treemaps) that require more sophisticated rendering than Recharts provides |
-| **Used for** | Technology treemap visualizations showing software vendor and tool distribution |
+| **Why we use it** | Renders the dashboard donut charts and the Technology treemap, with the interactivity, accessibility module, and treemap support the dashboard relies on |
+| **Used for** | Donut charts for categorical breakdowns (Country, Industry, Revenue, Headcount) and the Technology treemap showing software vendor and tool distribution |
 | **Package** | `highcharts`, `highcharts-react-official` |
 
 ---
@@ -229,7 +228,7 @@ Technologies for storing and querying data.
 |---|---|
 | **What it is** | A Next.js Route Handler that serves the full dashboard dataset to the client on initial load |
 | **Why we use it** | Wraps the underlying Server Action with an in-memory stale-while-revalidate (SWR) cache and gzip compression, so warm requests skip the database round-trip and ship pre-compressed JSON to the browser |
-| **Caching** | In-memory SWR with a 5-minute TTL (configurable via `DASHBOARD_CACHE_TTL_MS`); stale responses are served immediately while a background revalidation refreshes the cache |
+| **Caching** | In-memory SWR with a 1-hour TTL (configurable via `DASHBOARD_CACHE_TTL_MS`); stale responses are served immediately while a background revalidation refreshes the cache |
 | **Compression** | Pre-gzipped payload returned when the client sends `Accept-Encoding: gzip`; raw JSON otherwise |
 | **Authentication** | Requires a Supabase JWT bearer token in the `Authorization` header, validated server-side before any cached data is returned |
 | **Cache invalidation** | `POST /api/dashboard` (also auth-gated) clears the cache; called by the client before a force-refresh |
@@ -239,9 +238,9 @@ Technologies for storing and querying data.
 | | |
 |---|---|
 | **What it is** | An open-source Firebase alternative built on PostgreSQL |
-| **Version** | 2.49.1 (JS client) |
+| **Version** | 2.106.x (JS client) |
 | **Why we use it** | Provides authentication, user profiles, and saved filter storage. Built-in Row-Level Security (RLS) ensures data isolation between users without custom middleware |
-| **Tables managed** | `public.profiles` (user metadata), `public.saved_filters` (filter configurations) |
+| **Tables managed** | `public.profiles` (user metadata), `public.saved_filters` (filter configurations), `public.user_exports` (export audit log) |
 | **Package** | `@supabase/supabase-js` |
 
 ---
@@ -273,18 +272,9 @@ Technologies for generating downloadable reports.
 |---|---|
 | **What it is** | A library for reading, manipulating, and writing Excel files |
 | **Version** | 4.4.0 |
-| **Why we use it** | Generates native `.xlsx` files directly in the browser without a server roundtrip. Supports multiple sheets, styling, and large datasets |
-| **Used for** | Exporting filtered dashboard data (Accounts, Centers, Prospects) into multi-sheet Excel workbooks |
+| **Why we use it** | Builds native `.xlsx` workbooks on the server (`lib/exports/server-builder.ts`) against a full-schema `SELECT *`, so exports include every database column. Supports multiple sheets, styling, and large datasets |
+| **Used for** | Exporting filtered dashboard data (Accounts, Centers, Prospects) into multi-sheet Excel workbooks, archived to Supabase Storage and logged in `public.user_exports` |
 | **Package** | `exceljs` |
-
-### JSZip
-
-| | |
-|---|---|
-| **What it is** | A library for creating and reading ZIP files |
-| **Version** | 3.10.1 |
-| **Why we use it** | Compresses exported Excel files for faster downloads |
-| **Package** | `jszip` |
 
 ---
 
@@ -297,7 +287,7 @@ Technologies for tracking usage and performance.
 | | |
 |---|---|
 | **What it is** | An open-source product analytics platform |
-| **Version** | 1.351.3 |
+| **Version** | 1.375.x |
 | **Why we use it** | Tracks user behavior, feature usage, and engagement patterns. Helps the team understand which features are most valuable and where users encounter friction |
 | **Events tracked** | Page views, filter interactions, export actions, tab navigation, session duration |
 | **User identification** | Tied to Supabase user ID |
@@ -391,29 +381,13 @@ How the application is built, deployed, and served.
 
 | Setting | Value | Why |
 |---------|-------|-----|
-| ESLint during builds | Ignored | Prevents build failures from non-critical lint warnings |
-| TypeScript errors during builds | Ignored | Allows deployment while type issues are being resolved |
-| Image optimization | Disabled (`unoptimized: true`) | Static export compatibility |
+| TypeScript errors during builds | Ignored (`typescript.ignoreBuildErrors`) | Allows deployment while type issues are being resolved |
+| Image optimization | Disabled (`images.unoptimized: true`) | Avoids the optimizer; `img.logo.dev` is the only allowed remote pattern |
+| Response compression | Enabled (`compress: true`) | Gzip-compresses HTTP responses |
 
 ---
 
-## 13. AI and Agentic Capabilities
-
-Runtime AI services that power agentic features in the application.
-
-### OpenRouter
-
-| | |
-|---|---|
-| **What it is** | A unified API gateway that routes requests across many LLM providers (Anthropic, OpenAI, Google, Meta, Mistral, and others) through a single endpoint and billing relationship |
-| **Why we use it** | Powers the application's agentic capabilities. A single integration unlocks access to every major model, so we can pick the best model per task (reasoning, tool use, summarization, cost-sensitive workloads) without maintaining a separate SDK and credential for each provider. Also avoids vendor lock-in — swapping models is a config change, not a code change |
-| **Used for** | Agent loops, tool-calling, and any LLM-driven feature in the dashboard |
-| **Authentication** | API key passed via `Authorization: Bearer` header |
-| **Environment variable** | `OPENROUTER_API_KEY` |
-
----
-
-## 14. External APIs
+## 13. External APIs
 
 Third-party services the application communicates with at runtime.
 
@@ -422,10 +396,9 @@ Third-party services the application communicates with at runtime.
 | **Neon PostgreSQL** | Primary BI data warehouse | Yes | `DATABASE_URL` |
 | **Supabase** | Authentication, profiles, saved filters | Yes | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` |
 | **MapTiler** | Map tiles for geospatial views | Yes | `NEXT_PUBLIC_MAPTILER_KEY` |
-| **Logo.dev** | Company logo images | No | `NEXT_PUBLIC_LOGO_DEV_TOKEN` |
+| **Logo.dev** | Company logo images | No | `NEXT_PUBLIC_LOGO_DEV_KEY` |
 | **PostHog** | Product analytics | No | `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST` |
 | **Yahoo Finance** | Stock prices and financial data | No | None (public API) |
-| **OpenRouter** | LLM gateway for agentic capabilities | Yes | `OPENROUTER_API_KEY` |
 
 ---
 
@@ -446,8 +419,8 @@ Each database serves a distinct purpose:
 
 This separation keeps the BI data warehouse isolated from user mutations and simplifies security boundaries.
 
-### Why Recharts AND Highcharts?
-Recharts handles the majority of charting needs (pie, donut) with a simple React-native API. Highcharts is used specifically for treemap visualizations where Recharts lacks support. This avoids over-engineering a single charting solution while using the best tool for each visualization type.
+### Why Highcharts AND Recharts?
+Highcharts renders the dashboard donut charts and the Technology treemap, where its interactivity and treemap support fit the categorical-breakdown use case. Recharts handles the single revenue-trend area chart in the Account details dialog, through the shadcn/ui `chart.tsx` wrapper. Each library is used where it fits best rather than forcing one solution everywhere.
 
 ### Why MapLibre instead of Google Maps or Mapbox?
 MapLibre is open-source (no per-load pricing), supports WebGL rendering for large point datasets (5000+ centers), and works with any tile provider (MapTiler in our case). This avoids vendor lock-in and reduces operational costs.

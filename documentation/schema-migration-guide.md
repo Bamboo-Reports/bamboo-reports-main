@@ -1,4 +1,4 @@
-# Schema Migration & Reference Guide (2026-02)
+# Schema Migration & Reference Guide (2026-05)
 
 This guide documents the migration from the legacy column naming (uppercase, space-separated) to the new snake_case schema and provides a comprehensive reference for the current database structure (`etl/master-schema.json`).
 
@@ -9,7 +9,7 @@ This guide documents the migration from the legacy column naming (uppercase, spa
 
 ## 1. Quick Summary
 
-- Core Tables: `accounts`, `centers`, `services`, `functions`, `tech`, `prospects`.
+- Core Tables: `accounts`, `centers`, `services`, `functions`, `tech`, `prospects`, `alias`.
 - Audit Tables: `audit.import_runs`, `audit.field_change_events`, `audit.notification_reads`.
 - Naming Convention: strict `snake_case`.
 - Primary Keys (PK):
@@ -18,7 +18,7 @@ This guide documents the migration from the legacy column naming (uppercase, spa
 - Linkage:
   - `centers` links to `accounts` via `account_global_legal_name`.
   - `services`, `functions`, and `tech` link to `centers` via `cn_unique_key`.
-  - `tech` and `prospects` also link to `accounts` via `account_global_legal_name`.
+  - `tech`, `prospects`, and `alias` also link to `accounts` via `account_global_legal_name`.
 
 ---
 
@@ -36,6 +36,7 @@ Notable columns:
 - Workforce: `account_hq_employee_count`, `account_hq_employee_range`, `account_hq_employee_source_type`, `account_hq_employee_source_link`, `account_center_employees`, `account_center_employees_range`
 - India timeline: `account_first_center_year`, `years_in_india`
 - Notes and coverage: `account_comments`, `account_coverage`
+- Visibility: `account_visibility` (`include` / `exclude`, default `include`), `account_visibility_note` (human-readable exclusion reason)
 
 ### 2.2 Table: `centers`
 Description: Delivery centers or office locations.
@@ -94,6 +95,21 @@ Columns:
 - `prospect_linkedin_url`, `prospect_other_source_url`, `prospect_email`
 - `prospect_city`, `prospect_state`, `prospect_country`
 
+### 2.7 Table: `alias`
+Description: Alternate names and brands for an account, sourced from the "alias" sheet. Powers alias-aware account search (global search and the account filter autocomplete). Linked to `accounts` by a foreign key on `account_global_legal_name` with `ON UPDATE CASCADE` / `ON DELETE CASCADE`.
+
+Columns:
+- `uuid` (PK)
+- `account_global_legal_name` (FK to `accounts`)
+- `short_legal_name`
+- `brand_name`
+- `abbreviated_name`
+- `flagship_products`
+- `currently_known_as`
+- `notes`
+
+> Migration: `documentation/sql/alias-table-migration.sql`.
+
 ---
 
 ## 3. Linkage & Cascade Logic
@@ -109,6 +125,7 @@ Columns:
 - Center <-> Function: bi-directional in dashboard filtering.
 - Center <-> Tech: software filters map through `tech.cn_unique_key`.
 - Prospects: linked primarily by `account_global_legal_name`.
+- Alias: linked to accounts by `account_global_legal_name`; alias rows feed account search but are not a filterable entity.
 
 ---
 
@@ -119,7 +136,7 @@ Columns:
 - When adding a new filter, update both query and in-memory filtering paths.
 
 ### 4.2 Type Definitions (`lib/types.ts`)
-- Keep interfaces aligned with `master-schema.json`.
+- Keep interfaces aligned with `etl/master-schema.json`.
 - Numeric DB fields (`INTEGER`, `BIGINT`, `DOUBLE PRECISION`) should be typed as `number | null` where nullable.
 - `TIMESTAMP` fields are represented as `string | null` in current frontend types.
 
