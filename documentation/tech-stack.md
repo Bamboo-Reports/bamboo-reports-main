@@ -54,7 +54,7 @@ These are the foundational technologies that the entire application is built on.
 | **What it is** | A React framework for building full-stack web applications |
 | **Version** | 16.2.x |
 | **Why we use it** | Provides the App Router for file-based routing, Server Actions for secure server-side data fetching without a separate API layer, server-side rendering (SSR) for initial page loads, and automatic code splitting for performance |
-| **Key features used** | App Router, Server Actions, Server Components, Route Handlers, file-based routing |
+| **Key features used** | App Router, Server Actions, Server Components, Route Handlers, file-based routing, Turbopack |
 | **Package** | `next` |
 
 ### React 19.2
@@ -63,7 +63,7 @@ These are the foundational technologies that the entire application is built on.
 |---|---|
 | **What it is** | A JavaScript library for building user interfaces |
 | **Version** | 19.2.x |
-| **Why we use it** | Industry-standard UI library with a rich ecosystem. React 19 adds Actions, the `use` hook, ref as a regular prop, and improved Suspense and concurrent rendering for better performance |
+| **Why we use it** | Industry-standard UI library with a rich ecosystem. React 19 adds Actions, the `use` hook, ref as a regular prop, and improved Server Components and concurrent rendering for better performance |
 | **Key features used** | Hooks (`useState`, `useMemo`, `useCallback`, `useEffect`), `React.memo` for performance optimization, custom hooks pattern |
 | **Package** | `react`, `react-dom` |
 
