@@ -1,9 +1,11 @@
 import { getDashboardData } from "@/app/actions/data"
 import { resolveAuthenticatedUserId, extractBearerToken } from "@/lib/auth/server"
+import { createLogger } from "@/lib/logger"
 import { promisify } from "node:util"
 import { gzip as gzipCb } from "node:zlib"
 
 const gzip = promisify(gzipCb)
+const logger = createLogger("api/dashboard")
 
 export const dynamic = "force-dynamic"
 
@@ -27,6 +29,7 @@ let cache: {
 
 async function fetchAndCache() {
   const queryStart = Date.now()
+  logger.info("dashboard_cache_populate_started")
   const data = await getDashboardData()
   const queryMs = Date.now() - queryStart
 
@@ -42,7 +45,17 @@ async function fetchAndCache() {
     revalidating: false,
   }
 
-  console.log(`[Cache] Populated: DB ${queryMs}ms, gzip ${compressMs}ms, raw ${(json.length / 1024 / 1024).toFixed(1)}MB, compressed ${(gzipped.length / 1024 / 1024).toFixed(1)}MB`)
+  logger.info("dashboard_cache_populated", {
+    query_ms: queryMs,
+    gzip_ms: compressMs,
+    raw_mb: Number((json.length / 1024 / 1024).toFixed(1)),
+    compressed_mb: Number((gzipped.length / 1024 / 1024).toFixed(1)),
+    accounts_count: data.accounts.length,
+    centers_count: data.centers.length,
+    prospects_count: data.prospects.length,
+    locked_prospect_teasers_count: data.lockedProspectTeasers.length,
+    error: data.error,
+  })
 
   return { gzipped, json }
 }
@@ -50,9 +63,9 @@ async function fetchAndCache() {
 function revalidateInBackground() {
   if (cache.revalidating) return
   cache.revalidating = true
-  console.log("[Cache] Stale — revalidating in background")
+  logger.info("dashboard_cache_background_revalidation_started")
   fetchAndCache().catch((err) => {
-    console.error("[Cache] Background revalidation failed:", err)
+    logger.error("dashboard_cache_background_revalidation_failed", { error: err })
     cache.revalidating = false
   })
 }
@@ -92,21 +105,29 @@ export async function GET(request: Request) {
 
   // Cache HIT — fresh data, return immediately
   if (isFresh && cache.gzipped && cache.json) {
-    console.log(`[Cache] HIT (age: ${age}s, TTL: ${CACHE_TTL / 1000}s) — ${Date.now() - start}ms`)
+    logger.info("dashboard_cache_hit", {
+      age_seconds: age,
+      ttl_seconds: CACHE_TTL / 1000,
+      duration_ms: Date.now() - start,
+    })
     return buildResponse(cache.gzipped, cache.json, acceptEncoding, "HIT", age)
   }
 
   // Cache STALE — return stale data immediately, revalidate in background
   if (isStale && cache.gzipped && cache.json) {
-    console.log(`[Cache] STALE (age: ${age}s, TTL: ${CACHE_TTL / 1000}s) — ${Date.now() - start}ms`)
+    logger.info("dashboard_cache_stale", {
+      age_seconds: age,
+      ttl_seconds: CACHE_TTL / 1000,
+      duration_ms: Date.now() - start,
+    })
     revalidateInBackground()
     return buildResponse(cache.gzipped, cache.json, acceptEncoding, "STALE", age)
   }
 
   // Cache MISS — fetch from DB, cache, return
-  console.log("[Cache] MISS — fetching from database")
+  logger.info("dashboard_cache_miss")
   const { gzipped, json } = await fetchAndCache()
-  console.log(`[Cache] MISS total: ${Date.now() - start}ms`)
+  logger.info("dashboard_cache_miss_completed", { duration_ms: Date.now() - start })
 
   return buildResponse(gzipped, json, acceptEncoding, "MISS", 0)
 }
@@ -120,7 +141,7 @@ export async function POST(request: Request) {
   if (authError) return authError
 
   cache = { gzipped: null, json: null, timestamp: 0, revalidating: false }
-  console.log("[Cache] Invalidated via POST")
+  logger.info("dashboard_cache_invalidated")
   return new Response(JSON.stringify({ ok: true }), {
     headers: { "Content-Type": "application/json" },
   })

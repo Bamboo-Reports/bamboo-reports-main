@@ -193,8 +193,11 @@ TABLE_DEFS: Dict[str, Dict[str, Any]] = {
         "track_changes": True,
         "track_lifecycle": True,
         "indexes": [
+            "CREATE INDEX IF NOT EXISTS prospects_unique_key_idx ON public.prospects (ps_unique_key);",
             "CREATE INDEX IF NOT EXISTS prospects_department_idx ON public.prospects (prospect_department);",
             "CREATE INDEX IF NOT EXISTS prospects_level_idx ON public.prospects (prospect_level);",
+            "CREATE INDEX IF NOT EXISTS prospects_head_type_idx ON public.prospects (head_type);",
+            "CREATE INDEX IF NOT EXISTS prospects_center_name_idx ON public.prospects (center_name);",
             "CREATE INDEX IF NOT EXISTS prospects_city_idx ON public.prospects (prospect_city);",
             "CREATE INDEX IF NOT EXISTS prospects_title_trgm_idx ON public.prospects USING gin (prospect_title gin_trgm_ops);",
             "CREATE INDEX IF NOT EXISTS prospects_account_name_idx ON public.prospects (account_global_legal_name);",
@@ -477,7 +480,7 @@ def normalize_change_value(value: Any) -> Optional[str]:
 
 
 INTEGER_FLOAT_TEXT_RE = re.compile(r"^([+-]?\d+)\.0+$")
-INTEGER_FLOAT_TEXT_COLUMNS = ("zip", "postal", "postcode")
+INTEGER_FLOAT_TEXT_COLUMNS = ("zip", "postal", "postcode", "year")
 
 
 def normalize_text_value(value: Any, col_name: str) -> Optional[str]:

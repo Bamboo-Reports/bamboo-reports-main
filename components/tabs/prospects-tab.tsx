@@ -98,6 +98,10 @@ export function ProspectsTab({
     )
   }, [])
 
+  const getProspectRecordId = React.useCallback((prospect: Prospect) => {
+    return prospect.ps_unique_key || `${prospect.account_global_legal_name}::${getProspectDisplayName(prospect)}`
+  }, [getProspectDisplayName])
+
   const handleProspectClick = (prospect: Prospect, openedFrom: "table_row" | "grid_card") => {
     if (isDialogOpen && openedRecordRef.current) {
       const dwellSeconds = Math.max(0, Math.round((Date.now() - openedRecordRef.current.openedAt) / 1000))
@@ -111,10 +115,10 @@ export function ProspectsTab({
     setSelectedProspect(prospect)
     setIsDialogOpen(true)
     const prospectName = getProspectDisplayName(prospect)
-    const recordId = `${prospect.account_global_legal_name}-${prospectName}-${prospect.prospect_title ?? ""}`
+    const recordId = getProspectRecordId(prospect)
     onRecordOpened?.({
       type: "prospect",
-      id: `${prospect.account_global_legal_name}::${prospectName}`,
+      id: recordId,
       title: prospectName,
       subtitle: prospect.prospect_title || prospect.prospect_department || prospect.account_global_legal_name || "",
     })
@@ -391,7 +395,7 @@ export function ProspectsTab({
                       {getPaginatedData(tableItems, currentPage, itemsPerPage).map((item, index) =>
                         item.type === "visible" ? (
                           <ProspectRow
-                            key={`${item.prospect.prospect_email}-${index}`}
+                            key={`${getProspectRecordId(item.prospect)}-${index}`}
                             prospect={item.prospect}
                             onClick={() => handleProspectClick(item.prospect, "table_row")}
                             visibleColumns={visibleColumnSet}

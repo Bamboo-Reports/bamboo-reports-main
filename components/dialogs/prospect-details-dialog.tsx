@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -114,8 +115,10 @@ export function ProspectDetailsDialog({
         ? allProspects.filter(
             (other) =>
               other.account_global_legal_name === p.account_global_legal_name &&
-              (other.prospect_first_name !== p.prospect_first_name ||
-                other.prospect_last_name !== p.prospect_last_name),
+              (p.ps_unique_key
+                ? other.ps_unique_key !== p.ps_unique_key
+                : other.prospect_first_name !== p.prospect_first_name ||
+                  other.prospect_last_name !== p.prospect_last_name),
           )
         : [],
     [p, allProspects],
@@ -153,7 +156,7 @@ export function ProspectDetailsDialog({
 
   if (!p) return null
 
-  const fullName = [p.prospect_first_name, p.prospect_last_name].filter(Boolean).join(" ").trim()
+  const fullName = p.prospect_full_name || [p.prospect_first_name, p.prospect_last_name].filter(Boolean).join(" ").trim()
   const initials = [p.prospect_first_name?.[0], p.prospect_last_name?.[0]].filter(Boolean).join("")
   const location = [p.prospect_city, p.prospect_state].filter(Boolean).join(", ")
 
@@ -181,6 +184,9 @@ export function ProspectDetailsDialog({
       <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-y-auto glassmorphism-dialog">
         <DialogHeader>
           <DialogBreadcrumb items={breadcrumbItems} />
+          <DialogDescription className="sr-only">
+            Prospect profile details, contact information, account linkage, and related contacts.
+          </DialogDescription>
           <DialogTitle className="flex items-center gap-3 text-2xl font-bold">
             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
               <span className="text-lg font-bold text-primary">{initials}</span>
@@ -287,9 +293,25 @@ export function ProspectDetailsDialog({
               <div className={hasLeftContent ? "lg:border-l lg:border-border/50 lg:pl-6" : ""}>
                 <MetaRow label="Department" value={p.prospect_department} />
                 <MetaRow label="Level" value={p.prospect_level} />
+                <MetaRow label="In Company Since" value={p.prospect_in_company_year} />
+                <MetaRow label="Current Role Since" value={p.prospect_current_year} />
                 <MetaRow label="Center" value={p.center_name} />
                 <MetaRow label="Location" value={location} />
                 <MetaRow label="Country" value={p.prospect_country} />
+                {p.prospect_other_source_url ? (
+                  <div className="flex items-start justify-between gap-4 py-1.5 text-sm border-b border-border/30 last:border-b-0">
+                    <span className="text-muted-foreground shrink-0">Other Source</span>
+                    <a
+                      href={p.prospect_other_source_url.startsWith("http") ? p.prospect_other_source_url : `https://${p.prospect_other_source_url}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex min-w-0 items-center gap-1 font-medium text-primary hover:underline"
+                    >
+                      <span className="truncate">Open source</span>
+                      <SquareArrowOutUpRight className="h-3.5 w-3.5 shrink-0" />
+                    </a>
+                  </div>
+                ) : null}
               </div>
             </div>
           </section>

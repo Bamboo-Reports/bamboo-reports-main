@@ -4,6 +4,7 @@ import React from "react"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -162,6 +163,9 @@ export function CenterDetailsDialog({
               { label: center.center_name ?? "" },
             ]}
           />
+          <DialogDescription className="sr-only">
+            Center profile details, services, technology usage, location, and related account information.
+          </DialogDescription>
           <DialogTitle className="flex items-center gap-3 text-2xl font-bold">
             <CompanyLogo
               domain={center.center_account_website ?? undefined}

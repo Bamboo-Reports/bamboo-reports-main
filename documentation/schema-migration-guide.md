@@ -85,11 +85,13 @@ Description: Contact/lead rows linked to accounts.
 Columns:
 - `uuid`
 - `last_update_date`
+- `ps_unique_key`
 - `account_global_legal_name`
 - `center_name`
 - `prospect_full_name`, `prospect_first_name`, `prospect_last_name`
-- `prospect_title`, `prospect_department`, `prospect_level`
-- `prospect_linkedin_url`, `prospect_email`
+- `prospect_title`, `prospect_in_company_year`, `prospect_current_year`
+- `prospect_department`, `prospect_level`, `head_type`
+- `prospect_linkedin_url`, `prospect_other_source_url`, `prospect_email`
 - `prospect_city`, `prospect_state`, `prospect_country`
 
 ---

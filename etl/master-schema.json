@@ -1056,6 +1056,22 @@
       },
       {
         "Table": "prospects",
+        "Column": "prospect_in_company_year",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "prospects",
+        "Column": "prospect_current_year",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "prospects",
         "Column": "prospect_department",
         "Type": "TEXT",
         "Nullable": "YES",

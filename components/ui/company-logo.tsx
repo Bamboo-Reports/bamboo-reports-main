@@ -148,7 +148,7 @@ export function CompanyLogo({
         sizes={`${sizeConfig.img}px`}
         loading={priority ? "eager" : "lazy"}
         priority={priority}
-        onLoadingComplete={() => setImageLoaded(true)}
+        onLoad={() => setImageLoaded(true)}
         onError={() => {
           setImageError(true)
           setImageLoaded(false)
