@@ -88,7 +88,7 @@ function ProfileThemeSwitcher() {
   )
 }
 
-export const Header = React.memo(function Header({ onRefresh, onStartTour, onOpenSearch, onOpenExports, onOpenHistory }: HeaderProps): JSX.Element {
+export const Header = React.memo(function Header({ onRefresh, onStartTour, onOpenSearch, onOpenExports, onOpenHistory }: HeaderProps): React.JSX.Element {
   const environmentLabel = getEnvironmentLabel()
   const router = useRouter()
   const [profile, setProfile] = useState<Profile | null>(null)

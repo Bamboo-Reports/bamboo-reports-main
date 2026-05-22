@@ -47,7 +47,7 @@ import type { AccountVisibilityInfo } from "@/components/filters/account-autocom
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "br-dashboard-sidebar-collapsed"
 
-function DashboardContent(): JSX.Element | null {
+function DashboardContent(): React.JSX.Element | null {
   const accountsEnabled = isSectionEnabled("accounts")
   const centersEnabled = isSectionEnabled("centers")
   const prospectsEnabled = isSectionEnabled("prospects")

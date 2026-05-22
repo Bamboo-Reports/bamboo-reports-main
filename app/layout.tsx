@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { DM_Sans } from 'next/font/google'
 import './globals.css'
 import { ThemeProvider } from '@/components/theme-provider'
 import { AppProviders } from '@/app/providers'
@@ -8,6 +9,13 @@ import { MaintenancePage } from '@/components/maintenance-page'
 import { Toaster } from 'sonner'
 
 const isMaintenanceMode = process.env.NEXT_PUBLIC_MAINTENANCE_MODE === 'true'
+
+const dmSans = DM_Sans({
+  subsets: ['latin'],
+  display: 'swap',
+  style: ['normal', 'italic'],
+  variable: '--font-dm-sans',
+})
 
 export const metadata: Metadata = {
   title: 'Bamboo Reports - A Research NXT Product',
@@ -26,15 +34,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+    <html lang="en" className={dmSans.variable} suppressHydrationWarning>
       <body>
         <AppProviders>
           <ThemeProvider

@@ -4,6 +4,7 @@ import type { Account, Alias, Center, Function, Service, Tech, Prospect, LockedP
 import { getProspectsPerAccountLimit, isSectionEnabled } from "@/lib/config/dashboard-access"
 import { partitionProspectsByAccess } from "@/lib/dashboard/prospect-access"
 import { getSqlOrThrow, fetchWithRetry } from "@/lib/db/connection"
+import { createLogger } from "@/lib/logger"
 
 export type DashboardSummaryMetrics = {
   totalAccountsCount: number
@@ -31,6 +32,28 @@ const EMPTY_SUMMARY_METRICS: DashboardSummaryMetrics = {
   totalHeadcountFull: 0,
 }
 
+const logger = createLogger("actions/data")
+
+async function measureRows<T>(label: string, query: () => Promise<T[]>): Promise<T[]> {
+  const startedAt = Date.now()
+  try {
+    const rows = await fetchWithRetry(query)
+    logger.debug("query_succeeded", {
+      label,
+      row_count: rows.length,
+      duration_ms: Date.now() - startedAt,
+    })
+    return rows
+  } catch (error) {
+    logger.error("query_failed", {
+      label,
+      duration_ms: Date.now() - startedAt,
+      error,
+    })
+    throw error
+  }
+}
+
 // ============================================
 // BASIC DATA FETCHING FUNCTIONS
 // ============================================
@@ -38,11 +61,12 @@ const EMPTY_SUMMARY_METRICS: DashboardSummaryMetrics = {
 export async function getAccounts(): Promise<Account[]> {
   try {
     const sqlClient = getSqlOrThrow()
-    return (await fetchWithRetry(
+    return (await measureRows(
+      "accounts",
       () => sqlClient`SELECT * FROM accounts ORDER BY account_global_legal_name`
     )) as Account[]
   } catch (error) {
-    console.error("Error fetching accounts:", error)
+    logger.error("fetch_accounts_failed", { error })
     return []
   }
 }
@@ -50,9 +74,9 @@ export async function getAccounts(): Promise<Account[]> {
 export async function getCenters(): Promise<Center[]> {
   try {
     const sqlClient = getSqlOrThrow()
-    return (await fetchWithRetry(() => sqlClient`SELECT * FROM centers ORDER BY center_name`)) as Center[]
+    return (await measureRows("centers", () => sqlClient`SELECT * FROM centers ORDER BY center_name`)) as Center[]
   } catch (error) {
-    console.error("Error fetching centers:", error)
+    logger.error("fetch_centers_failed", { error })
     return []
   }
 }
@@ -60,9 +84,9 @@ export async function getCenters(): Promise<Center[]> {
 export async function getFunctions(): Promise<Function[]> {
   try {
     const sqlClient = getSqlOrThrow()
-    return (await fetchWithRetry(() => sqlClient`SELECT * FROM functions ORDER BY cn_unique_key`)) as Function[]
+    return (await measureRows("functions", () => sqlClient`SELECT * FROM functions ORDER BY cn_unique_key`)) as Function[]
   } catch (error) {
-    console.error("Error fetching functions:", error)
+    logger.error("fetch_functions_failed", { error })
     return []
   }
 }
@@ -70,9 +94,9 @@ export async function getFunctions(): Promise<Function[]> {
 export async function getServices(): Promise<Service[]> {
   try {
     const sqlClient = getSqlOrThrow()
-    return (await fetchWithRetry(() => sqlClient`SELECT * FROM services ORDER BY center_name`)) as Service[]
+    return (await measureRows("services", () => sqlClient`SELECT * FROM services ORDER BY center_name`)) as Service[]
   } catch (error) {
-    console.error("Error fetching services:", error)
+    logger.error("fetch_services_failed", { error })
     return []
   }
 }
@@ -80,11 +104,12 @@ export async function getServices(): Promise<Service[]> {
 export async function getTech(): Promise<Tech[]> {
   try {
     const sqlClient = getSqlOrThrow()
-    return (await fetchWithRetry(
+    return (await measureRows(
+      "tech",
       () => sqlClient`SELECT * FROM tech ORDER BY account_global_legal_name, software_category, software_in_use`
     )) as Tech[]
   } catch (error) {
-    console.error("Error fetching tech:", error)
+    logger.error("fetch_tech_failed", { error })
     return []
   }
 }
@@ -92,13 +117,14 @@ export async function getTech(): Promise<Tech[]> {
 export async function getAliases(): Promise<Alias[]> {
   try {
     const sqlClient = getSqlOrThrow()
-    return (await fetchWithRetry(
+    return (await measureRows(
+      "aliases",
       () => sqlClient`SELECT uuid, account_global_legal_name, short_legal_name, brand_name,
         abbreviated_name, flagship_products, currently_known_as, notes
         FROM alias`
     )) as Alias[]
   } catch (error) {
-    console.error("Error fetching aliases:", error)
+    logger.error("fetch_aliases_failed", { error })
     return []
   }
 }
@@ -106,11 +132,12 @@ export async function getAliases(): Promise<Alias[]> {
 export async function getProspects(): Promise<Prospect[]> {
   try {
     const sqlClient = getSqlOrThrow()
-    return (await fetchWithRetry(
+    return (await measureRows(
+      "prospects",
       () => sqlClient`SELECT * FROM prospects ORDER BY prospect_last_name, prospect_first_name`
     )) as Prospect[]
   } catch (error) {
-    console.error("Error fetching prospects:", error)
+    logger.error("fetch_prospects_failed", { error })
     return []
   }
 }
@@ -122,7 +149,8 @@ export async function getProspects(): Promise<Prospect[]> {
 async function getDashboardAccounts(): Promise<Account[]> {
   try {
     const sqlClient = getSqlOrThrow()
-    return (await fetchWithRetry(
+    return (await measureRows(
+      "dashboard_accounts",
       () => sqlClient`SELECT account_nasscom_status, account_nasscom_member_status, account_data_coverage,
         account_source, account_type, account_global_legal_name, account_hq_stock_ticker,
         account_hq_company_type, account_about, account_hq_key_offerings,
@@ -137,7 +165,7 @@ async function getDashboardAccounts(): Promise<Account[]> {
         FROM accounts ORDER BY account_global_legal_name`
     )) as Account[]
   } catch (error) {
-    console.error("Error fetching dashboard accounts:", error)
+    logger.error("fetch_dashboard_accounts_failed", { error })
     return []
   }
 }
@@ -145,7 +173,8 @@ async function getDashboardAccounts(): Promise<Account[]> {
 async function getDashboardCenters(): Promise<Center[]> {
   try {
     const sqlClient = getSqlOrThrow()
-    return (await fetchWithRetry(
+    return (await measureRows(
+      "dashboard_centers",
       () => sqlClient`SELECT account_global_legal_name, cn_unique_key, center_status, center_inc_year,
         announced_year, announced_month, center_end_year, center_name,
         center_management_partner, center_jv_status, center_jv_name,
@@ -157,7 +186,7 @@ async function getDashboardCenters(): Promise<Center[]> {
         FROM centers ORDER BY center_name`
     )) as Center[]
   } catch (error) {
-    console.error("Error fetching dashboard centers:", error)
+    logger.error("fetch_dashboard_centers_failed", { error })
     return []
   }
 }
@@ -165,11 +194,12 @@ async function getDashboardCenters(): Promise<Center[]> {
 async function getDashboardFunctions(): Promise<Function[]> {
   try {
     const sqlClient = getSqlOrThrow()
-    return (await fetchWithRetry(
+    return (await measureRows(
+      "dashboard_functions",
       () => sqlClient`SELECT cn_unique_key, function_name FROM functions ORDER BY cn_unique_key`
     )) as Function[]
   } catch (error) {
-    console.error("Error fetching dashboard functions:", error)
+    logger.error("fetch_dashboard_functions_failed", { error })
     return []
   }
 }
@@ -177,7 +207,8 @@ async function getDashboardFunctions(): Promise<Function[]> {
 async function getDashboardServices(): Promise<Service[]> {
   try {
     const sqlClient = getSqlOrThrow()
-    return (await fetchWithRetry(
+    return (await measureRows(
+      "dashboard_services",
       () => sqlClient`SELECT cn_unique_key, center_name, primary_service, focus_region,
         service_it, service_erd, service_fna, service_hr,
         service_procurement, service_sales_marketing, service_customer_support,
@@ -185,7 +216,7 @@ async function getDashboardServices(): Promise<Service[]> {
         FROM services ORDER BY center_name`
     )) as Service[]
   } catch (error) {
-    console.error("Error fetching dashboard services:", error)
+    logger.error("fetch_dashboard_services_failed", { error })
     return []
   }
 }
@@ -193,13 +224,14 @@ async function getDashboardServices(): Promise<Service[]> {
 async function getDashboardTech(): Promise<Tech[]> {
   try {
     const sqlClient = getSqlOrThrow()
-    return (await fetchWithRetry(
+    return (await measureRows(
+      "dashboard_tech",
       () => sqlClient`SELECT account_global_legal_name, cn_unique_key, software_in_use,
         software_vendor, software_category
         FROM tech ORDER BY account_global_legal_name, software_category, software_in_use`
     )) as Tech[]
   } catch (error) {
-    console.error("Error fetching dashboard tech:", error)
+    logger.error("fetch_dashboard_tech_failed", { error })
     return []
   }
 }
@@ -207,15 +239,18 @@ async function getDashboardTech(): Promise<Tech[]> {
 async function getDashboardProspects(): Promise<Prospect[]> {
   try {
     const sqlClient = getSqlOrThrow()
-    return (await fetchWithRetry(
-      () => sqlClient`SELECT account_global_legal_name, prospect_full_name, prospect_first_name,
-        prospect_last_name, prospect_title, head_type, prospect_department, prospect_level,
-        prospect_email, prospect_linkedin_url, prospect_city, prospect_state,
+    return (await measureRows(
+      "dashboard_prospects",
+      () => sqlClient`SELECT uuid, last_update_date, ps_unique_key, account_global_legal_name,
+        center_name, prospect_full_name, prospect_first_name, prospect_last_name,
+        prospect_title, prospect_in_company_year, prospect_current_year,
+        prospect_department, prospect_level, head_type, prospect_linkedin_url,
+        prospect_other_source_url, prospect_email, prospect_city, prospect_state,
         prospect_country
         FROM prospects ORDER BY prospect_last_name, prospect_first_name`
     )) as Prospect[]
   } catch (error) {
-    console.error("Error fetching dashboard prospects:", error)
+    logger.error("fetch_dashboard_prospects_failed", { error })
     return []
   }
 }
@@ -225,13 +260,13 @@ async function getDashboardSummaryMetrics(): Promise<DashboardSummaryMetrics> {
     const sqlClient = getSqlOrThrow()
 
     const [accountsCountRows, centersSummaryRows, prospectsCountRows] = await Promise.all([
-      fetchWithRetry(() => sqlClient`
+      measureRows("dashboard_summary_accounts", () => sqlClient`
         SELECT
           COUNT(*)::int AS total_full,
           COUNT(*) FILTER (WHERE account_visibility IS DISTINCT FROM 'exclude')::int AS total_visible
         FROM accounts
       `),
-      fetchWithRetry(() => sqlClient`
+      measureRows("dashboard_summary_centers", () => sqlClient`
         SELECT
           COUNT(*)::int AS total_centers_full,
           COUNT(*) FILTER (WHERE a.account_visibility IS DISTINCT FROM 'exclude')::int AS total_centers_visible,
@@ -242,7 +277,7 @@ async function getDashboardSummaryMetrics(): Promise<DashboardSummaryMetrics> {
         FROM centers c
         LEFT JOIN accounts a ON a.account_global_legal_name = c.account_global_legal_name
       `),
-      fetchWithRetry(() => sqlClient`
+      measureRows("dashboard_summary_prospects", () => sqlClient`
         SELECT
           COUNT(*)::int AS total_full,
           COUNT(*) FILTER (WHERE a.account_visibility IS DISTINCT FROM 'exclude')::int AS total_visible
@@ -275,7 +310,7 @@ async function getDashboardSummaryMetrics(): Promise<DashboardSummaryMetrics> {
       totalHeadcountFull: Number(centersSummary?.total_headcount_full ?? 0),
     }
   } catch (error) {
-    console.error("Error fetching dashboard summary metrics:", error)
+    logger.error("fetch_dashboard_summary_metrics_failed", { error })
     return { ...EMPTY_SUMMARY_METRICS }
   }
 }
@@ -298,10 +333,11 @@ export type AllDataResult = {
 }
 
 export async function getAllData(): Promise<AllDataResult> {
+  const startedAt = Date.now()
   try {
     // Check if DATABASE_URL is available
     if (!process.env.DATABASE_URL) {
-      console.error("DATABASE_URL environment variable is not set")
+      logger.error("database_url_missing")
       return {
         accounts: [],
         centers: [],
@@ -318,20 +354,21 @@ export async function getAllData(): Promise<AllDataResult> {
 
     // Ensure we can get the SQL client
     try {
-        getSqlOrThrow()
+      getSqlOrThrow()
     } catch {
-        console.error("Database connection not initialized")
-        return {
-          accounts: [],
-          centers: [],
-          functions: [],
-          services: [],
-          tech: [],
-          prospects: [],
-          lockedProspectTeasers: [],
-          summary: { ...EMPTY_SUMMARY_METRICS },
-          error: "Database connection failed",
-        }
+      logger.error("database_connection_unavailable")
+      return {
+        accounts: [],
+        centers: [],
+        functions: [],
+        services: [],
+        tech: [],
+        prospects: [],
+        aliases: [],
+        lockedProspectTeasers: [],
+        summary: { ...EMPTY_SUMMARY_METRICS },
+        error: "Database connection failed",
+      }
     }
 
     // Fetch all data in parallel with retry logic
@@ -364,6 +401,18 @@ export async function getAllData(): Promise<AllDataResult> {
     const totalHeadcountFull = centers.reduce((sum, c) => sum + (c.center_employees ?? 0), 0)
     const totalHeadcount = centers.reduce((sum, c) => sum + (isCenterVisible(c) ? (c.center_employees ?? 0) : 0), 0)
 
+    logger.info("all_data_loaded", {
+      duration_ms: Date.now() - startedAt,
+      accounts_count: accounts.length,
+      centers_count: centers.length,
+      functions_count: functions.length,
+      services_count: services.length,
+      tech_count: tech.length,
+      prospects_count: prospects.length,
+      aliases_count: aliases.length,
+      excluded_accounts_count: excludedAccountNames.size,
+    })
+
     return {
       accounts,
       centers,
@@ -388,7 +437,10 @@ export async function getAllData(): Promise<AllDataResult> {
       error: null,
     } satisfies AllDataResult
   } catch (error) {
-    console.error("Error fetching all data:", error)
+    logger.error("all_data_load_failed", {
+      duration_ms: Date.now() - startedAt,
+      error,
+    })
     return {
       accounts: [],
       centers: [],
@@ -396,6 +448,7 @@ export async function getAllData(): Promise<AllDataResult> {
       services: [],
       tech: [],
       prospects: [],
+      aliases: [],
       lockedProspectTeasers: [],
       summary: { ...EMPTY_SUMMARY_METRICS },
       error: error instanceof Error ? error.message : "Unknown database error",
@@ -408,8 +461,10 @@ export async function getAllData(): Promise<AllDataResult> {
  * Used by the /api/dashboard route. Exports use getAllData() for full columns.
  */
 export async function getDashboardData(): Promise<AllDataResult> {
+  const startedAt = Date.now()
   try {
     if (!process.env.DATABASE_URL) {
+      logger.error("dashboard_database_url_missing")
       return {
         accounts: [],
         centers: [],
@@ -427,6 +482,7 @@ export async function getDashboardData(): Promise<AllDataResult> {
     try {
       getSqlOrThrow()
     } catch {
+      logger.error("dashboard_database_connection_unavailable")
       return {
         accounts: [],
         centers: [],
@@ -459,6 +515,23 @@ export async function getDashboardData(): Promise<AllDataResult> {
 
     const { visibleProspects, lockedProspectTeasers } = partitionProspectsByAccess(rawProspects, prospectsPerAccountLimit)
 
+    logger.info("dashboard_data_loaded", {
+      duration_ms: Date.now() - startedAt,
+      accounts_enabled: accountsEnabled,
+      centers_enabled: centersEnabled,
+      prospects_enabled: prospectsEnabled,
+      prospects_per_account_limit: prospectsPerAccountLimit,
+      accounts_count: accounts.length,
+      centers_count: centers.length,
+      functions_count: functions.length,
+      services_count: services.length,
+      tech_count: tech.length,
+      raw_prospects_count: rawProspects.length,
+      visible_prospects_count: visibleProspects.length,
+      locked_prospect_teasers_count: lockedProspectTeasers.length,
+      aliases_count: aliases.length,
+    })
+
     return {
       accounts,
       centers,
@@ -472,7 +545,10 @@ export async function getDashboardData(): Promise<AllDataResult> {
       error: null,
     } satisfies AllDataResult
   } catch (error) {
-    console.error("Error fetching dashboard data:", error)
+    logger.error("dashboard_data_load_failed", {
+      duration_ms: Date.now() - startedAt,
+      error,
+    })
     return {
       accounts: [], centers: [], functions: [], services: [], tech: [], prospects: [], aliases: [], lockedProspectTeasers: [],
       summary: { ...EMPTY_SUMMARY_METRICS },
@@ -509,9 +585,14 @@ export async function getFilteredAccounts(filters: {
     query = sqlClient`${query} ORDER BY account_global_legal_name`
 
     const results = (await fetchWithRetry(() => query)) as Account[]
+    logger.info("filtered_accounts_loaded", {
+      row_count: results.length,
+      countries_count: filters.countries?.length ?? 0,
+      industries_count: filters.industries?.length ?? 0,
+    })
     return { success: true, data: results }
   } catch (error) {
-    console.error("Error fetching filtered accounts:", error)
+    logger.error("filtered_accounts_load_failed", { error })
     return { success: false, error: error instanceof Error ? error.message : "Unknown error", data: [] }
   }
 }
@@ -525,7 +606,7 @@ export async function loadData(_filters: unknown): Promise<{ success: boolean; d
     const data = await getAllData()
     return { success: true, data }
   } catch (error) {
-    console.error("Error in loadData:", error)
+    logger.error("legacy_load_data_failed", { error })
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" }
   }
 }
@@ -536,7 +617,7 @@ export async function exportToExcel(data: unknown[]): Promise<{ success: boolean
     // The actual Excel generation happens on the client side with the exceljs library
     return { success: true, downloadUrl: "#" }
   } catch (error) {
-    console.error("Error in exportToExcel:", error)
+    logger.error("legacy_export_to_excel_failed", { error })
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" }
   }
 }

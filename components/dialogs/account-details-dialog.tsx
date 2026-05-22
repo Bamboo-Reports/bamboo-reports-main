@@ -4,6 +4,7 @@ import React from "react"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -73,6 +74,9 @@ export function AccountDetailsDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[85vw] max-h-[90vh] overflow-y-auto glassmorphism-dialog">
         <DialogHeader>
+          <DialogDescription className="sr-only">
+            Account profile details, headquarters, revenue, headcount, rankings, and India GCC information.
+          </DialogDescription>
           <DialogTitle className="text-2xl font-bold flex items-center gap-3">
             <CompanyLogo
               domain={account.account_hq_website ?? undefined}

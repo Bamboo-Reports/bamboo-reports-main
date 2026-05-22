@@ -81,13 +81,15 @@ export function buildSearchIndex(
     const title = p.prospect_title ?? ""
     const headType = p.head_type ?? ""
     const account = p.account_global_legal_name
+    const center = p.center_name ?? ""
     const email = p.prospect_email ?? ""
+    const uniqueKey = p.ps_unique_key ?? ""
 
     return {
-      searchText: [fullName, title, headType, account, email].join(" ").toLowerCase(),
+      searchText: [fullName, title, headType, account, center, email, uniqueKey].join(" ").toLowerCase(),
       result: {
         type: "prospect" as const,
-        id: `${account}::${fullName}`,
+        id: uniqueKey || `${account}::${fullName}`,
         title: fullName || "Unknown",
         subtitle: [title, account].filter(Boolean).join(" · "),
         meta: "",

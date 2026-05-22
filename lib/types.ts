@@ -133,16 +133,20 @@ export interface Tech {
 export interface Prospect {
   uuid?: string | null
   last_update_date?: string | null
+  ps_unique_key?: string | null
   account_global_legal_name: string
   center_name: string | null
   prospect_full_name?: string | null
   prospect_first_name: string | null
   prospect_last_name: string | null
   prospect_title: string | null
+  prospect_in_company_year?: string | null
+  prospect_current_year?: string | null
   head_type?: string | null
   prospect_department: string | null
   prospect_level: string | null
   prospect_linkedin_url: string | null
+  prospect_other_source_url?: string | null
   prospect_email: string | null
   prospect_city: string | null
   prospect_state: string | null

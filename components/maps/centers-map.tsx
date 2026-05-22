@@ -5,6 +5,7 @@ import { Map as MapGL, Source, Layer, NavigationControl, FullscreenControl } fro
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { getMaptilerStyleUrl } from "@/lib/config/maptiler"
+import { createLogger } from "@/lib/logger"
 import type { Center } from "@/lib/types"
 import "maplibre-gl/dist/maplibre-gl.css"
 
@@ -52,6 +53,7 @@ interface CityFeatureCollection {
 
 const HALO_RADIUS_SCALE = 1.5
 const OVERLAP_PADDING = 0.5
+const logger = createLogger("components/CentersMap")
 
 export function CentersMap({ centers, heightClass = "h-[750px]", showAccountsCount = true }: CentersMapProps) {
   const [hoveredCity, setHoveredCity] = useState<string | null>(null)
@@ -70,9 +72,10 @@ export function CentersMap({ centers, heightClass = "h-[750px]", showAccountsCou
 
   useEffect(() => {
     setIsClient(true)
-    console.log("[CentersMap] Component mounted")
-    console.log("[CentersMap] Centers count:", centers?.length)
-    console.log("[CentersMap] MapTiler key exists:", !!process.env.NEXT_PUBLIC_MAPTILER_KEY)
+    logger.debug("mounted", {
+      centers_count: centers?.length,
+      has_maptiler_key: Boolean(process.env.NEXT_PUBLIC_MAPTILER_KEY),
+    })
   }, [centers])
 
   useLayoutEffect(() => {
@@ -158,7 +161,7 @@ export function CentersMap({ centers, heightClass = "h-[750px]", showAccountsCou
   // Aggregate centers by city and calculate cluster data
   const cityData = useMemo(() => {
     try {
-      console.log("[CentersMap] Calculating city data...")
+      logger.debug("city_data_calculation_started", { centers_count: centers.length })
       const cityMap = new Map<string, CityCluster>()
 
       centers.forEach((center) => {
@@ -199,10 +202,10 @@ export function CentersMap({ centers, heightClass = "h-[750px]", showAccountsCou
       })
 
       const result = Array.from(cityMap.values())
-      console.log("[CentersMap] City data calculated:", result.length, "cities")
+      logger.debug("city_data_calculated", { cities_count: result.length })
       return result
     } catch (err) {
-      console.error("[CentersMap] Error calculating city data:", err)
+      logger.error("city_data_calculation_failed", { error: err })
       setError(err instanceof Error ? err.message : "Error calculating city data")
       return []
     }
@@ -395,7 +398,7 @@ export function CentersMap({ centers, heightClass = "h-[750px]", showAccountsCou
   }
 
   if (!maptilerKey) {
-    console.error("[CentersMap] MapTiler key is missing")
+    logger.warn("maptiler_key_missing")
     return (
       <div className={`flex items-center justify-center ${heightClass} bg-muted rounded-lg`}>
         <div className="text-center">
@@ -411,7 +414,7 @@ export function CentersMap({ centers, heightClass = "h-[750px]", showAccountsCou
   }
 
   if (cityData.length === 0) {
-    console.warn("[CentersMap] No city data with coordinates")
+    logger.warn("city_coordinate_data_missing", { centers_count: centers.length })
     return (
       <div className={`flex items-center justify-center ${heightClass} bg-muted rounded-lg`}>
         <div className="text-center">
@@ -424,7 +427,7 @@ export function CentersMap({ centers, heightClass = "h-[750px]", showAccountsCou
     )
   }
 
-  console.log("[CentersMap] Rendering map with", cityData.length, "cities")
+  logger.debug("rendering_map", { cities_count: cityData.length })
 
   try {
     const handleMapMoveTracked = (event: any) => {
@@ -496,7 +499,7 @@ export function CentersMap({ centers, heightClass = "h-[750px]", showAccountsCou
           setMousePosition(null)
         }}
         onError={(e) => {
-          console.error("[CentersMap] Map error:", e)
+          logger.error("map_runtime_error", { error: e.error ?? e })
           setError(`Map error: ${e.error?.message || "Unknown error"}`)
           captureEvent(ANALYTICS_EVENTS.MAP_ERROR_SHOWN, {
             map_kind: "city",
@@ -618,7 +621,7 @@ export function CentersMap({ centers, heightClass = "h-[750px]", showAccountsCou
     </div>
     )
   } catch (err) {
-    console.error("[CentersMap] Render error:", err)
+    logger.error("render_failed", { error: err })
     return (
       <div className={`flex items-center justify-center ${heightClass} bg-muted rounded-lg`}>
         <div className="text-center">
