@@ -43,6 +43,7 @@ import { formatRevenueInMillions } from "@/lib/utils/helpers"
 import type { SearchResult } from "@/lib/search"
 import type { RecentItem } from "@/hooks/use-recent-items"
 import type { Account, Center, Prospect } from "@/lib/types"
+import type { AccountVisibilityInfo } from "@/components/filters/account-autocomplete"
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "br-dashboard-sidebar-collapsed"
 
@@ -118,6 +119,19 @@ function DashboardContent(): JSX.Element | null {
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const canExport = canExportData(userRole)
+  const accountVisibilityByName = useMemo<Record<string, AccountVisibilityInfo>>(
+    () =>
+      Object.fromEntries(
+        accounts.map((account) => [
+          account.account_global_legal_name,
+          {
+            visibility: account.account_visibility,
+            note: account.account_visibility_note,
+          },
+        ])
+      ),
+    [accounts]
+  )
 
   // Global search state
   const { setTheme, resolvedTheme } = useTheme()
@@ -829,6 +843,7 @@ function DashboardContent(): JSX.Element | null {
             yearsInIndiaRange={yearsInIndiaRange}
             centerIncYearRange={centerIncYearRange}
             accountNames={accountNames}
+            accountVisibilityByName={accountVisibilityByName}
             aliases={aliases}
             setPendingFilters={setPendingFilters}
             resetFilters={resetFilters}

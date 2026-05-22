@@ -23,6 +23,7 @@ import {
 import { getEnabledSections } from "@/lib/config/dashboard-access"
 import type { GroupedResults, SearchResult, SearchResultType } from "@/lib/search"
 import type { RecentItem } from "@/hooks/use-recent-items"
+import type { Account } from "@/lib/types"
 
 interface GlobalSearchProps {
   open: boolean
@@ -67,6 +68,8 @@ function formatTimeAgo(timestamp: number): string {
 }
 
 function SearchResultRow({ result }: { result: SearchResult }) {
+  const account = result.type === "account" ? (result.data as Account) : null
+
   return (
     <div className="flex items-start gap-3 w-full">
       <div className="mt-0.5">{typeIcons[result.type]}</div>
@@ -77,6 +80,14 @@ function SearchResultRow({ result }: { result: SearchResult }) {
         {result.matchedAlias && (
           <p className="mt-0.5 truncate text-xs text-muted-foreground leading-tight">
             Known as: {result.matchedAlias.value}
+          </p>
+        )}
+        {account?.account_visibility === "exclude" && (
+          <p
+            className="mt-0.5 truncate text-xs font-medium leading-tight text-amber-700 dark:text-amber-300"
+            title="NON-GCC"
+          >
+            NON-GCC
           </p>
         )}
         {result.subtitle && (

@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Slider } from "@/components/ui/slider"
 import { Button } from "@/components/ui/button"
 import { EnhancedMultiSelect } from "@/components/enhanced-multi-select"
-import { AccountAutocomplete } from "@/components/filters/account-autocomplete"
+import { AccountAutocomplete, type AccountVisibilityInfo } from "@/components/filters/account-autocomplete"
 import { TitleKeywordInput } from "@/components/filters/title-keyword-input"
 import { getPremiumFilterKeys, isFilterEnabled, isShowMoreEnabled } from "@/lib/config/filters"
 import type { Alias, Filters, AvailableOptions } from "@/lib/types"
@@ -23,6 +23,7 @@ interface FilterSectionBaseProps {
 
 interface AccountFilterSectionProps extends FilterSectionBaseProps {
   accountNames: string[]
+  accountVisibilityByName?: Record<string, AccountVisibilityInfo>
   aliases?: Alias[]
   revenueRange: { min: number; max: number }
   yearsInIndiaRange: { min: number; max: number }
@@ -68,6 +69,7 @@ export function AccountFiltersSection({
   setPendingFilters,
   setActiveFilter,
   accountNames,
+  accountVisibilityByName,
   aliases,
   revenueRange,
   yearsInIndiaRange,
@@ -97,6 +99,7 @@ export function AccountFiltersSection({
             <Label className="text-xs font-medium">Account Name</Label>
             <AccountAutocomplete
               accountNames={accountNames}
+              accountVisibilityByName={accountVisibilityByName}
               aliases={aliases}
               selectedAccounts={pendingFilters.accountGlobalLegalNameKeywords}
               onChange={(keywords) => setPendingFilters((prev) => ({ ...prev, accountGlobalLegalNameKeywords: keywords }))}

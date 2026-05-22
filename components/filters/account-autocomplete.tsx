@@ -4,7 +4,6 @@ import React, { useState, useEffect, useMemo, useRef, useCallback, useId } from 
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { X, Plus, Minus } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { captureEvent } from "@/lib/analytics/client"
@@ -25,11 +24,18 @@ interface AccountAutocompleteProps {
   placeholder?: string
   trackingKey?: string
   aliases?: Alias[]
+  accountVisibilityByName?: Record<string, AccountVisibilityInfo>
 }
 
 interface AccountSuggestion {
   name: string
   matchedAlias: AliasMatch | null
+  visibility: AccountVisibilityInfo | null
+}
+
+export interface AccountVisibilityInfo {
+  visibility?: "include" | "exclude" | null
+  note?: string | null
 }
 
 export function AccountAutocomplete({
@@ -39,6 +45,7 @@ export function AccountAutocomplete({
   placeholder = "Type to search account names...",
   trackingKey,
   aliases,
+  accountVisibilityByName,
 }: AccountAutocompleteProps) {
   const [inputValue, setInputValue] = useState("")
   const [debouncedValue, setDebouncedValue] = useState("")
@@ -80,21 +87,22 @@ export function AccountAutocomplete({
     for (const name of uniqueAccountNames) {
       const lowerName = name.toLowerCase()
       if (alreadySelected.has(lowerName)) continue
+      const visibility = accountVisibilityByName?.[name] ?? null
 
       if (lowerName.startsWith(searchTerm)) {
-        startsWithMatches.push({ name, matchedAlias: null })
+        startsWithMatches.push({ name, matchedAlias: null, visibility })
       } else if (lowerName.includes(searchTerm)) {
-        containsMatches.push({ name, matchedAlias: null })
+        containsMatches.push({ name, matchedAlias: null, visibility })
       } else {
         const matched = findAliasMatch(aliasMap.get(lowerName), searchTerm)
         if (matched) {
-          aliasMatches.push({ name, matchedAlias: matched })
+          aliasMatches.push({ name, matchedAlias: matched, visibility })
         }
       }
     }
 
     return [...startsWithMatches, ...containsMatches, ...aliasMatches].slice(0, 50)
-  }, [debouncedValue, uniqueAccountNames, selectedAccounts, aliasMap])
+  }, [debouncedValue, uniqueAccountNames, selectedAccounts, aliasMap, accountVisibilityByName])
   const isSuggestionsOpen = isOpen && suggestions.length > 0
   const listboxId = `${comboboxId}-listbox`
   const activeOptionId =
@@ -342,12 +350,12 @@ export function AccountAutocomplete({
         {isSuggestionsOpen && (
           <div
             ref={dropdownRef}
-            className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg"
+            className="relative z-50 w-full mt-1 bg-popover border rounded-md shadow-lg"
             role="listbox"
             id={listboxId}
             aria-label="Account suggestions"
           >
-            <ScrollArea className="h-auto max-h-[300px]">
+            <div className="max-h-[300px] overflow-y-auto">
               <div className="p-1">
                 {suggestions.map((suggestion, index) => (
                   <div
@@ -373,6 +381,14 @@ export function AccountAutocomplete({
                       {suggestion.matchedAlias && (
                         <span className="mt-0.5 block text-xs text-muted-foreground">
                           Known as: {highlightMatch(suggestion.matchedAlias.value, debouncedValue)}
+                        </span>
+                      )}
+                      {suggestion.visibility?.visibility === "exclude" && (
+                        <span
+                          className="mt-0.5 block truncate text-xs font-medium text-amber-700 dark:text-amber-300"
+                          title="NON-GCC"
+                        >
+                          NON-GCC
                         </span>
                       )}
                     </span>
@@ -409,7 +425,7 @@ export function AccountAutocomplete({
                   </div>
                 ))}
               </div>
-            </ScrollArea>
+            </div>
 
             {/* Results count indicator */}
             {suggestions.length === 50 && (
