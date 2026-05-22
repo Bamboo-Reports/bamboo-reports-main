@@ -2,7 +2,7 @@
 
 A complete reference mapping every user-facing label in the application to its source database column. This document covers filters, data tables, detail dialogs, charts, and summary cards.
 
-> **Last Updated:** March 2026
+> **Last Updated:** May 2026
 > **Audience:** Frontend developers, backend engineers, data engineers, QA testers
 
 ---
@@ -255,7 +255,7 @@ This is a tabbed dialog with three tabs: **Account Info**, **Centers**, and **Pr
 | Exchange | `financialData.exchange` | Yahoo Finance API |
 | Market Cap | `financialData.marketCap` | Yahoo Finance API |
 | Net Profit | `financialData.netProfit` | Yahoo Finance API |
-| Annual Revenue (FY) chart | `financialData.annualRevenueSeries` | Array of `{ label, revenue }` — bar chart |
+| Annual Revenue (FY) chart | `financialData.annualRevenueSeries` | Array of `{ label, revenue }`, rendered as a Recharts area chart |
 
 **Rankings & Recognition Section:**
 
@@ -435,19 +435,14 @@ Pie charts are rendered using Highcharts as donut charts (inner radius 65%). Seg
 
 #### Account Charts
 
-These charts use the `calculateChartData(accounts, field)` helper which counts occurrences of each unique value in the specified column and returns the top 10 entries.
+The Accounts tab renders four account pie charts, built by `getAccountChartData` in `lib/dashboard/charts.ts`. Each uses the `calculateChartData(accounts, field)` helper, which counts occurrences of each unique value in the specified column.
 
 | Chart Title | Database Column | Table | Aggregation |
 |-------------|----------------|-------|-------------|
-| Region | `account_hq_region` | `accounts` | Count of accounts per region |
-| Country | `account_hq_country` | `accounts` | Count of accounts per country |
-| Industry | `account_hq_industry` | `accounts` | Count of accounts per industry |
-| Segment | `account_primary_nature` | `accounts` | Count of accounts per segment |
-| Category | `account_primary_category` | `accounts` | Count of accounts per category |
+| Country | `account_hq_country` | `accounts` | Count of accounts per HQ country |
+| Industry | `account_primary_category` | `accounts` | Count of accounts per primary category |
 | Revenue Range | `account_hq_revenue_range` | `accounts` | Count of accounts per revenue bucket |
-| HQ Employee Range | `account_hq_employee_range` | `accounts` | Count of accounts per employee bucket |
 | GCC Aggregate Headcount (India) | `account_center_employees_range` | `accounts` | Count of accounts per headcount bucket |
-| NASSCOM GCC Listing Status | `account_nasscom_status` | `accounts` | Count of accounts per status |
 
 #### Center Charts
 

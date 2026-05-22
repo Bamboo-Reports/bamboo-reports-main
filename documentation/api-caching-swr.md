@@ -1,6 +1,6 @@
 # API Caching with Stale-While-Revalidate (SWR)
 
-> **Last Updated:** April 2026
+> **Last Updated:** May 2026
 > **Audience:** Engineering team
 
 ---
@@ -15,8 +15,8 @@ The `/api/dashboard` route uses an **in-memory SWR (Stale-While-Revalidate) cach
 
 ```
 First request     →  DB query (6 tables) → gzip → cache → respond     [MISS]
-Within 5 minutes  →  serve cached response immediately                 [HIT]
-After 5 minutes   →  serve stale cache → revalidate DB in background   [STALE]
+Within the TTL    →  serve cached response immediately                 [HIT]
+After the TTL     →  serve stale cache → revalidate DB in background   [STALE]
 Refresh button    →  POST invalidates cache → fresh DB fetch           [MISS]
 ```
 
@@ -34,7 +34,7 @@ Refresh button    →  POST invalidates cache → fresh DB fetch           [MISS
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DASHBOARD_CACHE_TTL_MS` | `300000` (5 min) | Time-to-live for cached data in milliseconds |
+| `DASHBOARD_CACHE_TTL_MS` | `3600000` (1 hour) | Time-to-live for cached data in milliseconds |
 
 Set in `.env.local` to customize:
 
@@ -77,8 +77,8 @@ All cache operations are logged with the `[Cache]` prefix:
 ```
 [Cache] MISS — fetching from database
 [Cache] Populated: DB 2341ms, gzip 89ms, raw 4.2MB, compressed 0.8MB
-[Cache] HIT (age: 23s, TTL: 300s) — 1ms
-[Cache] STALE (age: 312s, TTL: 300s) — 0ms
+[Cache] HIT (age: 23s, TTL: 3600s) — 1ms
+[Cache] STALE (age: 3725s, TTL: 3600s) — 0ms
 [Cache] Stale — revalidating in background
 [Cache] Invalidated via POST
 [Cache] Background revalidation failed: <error>

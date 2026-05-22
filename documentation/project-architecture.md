@@ -44,7 +44,9 @@ Component Mount / User Action
 -   **`page.tsx`**: Main dashboard entry point and UI orchestrator. Wires auth, data loading, filtering hooks, and layout composition.
 -   **`providers.tsx`**: Application-level providers (PostHog analytics).
 -   **`(auth)/`**: Auth route group containing `signin/` and `signup/` pages.
--   **Rule:** Database access is isolated to `app/actions/*` and `lib/db/connection.ts`. Components should never import DB drivers directly.
+-   **`api/dashboard/`**: Route Handler that serves the full dashboard dataset with an in-memory SWR cache and gzip compression (see `documentation/api-caching-swr.md`).
+-   **`api/exports/`**: Route Handlers for generating, listing, and re-downloading user exports.
+-   **Rule:** Database access is isolated to `app/actions/*`, `app/api/*`, and `lib/db/connection.ts`. Components should never import DB drivers directly.
 
 ### 2.2 `components/` (UI Composition)
 
@@ -54,13 +56,18 @@ Organized by feature domain:
 |-----------|---------------|
 | `auth/` | Sign-in and sign-up form components |
 | `cards/` | Card component variants |
-| `charts/` | Recharts pie/donut charts, Highcharts treemaps |
+| `charts/` | Highcharts donut charts and the Technology treemap (the Recharts revenue area chart lives in `dialogs/`) |
 | `dashboard/` | Summary cards with filtered vs. total counts |
 | `dialogs/` | Tabbed detail views for Accounts, Centers, Prospects |
 | `export/` | Excel export workflow and dialog |
+| `exports/` | "My exports" dialog for re-downloading archived exports |
 | `filters/` | Sidebar filter UI, multi-select controls, keyword inputs |
+| `history/` | Recently viewed history dialog |
 | `layout/` | Header and Footer components |
 | `maps/` | MapLibre cluster map and state choropleth map |
+| `notifications/` | Notification bell dropdown |
+| `prospects/` | Locked prospect teaser cards for capped deployments |
+| `search/` | Global search with alias-aware account matching |
 | `states/` | Loading and error state fallback components |
 | `tables/` | Data grid row components (AccountRow, CenterRow, etc.) |
 | `tabs/` | Tab views (Accounts, Centers, Prospects, Services) |
@@ -77,12 +84,14 @@ Key components:
 |------|---------------|
 | `use-auth-guard.ts` | Redirects unauthenticated users to sign-in |
 | `use-dashboard-data.ts` | Orchestrates data fetching and loading state |
-| `use-dashboard-filters.ts` | Complex filter state management (the largest hook — manages all filter logic, include/exclude modes, range sliders, keyword search) |
+| `use-dashboard-filters.ts` | Complex filter state management (the largest hook, manages all filter logic, include/exclude modes, range sliders, keyword search) |
+| `use-global-search.ts` | Alias-aware global account search state |
 | `use-notifications.ts` | Notification state, unread counts, and read tracking |
+| `use-product-tour.ts` | Guided product tour orchestration (driver.js) |
 | `use-range-filter.ts` | Reusable range slider logic with logarithmic scaling |
-| `use-recently-updated-accounts.ts` | Tracks recently changed account records |
-| `use-recently-updated-table-records.ts` | Tracks recently changed records across all tables |
+| `use-recent-items.ts` | Tracks recently viewed records for the History dialog |
 | `use-saved-filters.ts` | Saved filter CRUD with Supabase |
+| `use-table-column-preferences.ts` | Per-user table column visibility preferences |
 
 ### 2.4 `lib/` (Utilities & Configuration)
 
@@ -93,9 +102,14 @@ Key components:
 | `config/` | Environment label, dashboard access, premium filter reveal, MapTiler configuration, notification settings |
 | `dashboard/` | Dashboard-specific data transformation utilities |
 | `db/` | Neon PostgreSQL connection client with retry logic |
+| `exports/` | Export request client and server-side ExcelJS workbook builder |
 | `finance/` | Financial data transformation utilities |
+| `notifications/` | Notification message formatting helpers |
+| `request/` | Request metadata helpers (client IP, user-agent) for the export audit log |
+| `search/` | Account search index and alias matching (`alias-utils.ts`, `index.ts`) |
 | `supabase/` | Supabase client factory (singleton) |
-| `utils/` | General helpers — chart data transformers, export helpers, filter logic, formatters |
+| `tour/` | Guided product tour steps and configuration |
+| `utils/` | General helpers (chart data transformers, export helpers, filter logic, formatters) |
 | `validators/` | Zod schemas for runtime validation |
 | `types.ts` | Shared TypeScript interfaces (Account, Center, Service, Function, Tech, Prospect, Filters) |
 
@@ -156,11 +170,11 @@ const results = await fetchWithRetry(() => sql`
 -   **Safety:** Parameterized queries prevent SQL injection.
 -   **Performance:** `Promise.all` in `getAllData` fetches Accounts, Centers, and Prospects concurrently.
 -   **Retry Logic:** 3 retries with exponential backoff (1s, 2s, 4s) via `fetchWithRetry` in `lib/db/connection.ts`.
--   **Caching:** No custom in-memory cache. Server actions always fetch fresh data (`no-store`).
+-   **Caching:** Server Actions themselves keep no cross-request cache and fetch fresh data. The `GET /api/dashboard` Route Handler layers an in-memory stale-while-revalidate cache (default 1-hour TTL, configurable via `DASHBOARD_CACHE_TTL_MS`) over the dashboard query. See `documentation/api-caching-swr.md`.
 
 ### 4.2 Supabase PostgreSQL (User Data)
 
--   **Tables:** `public.profiles`, `public.saved_filters`
+-   **Tables:** `public.profiles`, `public.saved_filters`, `public.user_exports` (export audit log).
 -   **Security:** Row-Level Security (RLS) policies ensure users can only access their own data.
 -   **Client:** Singleton Supabase client in `lib/supabase/client.ts`.
 
@@ -174,6 +188,12 @@ Two columns on `accounts` control whether an account is included by default in d
 **Visibility filter behavior:** the Account Attributes sidebar includes `Account Visibility` with `ALL`, `GCCs`, and `NON-GCCs`. `GCCs` is the default and includes accounts where `account_visibility = 'include'`; `NON-GCCs` includes `account_visibility = 'exclude'`; `ALL` includes both. The selected visibility mode constrains `filteredAccounts` / `filteredCenters` / `filteredProspects`, so tables, charts, exports, and summary card numerators stay aligned. The summary card denominators always show the full universe (e.g., 2657 accounts) so the user can see "2349 visible / 2657 total". Explicit account-name search bypasses the visibility mode so a searched account can be found directly. This is implemented in `lib/dashboard/filtering.ts` (`getFilteredData`) and `app/page.tsx` (summary card props use the `*Full` totals from `DashboardSummaryMetrics`).
 
 **Server-side totals:** `getDashboardSummaryMetrics` in `app/actions/data.ts` returns BOTH a visible universe (`totalAccountsCount`, etc.) and a full universe (`totalAccountsCountFull`, etc.) for accounts, centers, upcoming centers, prospects, and headcount. Centers and prospects join `accounts` on `account_global_legal_name` to compute the visible variants.
+
+### 4.4 Account Aliases (`alias` table)
+
+The `public.alias` table stores alternate names for each account (short legal name, brand name, abbreviation, flagship products, "currently known as"), linked to `accounts` by a foreign key on `account_global_legal_name` with `ON UPDATE`/`ON DELETE CASCADE`.
+
+Alias rows power alias-aware account search: the global search (`components/search/global-search.tsx`) and the account filter autocomplete (`components/filters/account-autocomplete.tsx`) match a query against both account names and alias values, so searching for an alternate name (for example "HMH" or "HackerRank") resolves to the underlying account. Matches found through an alias surface a "Known as: <alias>" hint so the result is not confusing. Matching logic lives in `lib/search/alias-utils.ts` and `lib/search/index.ts`; the alias dataset is loaded alongside dashboard data in `app/actions/data.ts`. The migration is `documentation/sql/alias-table-migration.sql`.
 
 ---
 
@@ -214,7 +234,7 @@ app/layout.tsx (Root Layout)
     └── app/page.tsx (Dashboard)
         └── DashboardContent
             ├── Header
-            │   └── ThemeToggle, NotificationBell, UserMenu
+            │   └── GlobalSearch, ThemeToggle, NotificationBell, UserMenu
             ├── FiltersSidebar
             │   ├── FilterSections
             │   │   ├── EnhancedMultiSelect (per filter group)
