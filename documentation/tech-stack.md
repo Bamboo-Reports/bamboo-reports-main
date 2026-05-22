@@ -32,7 +32,7 @@ A comprehensive breakdown of every technology used in the Bamboo Reports project
 
 | Category | Technologies |
 |----------|-------------|
-| **Frontend** | Next.js 14, React 18, TypeScript 5, Tailwind CSS |
+| **Frontend** | Next.js 16, React 19, TypeScript 5, Tailwind CSS |
 | **Component Library** | shadcn/ui (built on Radix UI primitives) |
 | **Charts** | Recharts, Highcharts |
 | **Maps** | MapLibre GL, MapTiler |
@@ -48,23 +48,23 @@ A comprehensive breakdown of every technology used in the Bamboo Reports project
 
 These are the foundational technologies that the entire application is built on.
 
-### Next.js 14.2
+### Next.js 16.2
 
 | | |
 |---|---|
 | **What it is** | A React framework for building full-stack web applications |
-| **Version** | 14.2.x |
+| **Version** | 16.2.x |
 | **Why we use it** | Provides the App Router for file-based routing, Server Actions for secure server-side data fetching without a separate API layer, server-side rendering (SSR) for initial page loads, and automatic code splitting for performance |
-| **Key features used** | App Router, Server Actions, Server Components, file-based routing |
+| **Key features used** | App Router, Server Actions, Server Components, file-based routing, Turbopack |
 | **Package** | `next` |
 
-### React 18.2
+### React 19.2
 
 | | |
 |---|---|
 | **What it is** | A JavaScript library for building user interfaces |
-| **Version** | 18.2.x |
-| **Why we use it** | Industry-standard UI library with a rich ecosystem. React 18 brings concurrent rendering features and automatic batching for better performance |
+| **Version** | 19.2.x |
+| **Why we use it** | Industry-standard UI library with a rich ecosystem. React 19 brings improved Server Components support, the new Actions APIs, and concurrent rendering for better performance |
 | **Key features used** | Hooks (`useState`, `useMemo`, `useCallback`, `useEffect`), `React.memo` for performance optimization, custom hooks pattern |
 | **Package** | `react`, `react-dom` |
 
@@ -364,11 +364,11 @@ Tools used during development but not shipped to production.
 | Tool | Version | Purpose |
 |------|---------|---------|
 | **ESLint** | 9.39.2 | JavaScript/TypeScript linting for code quality |
-| **eslint-config-next** | 16.1.5 | Next.js-specific ESLint rules (accessibility, best practices) |
+| **eslint-config-next** | 16.2.6 | Next.js-specific ESLint rules (accessibility, best practices) |
 | **PostCSS** | 8.5 | CSS processing pipeline (required by Tailwind CSS) |
 | **@types/node** | 22 | TypeScript definitions for Node.js APIs |
-| **@types/react** | 18 | TypeScript definitions for React |
-| **@types/react-dom** | 18 | TypeScript definitions for React DOM |
+| **@types/react** | 19 | TypeScript definitions for React |
+| **@types/react-dom** | 19 | TypeScript definitions for React DOM |
 | **baseline-browser-mapping** | 2.9.18 | Browser compatibility baseline checks |
 
 ---

@@ -3,11 +3,11 @@
 A modern Business Intelligence dashboard built with Next.js App Router, React, and TypeScript. The app delivers account, center, service, and prospect intelligence through rich filtering, data visualization, geospatial analytics, and export workflows.
 
 [![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com)
-[![Next.js](https://img.shields.io/badge/Next.js-14.2-000000?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
-[![React](https://img.shields.io/badge/React-18.2-61DAFB?style=for-the-badge&logo=react&logoColor=0B0B0B)](https://react.dev/)
+[![Next.js](https://img.shields.io/badge/Next.js-16.2-000000?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19.2-61DAFB?style=for-the-badge&logo=react&logoColor=0B0B0B)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
-[![Node.js](https://img.shields.io/badge/Node.js-18.17+-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-20.9+-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Supabase](https://img.shields.io/badge/Auth-Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=0B0B0B)](https://supabase.com)
 [![Neon](https://img.shields.io/badge/DB-Neon_PostgreSQL-00E699?style=for-the-badge&logo=postgresql&logoColor=white)](https://neon.tech/)
 [![PostHog](https://img.shields.io/badge/Analytics-PostHog-1D4AFF?style=for-the-badge&logo=posthog&logoColor=white)](https://posthog.com/)
@@ -129,8 +129,8 @@ For a comprehensive breakdown of every technology used in this project, see the 
 ### Core Framework
 | Technology | Version | Purpose |
 |------------|---------|---------|
-| **Next.js** | 14.2.x | App Router, Server Actions, SSR |
-| **React** | 18.2.x | Component Library, Hooks |
+| **Next.js** | 16.2.x | App Router, Server Actions, SSR |
+| **React** | 19.2.x | Component Library, Hooks |
 | **TypeScript** | 5.x | Strict Type Safety |
 
 ### UI and Styling
@@ -241,7 +241,7 @@ bamboo-reports-nextjs/
 ## Getting Started
 
 ### Prerequisites
-- **Node.js 18.17+**
+- **Node.js 20.9+**
 - **npm** (v9+)
 - **Neon PostgreSQL:** Connection string for the data warehouse.
 - **Supabase Project:** For authentication and user state.
