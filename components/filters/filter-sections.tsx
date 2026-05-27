@@ -45,22 +45,6 @@ interface CenterFilterSectionProps extends FilterSectionBaseProps {
 
 interface ProspectFilterSectionProps extends FilterSectionBaseProps {}
 
-const HEAD_TYPE_SWITCH_OPTIONS = [
-  { key: "all", label: "All", values: [] as string[] },
-  { key: "hr", label: "HR Head", values: ["HR Head"] },
-  { key: "gcc", label: "GCC Head", values: ["GCC Head"] },
-] as const
-
-const normalizeHeadType = (value: string) => value.trim().toLowerCase().replace(/\s+/g, " ")
-
-const getHeadTypeCategory = (value: string): "hr" | "gcc" | "others" | null => {
-  const normalized = normalizeHeadType(value)
-  if (normalized.includes("gcc") && normalized.includes("head")) return "gcc"
-  if (normalized.includes("hr") && normalized.includes("head")) return "hr"
-  if (normalized.includes("other")) return "others"
-  return null
-}
-
 export function AccountFiltersSection({
   pendingFilters,
   availableOptions,
@@ -804,89 +788,6 @@ export function ProspectFiltersSection({
   setPendingFilters,
   setActiveFilter,
 }: ProspectFilterSectionProps) {
-  const availableHeadTypeValues = React.useMemo(
-    () => (availableOptions.prospectHeadTypeValues || []).map((option) => option.value).filter(Boolean),
-    [availableOptions.prospectHeadTypeValues]
-  )
-
-  const headTypeModeByCategory = React.useMemo(() => {
-    const modes: Record<"hr" | "gcc", "none" | "include" | "exclude"> = {
-      hr: "none",
-      gcc: "none",
-    }
-
-    for (const item of pendingFilters.prospectHeadTypeValues) {
-      const category = getHeadTypeCategory(item.value)
-      if (category !== "hr" && category !== "gcc") continue
-
-      if (item.mode === "exclude") {
-        modes[category] = "exclude"
-      } else if (modes[category] === "none") {
-        modes[category] = "include"
-      }
-    }
-
-    return modes
-  }, [pendingFilters.prospectHeadTypeValues])
-
-  const buildHeadTypeFilterValues = (nextModes: Record<"hr" | "gcc", "none" | "include" | "exclude">) => {
-    const valuesByCategory: Record<"hr" | "gcc", string[]> = { hr: [], gcc: [] }
-    for (const value of availableHeadTypeValues) {
-      const category = getHeadTypeCategory(value)
-      if (category === "hr" || category === "gcc") {
-        valuesByCategory[category].push(value)
-      }
-    }
-
-    const nextFilterValues: Array<{ value: string; mode: "include" | "exclude" }> = []
-    const fallbackByCategory: Record<"hr" | "gcc", string[]> = {
-      hr: ["HR Head"],
-      gcc: ["GCC Head"],
-    }
-
-    for (const category of ["hr", "gcc"] as const) {
-      const mode = nextModes[category]
-      if (mode === "none") continue
-
-      const matchedValues = valuesByCategory[category]
-      const values = matchedValues.length > 0 ? Array.from(new Set(matchedValues)) : fallbackByCategory[category]
-      for (const value of values) {
-        nextFilterValues.push({ value, mode })
-      }
-    }
-
-    return nextFilterValues
-  }
-
-  const applyHeadTypeSwitch = (key: (typeof HEAD_TYPE_SWITCH_OPTIONS)[number]["key"]) => {
-    if (key === "all") {
-      setPendingFilters((prev) => ({
-        ...prev,
-        prospectHeadTypeValues: [],
-      }))
-      setActiveFilter("prospectHeadTypeValues")
-      return
-    }
-
-    if (key !== "hr" && key !== "gcc") {
-      return
-    }
-
-    const currentMode = headTypeModeByCategory[key]
-    const nextModeForKey = currentMode === "none" ? "include" : currentMode === "include" ? "exclude" : "include"
-
-    const nextModes: Record<"hr" | "gcc", "none" | "include" | "exclude"> = {
-      ...headTypeModeByCategory,
-      [key]: nextModeForKey,
-    }
-
-    setPendingFilters((prev) => ({
-      ...prev,
-      prospectHeadTypeValues: buildHeadTypeFilterValues(nextModes),
-    }))
-    setActiveFilter("prospectHeadTypeValues")
-  }
-
   return (
     <div className="pr-2">
       <div className="space-y-4 pt-2">
@@ -905,66 +806,17 @@ export function ProspectFiltersSection({
           {isFilterEnabled("prospectHeadTypeValues") && (
           <div className="space-y-2">
             <Label className="text-xs font-medium">Role</Label>
-            <div className="grid grid-cols-3 gap-2">
-              {HEAD_TYPE_SWITCH_OPTIONS.map((option) => {
-                const isAllActive =
-                  headTypeModeByCategory.hr === "none" && headTypeModeByCategory.gcc === "none"
-                const mode =
-                  option.key === "hr" || option.key === "gcc"
-                    ? headTypeModeByCategory[option.key]
-                    : "none"
-
-                const variant = option.key === "all" && isAllActive ? "default" : "outline"
-                const modeClassName =
-                  option.key === "all"
-                    ? ""
-                    : mode === "include"
-                      ? "border-green-500/60 bg-green-500/15 text-green-700 dark:text-green-300"
-                      : mode === "exclude"
-                        ? "border-red-500/60 bg-red-500/15 text-red-700 dark:text-red-300"
-                        : ""
-                const hoverActionClassName =
-                  option.key === "all"
-                    ? ""
-                    : mode === "include"
-                      ? "hover:border-red-500/60 hover:bg-red-500/15 hover:text-red-700 dark:hover:text-red-300"
-                      : "hover:border-green-500/60 hover:bg-green-500/15 hover:text-green-700 dark:hover:text-green-300"
-                const hoverHint =
-                  option.key === "hr" || option.key === "gcc"
-                    ? mode === "include"
-                      ? "-"
-                      : "+"
-                    : null
-
-                return (
-                  <Button
-                    key={option.key}
-                    type="button"
-                    variant={variant}
-                    size="sm"
-                    className={`group relative h-8 justify-center text-xs transition-colors ${modeClassName} ${hoverActionClassName}`}
-                    onClick={() => applyHeadTypeSwitch(option.key)}
-                    disabled={isApplying && activeFilter === "prospectHeadTypeValues"}
-                    title={
-                      option.key === "all"
-                        ? "Clear role filters"
-                        : mode === "include"
-                          ? `Click to exclude ${option.label}`
-                          : `Click to include ${option.label}`
-                    }
-                  >
-                    <span className={hoverHint ? "transition-opacity group-hover:opacity-0" : ""}>
-                      {option.label}
-                    </span>
-                    {hoverHint ? (
-                      <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs font-bold opacity-0 transition-opacity group-hover:opacity-100">
-                        {hoverHint}
-                      </span>
-                    ) : null}
-                  </Button>
-                )
-              })}
-            </div>
+            <EnhancedMultiSelect
+              options={availableOptions.prospectHeadTypeValues || []}
+              selected={pendingFilters.prospectHeadTypeValues}
+              trackingKey="prospectHeadTypeValues"
+              onChange={(selected) => {
+                setPendingFilters((prev) => ({ ...prev, prospectHeadTypeValues: selected }))
+                setActiveFilter("prospectHeadTypeValues")
+              }}
+              placeholder="Select roles..."
+              isApplying={isApplying && activeFilter === "prospectHeadTypeValues"}
+            />
           </div>
           )}
           {isFilterEnabled("prospectLevelValues") && (

@@ -3,7 +3,7 @@
 import * as React from "react"
 import { ChevronsUpDown, X, Plus, Minus } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Badge } from "@/components/ui/badge"
@@ -174,6 +174,7 @@ export const EnhancedMultiSelect = React.memo(function EnhancedMultiSelect({
 }: EnhancedMultiSelectProps) {
   const [open, setOpen] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState("")
+  const listId = React.useId()
   const searchTrackTimeoutRef = React.useRef<number | null>(null)
   const sourceFilterKey = trackingKey ?? placeholder
 
@@ -400,11 +401,21 @@ export const EnhancedMultiSelect = React.memo(function EnhancedMultiSelect({
       <div className="flex items-center gap-2 w-full">
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
-            <Button
-              variant="outline"
+            <div
               role="combobox"
+              tabIndex={0}
+              aria-controls={listId}
               aria-expanded={open}
-              className="justify-between h-auto min-h-10 bg-transparent hover:bg-accent/20 flex-1 transition-colors duration-150"
+              className={cn(
+                buttonVariants({ variant: "outline" }),
+                "h-auto min-h-10 flex-1 cursor-pointer justify-between bg-transparent py-2 hover:bg-accent/20 transition-colors duration-150"
+              )}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault()
+                  setOpen((currentOpen) => !currentOpen)
+                }
+              }}
             >
               <div className="flex gap-1 flex-wrap items-center w-full">
                 {selected.length === 0 && <span className="text-muted-foreground">{placeholder}</span>}
@@ -428,7 +439,7 @@ export const EnhancedMultiSelect = React.memo(function EnhancedMultiSelect({
                 "h-4 w-4 shrink-0 opacity-50 ml-2",
                 open && "rotate-180"
               )} />
-            </Button>
+            </div>
           </PopoverTrigger>
           <PopoverContent className="w-[--radix-popover-trigger-width] min-w-[200px] p-0" align="start">
             <Command>
@@ -443,7 +454,7 @@ export const EnhancedMultiSelect = React.memo(function EnhancedMultiSelect({
                   Showing first {DEFAULT_VISIBLE_OPTIONS} options. Use search to find more.
                 </p>
               ) : null}
-              <CommandList className="max-h-64">
+              <CommandList id={listId} className="max-h-64">
                 <CommandEmpty>No item found.</CommandEmpty>
                 <CommandGroup>
                   {renderOptions}
