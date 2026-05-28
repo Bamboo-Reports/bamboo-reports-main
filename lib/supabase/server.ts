@@ -4,7 +4,7 @@ let serviceRoleClient: SupabaseClient | null = null
 
 /**
  * Returns a Supabase client initialised with the service-role key.
- * Bypasses RLS — only use server-side for trusted operations (Storage
+ * Bypasses RLS. only use server-side for trusted operations (Storage
  * uploads, signed URL creation, privileged queries).
  */
 export function getSupabaseServiceRoleClient(): SupabaseClient {

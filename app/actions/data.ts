@@ -1,5 +1,3 @@
-"use server"
-
 import type { Account, Alias, Center, Function, Service, Tech, Prospect, LockedProspectTeaser } from "@/lib/types"
 import { getProspectsPerAccountLimit, isSectionEnabled } from "@/lib/config/dashboard-access"
 import { partitionProspectsByAccess } from "@/lib/dashboard/prospect-access"
@@ -554,46 +552,6 @@ export async function getDashboardData(): Promise<AllDataResult> {
       summary: { ...EMPTY_SUMMARY_METRICS },
       error: error instanceof Error ? error.message : "Unknown database error",
     }
-  }
-}
-
-// ============================================
-// SERVER-SIDE FILTERING (ADVANCED - OPTIONAL)
-// ============================================
-
-/**
- * Get filtered accounts from server side
- * This is more efficient for large datasets
- */
-export async function getFilteredAccounts(filters: {
-  countries?: string[]
-  industries?: string[]
-}): Promise<{ success: boolean; data: Account[]; error?: string }> {
-  try {
-    const sqlClient = getSqlOrThrow()
-
-    let query = sqlClient`SELECT * FROM accounts WHERE 1=1`
-
-    if (filters.countries && filters.countries.length > 0) {
-      query = sqlClient`${query} AND account_hq_country = ANY(${filters.countries})`
-    }
-
-    if (filters.industries && filters.industries.length > 0) {
-      query = sqlClient`${query} AND account_hq_industry = ANY(${filters.industries})`
-    }
-
-    query = sqlClient`${query} ORDER BY account_global_legal_name`
-
-    const results = (await fetchWithRetry(() => query)) as Account[]
-    logger.info("filtered_accounts_loaded", {
-      row_count: results.length,
-      countries_count: filters.countries?.length ?? 0,
-      industries_count: filters.industries?.length ?? 0,
-    })
-    return { success: true, data: results }
-  } catch (error) {
-    logger.error("filtered_accounts_load_failed", { error })
-    return { success: false, error: error instanceof Error ? error.message : "Unknown error", data: [] }
   }
 }
 

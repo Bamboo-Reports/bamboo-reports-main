@@ -2,11 +2,13 @@
 
 import YahooFinance from "yahoo-finance2"
 import { normalizeTickerForYahoo } from "@/lib/finance/tickers"
+import { createLogger } from "@/lib/logger"
 import type { AccountFinancialInfoResponse } from "@/lib/types"
 
 const yahooFinance = new YahooFinance({
   suppressNotices: ["yahooSurvey"],
 })
+const logger = createLogger("actions/financial")
 
 function toNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null
@@ -153,7 +155,7 @@ export async function getAccountFinancialInfo(rawTicker: string): Promise<Accoun
       },
     }
   } catch (error) {
-    console.error("Error fetching financial data:", {
+    logger.error("financial_data_fetch_failed", {
       inputTicker: rawTicker,
       normalizedTicker,
       error,

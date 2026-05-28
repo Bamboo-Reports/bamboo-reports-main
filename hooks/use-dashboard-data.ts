@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react"
+import { devError } from "@/lib/utils/dev-log"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { isSectionEnabled } from "@/lib/config/dashboard-access"
@@ -186,7 +187,7 @@ export function useDashboardData({ enabled }: UseDashboardDataOptions) {
         duration_ms: Date.now() - startedAt,
       })
     } catch (err) {
-      console.error("Error loading data:", err)
+      devError("Error loading data:", err)
       const errorMessage = err instanceof Error ? err.message : "Failed to load data from database"
       setError(errorMessage)
       setConnectionStatus("Database connection failed")

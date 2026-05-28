@@ -1,6 +1,7 @@
-"use server"
-
 import { getSqlOrThrow, fetchWithRetry, getSql } from "@/lib/db/connection"
+import { createLogger } from "@/lib/logger"
+
+const logger = createLogger("actions/system")
 
 // ============================================
 // DATABASE HEALTH & DIAGNOSTICS
@@ -25,7 +26,7 @@ export async function testConnection(): Promise<{ success: boolean; message: str
     await fetchWithRetry(() => getSqlOrThrow()`SELECT 1 as test`)
     return { success: true, message: "Database connection successful" }
   } catch (error) {
-    console.error("Database connection test failed:", error)
+    logger.error("database_connection_test_failed", { error })
     return {
       success: false,
       message: `Connection failed: ${error instanceof Error ? error.message : "Unknown error"}`,

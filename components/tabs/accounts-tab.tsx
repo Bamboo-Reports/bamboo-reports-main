@@ -415,9 +415,9 @@ export function AccountsTab({
                   </TableHeader>
                   <TableBody>
                     {getPaginatedData(sortedAccounts, currentPage, itemsPerPage).map(
-                      (account, index) => (
+                      (account) => (
                         <AccountRow
-                          key={`${account.account_global_legal_name}-${index}`}
+                          key={account.account_global_legal_name}
                           account={account}
                           onClick={() => handleAccountClick(account, "table_row")}
                           visibleColumns={visibleColumnSet}
@@ -447,9 +447,9 @@ export function AccountsTab({
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
                       {getPaginatedData(sortedAccounts, currentPage, itemsPerPage).map(
-                        (account, index) => (
+                        (account) => (
                         <AccountGridCard
-                          key={`${account.account_global_legal_name}-${index}`}
+                          key={account.account_global_legal_name}
                           account={account}
                           onClick={() => handleAccountClick(account, "grid_card")}
                         />

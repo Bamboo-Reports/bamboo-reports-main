@@ -61,8 +61,8 @@ export function ServicesTab({
               </TableHeader>
               <TableBody>
                 {getPaginatedData(services, currentPage, itemsPerPage).map(
-                  (service, index) => (
-                    <ServiceRow key={`${service.cn_unique_key}-${index}`} service={service} />
+                  (service) => (
+                    <ServiceRow key={service.cn_unique_key} service={service} />
                   )
                 )}
               </TableBody>

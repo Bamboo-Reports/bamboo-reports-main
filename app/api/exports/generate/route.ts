@@ -1,6 +1,9 @@
 import { randomUUID } from "node:crypto"
+import { z } from "zod"
 import { extractBearerToken, resolveAuthenticatedUserId } from "@/lib/auth/server"
+import { createLogger } from "@/lib/logger"
 import { getSupabaseServiceRoleClient, USER_EXPORTS_BUCKET } from "@/lib/supabase/server"
+import type { SupabaseClient } from "@supabase/supabase-js"
 import { getClientInfo } from "@/lib/request/client-info"
 import { getDatasetUnavailableMessage, isDatasetEnabled } from "@/lib/config/dashboard-access"
 import {
@@ -11,8 +14,27 @@ import {
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
 
+const logger = createLogger("api/exports/generate")
+
 const XLSX_CONTENT_TYPE =
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+const MAX_FILTER_VALUES = 5000
+
+// Rolling per-user rate limit, backed by the user_exports audit table.
+const EXPORT_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000
+const parsedRateLimit = Number.parseInt(process.env.EXPORT_RATE_LIMIT_PER_HOUR ?? "", 10)
+const EXPORT_RATE_LIMIT_MAX =
+  Number.isFinite(parsedRateLimit) && parsedRateLimit > 0 ? parsedRateLimit : 20
+
+const exportRequestSchema = z.object({
+  datasets: z.array(z.string()).optional(),
+  accountNames: z.array(z.string()).max(MAX_FILTER_VALUES).nullish(),
+  centerKeys: z.array(z.string()).max(MAX_FILTER_VALUES).nullish(),
+  isFiltered: z.boolean().optional(),
+  filtersApplied: z.unknown().optional(),
+  clientPublicIp: z.string().nullish(),
+})
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -23,6 +45,22 @@ function json(body: unknown, status = 200) {
 
 function isLocalIp(val: string | null) {
   return !val || val === "::1" || val === "127.0.0.1" || val.startsWith("::ffff:127.")
+}
+
+// Returns true when the user has hit the export cap. Fails open on lookup
+// errors so a transient DB issue never blocks legitimate exports.
+async function isRateLimited(supabase: SupabaseClient, userId: string): Promise<boolean> {
+  const since = new Date(Date.now() - EXPORT_RATE_LIMIT_WINDOW_MS).toISOString()
+  const { count, error } = await supabase
+    .from("user_exports")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .gte("created_at", since)
+  if (error) {
+    logger.error("rate_limit_check_failed", { error })
+    return false
+  }
+  return (count ?? 0) >= EXPORT_RATE_LIMIT_MAX
 }
 
 const VALID_DATASETS: ServerExportDatasetKey[] = ["accounts", "centers", "services", "prospects"]
@@ -38,19 +76,18 @@ export async function POST(request: Request) {
     return json({ error: "Invalid or expired token" }, 401)
   }
 
-  let body: {
-    datasets?: string[]
-    accountNames?: string[] | null
-    centerKeys?: string[] | null
-    isFiltered?: boolean
-    filtersApplied?: unknown
-    clientPublicIp?: string | null
-  }
+  let rawBody: unknown
   try {
-    body = await request.json()
+    rawBody = await request.json()
   } catch {
     return json({ error: "Invalid JSON body" }, 400)
   }
+
+  const parsed = exportRequestSchema.safeParse(rawBody)
+  if (!parsed.success) {
+    return json({ error: "Invalid request body" }, 400)
+  }
+  const body = parsed.data
 
   const datasets = (body.datasets ?? []).filter((d): d is ServerExportDatasetKey =>
     VALID_DATASETS.includes(d as ServerExportDatasetKey)
@@ -63,6 +100,12 @@ export async function POST(request: Request) {
     return json({ error: blockedDataset ? getDatasetUnavailableMessage(blockedDataset) : "Dataset unavailable" }, 403)
   }
 
+  const supabase = getSupabaseServiceRoleClient()
+
+  if (await isRateLimited(supabase, userId)) {
+    return json({ error: "Export rate limit reached. Please wait before generating more exports." }, 429)
+  }
+
   let buildResult
   try {
     buildResult = await buildServerExport({
@@ -71,7 +114,7 @@ export async function POST(request: Request) {
       centerKeys: body.centerKeys ?? null,
     })
   } catch (err) {
-    console.error("[exports/generate] build failed:", err)
+    logger.error("build_failed", { error: err })
     return json({ error: "Failed to build export" }, 500)
   }
 
@@ -82,15 +125,14 @@ export async function POST(request: Request) {
   const filename = `dashboard-export-${timestamp}.xlsx`
   const storagePath = `${userId}/${exportId}.xlsx`
 
-  const supabase = getSupabaseServiceRoleClient()
   const upload = await supabase.storage
     .from(USER_EXPORTS_BUCKET)
     .upload(storagePath, buffer, {
       contentType: XLSX_CONTENT_TYPE,
       upsert: false,
-    })
+  })
   if (upload.error) {
-    console.error("[exports/generate] storage upload failed:", upload.error)
+    logger.error("storage_upload_failed", { error: upload.error })
     return json({ error: "Failed to archive export" }, 500)
   }
 
@@ -121,14 +163,17 @@ export async function POST(request: Request) {
     .single()
 
   if (insert.error) {
-    console.error("[exports/generate] insert failed:", insert.error)
+    logger.error("insert_failed", { error: insert.error })
     await supabase.storage.from(USER_EXPORTS_BUCKET).remove([storagePath])
-    return json({ error: `Failed to record export: ${insert.error.message}` }, 500)
+    return json({ error: "Failed to record export" }, 500)
   }
 
-  console.log(
-    `[exports/generate] ok id=${exportId} user=${userId} rows=${totalRows} bytes=${buffer.byteLength}`
-  )
+  logger.info("generate_succeeded", {
+    export_id: exportId,
+    user_id: userId,
+    total_rows: totalRows,
+    bytes: buffer.byteLength,
+  })
 
   return json({
     id: exportId,

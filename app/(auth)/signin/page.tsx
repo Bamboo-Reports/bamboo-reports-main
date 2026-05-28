@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { devError } from "@/lib/utils/dev-log"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AuthShell } from "@/components/auth/auth-shell"
 import { captureEvent, identifyUser } from "@/lib/analytics/client"
@@ -100,7 +101,7 @@ function SignInForm() {
         })
 
         if (insertError) {
-          console.error("Failed to create user profile:", insertError.message)
+          devError("Failed to create user profile:", insertError.message)
           setSubmitError("Account signed in but profile setup failed. Please try refreshing.")
           return
         }

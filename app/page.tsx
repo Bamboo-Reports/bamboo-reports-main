@@ -262,6 +262,9 @@ function DashboardContent(): React.JSX.Element | null {
     activeSection,
     currentScreenView,
     activeFiltersCount,
+    accountsEnabled,
+    centersEnabled,
+    prospectsEnabled,
     filteredData.filteredAccounts.length,
     filteredData.filteredCenters.length,
     filteredData.filteredProspects.length,
@@ -420,6 +423,9 @@ function DashboardContent(): React.JSX.Element | null {
     }
   }, [
     activeFiltersCount,
+    accountsEnabled,
+    centersEnabled,
+    prospectsEnabled,
     filteredData.filteredAccounts.length,
     filteredData.filteredCenters.length,
     filteredData.filteredProspects.length,

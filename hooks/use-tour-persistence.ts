@@ -73,7 +73,7 @@ export function useTourPersistence(userId: string | null) {
           .update({ tour_completed_at: now, tour_version: TOUR_VERSION })
           .eq("user_id", userId)
       } catch {
-        // Supabase write failed — localStorage still persists the state
+        // Supabase write failed. localStorage still persists the state.
       }
     }
   }, [userId])

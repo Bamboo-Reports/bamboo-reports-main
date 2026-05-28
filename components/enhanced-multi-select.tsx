@@ -28,6 +28,7 @@ interface EnhancedMultiSelectProps {
 }
 
 const DEFAULT_VISIBLE_OPTIONS = 20
+const MAX_SEARCH_RESULTS = 100
 
 // Memoized Badge component with include/exclude toggle
 const EnhancedSelectBadge = React.memo(({
@@ -310,6 +311,7 @@ export const EnhancedMultiSelect = React.memo(function EnhancedMultiSelect({
   }, [selected, handleUnselect, handleToggleMode])
 
   const normalizedSearchQuery = searchQuery.trim().toLowerCase()
+  const deferredSearchQuery = React.useDeferredValue(normalizedSearchQuery)
   const visibleOptions = React.useMemo(() => {
     const allOptions = options.map((option) => ({
       value: typeof option === "string" ? option : option.value,
@@ -317,13 +319,20 @@ export const EnhancedMultiSelect = React.memo(function EnhancedMultiSelect({
       disabled: typeof option === "object" ? (option.disabled ?? false) : false,
     }))
 
-    if (normalizedSearchQuery.length > 0) {
-      return allOptions.filter((option) => option.value.toLowerCase().includes(normalizedSearchQuery))
+    if (deferredSearchQuery.length > 0) {
+      const matched: typeof allOptions = []
+      for (const option of allOptions) {
+        if (option.value.toLowerCase().includes(deferredSearchQuery)) {
+          matched.push(option)
+          if (matched.length >= MAX_SEARCH_RESULTS) break
+        }
+      }
+      return matched
     }
 
     const sorted = [...allOptions].sort((a, b) => b.count - a.count)
     return sorted.slice(0, DEFAULT_VISIBLE_OPTIONS)
-  }, [options, normalizedSearchQuery])
+  }, [options, deferredSearchQuery])
 
   const hasMoreOptions = normalizedSearchQuery.length === 0 && options.length > DEFAULT_VISIBLE_OPTIONS
 

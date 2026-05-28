@@ -15,8 +15,6 @@ export type ServerExportResponse = {
   totalRows: number
   rowCounts: Record<string, number>
   downloadPath: string
-  /** Access token bundled in for the subsequent signed-URL redirect. */
-  accessToken: string
 }
 
 async function resolveClientPublicIp(): Promise<string | null> {
@@ -72,6 +70,39 @@ export async function requestServerExport(
     throw new Error(`Export failed (${res.status}): ${detail || "no detail"}`)
   }
 
-  const payload = (await res.json()) as Omit<ServerExportResponse, "accessToken">
-  return { ...payload, accessToken: token }
+  return (await res.json()) as ServerExportResponse
+}
+
+export async function resolveExportDownloadUrl(exportId: string): Promise<string> {
+  const supabase = getSupabaseBrowserClient()
+  const { data: sessionData } = await supabase.auth.getSession()
+  const token = sessionData.session?.access_token
+  if (!token) {
+    throw new Error("No active session; cannot download export.")
+  }
+
+  const res = await fetch(`/api/exports/${encodeURIComponent(exportId)}/download`, {
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    cache: "no-store",
+  })
+
+  if (!res.ok) {
+    let detail = ""
+    try {
+      const errJson = await res.json()
+      detail = errJson.error ?? JSON.stringify(errJson)
+    } catch {
+      detail = await res.text().catch(() => "")
+    }
+    throw new Error(`Download failed (${res.status}): ${detail || "no detail"}`)
+  }
+
+  const payload = (await res.json()) as { url?: string }
+  if (!payload.url) {
+    throw new Error("Download URL missing from response.")
+  }
+  return payload.url
 }

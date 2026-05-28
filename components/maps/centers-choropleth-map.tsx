@@ -5,6 +5,7 @@ import { Map as MapGL, Source, Layer, NavigationControl, FullscreenControl } fro
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { getMaptilerCountriesTilesUrl, getMaptilerStyleUrl } from "@/lib/config/maptiler"
+import { devError } from "@/lib/utils/dev-log"
 import type { Center } from "@/lib/types"
 import "maplibre-gl/dist/maplibre-gl.css"
 
@@ -507,7 +508,7 @@ export function CentersChoroplethMap({
   }
 
   if (!maptilerKey) {
-    console.error("[CentersChoroplethMap] MapTiler key is missing")
+    devError("[CentersChoroplethMap] MapTiler key is missing")
     return (
       <div className={`flex items-center justify-center ${heightClass} bg-muted rounded-lg`}>
         <div className="text-center">
@@ -622,7 +623,7 @@ export function CentersChoroplethMap({
           setHoveredFeatureKeys(null)
         }}
         onError={(e) => {
-          console.error("[CentersChoroplethMap] Map error:", e)
+          devError("[CentersChoroplethMap] Map error:", e)
           setError(`Map error: ${e.error?.message || "Unknown error"}`)
           captureEvent(ANALYTICS_EVENTS.MAP_ERROR_SHOWN, {
             map_kind: "state",

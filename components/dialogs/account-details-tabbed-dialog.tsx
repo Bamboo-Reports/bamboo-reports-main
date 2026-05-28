@@ -40,7 +40,7 @@ import { ProspectGridCard } from "@/components/cards/prospect-grid-card"
 import { LockedProspectTeaserCard } from "@/components/prospects/locked-prospect-teaser-section"
 import { Badge } from "@/components/ui/badge"
 import { TechTreemap } from "@/components/charts/tech-treemap"
-import { getAccountFinancialInfo } from "@/app/actions"
+import { getAccountFinancialInfo } from "@/app/actions/financial"
 import { isSectionEnabled } from "@/lib/config/dashboard-access"
 import {
   ChartContainer,
@@ -63,6 +63,17 @@ function formatRevenueAxis(value: number): string {
     notation: "compact",
     maximumFractionDigits: 1,
   }).format(value)
+}
+
+function sortByCount(items: string[]): Array<{ name: string; count: number }> {
+  const counts = new Map<string, number>()
+  for (const v of items) {
+    if (!v) continue
+    counts.set(v, (counts.get(v) ?? 0) + 1)
+  }
+  return Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([name, count]) => ({ name, count }))
 }
 
 function QuickFilterGroup({
@@ -211,39 +222,40 @@ export function AccountDetailsDialog({
   const ticker = account?.account_hq_stock_ticker?.trim() ?? ""
 
   // Filter centers and prospects for this account
-  const accountCenters = account && canViewCenters
-    ? centers.filter((center) => center.account_global_legal_name === account.account_global_legal_name)
-    : []
-  const accountProspects = account && canViewProspects
-    ? prospects
-        .filter((prospect) => prospect.account_global_legal_name === account.account_global_legal_name)
-        .sort((a, b) => {
-          const nameA = `${a.prospect_first_name ?? ""} ${a.prospect_last_name ?? ""}`.trim().toLowerCase()
-          const nameB = `${b.prospect_first_name ?? ""} ${b.prospect_last_name ?? ""}`.trim().toLowerCase()
-          return nameA.localeCompare(nameB)
-        })
-    : []
-  const accountLockedProspectTeasers = account && canViewProspects
-    ? lockedProspectTeasers.filter((teaser) => teaser.account_global_legal_name === account.account_global_legal_name)
-    : []
-  const accountTech = account
-    ? tech.filter((item) => item.account_global_legal_name === account.account_global_legal_name)
-    : []
+  const accountCenters = React.useMemo(
+    () => account && canViewCenters
+      ? centers.filter((center) => center.account_global_legal_name === account.account_global_legal_name)
+      : [],
+    [account, canViewCenters, centers]
+  )
+  const accountProspects = React.useMemo(
+    () => account && canViewProspects
+      ? prospects
+          .filter((prospect) => prospect.account_global_legal_name === account.account_global_legal_name)
+          .sort((a, b) => {
+            const nameA = `${a.prospect_first_name ?? ""} ${a.prospect_last_name ?? ""}`.trim().toLowerCase()
+            const nameB = `${b.prospect_first_name ?? ""} ${b.prospect_last_name ?? ""}`.trim().toLowerCase()
+            return nameA.localeCompare(nameB)
+          })
+      : [],
+    [account, canViewProspects, prospects]
+  )
+  const accountLockedProspectTeasers = React.useMemo(
+    () => account && canViewProspects
+      ? lockedProspectTeasers.filter((teaser) => teaser.account_global_legal_name === account.account_global_legal_name)
+      : [],
+    [account, canViewProspects, lockedProspectTeasers]
+  )
+  const accountTech = React.useMemo(
+    () => account
+      ? tech.filter((item) => item.account_global_legal_name === account.account_global_legal_name)
+      : [],
+    [account, tech]
+  )
 
   const location = [account?.account_hq_city, account?.account_hq_state]
     .filter(Boolean)
     .join(", ")
-
-  const sortByCount = (items: string[]): Array<{ name: string; count: number }> => {
-    const counts = new Map<string, number>()
-    for (const v of items) {
-      if (!v) continue
-      counts.set(v, (counts.get(v) ?? 0) + 1)
-    }
-    return Array.from(counts.entries())
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-      .map(([name, count]) => ({ name, count }))
-  }
 
   const centerTypeOptions = React.useMemo(
     () => sortByCount(accountCenters.map((c) => (c.center_type ?? "").trim())),

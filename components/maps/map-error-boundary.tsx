@@ -1,6 +1,7 @@
 "use client"
 
 import React from "react"
+import { devError } from "@/lib/utils/dev-log"
 
 interface Props {
   children: React.ReactNode
@@ -18,12 +19,12 @@ export class MapErrorBoundary extends React.Component<Props, State> {
   }
 
   static getDerivedStateFromError(error: Error): State {
-    console.error("[MapErrorBoundary] Caught error:", error)
+    devError("[MapErrorBoundary] Caught error:", error)
     return { hasError: true, error }
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error("[MapErrorBoundary] Error details:", error, errorInfo)
+    devError("[MapErrorBoundary] Error details:", error, errorInfo)
   }
 
   render() {

@@ -4,6 +4,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useTransition,
 } from "react"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
@@ -27,6 +28,19 @@ import {
 } from "@/lib/dashboard/filtering"
 import { getAccountChartData, getCenterChartData, getProspectChartData } from "@/lib/dashboard/charts"
 import { isSectionEnabled } from "@/lib/config/dashboard-access"
+import { perfLog } from "@/lib/utils/dev-log"
+
+// Returns the filter keys whose values differ between two filter objects.
+function changedFilterKeys(prev: Filters, next: Filters): string[] {
+  const keys = new Set<string>([...Object.keys(prev), ...Object.keys(next)])
+  const changed: string[] = []
+  for (const key of keys) {
+    if ((prev as unknown as Record<string, unknown>)[key] !== (next as unknown as Record<string, unknown>)[key]) {
+      changed.push(key)
+    }
+  }
+  return changed
+}
 import { sanitizeFilters } from "@/lib/config/filters"
 
 interface UseDashboardFiltersParams {
@@ -62,7 +76,7 @@ export function useDashboardFilters({
 
   const [filters, setFilters] = useState<Filters>(() => createDefaultFilters())
   const [pendingFilters, setPendingFilters] = useState<Filters>(() => createDefaultFilters())
-  const [isApplying, setIsApplying] = useState(false)
+  const [isApplying, startApplyTransition] = useTransition()
 
   const [revenueRange, setRevenueRange] = useState(baseRanges.revenueRange)
   const [yearsInIndiaRange, setYearsInIndiaRange] = useState(baseRanges.yearsInIndiaRange)
@@ -71,6 +85,11 @@ export function useDashboardFilters({
   const isRevenueRangeAutoRef = useRef(true)
   const previousTrackedFiltersRef = useRef<Filters | null>(null)
   const filterTrackTimeoutRef = useRef<number | null>(null)
+
+  // Interaction timing instrumentation (dev only).
+  const applyStartRef = useRef<number | null>(null)
+  const applyLabelRef = useRef<string>("")
+  const prevPendingFiltersRef = useRef<Filters>(pendingFilters)
 
   useEffect(() => {
     isRevenueRangeAutoRef.current = true
@@ -98,17 +117,40 @@ export function useDashboardFilters({
   }, [baseRanges])
 
   useEffect(() => {
-    setIsApplying(true)
-    setFilters(pendingFilters)
-    setIsApplying(false)
+    const changed = changedFilterKeys(prevPendingFiltersRef.current, pendingFilters)
+    prevPendingFiltersRef.current = pendingFilters
+    if (changed.length > 0) {
+      applyLabelRef.current = changed.join(", ")
+      applyStartRef.current = performance.now()
+    }
+    startApplyTransition(() => {
+      setFilters(pendingFilters)
+    })
   }, [pendingFilters])
 
   const accountNames = useMemo(() => getAccountNames(accounts), [accounts])
 
   const filteredData: FilteredData = useMemo(
-    () => getFilteredData(accounts, centers, functions, services, prospects, tech, sanitizeFilters(filters), { accountsEnabled, centersEnabled, prospectsEnabled }),
+    () => {
+      const start = performance.now()
+      const result = getFilteredData(accounts, centers, functions, services, prospects, tech, sanitizeFilters(filters), { accountsEnabled, centersEnabled, prospectsEnabled })
+      perfLog("getFilteredData recompute", performance.now() - start)
+      return result
+    },
     [accounts, centers, functions, services, prospects, tech, filters, accountsEnabled, centersEnabled, prospectsEnabled]
   )
+
+  // Logs total perceived latency from a filter change to the painted update (dev only).
+  useEffect(() => {
+    if (applyStartRef.current == null) return
+    const start = applyStartRef.current
+    const label = applyLabelRef.current
+    applyStartRef.current = null
+    const raf = requestAnimationFrame(() => {
+      perfLog(`apply [${label}] reflected in UI`, performance.now() - start)
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [filteredData])
 
   const accountChartData = useMemo(
     () => getAccountChartData(filteredData.filteredAccounts),
@@ -237,7 +279,12 @@ export function useDashboardFilters({
   )
 
   const availableOptions: AvailableOptions = useMemo(
-    () => getAvailableOptions(accounts, centers, functions, prospects, tech, sanitizeFilters(filterStateForOptions as Filters), { accountsEnabled, centersEnabled, prospectsEnabled }),
+    () => {
+      const start = performance.now()
+      const result = getAvailableOptions(accounts, centers, functions, prospects, tech, sanitizeFilters(filterStateForOptions as Filters), { accountsEnabled, centersEnabled, prospectsEnabled })
+      perfLog("getAvailableOptions recompute", performance.now() - start)
+      return result
+    },
     [accounts, centers, functions, prospects, tech, filterStateForOptions, accountsEnabled, centersEnabled, prospectsEnabled]
   )
 

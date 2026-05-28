@@ -1,5 +1,6 @@
 
 import { useState, useCallback, useEffect } from "react"
+import { devError } from "@/lib/utils/dev-log"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { buildTrackedFiltersSnapshot, normalizeTrackedText } from "@/lib/analytics/tracking"
@@ -83,7 +84,7 @@ export function useSavedFilters() {
             owner_email: ownerEmail,
           }
         } catch (error) {
-          console.error("Failed to parse saved filter:", error)
+          devError("Failed to parse saved filter:", error)
           return null
         }
       }
@@ -94,25 +95,42 @@ export function useSavedFilters() {
 
       const sharedFilters: SavedFilter[] = []
       if (Array.isArray(sharedData)) {
-        for (const share of sharedData) {
-          const filterData = share.saved_filters as unknown as Record<string, unknown> | null
-          if (filterData) {
-            // Look up the owner's email from profiles
-            const { data: ownerProfile } = await supabase
-              .from("profiles")
-              .select("email")
-              .eq("user_id", filterData.user_id as string)
-              .single()
+        const sharedFilterData = sharedData
+          .map((share) => share.saved_filters as unknown as Record<string, unknown> | null)
+          .filter((filterData): filterData is Record<string, unknown> => Boolean(filterData))
 
-            const normalized = normalizeFilter(filterData, ownerProfile?.email ?? "a teammate")
-            if (normalized) sharedFilters.push(normalized)
+        const ownerIds = Array.from(
+          new Set(
+            sharedFilterData
+              .map((filterData) => filterData.user_id)
+              .filter((id): id is string => typeof id === "string")
+          )
+        )
+
+        const ownerEmailById = new Map<string, string>()
+        if (ownerIds.length > 0) {
+          const { data: ownerProfiles } = await supabase
+            .from("profiles")
+            .select("user_id, email")
+            .in("user_id", ownerIds)
+
+          for (const profile of ownerProfiles ?? []) {
+            if (typeof profile.user_id === "string" && typeof profile.email === "string") {
+              ownerEmailById.set(profile.user_id, profile.email)
+            }
           }
+        }
+
+        for (const filterData of sharedFilterData) {
+          const ownerEmail = ownerEmailById.get(filterData.user_id as string) ?? "a teammate"
+          const normalized = normalizeFilter(filterData, ownerEmail)
+          if (normalized) sharedFilters.push(normalized)
         }
       }
 
       setSavedFilters([...ownFilters, ...sharedFilters])
     } catch (error) {
-      console.error("Failed to load saved filters:", error)
+      devError("Failed to load saved filters:", error)
     } finally {
       setLoading(false)
     }
@@ -147,7 +165,7 @@ export function useSavedFilters() {
       })
       return true
     } catch (error) {
-      console.error("Error saving filter:", error)
+      devError("Error saving filter:", error)
       return false
     } finally {
       setLoading(false)
@@ -175,7 +193,7 @@ export function useSavedFilters() {
       })
       return true
     } catch (error) {
-      console.error("Error deleting filter:", error)
+      devError("Error deleting filter:", error)
       return false
     } finally {
       setLoading(false)
@@ -210,7 +228,7 @@ export function useSavedFilters() {
       })
       return true
     } catch (error) {
-      console.error("Error updating filter:", error)
+      devError("Error updating filter:", error)
       return false
     } finally {
       setLoading(false)
@@ -263,7 +281,7 @@ export function useSavedFilters() {
 
       return { success: true }
     } catch (error) {
-      console.error("Error sharing filter:", error)
+      devError("Error sharing filter:", error)
       return { success: false, error: "Failed to share filter" }
     } finally {
       setLoading(false)
@@ -288,7 +306,7 @@ export function useSavedFilters() {
 
       return true
     } catch (error) {
-      console.error("Error unsharing filter:", error)
+      devError("Error unsharing filter:", error)
       return false
     } finally {
       setLoading(false)
@@ -306,7 +324,7 @@ export function useSavedFilters() {
       if (error) throw error
       return data ?? []
     } catch (error) {
-      console.error("Error fetching filter shares:", error)
+      devError("Error fetching filter shares:", error)
       return []
     }
   }, [supabase])
