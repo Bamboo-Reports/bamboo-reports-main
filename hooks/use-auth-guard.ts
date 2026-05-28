@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { DEFAULT_USER_ROLE, normalizeUserRole, type UserRole } from "@/lib/auth/roles"
+import { devError } from "@/lib/utils/dev-log"
 
 export function useAuthGuard() {
   const router = useRouter()
@@ -51,7 +52,7 @@ export function useAuthGuard() {
       await loadUserRole(session.user.id)
       setAuthReady(true)
     }).catch((error) => {
-      console.error("Failed to get auth session:", error)
+      devError("Failed to get auth session:", error)
       if (!isMounted) return
       setAuthReady(true)
     })

@@ -66,6 +66,14 @@ export async function POST(request: Request) {
     return json({ error: blockedDataset ? getDatasetUnavailableMessage(blockedDataset) : "Dataset unavailable" }, 403)
   }
 
+  const MAX_FILTER_VALUES = 5000
+  if (
+    (Array.isArray(body.accountNames) && body.accountNames.length > MAX_FILTER_VALUES) ||
+    (Array.isArray(body.centerKeys) && body.centerKeys.length > MAX_FILTER_VALUES)
+  ) {
+    return json({ error: "Too many filter values" }, 400)
+  }
+
   let buildResult
   try {
     buildResult = await buildServerExport({
@@ -126,7 +134,7 @@ export async function POST(request: Request) {
   if (insert.error) {
     logger.error("insert_failed", { error: insert.error })
     await supabase.storage.from(USER_EXPORTS_BUCKET).remove([storagePath])
-    return json({ error: `Failed to record export: ${insert.error.message}` }, 500)
+    return json({ error: "Failed to record export" }, 500)
   }
 
   logger.info("generate_succeeded", {

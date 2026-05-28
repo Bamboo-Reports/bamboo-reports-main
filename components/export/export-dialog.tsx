@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { devError } from "@/lib/utils/dev-log"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Building2, Briefcase, Users, Sparkles, CheckCircle2, Download } from "lucide-react"
@@ -306,7 +307,7 @@ export function ExportDialog({
       onExportCompleted?.()
     } catch (err) {
       rampCancelled = true
-      console.error("Export failed:", err)
+      devError("Export failed:", err)
       const message = err instanceof Error ? err.message : "Export failed. Please try again."
       setError(message)
       captureEvent(ANALYTICS_EVENTS.EXPORT_FAILED, {

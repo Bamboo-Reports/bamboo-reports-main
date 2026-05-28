@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 import { Download, Eye, FileArchive, Loader2, MoreHorizontal } from "lucide-react"
 import { PaginationControls } from "@/components/ui/pagination-controls"
 import { getPaginatedData } from "@/lib/utils/helpers"
+import { devError } from "@/lib/utils/dev-log"
 import {
   Dialog,
   DialogContent,
@@ -100,7 +101,7 @@ export function ExportsDialog({ open, onOpenChange }: ExportsDialogProps) {
       const payload = await res.json()
       setExports(payload.exports ?? [])
     } catch (err) {
-      console.error(err)
+      devError(err)
       setError("Failed to load exports.")
     } finally {
       setLoading(false)
@@ -125,7 +126,7 @@ export function ExportsDialog({ open, onOpenChange }: ExportsDialogProps) {
       const url = await resolveExportDownloadUrl(row.id)
       window.open(url, "_self")
     } catch (err) {
-      console.error(err)
+      devError(err)
       setError(err instanceof Error ? err.message : "Failed to download export.")
     } finally {
       setTimeout(() => setDownloadingId(null), 1500)
