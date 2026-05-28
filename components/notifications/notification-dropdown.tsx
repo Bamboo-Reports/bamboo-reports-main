@@ -61,7 +61,7 @@ export function NotificationDropdown() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[360px] p-0 overflow-hidden">
-        {/* Header with gradient — matches profile dropdown style */}
+        {/* Header with gradient. matches profile dropdown style */}
         <div className="border-b border-border/60 bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-background px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">

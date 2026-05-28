@@ -84,7 +84,7 @@ async function requireAuth(request: Request): Promise<Response | null> {
   }
   try {
     await resolveAuthenticatedUserId(token)
-    return null // authenticated
+    return null
   } catch {
     return new Response(JSON.stringify({ error: "Invalid or expired token" }), {
       status: 401,
@@ -103,7 +103,7 @@ export async function GET(request: Request) {
   const isFresh = cache.timestamp > 0 && Date.now() - cache.timestamp < CACHE_TTL
   const isStale = cache.timestamp > 0 && !isFresh
 
-  // Cache HIT — fresh data, return immediately
+  // Cache HIT: fresh data, return immediately
   if (isFresh && cache.gzipped && cache.json) {
     logger.info("dashboard_cache_hit", {
       age_seconds: age,
@@ -113,7 +113,7 @@ export async function GET(request: Request) {
     return buildResponse(cache.gzipped, cache.json, acceptEncoding, "HIT", age)
   }
 
-  // Cache STALE — return stale data immediately, revalidate in background
+  // Cache STALE: return stale data immediately, revalidate in background
   if (isStale && cache.gzipped && cache.json) {
     logger.info("dashboard_cache_stale", {
       age_seconds: age,
@@ -124,7 +124,7 @@ export async function GET(request: Request) {
     return buildResponse(cache.gzipped, cache.json, acceptEncoding, "STALE", age)
   }
 
-  // Cache MISS — fetch from DB, cache, return
+  // Cache MISS: fetch from DB, cache, return
   logger.info("dashboard_cache_miss")
   const { gzipped, json } = await fetchAndCache()
   logger.info("dashboard_cache_miss_completed", { duration_ms: Date.now() - start })

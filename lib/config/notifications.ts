@@ -17,5 +17,5 @@ function areNotificationsEnabled(): boolean {
   return true
 }
 
-/** Evaluated once at module load — env vars don't change at runtime. */
+/** Evaluated once at module load. env vars don't change at runtime. */
 export const NOTIFICATIONS_ENABLED = areNotificationsEnabled()

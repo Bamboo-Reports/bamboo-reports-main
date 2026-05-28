@@ -1,5 +1,3 @@
-"use server"
-
 import type { Account, Alias, Center, Function, Service, Tech, Prospect, LockedProspectTeaser } from "@/lib/types"
 import { getProspectsPerAccountLimit, isSectionEnabled } from "@/lib/config/dashboard-access"
 import { partitionProspectsByAccess } from "@/lib/dashboard/prospect-access"

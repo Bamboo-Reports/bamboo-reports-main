@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto"
 import { extractBearerToken, resolveAuthenticatedUserId } from "@/lib/auth/server"
+import { createLogger } from "@/lib/logger"
 import { getSupabaseServiceRoleClient, USER_EXPORTS_BUCKET } from "@/lib/supabase/server"
 import { getClientInfo } from "@/lib/request/client-info"
 import { getDatasetUnavailableMessage, isDatasetEnabled } from "@/lib/config/dashboard-access"
@@ -10,6 +11,8 @@ import {
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
+
+const logger = createLogger("api/exports/generate")
 
 const XLSX_CONTENT_TYPE =
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -71,7 +74,7 @@ export async function POST(request: Request) {
       centerKeys: body.centerKeys ?? null,
     })
   } catch (err) {
-    console.error("[exports/generate] build failed:", err)
+    logger.error("build_failed", { error: err })
     return json({ error: "Failed to build export" }, 500)
   }
 
@@ -88,9 +91,9 @@ export async function POST(request: Request) {
     .upload(storagePath, buffer, {
       contentType: XLSX_CONTENT_TYPE,
       upsert: false,
-    })
+  })
   if (upload.error) {
-    console.error("[exports/generate] storage upload failed:", upload.error)
+    logger.error("storage_upload_failed", { error: upload.error })
     return json({ error: "Failed to archive export" }, 500)
   }
 
@@ -121,14 +124,17 @@ export async function POST(request: Request) {
     .single()
 
   if (insert.error) {
-    console.error("[exports/generate] insert failed:", insert.error)
+    logger.error("insert_failed", { error: insert.error })
     await supabase.storage.from(USER_EXPORTS_BUCKET).remove([storagePath])
     return json({ error: `Failed to record export: ${insert.error.message}` }, 500)
   }
 
-  console.log(
-    `[exports/generate] ok id=${exportId} user=${userId} rows=${totalRows} bytes=${buffer.byteLength}`
-  )
+  logger.info("generate_succeeded", {
+    export_id: exportId,
+    user_id: userId,
+    total_rows: totalRows,
+    bytes: buffer.byteLength,
+  })
 
   return json({
     id: exportId,

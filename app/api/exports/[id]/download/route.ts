@@ -1,7 +1,10 @@
 import { extractBearerToken, resolveAuthenticatedUserId } from "@/lib/auth/server"
+import { createLogger } from "@/lib/logger"
 import { getSupabaseServiceRoleClient, USER_EXPORTS_BUCKET } from "@/lib/supabase/server"
 
 export const dynamic = "force-dynamic"
+
+const logger = createLogger("api/exports/download")
 
 function jsonError(status: number, message: string) {
   return new Response(JSON.stringify({ error: message }), {
@@ -10,16 +13,13 @@ function jsonError(status: number, message: string) {
   })
 }
 
-async function authenticateFromQueryOrHeader(request: Request): Promise<string | Response> {
-  const url = new URL(request.url)
-  const queryToken = url.searchParams.get("access_token")
+async function authenticateFromHeader(request: Request): Promise<string | Response> {
   const headerToken = extractBearerToken(request.headers.get("authorization"))
-  const token = headerToken || queryToken
 
-  if (!token) return jsonError(401, "Missing authorization token")
+  if (!headerToken) return jsonError(401, "Missing authorization token")
 
   try {
-    return await resolveAuthenticatedUserId(token)
+    return await resolveAuthenticatedUserId(headerToken)
   } catch {
     return jsonError(401, "Invalid or expired token")
   }
@@ -58,7 +58,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const auth = await authenticateFromQueryOrHeader(request)
+  const auth = await authenticateFromHeader(request)
   if (auth instanceof Response) return auth
   const userId = auth
 
@@ -66,7 +66,7 @@ export async function GET(
   try {
     exportRow = await fetchExportRow(id)
   } catch (err) {
-    console.error("[exports] download lookup failed:", err)
+    logger.error("download_lookup_failed", { error: err })
     return jsonError(500, "Failed to look up export")
   }
   if (!exportRow || exportRow.user_id !== userId) {
@@ -81,8 +81,17 @@ export async function GET(
     })
 
   if (signedErr || !signed?.signedUrl) {
-    console.error("[exports] signed url failed:", signedErr)
+    logger.error("signed_url_failed", { error: signedErr })
     return jsonError(500, "Failed to generate download URL")
+  }
+
+  if (request.headers.get("accept")?.includes("application/json")) {
+    return new Response(JSON.stringify({ url: signed.signedUrl }), {
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+      },
+    })
   }
 
   return Response.redirect(signed.signedUrl, 302)

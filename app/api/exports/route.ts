@@ -1,6 +1,9 @@
 import { resolveAuthenticatedUserId, extractBearerToken } from "@/lib/auth/server"
+import { createLogger } from "@/lib/logger"
 
 export const dynamic = "force-dynamic"
+
+const logger = createLogger("api/exports")
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -40,12 +43,12 @@ export async function GET(request: Request) {
 
   if (!res.ok) {
     const body = await res.text().catch(() => "")
-    console.error(`[exports] list failed ${res.status}: ${body}`)
+    logger.error("list_failed", { status: res.status, body })
     return json({ error: "Failed to list exports" }, 500)
   }
 
   const data = (await res.json()) as unknown[]
-  console.log(`[exports] list user=${userId} count=${data.length}`)
+  logger.info("list_succeeded", { user_id: userId, count: data.length })
 
   return new Response(JSON.stringify({ exports: data }), {
     status: 200,

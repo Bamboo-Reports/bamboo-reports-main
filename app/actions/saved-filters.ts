@@ -1,6 +1,7 @@
-"use server"
-
 import { getSqlOrThrow, fetchWithRetry } from "@/lib/db/connection"
+import { createLogger } from "@/lib/logger"
+
+const logger = createLogger("actions/saved-filters")
 
 // ============================================
 // TYPESCRIPT INTERFACES
@@ -30,7 +31,7 @@ export async function saveFilterSet(
   try {
     const sqlClient = getSqlOrThrow()
 
-    console.log("Saving filter set:", name)
+    logger.info("save_filter_set_started", { name })
     const result = (await fetchWithRetry(
       () => sqlClient`
         INSERT INTO saved_filters (name, filters)
@@ -38,11 +39,11 @@ export async function saveFilterSet(
         RETURNING id, name, created_at
       `
     )) as unknown[]
-    console.log("Successfully saved filter set:", result[0])
+    logger.info("save_filter_set_succeeded", { result: result[0] })
 
     return { success: true, data: result[0] }
   } catch (error) {
-    console.error("Error saving filter set:", error)
+    logger.error("save_filter_set_failed", { error })
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" }
   }
 }
@@ -51,7 +52,7 @@ export async function getSavedFilters(): Promise<FilterSet[]> {
   try {
     const sqlClient = getSqlOrThrow()
 
-    console.log("Fetching saved filters...")
+    logger.info("get_saved_filters_started")
     const savedFilters = (await fetchWithRetry(
       () => sqlClient`
         SELECT id, name, filters, created_at, updated_at 
@@ -59,11 +60,11 @@ export async function getSavedFilters(): Promise<FilterSet[]> {
         ORDER BY created_at DESC
       `
     )) as FilterSet[]
-    console.log(`Successfully fetched ${savedFilters.length} saved filters`)
+    logger.info("get_saved_filters_succeeded", { count: savedFilters.length })
 
     return savedFilters
   } catch (error) {
-    console.error("Error fetching saved filters:", error)
+    logger.error("get_saved_filters_failed", { error })
     return []
   }
 }
@@ -74,7 +75,7 @@ export async function deleteSavedFilter(
   try {
     const sqlClient = getSqlOrThrow()
 
-    console.log("Deleting saved filter:", id)
+    logger.info("delete_saved_filter_started", { id })
     const result = (await fetchWithRetry(
       () => sqlClient`
         DELETE FROM saved_filters 
@@ -82,11 +83,11 @@ export async function deleteSavedFilter(
         RETURNING id, name
       `
     )) as unknown[]
-    console.log("Successfully deleted filter set:", result[0])
+    logger.info("delete_saved_filter_succeeded", { result: result[0] })
 
     return { success: true, data: result[0] }
   } catch (error) {
-    console.error("Error deleting saved filter:", error)
+    logger.error("delete_saved_filter_failed", { error })
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" }
   }
 }
@@ -99,7 +100,7 @@ export async function updateSavedFilter(
   try {
     const sqlClient = getSqlOrThrow()
 
-    console.log("Updating saved filter:", id, name)
+    logger.info("update_saved_filter_started", { id, name })
     const result = (await fetchWithRetry(
       () => sqlClient`
         UPDATE saved_filters 
@@ -108,11 +109,11 @@ export async function updateSavedFilter(
         RETURNING id, name, updated_at
       `
     )) as unknown[]
-    console.log("Successfully updated filter set:", result[0])
+    logger.info("update_saved_filter_succeeded", { result: result[0] })
 
     return { success: true, data: result[0] }
   } catch (error) {
-    console.error("Error updating saved filter:", error)
+    logger.error("update_saved_filter_failed", { error })
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" }
   }
 }
@@ -126,7 +127,7 @@ export async function loadFilterSets(): Promise<{ success: boolean; data?: Filte
     const filters = await getSavedFilters()
     return { success: true, data: filters }
   } catch (error) {
-    console.error("Error loading filter sets:", error)
+    logger.error("load_filter_sets_failed", { error })
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" }
   }
 }
@@ -136,7 +137,7 @@ export async function deleteFilterSet(id: number): Promise<{ success: boolean; d
     const result = await deleteSavedFilter(id)
     return result
   } catch (error) {
-    console.error("Error deleting filter set:", error)
+    logger.error("delete_filter_set_failed", { error })
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" }
   }
 }

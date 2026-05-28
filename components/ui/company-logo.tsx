@@ -30,7 +30,7 @@ const sizeMap = {
   xl: { container: "h-24 w-24", icon: "h-12 w-12", img: 150 },
 }
 
-const LOGO_DEV_PUBLIC_KEY = getLogoDevPublicKey() || "pk_GAZeDBqlSWS8CSE3PZ8WeA"
+const LOGO_DEV_PUBLIC_KEY = getLogoDevPublicKey()
 
 export function CompanyLogo({
   domain,
@@ -105,7 +105,7 @@ export function CompanyLogo({
     </div>
   )
 
-  if (!cleanDomain || imageError) {
+  if (!cleanDomain || !LOGO_DEV_PUBLIC_KEY || imageError) {
     return renderFallback()
   }
 

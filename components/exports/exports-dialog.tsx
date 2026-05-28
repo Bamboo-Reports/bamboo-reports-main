@@ -28,6 +28,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { resolveExportDownloadUrl } from "@/lib/exports/request-client"
 
 type ExportRow = {
   id: string
@@ -55,7 +56,7 @@ function formatDate(iso: string): string {
 }
 
 function formatIp(ip: string | null): string {
-  if (!ip) return "—"
+  if (!ip) return "N/A"
   if (ip === "::1" || ip === "127.0.0.1") return `${ip} (localhost)`
   return ip
 }
@@ -121,8 +122,11 @@ export function ExportsDialog({ open, onOpenChange }: ExportsDialogProps) {
         setError("Session expired.")
         return
       }
-      const url = `/api/exports/${row.id}/download?access_token=${encodeURIComponent(token)}`
+      const url = await resolveExportDownloadUrl(row.id)
       window.open(url, "_self")
+    } catch (err) {
+      console.error(err)
+      setError(err instanceof Error ? err.message : "Failed to download export.")
     } finally {
       setTimeout(() => setDownloadingId(null), 1500)
     }
@@ -367,7 +371,7 @@ function ExportDetailsDialog({
                   label="User agent"
                   value={
                     <span className="font-mono text-[11px] break-all text-right max-w-[400px] block">
-                      {row.user_agent ?? "—"}
+                      {row.user_agent ?? "N/A"}
                     </span>
                   }
                 />

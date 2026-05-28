@@ -107,7 +107,7 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       },
       {
         key: "accountHqRevenueIncludeNull",
-        label: "Revenue — Include all",
+        label: "Revenue: Include all",
         enabled: true,
         type: "boolean",
         column: "account_hq_revenue",
@@ -133,7 +133,7 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       },
       {
         key: "yearsInIndiaIncludeNull",
-        label: "Years In India — Include all",
+        label: "Years In India: Include all",
         enabled: true,
         type: "boolean",
         column: "years_in_india",
@@ -280,7 +280,7 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       },
       {
         key: "centerIncYearIncludeNull",
-        label: "Incorporation Timeline — Include all",
+        label: "Incorporation Timeline: Include all",
         enabled: true,
         type: "boolean",
         column: "center_inc_year",
@@ -405,7 +405,7 @@ for (const section of FILTER_SECTIONS) {
   }
 }
 
-/** Frozen set for runtime lookups — rebuild by restarting the dev server after config changes */
+/** Frozen set for runtime lookups. rebuild by restarting the dev server after config changes */
 export const ENABLED_FILTER_KEYS: ReadonlySet<string> = _enabledFilterKeys
 
 /** Check if a specific filter is enabled */

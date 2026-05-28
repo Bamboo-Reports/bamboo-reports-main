@@ -16,7 +16,7 @@ import {
   markAllAsRead as markAllAsReadAction,
   type NotificationSummary,
   type RecordUpdateSummary,
-} from "@/app/actions"
+} from "@/app/actions/notifications"
 import { NOTIFICATIONS_ENABLED } from "@/lib/config/notifications"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 

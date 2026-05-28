@@ -14,7 +14,11 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Building2, Briefcase, Users, Sparkles, CheckCircle2, Download } from "lucide-react"
 import type { ExportDatasetKey } from "@/lib/utils/export-helpers"
-import { requestServerExport, type ServerExportResponse } from "@/lib/exports/request-client"
+import {
+  requestServerExport,
+  resolveExportDownloadUrl,
+  type ServerExportResponse,
+} from "@/lib/exports/request-client"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { toTrackedStringArray } from "@/lib/analytics/tracking"
@@ -121,7 +125,7 @@ export function ExportDialog({
           rafRef.current = null
           return current
         }
-        // Tween at ~140%/second — helper emits ramped ticks so we just
+        // Tween at ~140%/second. helper emits ramped ticks so we just
         // need to glide the last pixels between them.
         const step = (dt / 1000) * 140
         const diff = progress - current
@@ -476,9 +480,13 @@ export function ExportDialog({
               <Button
                 size="sm"
                 className="gap-2"
-                onClick={() => {
-                  const url = `${exportResult.downloadPath}?access_token=${encodeURIComponent(exportResult.accessToken)}`
-                  window.open(url, "_self")
+                onClick={async () => {
+                  try {
+                    const url = await resolveExportDownloadUrl(exportResult.id)
+                    window.open(url, "_self")
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : "Failed to download export.")
+                  }
                 }}
               >
                 <Download className="h-4 w-4" />
