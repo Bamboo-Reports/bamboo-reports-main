@@ -392,10 +392,10 @@ export function ProspectsTab({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {getPaginatedData(tableItems, currentPage, itemsPerPage).map((item, index) =>
+                      {getPaginatedData(tableItems, currentPage, itemsPerPage).map((item) =>
                         item.type === "visible" ? (
                           <ProspectRow
-                            key={`${getProspectRecordId(item.prospect)}-${index}`}
+                            key={getProspectRecordId(item.prospect)}
                             prospect={item.prospect}
                             onClick={() => handleProspectClick(item.prospect, "table_row")}
                             visibleColumns={visibleColumnSet}
@@ -431,10 +431,10 @@ export function ProspectsTab({
                       </button>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
-                      {getPaginatedData(gridItems, currentPage, itemsPerPage).map((item, index) =>
+                      {getPaginatedData(gridItems, currentPage, itemsPerPage).map((item) =>
                         item.type === "visible" ? (
                           <ProspectGridCard
-                            key={`${item.prospect.prospect_email}-${index}`}
+                            key={getProspectRecordId(item.prospect)}
                             prospect={item.prospect}
                             onClick={() => handleProspectClick(item.prospect, "grid_card")}
                           />

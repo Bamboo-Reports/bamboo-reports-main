@@ -427,9 +427,9 @@ export function CentersTab({
                     </TableHeader>
                     <TableBody>
                       {getPaginatedData(sortedCenters, currentPage, itemsPerPage).map(
-                        (center, index) => (
+                        (center) => (
                           <CenterRow
-                            key={`${center.cn_unique_key}-${index}`}
+                            key={center.cn_unique_key}
                             center={center}
                             onClick={() => handleCenterClick(center, "table_row")}
                             visibleColumns={visibleColumnSet}
@@ -459,9 +459,9 @@ export function CentersTab({
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
                       {getPaginatedData(sortedCenters, currentPage, itemsPerPage).map(
-                        (center, index) => (
+                        (center) => (
                           <CenterGridCard
-                            key={`${center.cn_unique_key}-${index}`}
+                            key={center.cn_unique_key}
                             center={center}
                             onClick={() => handleCenterClick(center, "grid_card")}
                           />

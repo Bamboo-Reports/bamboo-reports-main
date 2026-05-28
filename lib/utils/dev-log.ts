@@ -11,3 +11,9 @@ export function devWarn(...args: unknown[]): void {
     console.warn(...args)
   }
 }
+
+export function perfLog(label: string, ms: number): void {
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`[perf] ${label}: ${ms.toFixed(1)}ms`)
+  }
+}
