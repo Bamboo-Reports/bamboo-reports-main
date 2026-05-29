@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Briefcase, Building2, Clock, Trash2, Users } from "lucide-react"
+import { Clock, Trash2 } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -14,46 +14,10 @@ import { Button } from "@/components/ui/button"
 import { PaginationControls } from "@/components/ui/pagination-controls"
 import { cn } from "@/lib/utils"
 import { getPaginatedData } from "@/lib/utils/helpers"
+import { ENTITY_TYPE_META, formatTimeAgo } from "@/lib/dashboard/entity-display"
 import type { RecentItem } from "@/hooks/use-recent-items"
 
 const ITEMS_PER_PAGE = 10
-
-function timeAgo(ts: number): string {
-  const diff = Date.now() - ts
-  const minutes = Math.floor(diff / 60_000)
-  if (minutes < 1) return "Just now"
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  if (days === 1) return "Yesterday"
-  if (days < 7) return `${days}d ago`
-  return new Date(ts).toLocaleDateString(undefined, { day: "2-digit", month: "short" })
-}
-
-const TYPE_META = {
-  account: {
-    icon: Building2,
-    iconClass: "text-primary",
-    borderClass: "border-primary/20",
-    badgeClass: "bg-primary/10 text-primary border-primary/20",
-    label: "Account",
-  },
-  center: {
-    icon: Briefcase,
-    iconClass: "text-[hsl(var(--chart-2))]",
-    borderClass: "border-[hsl(var(--chart-2))]/25",
-    badgeClass: "bg-[hsl(var(--chart-2)/0.12)] text-[hsl(var(--chart-2))] border-[hsl(var(--chart-2)/0.25)]",
-    label: "Center",
-  },
-  prospect: {
-    icon: Users,
-    iconClass: "text-[hsl(var(--chart-3))]",
-    borderClass: "border-[hsl(var(--chart-3))]/25",
-    badgeClass: "bg-[hsl(var(--chart-3)/0.12)] text-[hsl(var(--chart-3))] border-[hsl(var(--chart-3)/0.25)]",
-    label: "Prospect",
-  },
-} as const
 
 interface HistoryDialogProps {
   open: boolean
@@ -116,7 +80,7 @@ export function HistoryDialog({
             <div className="overflow-hidden rounded-xl border border-border/60 bg-background/40 backdrop-blur-sm dark:bg-white/5 dark:border-white/10">
               <div className="divide-y divide-border/40">
                 {paginated.map((item) => {
-                  const meta = TYPE_META[item.type]
+                  const meta = ENTITY_TYPE_META[item.type]
                   const Icon = meta.icon
                   return (
                     <button
@@ -144,7 +108,7 @@ export function HistoryDialog({
                         {meta.label}
                       </Badge>
                       <span className="shrink-0 text-xs tabular-nums text-muted-foreground w-16 text-right">
-                        {timeAgo(item.viewedAt)}
+                        {formatTimeAgo(item.viewedAt)}
                       </span>
                     </button>
                   )
