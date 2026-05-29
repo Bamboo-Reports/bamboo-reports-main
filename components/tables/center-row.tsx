@@ -15,16 +15,19 @@ import { CompanyLogo } from "@/components/ui/company-logo"
 import type { CenterTableColumnKey } from "@/lib/dashboard/table-column-preferences"
 interface CenterRowProps {
   center: Center
-  onClick: () => void
+  // Entity-param callbacks keep a single stable handler shared across rows so a
+  // selection toggle doesn't re-render every memo'd row.
+  onOpen: (center: Center) => void
   visibleColumns: Set<CenterTableColumnKey>
   selectable?: boolean
   isSelected?: boolean
-  onSelectChange?: (checked: boolean) => void
+  onSelectChange?: (center: Center, checked: boolean) => void
   isFavorite?: boolean
-  onToggleFavorite?: () => void
+  onToggleFavorite?: (center: Center) => void
 }
 
-export const CenterRow = memo(({ center, onClick, visibleColumns, selectable, isSelected, onSelectChange, isFavorite, onToggleFavorite }: CenterRowProps) => {
+export const CenterRow = memo(({ center, onOpen, visibleColumns, selectable, isSelected, onSelectChange, isFavorite, onToggleFavorite }: CenterRowProps) => {
+  const handleOpen = () => onOpen(center)
   const location = [center.center_city, center.center_state].filter(Boolean).join(", ")
 
   return (
@@ -32,11 +35,11 @@ export const CenterRow = memo(({ center, onClick, visibleColumns, selectable, is
       <ContextMenuTrigger asChild>
         <TableRow
           className="cursor-pointer hover:bg-muted/50 transition-colors focus-visible:bg-muted/70 animate-stagger"
-          onClick={onClick}
+          onClick={handleOpen}
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === " ") {
               event.preventDefault()
-              onClick()
+              handleOpen()
             }
           }}
           tabIndex={0}
@@ -50,7 +53,7 @@ export const CenterRow = memo(({ center, onClick, visibleColumns, selectable, is
           >
             <Checkbox
               checked={Boolean(isSelected)}
-              onCheckedChange={(checked) => onSelectChange?.(checked === true)}
+              onCheckedChange={(checked) => onSelectChange?.(center, checked === true)}
               aria-label={`Select ${center.center_name || "center"}`}
             />
           </TableCell>
@@ -105,12 +108,12 @@ export const CenterRow = memo(({ center, onClick, visibleColumns, selectable, is
         </TableRow>
       </ContextMenuTrigger>
       <ContextMenuContent className="w-48">
-        <ContextMenuItem onClick={onClick}>
+        <ContextMenuItem onClick={handleOpen}>
           <Eye className="h-4 w-4" />
           View Details
         </ContextMenuItem>
         {onToggleFavorite && (
-          <ContextMenuItem onClick={onToggleFavorite}>
+          <ContextMenuItem onClick={() => onToggleFavorite(center)}>
             {isFavorite ? <StarOff className="h-4 w-4" /> : <Star className="h-4 w-4" />}
             {isFavorite ? "Remove from Favorites" : "Add to Favorites"}
           </ContextMenuItem>

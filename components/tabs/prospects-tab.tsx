@@ -45,11 +45,21 @@ interface ProspectsTabProps {
   setCurrentPage: (page: number | ((prev: number) => number)) => void
   itemsPerPage: number
   onRecordOpened?: (item: { type: "prospect" | "account"; id: string; title: string; subtitle: string }) => void
-  onDownloadSelection?: (scope: { dataset: "prospects"; accountNames: string[] }) => void
+  onDownloadSelection?: (scope: { dataset: "prospects"; prospectIds: string[] }) => void
   favoriteKeys?: Set<string>
   onToggleFavorite?: (item: FavoriteInput) => void
   onFavoriteMany?: (items: FavoriteInput[]) => void
   onUnfavoriteMany?: (items: FavoriteInput[]) => void
+}
+
+// Module-level so the reference is stable across renders (passed to memo'd rows).
+function buildProspectFavorite(prospect: Prospect): FavoriteInput {
+  return {
+    entity_type: "prospect",
+    entity_id: getProspectRecordIdUtil(prospect),
+    title: getProspectDisplayNameUtil(prospect),
+    subtitle: prospect.prospect_title || prospect.prospect_department || prospect.account_global_legal_name || null,
+  }
 }
 
 export function ProspectsTab({
@@ -115,7 +125,7 @@ export function ProspectsTab({
     []
   )
 
-  const handleProspectClick = (prospect: Prospect, openedFrom: "table_row" | "grid_card") => {
+  const handleProspectClick = React.useCallback((prospect: Prospect, openedFrom: "table_row" | "grid_card") => {
     if (isDialogOpen && openedRecordRef.current) {
       const dwellSeconds = Math.max(0, Math.round((Date.now() - openedRecordRef.current.openedAt) / 1000))
       captureEvent(ANALYTICS_EVENTS.RECORD_CLOSED, {
@@ -150,7 +160,7 @@ export function ProspectsTab({
       opened_from: openedFrom,
       has_contact_field: Boolean(prospect.prospect_email),
     })
-  }
+  }, [isDialogOpen, onRecordOpened, prospectsView, dataLayout, getProspectDisplayName, getProspectRecordId])
 
   const handleAccountOpen = (accountName: string) => {
     const account = accounts.find((item) => item.account_global_legal_name === accountName)
@@ -276,14 +286,6 @@ export function ProspectsTab({
     [sortedProspects, lockedProspectTeasers]
   )
 
-  const accountNameByKey = React.useMemo(() => {
-    const map = new Map<string, string>()
-    for (const prospect of prospects) {
-      const key = getProspectRecordId(prospect)
-      if (prospect.account_global_legal_name) map.set(key, prospect.account_global_legal_name)
-    }
-    return map
-  }, [prospects, getProspectRecordId])
   const availableKeys = React.useMemo(
     () => prospects.map((prospect) => getProspectRecordId(prospect)),
     [prospects, getProspectRecordId]
@@ -301,23 +303,26 @@ export function ProspectsTab({
   const allPageSelected = pageKeys.length > 0 && selectedOnPageCount === pageKeys.length
   const somePageSelected = selectedOnPageCount > 0 && !allPageSelected
 
-  const buildFavorite = (prospect: Prospect): FavoriteInput => ({
-    entity_type: "prospect",
-    entity_id: getProspectRecordId(prospect),
-    title: getProspectDisplayName(prospect),
-    subtitle: prospect.prospect_title || prospect.prospect_department || prospect.account_global_legal_name || null,
-  })
   const allSelectedFavorited =
     selectedKeys.size > 0 &&
     Array.from(selectedKeys).every((key) => Boolean(favoriteKeys?.has(`prospect:${key}`)))
 
+  // Stable per-row callbacks so toggling one row doesn't re-render every memo'd row.
+  const handleRowOpen = React.useCallback(
+    (prospect: Prospect) => handleProspectClick(prospect, "table_row"),
+    [handleProspectClick]
+  )
+  const handleRowSelectChange = React.useCallback(
+    (prospect: Prospect, checked: boolean) => toggleRow(getProspectRecordId(prospect), checked),
+    [toggleRow, getProspectRecordId]
+  )
+  const handleRowToggleFavorite = React.useCallback(
+    (prospect: Prospect) => onToggleFavorite?.(buildProspectFavorite(prospect)),
+    [onToggleFavorite]
+  )
+
   const handleExportSelection = () => {
-    const names = new Set<string>()
-    for (const key of selectedKeys) {
-      const name = accountNameByKey.get(key)
-      if (name) names.add(name)
-    }
-    onDownloadSelection?.({ dataset: "prospects", accountNames: Array.from(names) })
+    onDownloadSelection?.({ dataset: "prospects", prospectIds: Array.from(selectedKeys) })
   }
 
   // Show empty state when no prospects
@@ -461,13 +466,13 @@ export function ProspectsTab({
                           <ProspectRow
                             key={getProspectRecordId(item.prospect)}
                             prospect={item.prospect}
-                            onClick={() => handleProspectClick(item.prospect, "table_row")}
+                            onOpen={handleRowOpen}
                             visibleColumns={visibleColumnSet}
                             selectable
                             isSelected={selectedKeys.has(getProspectRecordId(item.prospect))}
-                            onSelectChange={(checked) => toggleRow(getProspectRecordId(item.prospect), checked)}
+                            onSelectChange={handleRowSelectChange}
                             isFavorite={favoriteKeys?.has(`prospect:${getProspectRecordId(item.prospect)}`)}
-                            onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(buildFavorite(item.prospect)) : undefined}
+                            onToggleFavorite={onToggleFavorite ? handleRowToggleFavorite : undefined}
                           />
                         ) : (
                           <LockedProspectTeaserRow
@@ -563,7 +568,7 @@ export function ProspectsTab({
             ? () => {
                 const items = prospects
                   .filter((p) => selectedKeys.has(getProspectRecordId(p)))
-                  .map(buildFavorite)
+                  .map(buildProspectFavorite)
                 if (allSelectedFavorited) onUnfavoriteMany?.(items)
                 else onFavoriteMany?.(items)
               }

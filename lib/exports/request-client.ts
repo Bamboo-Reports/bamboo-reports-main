@@ -5,6 +5,7 @@ export type ServerExportRequest = {
   datasets: ExportDatasetKey[]
   accountNames: string[] | null
   centerKeys: string[] | null
+  prospectKeys: string[] | null
   isFiltered: boolean
   filtersApplied: unknown
 }
@@ -53,6 +54,7 @@ export async function requestServerExport(
       datasets: input.datasets,
       accountNames: input.accountNames,
       centerKeys: input.centerKeys,
+      prospectKeys: input.prospectKeys,
       isFiltered: input.isFiltered,
       filtersApplied: input.filtersApplied,
       clientPublicIp: publicIp,

@@ -43,6 +43,8 @@ interface ExportDialogProps {
   accountNames?: string[] | null
   /** Center cn_unique_keys to include; null = all centers. */
   centerKeys?: string[] | null
+  /** Prospect ps_unique_keys to include; null = filter prospects by accountNames instead. */
+  prospectKeys?: string[] | null
   /** Locked prospect teasers matching the current export scope. */
   lockedProspectsCount?: number
   /** When set, restricts the dialog to these datasets (e.g. a single-sheet selection export). */
@@ -97,6 +99,7 @@ export function ExportDialog({
   filtersSnapshot,
   accountNames,
   centerKeys,
+  prospectKeys,
   lockedProspectsCount = 0,
   allowedDatasets,
   compact = false,
@@ -311,6 +314,7 @@ export function ExportDialog({
         datasets: selectedDatasets,
         accountNames: isFiltered ? accountNames ?? null : null,
         centerKeys: isFiltered ? centerKeys ?? null : null,
+        prospectKeys: isFiltered ? prospectKeys ?? null : null,
         isFiltered,
         filtersApplied: filtersSnapshot ?? null,
       })

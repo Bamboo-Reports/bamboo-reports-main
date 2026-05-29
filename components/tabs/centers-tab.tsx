@@ -56,6 +56,16 @@ interface CentersTabProps {
   onUnfavoriteMany?: (items: FavoriteInput[]) => void
 }
 
+// Module-level so the reference is stable across renders (passed to memo'd rows).
+function buildCenterFavorite(center: Center): FavoriteInput {
+  return {
+    entity_type: "center",
+    entity_id: center.cn_unique_key ?? "",
+    title: center.center_name || "Unknown Center",
+    subtitle: [center.center_city, center.center_country].filter(Boolean).join(", ") || center.account_global_legal_name || null,
+  }
+}
+
 export function CentersTab({
   accounts,
   centers,
@@ -110,7 +120,7 @@ export function CentersTab({
     openedFrom: "table_row" | "grid_card"
     center: Center
   } | null>(null)
-  const handleCenterClick = (center: Center, openedFrom: "table_row" | "grid_card") => {
+  const handleCenterClick = React.useCallback((center: Center, openedFrom: "table_row" | "grid_card") => {
     if (isDialogOpen && openedRecordRef.current) {
       const dwellSeconds = Math.max(0, Math.round((Date.now() - openedRecordRef.current.openedAt) / 1000))
       captureEvent(ANALYTICS_EVENTS.RECORD_CLOSED, {
@@ -143,7 +153,7 @@ export function CentersTab({
       opened_from: openedFrom,
       has_center_key: Boolean(center.cn_unique_key),
     })
-  }
+  }, [isDialogOpen, onRecordOpened, centersView, dataLayout])
 
   const handleAccountOpen = (accountName: string) => {
     const account = accounts.find((item) => item.account_global_legal_name === accountName)
@@ -275,15 +285,23 @@ export function CentersTab({
   const allPageSelected = pageKeys.length > 0 && selectedOnPageCount === pageKeys.length
   const somePageSelected = selectedOnPageCount > 0 && !allPageSelected
 
-  const buildFavorite = (center: Center): FavoriteInput => ({
-    entity_type: "center",
-    entity_id: center.cn_unique_key ?? "",
-    title: center.center_name || "Unknown Center",
-    subtitle: [center.center_city, center.center_country].filter(Boolean).join(", ") || center.account_global_legal_name || null,
-  })
   const allSelectedFavorited =
     selectedKeys.size > 0 &&
     Array.from(selectedKeys).every((key) => Boolean(favoriteKeys?.has(`center:${key}`)))
+
+  // Stable per-row callbacks so toggling one row doesn't re-render every memo'd row.
+  const handleRowOpen = React.useCallback(
+    (center: Center) => handleCenterClick(center, "table_row"),
+    [handleCenterClick]
+  )
+  const handleRowSelectChange = React.useCallback(
+    (center: Center, checked: boolean) => toggleRow(center.cn_unique_key ?? "", checked),
+    [toggleRow]
+  )
+  const handleRowToggleFavorite = React.useCallback(
+    (center: Center) => onToggleFavorite?.(buildCenterFavorite(center)),
+    [onToggleFavorite]
+  )
 
   // Show empty state when no centers
   if (centers.length === 0) {
@@ -479,13 +497,13 @@ export function CentersTab({
                           <CenterRow
                             key={center.cn_unique_key}
                             center={center}
-                            onClick={() => handleCenterClick(center, "table_row")}
+                            onOpen={handleRowOpen}
                             visibleColumns={visibleColumnSet}
                             selectable
                             isSelected={selectedKeys.has(center.cn_unique_key ?? "")}
-                            onSelectChange={(checked) => toggleRow(center.cn_unique_key ?? "", checked)}
+                            onSelectChange={handleRowSelectChange}
                             isFavorite={favoriteKeys?.has(`center:${center.cn_unique_key ?? ""}`)}
-                            onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(buildFavorite(center)) : undefined}
+                            onToggleFavorite={onToggleFavorite ? handleRowToggleFavorite : undefined}
                           />
                         )
                       )}
@@ -568,7 +586,7 @@ export function CentersTab({
             ? () => {
                 const items = centers
                   .filter((c) => selectedKeys.has(c.cn_unique_key ?? ""))
-                  .map(buildFavorite)
+                  .map(buildCenterFavorite)
                 if (allSelectedFavorited) onUnfavoriteMany?.(items)
                 else onFavoriteMany?.(items)
               }
