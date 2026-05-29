@@ -7,6 +7,8 @@
     "dev": "next dev",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "start": "next start",
     "benchmark": "node --env-file=.env scripts/benchmark-loading.mjs"
   },
@@ -84,7 +86,8 @@
     "eslint-config-next": "^16.2.6",
     "postcss": "^8.5.15",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.7"
   },
   "overrides": {
     "postcss": "$postcss",
