@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { ArrowDownAZ, ArrowUpAZ, ArrowUpDown, PieChartIcon, Table as TableIcon, LayoutGrid } from "lucide-react"
 import { ProspectRow } from "@/components/tables/prospect-row"
 import { SelectionActionBar } from "@/components/tables/selection-action-bar"
-import { useRowSelection } from "@/hooks/use-row-selection"
+import { useTableRowSelection } from "@/hooks/use-table-row-selection"
 import { getProspectDisplayName as getProspectDisplayNameUtil, getProspectRecordId as getProspectRecordIdUtil } from "@/lib/dashboard/prospect-id"
 import type { FavoriteInput } from "@/hooks/use-favorites"
 import { ProspectGridCard } from "@/components/cards/prospect-grid-card"
@@ -286,39 +286,38 @@ export function ProspectsTab({
     [sortedProspects, lockedProspectTeasers]
   )
 
-  const availableKeys = React.useMemo(
-    () => prospects.map((prospect) => getProspectRecordId(prospect)),
-    [prospects, getProspectRecordId]
-  )
-  const { selected: selectedKeys, toggle: toggleRow, toggleMany, clear: clearSelection } =
-    useRowSelection(availableKeys)
-  const pageKeys = React.useMemo(
+  const pageProspects = React.useMemo(
     () =>
       getPaginatedData(tableItems, currentPage, itemsPerPage)
         .filter((item) => item.type === "visible")
-        .map((item) => getProspectRecordId(item.prospect)),
-    [tableItems, currentPage, itemsPerPage, getProspectRecordId]
+        .map((item) => item.prospect),
+    [tableItems, currentPage, itemsPerPage]
   )
-  const selectedOnPageCount = pageKeys.filter((key) => selectedKeys.has(key)).length
-  const allPageSelected = pageKeys.length > 0 && selectedOnPageCount === pageKeys.length
-  const somePageSelected = selectedOnPageCount > 0 && !allPageSelected
+  const {
+    selected: selectedKeys,
+    toggleMany,
+    clear: clearSelection,
+    pageKeys,
+    allPageSelected,
+    somePageSelected,
+    allSelectedFavorited,
+    selectedFavoriteInputs,
+    handleRowSelectChange,
+    handleRowToggleFavorite,
+  } = useTableRowSelection({
+    items: prospects,
+    pageItems: pageProspects,
+    getKey: getProspectRecordIdUtil,
+    favoritePrefix: "prospect",
+    favoriteKeys,
+    buildFavorite: buildProspectFavorite,
+    onToggleFavorite,
+  })
 
-  const allSelectedFavorited =
-    selectedKeys.size > 0 &&
-    Array.from(selectedKeys).every((key) => Boolean(favoriteKeys?.has(`prospect:${key}`)))
-
-  // Stable per-row callbacks so toggling one row doesn't re-render every memo'd row.
+  // Tab-specific open handler kept stable so memo'd rows don't re-render.
   const handleRowOpen = React.useCallback(
     (prospect: Prospect) => handleProspectClick(prospect, "table_row"),
     [handleProspectClick]
-  )
-  const handleRowSelectChange = React.useCallback(
-    (prospect: Prospect, checked: boolean) => toggleRow(getProspectRecordId(prospect), checked),
-    [toggleRow, getProspectRecordId]
-  )
-  const handleRowToggleFavorite = React.useCallback(
-    (prospect: Prospect) => onToggleFavorite?.(buildProspectFavorite(prospect)),
-    [onToggleFavorite]
   )
 
   const handleExportSelection = () => {
@@ -566,9 +565,7 @@ export function ProspectsTab({
         onFavorite={
           onFavoriteMany || onUnfavoriteMany
             ? () => {
-                const items = prospects
-                  .filter((p) => selectedKeys.has(getProspectRecordId(p)))
-                  .map(buildProspectFavorite)
+                const items = selectedFavoriteInputs()
                 if (allSelectedFavorited) onUnfavoriteMany?.(items)
                 else onFavoriteMany?.(items)
               }

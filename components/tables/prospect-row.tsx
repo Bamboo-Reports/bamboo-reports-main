@@ -65,6 +65,7 @@ export const ProspectRow = memo(({ prospect, onOpen, visibleColumns, selectable,
           >
             <Checkbox
               checked={Boolean(isSelected)}
+              disabled={!onSelectChange}
               onCheckedChange={(checked) => onSelectChange?.(prospect, checked === true)}
               aria-label={`Select ${fullName || "prospect"}`}
             />

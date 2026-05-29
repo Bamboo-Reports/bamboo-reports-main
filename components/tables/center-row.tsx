@@ -53,6 +53,7 @@ export const CenterRow = memo(({ center, onOpen, visibleColumns, selectable, isS
           >
             <Checkbox
               checked={Boolean(isSelected)}
+              disabled={!onSelectChange}
               onCheckedChange={(checked) => onSelectChange?.(center, checked === true)}
               aria-label={`Select ${center.center_name || "center"}`}
             />

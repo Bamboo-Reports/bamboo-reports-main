@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { ArrowDownAZ, ArrowUpAZ, ArrowUpDown, PieChartIcon, Table as TableIcon, MapIcon, LayoutGrid, Layers, MapPin } from "lucide-react"
 import { CenterRow } from "@/components/tables"
 import { SelectionActionBar } from "@/components/tables/selection-action-bar"
-import { useRowSelection } from "@/hooks/use-row-selection"
+import { useTableRowSelection } from "@/hooks/use-table-row-selection"
 import type { FavoriteInput } from "@/hooks/use-favorites"
 import { CenterGridCard } from "@/components/cards/center-grid-card"
 import { PieChartCard } from "@/components/charts/pie-chart-card"
@@ -56,7 +56,9 @@ interface CentersTabProps {
   onUnfavoriteMany?: (items: FavoriteInput[]) => void
 }
 
-// Module-level so the reference is stable across renders (passed to memo'd rows).
+// Module-level so the references are stable across renders (passed to memo'd rows).
+const getCenterKey = (center: Center) => center.cn_unique_key ?? ""
+
 function buildCenterFavorite(center: Center): FavoriteInput {
   return {
     entity_type: "center",
@@ -268,39 +270,35 @@ export function CentersTab({
     return sort.direction === "asc" ? sorted : sorted.reverse()
   }, [centers, sort])
 
-  const availableKeys = React.useMemo(
-    () => centers.map((center) => center.cn_unique_key).filter((key): key is string => Boolean(key)),
-    [centers]
-  )
-  const { selected: selectedKeys, toggle: toggleRow, toggleMany, clear: clearSelection } =
-    useRowSelection(availableKeys)
-  const pageKeys = React.useMemo(
-    () =>
-      getPaginatedData(sortedCenters, currentPage, itemsPerPage)
-        .map((center) => center.cn_unique_key)
-        .filter((key): key is string => Boolean(key)),
+  const pageCenters = React.useMemo(
+    () => getPaginatedData(sortedCenters, currentPage, itemsPerPage),
     [sortedCenters, currentPage, itemsPerPage]
   )
-  const selectedOnPageCount = pageKeys.filter((key) => selectedKeys.has(key)).length
-  const allPageSelected = pageKeys.length > 0 && selectedOnPageCount === pageKeys.length
-  const somePageSelected = selectedOnPageCount > 0 && !allPageSelected
+  const {
+    selected: selectedKeys,
+    toggleMany,
+    clear: clearSelection,
+    pageKeys,
+    allPageSelected,
+    somePageSelected,
+    allSelectedFavorited,
+    selectedFavoriteInputs,
+    handleRowSelectChange,
+    handleRowToggleFavorite,
+  } = useTableRowSelection({
+    items: centers,
+    pageItems: pageCenters,
+    getKey: getCenterKey,
+    favoritePrefix: "center",
+    favoriteKeys,
+    buildFavorite: buildCenterFavorite,
+    onToggleFavorite,
+  })
 
-  const allSelectedFavorited =
-    selectedKeys.size > 0 &&
-    Array.from(selectedKeys).every((key) => Boolean(favoriteKeys?.has(`center:${key}`)))
-
-  // Stable per-row callbacks so toggling one row doesn't re-render every memo'd row.
+  // Tab-specific open handler kept stable so memo'd rows don't re-render.
   const handleRowOpen = React.useCallback(
     (center: Center) => handleCenterClick(center, "table_row"),
     [handleCenterClick]
-  )
-  const handleRowSelectChange = React.useCallback(
-    (center: Center, checked: boolean) => toggleRow(center.cn_unique_key ?? "", checked),
-    [toggleRow]
-  )
-  const handleRowToggleFavorite = React.useCallback(
-    (center: Center) => onToggleFavorite?.(buildCenterFavorite(center)),
-    [onToggleFavorite]
   )
 
   // Show empty state when no centers
@@ -492,7 +490,7 @@ export function CentersTab({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {getPaginatedData(sortedCenters, currentPage, itemsPerPage).map(
+                      {pageCenters.map(
                         (center) => (
                           <CenterRow
                             key={center.cn_unique_key}
@@ -501,9 +499,9 @@ export function CentersTab({
                             visibleColumns={visibleColumnSet}
                             selectable
                             isSelected={selectedKeys.has(center.cn_unique_key ?? "")}
-                            onSelectChange={handleRowSelectChange}
+                            onSelectChange={getCenterKey(center) ? handleRowSelectChange : undefined}
                             isFavorite={favoriteKeys?.has(`center:${center.cn_unique_key ?? ""}`)}
-                            onToggleFavorite={onToggleFavorite ? handleRowToggleFavorite : undefined}
+                            onToggleFavorite={onToggleFavorite && getCenterKey(center) ? handleRowToggleFavorite : undefined}
                           />
                         )
                       )}
@@ -584,9 +582,7 @@ export function CentersTab({
         onFavorite={
           onFavoriteMany || onUnfavoriteMany
             ? () => {
-                const items = centers
-                  .filter((c) => selectedKeys.has(c.cn_unique_key ?? ""))
-                  .map(buildCenterFavorite)
+                const items = selectedFavoriteInputs()
                 if (allSelectedFavorited) onUnfavoriteMany?.(items)
                 else onFavoriteMany?.(items)
               }

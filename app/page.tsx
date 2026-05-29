@@ -842,12 +842,14 @@ function DashboardContent(): React.JSX.Element | null {
 
   const handleToggleFavorite = useCallback(
     async (item: FavoriteInput) => {
-      const { ok, added } = await toggleFavorite(item)
-      if (!ok) {
+      const result = await toggleFavorite(item)
+      // null means a toggle for this item is already in flight; ignore it.
+      if (!result) return
+      if (!result.ok) {
         toast.error("Could not update favorites. Please try again.")
         return
       }
-      toast.success(added ? "Added to favorites" : "Removed from favorites")
+      toast.success(result.added ? "Added to favorites" : "Removed from favorites")
     },
     [toggleFavorite]
   )
