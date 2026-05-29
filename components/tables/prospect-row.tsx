@@ -16,16 +16,19 @@ import type { ProspectTableColumnKey } from "@/lib/dashboard/table-column-prefer
 
 interface ProspectRowProps {
   prospect: Prospect
-  onClick: () => void
+  // Entity-param callbacks keep one stable handler shared across rows so a
+  // selection toggle doesn't re-render every memo'd row.
+  onOpen: (prospect: Prospect) => void
   visibleColumns: Set<ProspectTableColumnKey>
   selectable?: boolean
   isSelected?: boolean
-  onSelectChange?: (checked: boolean) => void
+  onSelectChange?: (prospect: Prospect, checked: boolean) => void
   isFavorite?: boolean
-  onToggleFavorite?: () => void
+  onToggleFavorite?: (prospect: Prospect) => void
 }
 
-export const ProspectRow = memo(({ prospect, onClick, visibleColumns, selectable, isSelected, onSelectChange, isFavorite, onToggleFavorite }: ProspectRowProps) => {
+export const ProspectRow = memo(({ prospect, onOpen, visibleColumns, selectable, isSelected, onSelectChange, isFavorite, onToggleFavorite }: ProspectRowProps) => {
+  const handleOpen = () => onOpen(prospect)
   const copy = useCopyToClipboard()
   const fullName =
     prospect.prospect_full_name ||
@@ -44,11 +47,11 @@ export const ProspectRow = memo(({ prospect, onClick, visibleColumns, selectable
       <ContextMenuTrigger asChild>
         <TableRow
           className="cursor-pointer hover:bg-muted/50 transition-colors focus-visible:bg-muted/70 animate-stagger"
-          onClick={onClick}
+          onClick={handleOpen}
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === " ") {
               event.preventDefault()
-              onClick()
+              handleOpen()
             }
           }}
           tabIndex={0}
@@ -62,7 +65,8 @@ export const ProspectRow = memo(({ prospect, onClick, visibleColumns, selectable
           >
             <Checkbox
               checked={Boolean(isSelected)}
-              onCheckedChange={(checked) => onSelectChange?.(checked === true)}
+              disabled={!onSelectChange}
+              onCheckedChange={(checked) => onSelectChange?.(prospect, checked === true)}
               aria-label={`Select ${fullName || "prospect"}`}
             />
           </TableCell>
@@ -115,12 +119,12 @@ export const ProspectRow = memo(({ prospect, onClick, visibleColumns, selectable
         </TableRow>
       </ContextMenuTrigger>
       <ContextMenuContent className="w-48">
-        <ContextMenuItem onClick={onClick}>
+        <ContextMenuItem onClick={handleOpen}>
           <Eye className="h-4 w-4" />
           View Details
         </ContextMenuItem>
         {onToggleFavorite && (
-          <ContextMenuItem onClick={onToggleFavorite}>
+          <ContextMenuItem onClick={() => onToggleFavorite(prospect)}>
             {isFavorite ? <StarOff className="h-4 w-4" /> : <Star className="h-4 w-4" />}
             {isFavorite ? "Remove from Favorites" : "Add to Favorites"}
           </ContextMenuItem>

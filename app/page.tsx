@@ -122,7 +122,7 @@ function DashboardContent(): React.JSX.Element | null {
   const [exportScope, setExportScope] = useState<
     | { dataset: "accounts"; accountNames: string[] }
     | { dataset: "centers"; centerKeys: string[] }
-    | { dataset: "prospects"; accountNames: string[] }
+    | { dataset: "prospects"; prospectIds: string[] }
     | null
   >(null)
   const [exportsDialogOpen, setExportsDialogOpen] = useState(false)
@@ -201,6 +201,7 @@ function DashboardContent(): React.JSX.Element | null {
   const previousProspectsViewRef = useRef<"chart" | "data">("chart")
   const viewSwitchCountRef = useRef(0)
   const exportCountRef = useRef(0)
+  const exportScopeClearRef = useRef<number | null>(null)
   const heartbeatIntervalRef = useRef<number | null>(null)
   const idleTimeoutRef = useRef<number | null>(null)
   const isIdleRef = useRef(false)
@@ -579,29 +580,45 @@ function DashboardContent(): React.JSX.Element | null {
     loadData()
   }, [loadData])
 
+  // Cancel any pending deferred scope clear so a freshly opened export can't be
+  // reset by a timer scheduled when the previous dialog closed.
+  const cancelPendingScopeClear = useCallback(() => {
+    if (exportScopeClearRef.current !== null) {
+      window.clearTimeout(exportScopeClearRef.current)
+      exportScopeClearRef.current = null
+    }
+  }, [])
+
   const handleExportAll = useCallback(() => {
     if (!canExport) {
       return
     }
+    cancelPendingScopeClear()
     setExportScope(null)
     setExportDialogOpen(true)
-  }, [canExport])
+  }, [canExport, cancelPendingScopeClear])
 
   const handleDownloadSelection = useCallback(
     (
       scope:
         | { dataset: "accounts"; accountNames: string[] }
         | { dataset: "centers"; centerKeys: string[] }
-        | { dataset: "prospects"; accountNames: string[] }
+        | { dataset: "prospects"; prospectIds: string[] }
     ) => {
-      const values = "accountNames" in scope ? scope.accountNames : scope.centerKeys
+      const values =
+        scope.dataset === "centers"
+          ? scope.centerKeys
+          : scope.dataset === "prospects"
+            ? scope.prospectIds
+            : scope.accountNames
       if (!canExport || values.length === 0) {
         return
       }
+      cancelPendingScopeClear()
       setExportScope(scope)
       setExportDialogOpen(true)
     },
-    [canExport]
+    [canExport, cancelPendingScopeClear]
   )
 
   const handleExportDialogOpenChange = useCallback((open: boolean) => {
@@ -609,9 +626,15 @@ function DashboardContent(): React.JSX.Element | null {
     if (!open) {
       // Defer clearing the scope until the close animation (300ms) finishes,
       // otherwise the dialog briefly re-renders in its full multi-dataset form.
-      window.setTimeout(() => setExportScope(null), 350)
+      cancelPendingScopeClear()
+      exportScopeClearRef.current = window.setTimeout(() => {
+        exportScopeClearRef.current = null
+        setExportScope(null)
+      }, 350)
     }
-  }, [])
+  }, [cancelPendingScopeClear])
+
+  useEffect(() => cancelPendingScopeClear, [cancelPendingScopeClear])
 
   const exportPayload = useMemo(() => {
     const { filteredAccounts, filteredCenters, filteredServices, filteredProspects } = filteredData
@@ -640,6 +663,7 @@ function DashboardContent(): React.JSX.Element | null {
               .filter((key): key is string => Boolean(key))
           )
         ),
+        prospectKeys: undefined as string[] | undefined,
         allowedDatasets: undefined as ExportDatasetKey[] | undefined,
       }
     }
@@ -660,25 +684,44 @@ function DashboardContent(): React.JSX.Element | null {
         filtersSnapshot: snapshot,
         accountNames: [],
         centerKeys: exportScope.centerKeys,
+        prospectKeys: undefined as string[] | undefined,
         allowedDatasets: ["centers"] as ExportDatasetKey[],
       }
     }
 
-    const nameSet = new Set(exportScope.accountNames)
     if (exportScope.dataset === "prospects") {
-      const scopedProspects = filteredProspects.filter(
-        (p) => p.account_global_legal_name && nameSet.has(p.account_global_legal_name)
+      // Match the exact prospects the user selected (by stable record id), then
+      // target them server-side via ps_unique_key. Selected prospects without a
+      // key fall back to their account so they are still included.
+      const idSet = new Set(exportScope.prospectIds)
+      const scopedProspects = filteredProspects.filter((p) => idSet.has(getProspectRecordId(p)))
+      const prospectKeys = Array.from(
+        new Set(
+          scopedProspects
+            .map((p) => p.ps_unique_key)
+            .filter((key): key is string => Boolean(key))
+        )
+      )
+      const fallbackAccountNames = Array.from(
+        new Set(
+          scopedProspects
+            .filter((p) => !p.ps_unique_key)
+            .map((p) => p.account_global_legal_name)
+            .filter((name): name is string => Boolean(name))
+        )
       )
       return {
         data: { ...emptyData, prospects: scopedProspects },
         isFiltered: true,
         filtersSnapshot: snapshot,
-        accountNames: exportScope.accountNames,
+        accountNames: fallbackAccountNames,
         centerKeys: [],
+        prospectKeys,
         allowedDatasets: ["prospects"] as ExportDatasetKey[],
       }
     }
 
+    const nameSet = new Set(exportScope.accountNames)
     const scopedAccounts = filteredAccounts.filter(
       (a) => a.account_global_legal_name && nameSet.has(a.account_global_legal_name)
     )
@@ -688,6 +731,7 @@ function DashboardContent(): React.JSX.Element | null {
       filtersSnapshot: snapshot,
       accountNames: exportScope.accountNames,
       centerKeys: [],
+      prospectKeys: undefined as string[] | undefined,
       allowedDatasets: ["accounts"] as ExportDatasetKey[],
     }
   }, [exportScope, filteredData, filters, activeFiltersCount])
@@ -798,12 +842,14 @@ function DashboardContent(): React.JSX.Element | null {
 
   const handleToggleFavorite = useCallback(
     async (item: FavoriteInput) => {
-      const { ok, added } = await toggleFavorite(item)
-      if (!ok) {
+      const result = await toggleFavorite(item)
+      // null means a toggle for this item is already in flight; ignore it.
+      if (!result) return
+      if (!result.ok) {
         toast.error("Could not update favorites. Please try again.")
         return
       }
-      toast.success(added ? "Added to favorites" : "Removed from favorites")
+      toast.success(result.added ? "Added to favorites" : "Removed from favorites")
     },
     [toggleFavorite]
   )
@@ -1033,6 +1079,7 @@ function DashboardContent(): React.JSX.Element | null {
             lockedProspectsCount={filteredLockedProspectTeasers.length}
             accountNames={exportPayload.accountNames}
             centerKeys={exportPayload.centerKeys}
+            prospectKeys={exportPayload.prospectKeys}
             allowedDatasets={exportPayload.allowedDatasets}
             compact={Boolean(exportPayload.allowedDatasets)}
             onExportCompleted={handleExportCompleted}

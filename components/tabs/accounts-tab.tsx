@@ -18,7 +18,7 @@ import {
 } from "lucide-react"
 import { AccountRow } from "@/components/tables"
 import { SelectionActionBar } from "@/components/tables/selection-action-bar"
-import { useRowSelection } from "@/hooks/use-row-selection"
+import { useTableRowSelection } from "@/hooks/use-table-row-selection"
 import type { FavoriteInput } from "@/hooks/use-favorites"
 import { AccountGridCard } from "@/components/cards/account-grid-card"
 import { PieChartCard } from "@/components/charts/pie-chart-card"
@@ -65,6 +65,18 @@ interface AccountsTabProps {
   onUnfavoriteMany?: (items: FavoriteInput[]) => void
 }
 
+// Module-level so the references are stable across renders (passed to memo'd rows).
+const getAccountKey = (account: Account) => account.account_global_legal_name ?? ""
+
+function buildAccountFavorite(account: Account): FavoriteInput {
+  return {
+    entity_type: "account",
+    entity_id: account.account_global_legal_name ?? "",
+    title: account.account_global_legal_name || "Unknown Account",
+    subtitle: [account.account_hq_city, account.account_hq_country].filter(Boolean).join(", ") || null,
+  }
+}
+
 export function AccountsTab({
   accounts,
   centers,
@@ -97,15 +109,6 @@ export function AccountsTab({
   })
   const [dataLayout, setDataLayout] = useState<"table" | "grid">("table")
   const [mapMode, setMapMode] = useState<"city" | "state">("state")
-  const availableNames = React.useMemo(
-    () =>
-      accounts
-        .map((account) => account.account_global_legal_name)
-        .filter((name): name is string => Boolean(name)),
-    [accounts]
-  )
-  const { selected: selectedNames, toggle: toggleRow, toggleMany, clear: clearSelection } =
-    useRowSelection(availableNames)
   const {
     columns,
     visibleColumnSet,
@@ -132,7 +135,7 @@ export function AccountsTab({
     openedFrom: "table_row" | "grid_card"
     account: Account
   } | null>(null)
-  const handleAccountClick = (account: Account, openedFrom: "table_row" | "grid_card") => {
+  const handleAccountClick = React.useCallback((account: Account, openedFrom: "table_row" | "grid_card") => {
     if (isDialogOpen && openedRecordRef.current) {
       const dwellSeconds = Math.max(0, Math.round((Date.now() - openedRecordRef.current.openedAt) / 1000))
       captureEvent(ANALYTICS_EVENTS.RECORD_CLOSED, {
@@ -165,7 +168,7 @@ export function AccountsTab({
       opened_from: openedFrom,
       has_website: Boolean(account.account_hq_website),
     })
-  }
+  }, [isDialogOpen, onRecordOpened, accountsView, dataLayout])
 
   const handleSort = (key: typeof sort.key) => {
     let nextDirection: "asc" | "desc" | null = "asc"
@@ -254,26 +257,36 @@ export function AccountsTab({
     return sort.direction === "asc" ? sorted : sorted.reverse()
   }, [accounts, sort])
 
-  const pageNames = React.useMemo(
-    () =>
-      getPaginatedData(sortedAccounts, currentPage, itemsPerPage)
-        .map((account) => account.account_global_legal_name)
-        .filter((name): name is string => Boolean(name)),
+  const pageAccounts = React.useMemo(
+    () => getPaginatedData(sortedAccounts, currentPage, itemsPerPage),
     [sortedAccounts, currentPage, itemsPerPage]
   )
-  const selectedOnPageCount = pageNames.filter((name) => selectedNames.has(name)).length
-  const allPageSelected = pageNames.length > 0 && selectedOnPageCount === pageNames.length
-  const somePageSelected = selectedOnPageCount > 0 && !allPageSelected
-
-  const buildFavorite = (account: Account): FavoriteInput => ({
-    entity_type: "account",
-    entity_id: account.account_global_legal_name ?? "",
-    title: account.account_global_legal_name || "Unknown Account",
-    subtitle: [account.account_hq_city, account.account_hq_country].filter(Boolean).join(", ") || null,
+  const {
+    selected: selectedNames,
+    toggleMany,
+    clear: clearSelection,
+    pageKeys: pageNames,
+    allPageSelected,
+    somePageSelected,
+    allSelectedFavorited,
+    selectedFavoriteInputs,
+    handleRowSelectChange,
+    handleRowToggleFavorite,
+  } = useTableRowSelection({
+    items: accounts,
+    pageItems: pageAccounts,
+    getKey: getAccountKey,
+    favoritePrefix: "account",
+    favoriteKeys,
+    buildFavorite: buildAccountFavorite,
+    onToggleFavorite,
   })
-  const allSelectedFavorited =
-    selectedNames.size > 0 &&
-    Array.from(selectedNames).every((name) => Boolean(favoriteKeys?.has(`account:${name}`)))
+
+  // Tab-specific open handler kept stable so memo'd rows don't re-render.
+  const handleRowOpen = React.useCallback(
+    (account: Account) => handleAccountClick(account, "table_row"),
+    [handleAccountClick]
+  )
 
   if (accounts.length === 0) {
     return (
@@ -465,20 +478,18 @@ export function AccountsTab({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {getPaginatedData(sortedAccounts, currentPage, itemsPerPage).map(
+                    {pageAccounts.map(
                       (account) => (
                         <AccountRow
                           key={account.account_global_legal_name}
                           account={account}
-                          onClick={() => handleAccountClick(account, "table_row")}
+                          onOpen={handleRowOpen}
                           visibleColumns={visibleColumnSet}
                           selectable
                           isSelected={selectedNames.has(account.account_global_legal_name ?? "")}
-                          onSelectChange={(checked) =>
-                            toggleRow(account.account_global_legal_name ?? "", checked)
-                          }
+                          onSelectChange={getAccountKey(account) ? handleRowSelectChange : undefined}
                           isFavorite={favoriteKeys?.has(`account:${account.account_global_legal_name ?? ""}`)}
-                          onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(buildFavorite(account)) : undefined}
+                          onToggleFavorite={onToggleFavorite && getAccountKey(account) ? handleRowToggleFavorite : undefined}
                         />
                       )
                     )}
@@ -539,9 +550,7 @@ export function AccountsTab({
         onFavorite={
           onFavoriteMany || onUnfavoriteMany
             ? () => {
-                const items = accounts
-                  .filter((a) => selectedNames.has(a.account_global_legal_name ?? ""))
-                  .map(buildFavorite)
+                const items = selectedFavoriteInputs()
                 if (allSelectedFavorited) onUnfavoriteMany?.(items)
                 else onFavoriteMany?.(items)
               }

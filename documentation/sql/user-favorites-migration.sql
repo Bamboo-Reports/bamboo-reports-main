@@ -21,19 +21,24 @@ CREATE INDEX IF NOT EXISTS user_favorites_user_created_idx
 ALTER TABLE public.user_favorites ENABLE ROW LEVEL SECURITY;
 
 -- 4. RLS Policies (private per user, full CRUD scoped to auth.uid())
+-- Drop-then-create keeps this migration re-runnable (CREATE POLICY has no IF NOT EXISTS).
+DROP POLICY IF EXISTS "Favorites are private" ON public.user_favorites;
 CREATE POLICY "Favorites are private"
   ON public.user_favorites FOR SELECT
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert their favorites" ON public.user_favorites;
 CREATE POLICY "Users can insert their favorites"
   ON public.user_favorites FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their favorites" ON public.user_favorites;
 CREATE POLICY "Users can update their favorites"
   ON public.user_favorites FOR UPDATE
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete their favorites" ON public.user_favorites;
 CREATE POLICY "Users can delete their favorites"
   ON public.user_favorites FOR DELETE
   USING (auth.uid() = user_id);

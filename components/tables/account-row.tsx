@@ -15,16 +15,19 @@ import { CompanyLogo } from "@/components/ui/company-logo"
 import type { AccountTableColumnKey } from "@/lib/dashboard/table-column-preferences"
 interface AccountRowProps {
   account: Account
-  onClick: () => void
+  // Entity-param callbacks let the parent pass a single stable handler to every
+  // row, so toggling one row does not re-render the rest (the row is memo'd).
+  onOpen: (account: Account) => void
   visibleColumns: Set<AccountTableColumnKey>
   selectable?: boolean
   isSelected?: boolean
-  onSelectChange?: (checked: boolean) => void
+  onSelectChange?: (account: Account, checked: boolean) => void
   isFavorite?: boolean
-  onToggleFavorite?: () => void
+  onToggleFavorite?: (account: Account) => void
 }
 
-export const AccountRow = memo(({ account, onClick, visibleColumns, selectable, isSelected, onSelectChange, isFavorite, onToggleFavorite }: AccountRowProps) => {
+export const AccountRow = memo(({ account, onOpen, visibleColumns, selectable, isSelected, onSelectChange, isFavorite, onToggleFavorite }: AccountRowProps) => {
+  const handleOpen = () => onOpen(account)
   const location = [account.account_hq_city, account.account_hq_country]
     .filter(Boolean)
     .join(", ")
@@ -41,11 +44,11 @@ export const AccountRow = memo(({ account, onClick, visibleColumns, selectable, 
       <ContextMenuTrigger asChild>
         <TableRow
           className="cursor-pointer hover:bg-muted/50 transition-colors focus-visible:bg-muted/70 animate-stagger"
-          onClick={onClick}
+          onClick={handleOpen}
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === " ") {
               event.preventDefault()
-              onClick()
+              handleOpen()
             }
           }}
           tabIndex={0}
@@ -59,7 +62,8 @@ export const AccountRow = memo(({ account, onClick, visibleColumns, selectable, 
           >
             <Checkbox
               checked={Boolean(isSelected)}
-              onCheckedChange={(checked) => onSelectChange?.(checked === true)}
+              disabled={!onSelectChange}
+              onCheckedChange={(checked) => onSelectChange?.(account, checked === true)}
               aria-label={`Select ${accountName}`}
             />
           </TableCell>
@@ -126,12 +130,12 @@ export const AccountRow = memo(({ account, onClick, visibleColumns, selectable, 
         </TableRow>
       </ContextMenuTrigger>
       <ContextMenuContent className="w-48">
-        <ContextMenuItem onClick={onClick}>
+        <ContextMenuItem onClick={handleOpen}>
           <Eye className="h-4 w-4" />
           View Details
         </ContextMenuItem>
         {onToggleFavorite && (
-          <ContextMenuItem onClick={onToggleFavorite}>
+          <ContextMenuItem onClick={() => onToggleFavorite(account)}>
             {isFavorite ? <StarOff className="h-4 w-4" /> : <Star className="h-4 w-4" />}
             {isFavorite ? "Remove from Favorites" : "Add to Favorites"}
           </ContextMenuItem>

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Briefcase, Building2, Star, Trash2, Users, X } from "lucide-react"
+import { Star, Trash2, X } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -14,51 +14,10 @@ import { Button } from "@/components/ui/button"
 import { PaginationControls } from "@/components/ui/pagination-controls"
 import { cn } from "@/lib/utils"
 import { getPaginatedData } from "@/lib/utils/helpers"
-import type { FavoriteEntityType, FavoriteItem } from "@/hooks/use-favorites"
+import { ENTITY_TYPE_META, formatTimeAgo } from "@/lib/dashboard/entity-display"
+import type { FavoriteItem } from "@/hooks/use-favorites"
 
 const ITEMS_PER_PAGE = 10
-
-function timeAgo(iso: string): string {
-  const ts = new Date(iso).getTime()
-  if (Number.isNaN(ts)) return ""
-  const diff = Date.now() - ts
-  const minutes = Math.floor(diff / 60_000)
-  if (minutes < 1) return "Just now"
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  if (days === 1) return "Yesterday"
-  if (days < 7) return `${days}d ago`
-  return new Date(ts).toLocaleDateString(undefined, { day: "2-digit", month: "short" })
-}
-
-const TYPE_META: Record<
-  FavoriteEntityType,
-  { icon: typeof Building2; iconClass: string; borderClass: string; badgeClass: string; label: string }
-> = {
-  account: {
-    icon: Building2,
-    iconClass: "text-primary",
-    borderClass: "border-primary/20",
-    badgeClass: "bg-primary/10 text-primary border-primary/20",
-    label: "Account",
-  },
-  center: {
-    icon: Briefcase,
-    iconClass: "text-[hsl(var(--chart-2))]",
-    borderClass: "border-[hsl(var(--chart-2))]/25",
-    badgeClass: "bg-[hsl(var(--chart-2)/0.12)] text-[hsl(var(--chart-2))] border-[hsl(var(--chart-2)/0.25)]",
-    label: "Center",
-  },
-  prospect: {
-    icon: Users,
-    iconClass: "text-[hsl(var(--chart-3))]",
-    borderClass: "border-[hsl(var(--chart-3))]/25",
-    badgeClass: "bg-[hsl(var(--chart-3)/0.12)] text-[hsl(var(--chart-3))] border-[hsl(var(--chart-3)/0.25)]",
-    label: "Prospect",
-  },
-}
 
 interface FavoritesDialogProps {
   open: boolean
@@ -116,7 +75,7 @@ export function FavoritesDialog({ open, onOpenChange, favorites, onOpenFavorite,
             <div className="overflow-hidden rounded-xl border border-border/60 bg-background/40 backdrop-blur-sm dark:bg-white/5 dark:border-white/10">
               <div className="divide-y divide-border/40">
                 {paginated.map((item) => {
-                  const meta = TYPE_META[item.entity_type]
+                  const meta = ENTITY_TYPE_META[item.entity_type]
                   const Icon = meta.icon
                   return (
                     <div
@@ -147,7 +106,7 @@ export function FavoritesDialog({ open, onOpenChange, favorites, onOpenFavorite,
                           {meta.label}
                         </Badge>
                         <span className="shrink-0 text-xs tabular-nums text-muted-foreground w-16 text-right">
-                          {timeAgo(item.created_at)}
+                          {formatTimeAgo(item.created_at)}
                         </span>
                       </button>
                       <Button

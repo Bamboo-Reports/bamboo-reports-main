@@ -43,6 +43,8 @@ interface ExportDialogProps {
   accountNames?: string[] | null
   /** Center cn_unique_keys to include; null = all centers. */
   centerKeys?: string[] | null
+  /** Prospect ps_unique_keys to include; null = filter prospects by accountNames instead. */
+  prospectKeys?: string[] | null
   /** Locked prospect teasers matching the current export scope. */
   lockedProspectsCount?: number
   /** When set, restricts the dialog to these datasets (e.g. a single-sheet selection export). */
@@ -97,6 +99,7 @@ export function ExportDialog({
   filtersSnapshot,
   accountNames,
   centerKeys,
+  prospectKeys,
   lockedProspectsCount = 0,
   allowedDatasets,
   compact = false,
@@ -251,9 +254,12 @@ export function ExportDialog({
       prospects: isDatasetAllowed("prospects") && isDatasetEnabled("prospects") ? value : false,
     }
     setSelection(next)
+    // Report the datasets actually toggled on, not a hardcoded count: with
+    // allowed/disabled datasets a "select all" can enable fewer than four.
+    const nextSelectedDatasets = getSelectedDatasets(next)
     captureEvent(value ? ANALYTICS_EVENTS.EXPORT_SELECT_ALL_CLICKED : ANALYTICS_EVENTS.EXPORT_CLEAR_CLICKED, {
-      selected_dataset_count: value ? 4 : 0,
-      selected_datasets: value ? (Object.keys(next) as ExportDatasetKey[]) : [],
+      selected_dataset_count: nextSelectedDatasets.length,
+      selected_datasets: nextSelectedDatasets,
     })
   }
 
@@ -311,6 +317,7 @@ export function ExportDialog({
         datasets: selectedDatasets,
         accountNames: isFiltered ? accountNames ?? null : null,
         centerKeys: isFiltered ? centerKeys ?? null : null,
+        prospectKeys: isFiltered ? prospectKeys ?? null : null,
         isFiltered,
         filtersApplied: filtersSnapshot ?? null,
       })

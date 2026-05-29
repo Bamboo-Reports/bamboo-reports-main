@@ -25,6 +25,12 @@ export type ServerExportSelection = {
    * When null/undefined, exports everything.
    */
   centerKeys?: string[] | null
+  /**
+   * When provided, limits prospects to these ps_unique_keys (a precise row
+   * selection). Prospects without a stable key are targeted via accountNames
+   * instead, so they are still included.
+   */
+  prospectKeys?: string[] | null
 }
 
 export type ServerExportResult = {
@@ -57,10 +63,23 @@ async function fetchServices(centerKeys: string[] | null | undefined): Promise<S
   return (await sql`SELECT * FROM services ORDER BY center_name`) as Service[]
 }
 
-async function fetchProspects(accountNames: string[] | null | undefined): Promise<Prospect[]> {
+async function fetchProspects(
+  accountNames: string[] | null | undefined,
+  prospectKeys: string[] | null | undefined
+): Promise<Prospect[]> {
   const sql = getSqlOrThrow()
-  if (accountNames && accountNames.length > 0) {
-    return (await sql`SELECT * FROM prospects WHERE account_global_legal_name = ANY(${accountNames}) ORDER BY prospect_last_name, prospect_first_name`) as Prospect[]
+  const keys = prospectKeys && prospectKeys.length > 0 ? prospectKeys : null
+  const names = accountNames && accountNames.length > 0 ? accountNames : null
+  // A precise row selection targets ps_unique_key; any keyless prospects in the
+  // selection fall back to their account so nothing selected is dropped.
+  if (keys && names) {
+    return (await sql`SELECT * FROM prospects WHERE ps_unique_key = ANY(${keys}) OR account_global_legal_name = ANY(${names}) ORDER BY prospect_last_name, prospect_first_name`) as Prospect[]
+  }
+  if (keys) {
+    return (await sql`SELECT * FROM prospects WHERE ps_unique_key = ANY(${keys}) ORDER BY prospect_last_name, prospect_first_name`) as Prospect[]
+  }
+  if (names) {
+    return (await sql`SELECT * FROM prospects WHERE account_global_legal_name = ANY(${names}) ORDER BY prospect_last_name, prospect_first_name`) as Prospect[]
   }
   return (await sql`SELECT * FROM prospects ORDER BY prospect_last_name, prospect_first_name`) as Prospect[]
 }
@@ -94,14 +113,14 @@ function addWorksheet<T extends Record<string, unknown>>(
 export async function buildServerExport(
   selection: ServerExportSelection
 ): Promise<ServerExportResult> {
-  const { datasets, accountNames, centerKeys } = selection
+  const { datasets, accountNames, centerKeys, prospectKeys } = selection
   const prospectsPerAccountLimit = getProspectsPerAccountLimit()
 
   const [accounts, centers, services, rawProspects] = await Promise.all([
     datasets.includes("accounts") ? fetchAccounts(accountNames) : Promise.resolve([] as Account[]),
     datasets.includes("centers") ? fetchCenters(centerKeys) : Promise.resolve([] as Center[]),
     datasets.includes("services") ? fetchServices(centerKeys) : Promise.resolve([] as Service[]),
-    datasets.includes("prospects") ? fetchProspects(accountNames) : Promise.resolve([] as Prospect[]),
+    datasets.includes("prospects") ? fetchProspects(accountNames, prospectKeys) : Promise.resolve([] as Prospect[]),
   ])
   const { visibleProspects: prospects } = partitionProspectsByAccess(rawProspects, prospectsPerAccountLimit)
 

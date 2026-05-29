@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { devError } from "@/lib/utils/dev-log"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
@@ -33,6 +33,9 @@ export function useFavorites() {
   const [loading, setLoading] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [authReady, setAuthReady] = useState(false)
+  // Keys with a toggle in flight, so a rapid second click can't read stale
+  // favorite state and double-add (or double-remove) the same item.
+  const togglingRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     let isMounted = true
@@ -190,12 +193,20 @@ export function useFavorites() {
   }, [supabase, userId])
 
   const toggleFavorite = useCallback(
-    async (item: FavoriteInput): Promise<{ ok: boolean; added: boolean }> => {
-      const wasFavorite = isFavorite(item.entity_type, item.entity_id)
-      const ok = wasFavorite
-        ? await removeFavorite(item.entity_type, item.entity_id)
-        : await addFavorites([item])
-      return { ok, added: !wasFavorite }
+    async (item: FavoriteInput): Promise<{ ok: boolean; added: boolean } | null> => {
+      const key = favoriteKey(item.entity_type, item.entity_id)
+      // Ignore a re-entrant toggle for the same item while one is in flight.
+      if (togglingRef.current.has(key)) return null
+      togglingRef.current.add(key)
+      try {
+        const wasFavorite = isFavorite(item.entity_type, item.entity_id)
+        const ok = wasFavorite
+          ? await removeFavorite(item.entity_type, item.entity_id)
+          : await addFavorites([item])
+        return { ok, added: !wasFavorite }
+      } finally {
+        togglingRef.current.delete(key)
+      }
     },
     [isFavorite, removeFavorite, addFavorites]
   )
