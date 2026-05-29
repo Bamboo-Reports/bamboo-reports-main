@@ -70,6 +70,9 @@ export const ANALYTICS_EVENTS = {
   SEARCH_RECENT_ITEM_SELECTED: "search_recent_item_selected",
   SEARCH_ACTION_SELECTED: "search_action_selected",
   SEARCH_CLOSED: "search_closed",
+  FAVORITE_ADDED: "favorite_added",
+  FAVORITE_REMOVED: "favorite_removed",
+  FAVORITES_VIEW_OPENED: "favorites_view_opened",
 } as const
 
 export type AnalyticsEventName = (typeof ANALYTICS_EVENTS)[keyof typeof ANALYTICS_EVENTS]

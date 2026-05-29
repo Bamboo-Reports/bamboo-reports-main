@@ -1,6 +1,7 @@
 import { memo } from "react"
-import { CircleCheck, Eye, ExternalLink, Globe } from "lucide-react"
+import { CircleCheck, Eye, ExternalLink, Globe, Star, StarOff } from "lucide-react"
 import { TableRow, TableCell } from "@/components/ui/table"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   ContextMenu,
   ContextMenuContent,
@@ -16,9 +17,14 @@ interface AccountRowProps {
   account: Account
   onClick: () => void
   visibleColumns: Set<AccountTableColumnKey>
+  selectable?: boolean
+  isSelected?: boolean
+  onSelectChange?: (checked: boolean) => void
+  isFavorite?: boolean
+  onToggleFavorite?: () => void
 }
 
-export const AccountRow = memo(({ account, onClick, visibleColumns }: AccountRowProps) => {
+export const AccountRow = memo(({ account, onClick, visibleColumns, selectable, isSelected, onSelectChange, isFavorite, onToggleFavorite }: AccountRowProps) => {
   const location = [account.account_hq_city, account.account_hq_country]
     .filter(Boolean)
     .join(", ")
@@ -45,6 +51,19 @@ export const AccountRow = memo(({ account, onClick, visibleColumns }: AccountRow
           tabIndex={0}
           aria-label={`View account details for ${accountName}`}
         >
+          {selectable && (
+          <TableCell
+            className="w-[44px]"
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
+          >
+            <Checkbox
+              checked={Boolean(isSelected)}
+              onCheckedChange={(checked) => onSelectChange?.(checked === true)}
+              aria-label={`Select ${accountName}`}
+            />
+          </TableCell>
+          )}
           {visibleColumns.has("name") && (
           <TableCell className="font-medium max-w-[280px]">
             <div className="flex items-center gap-3">
@@ -111,6 +130,12 @@ export const AccountRow = memo(({ account, onClick, visibleColumns }: AccountRow
           <Eye className="h-4 w-4" />
           View Details
         </ContextMenuItem>
+        {onToggleFavorite && (
+          <ContextMenuItem onClick={onToggleFavorite}>
+            {isFavorite ? <StarOff className="h-4 w-4" /> : <Star className="h-4 w-4" />}
+            {isFavorite ? "Remove from Favorites" : "Add to Favorites"}
+          </ContextMenuItem>
+        )}
         {account.account_hq_website && (
           <>
             <ContextMenuSeparator />

@@ -54,16 +54,27 @@ export function getSupabaseBrowserClient(storagePreference?: "local" | "session"
     throw new Error("Missing Supabase environment variables.")
   }
 
-  const storage = resolvedStorage === "session" ? window.sessionStorage : window.localStorage
+  // During SSR there is no window; build a non-persisting client and don't
+  // cache it so the browser later gets a proper window-backed instance.
+  const isBrowser = typeof window !== "undefined"
+  const storage = isBrowser
+    ? resolvedStorage === "session"
+      ? window.sessionStorage
+      : window.localStorage
+    : undefined
 
-  supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+  const client = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       storage,
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
+      persistSession: isBrowser,
+      autoRefreshToken: isBrowser,
+      detectSessionInUrl: isBrowser,
     },
   })
-  supabaseStorage = resolvedStorage
-  return supabaseClient
+
+  if (isBrowser) {
+    supabaseClient = client
+    supabaseStorage = resolvedStorage
+  }
+  return client
 }

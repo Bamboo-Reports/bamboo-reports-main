@@ -4,8 +4,10 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTheme } from "next-themes"
 import { toast } from "sonner"
 import { ExportDialog } from "@/components/export/export-dialog"
+import type { ExportDatasetKey } from "@/lib/utils/export-helpers"
 import { ExportsDialog } from "@/components/exports/exports-dialog"
 import { HistoryDialog } from "@/components/history/history-dialog"
+import { FavoritesDialog } from "@/components/favorites/favorites-dialog"
 import { FiltersSidebar } from "@/components/filters/filters-sidebar"
 import { Header } from "@/components/layout/header"
 import { GlobalSearch } from "@/components/search/global-search"
@@ -23,6 +25,8 @@ import { useDashboardData } from "@/hooks/use-dashboard-data"
 import { useDashboardFilters } from "@/hooks/use-dashboard-filters"
 import { useGlobalSearch } from "@/hooks/use-global-search"
 import { useRecentItems } from "@/hooks/use-recent-items"
+import { useFavorites, type FavoriteItem, type FavoriteInput } from "@/hooks/use-favorites"
+import { getProspectRecordId } from "@/lib/dashboard/prospect-id"
 import {
   captureEvent,
   ensureAnalyticsSession,
@@ -115,8 +119,15 @@ function DashboardContent(): React.JSX.Element | null {
   const [prospectsView, setProspectsView] = useState<"chart" | "data">("chart")
   const [activeSection, setActiveSection] = useState<"accounts" | "centers" | "prospects">(defaultSection)
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
+  const [exportScope, setExportScope] = useState<
+    | { dataset: "accounts"; accountNames: string[] }
+    | { dataset: "centers"; centerKeys: string[] }
+    | { dataset: "prospects"; accountNames: string[] }
+    | null
+  >(null)
   const [exportsDialogOpen, setExportsDialogOpen] = useState(false)
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false)
+  const [favoritesDialogOpen, setFavoritesDialogOpen] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const canExport = canExportData(userRole)
   const accountVisibilityByName = useMemo<Record<string, AccountVisibilityInfo>>(
@@ -157,6 +168,16 @@ function DashboardContent(): React.JSX.Element | null {
     addRecentSearch,
     clearRecentItems,
   } = useRecentItems()
+
+  const {
+    favorites,
+    favoriteKeys,
+    toggleFavorite,
+    addFavorites,
+    removeFavorite,
+    removeFavorites,
+    clearFavorites,
+  } = useFavorites()
 
   // Search-triggered detail dialogs (separate from tab-level dialogs)
   const [searchSelectedAccount, setSearchSelectedAccount] = useState<Account | null>(null)
@@ -562,8 +583,114 @@ function DashboardContent(): React.JSX.Element | null {
     if (!canExport) {
       return
     }
+    setExportScope(null)
     setExportDialogOpen(true)
   }, [canExport])
+
+  const handleDownloadSelection = useCallback(
+    (
+      scope:
+        | { dataset: "accounts"; accountNames: string[] }
+        | { dataset: "centers"; centerKeys: string[] }
+        | { dataset: "prospects"; accountNames: string[] }
+    ) => {
+      const values = "accountNames" in scope ? scope.accountNames : scope.centerKeys
+      if (!canExport || values.length === 0) {
+        return
+      }
+      setExportScope(scope)
+      setExportDialogOpen(true)
+    },
+    [canExport]
+  )
+
+  const handleExportDialogOpenChange = useCallback((open: boolean) => {
+    setExportDialogOpen(open)
+    if (!open) {
+      // Defer clearing the scope until the close animation (300ms) finishes,
+      // otherwise the dialog briefly re-renders in its full multi-dataset form.
+      window.setTimeout(() => setExportScope(null), 350)
+    }
+  }, [])
+
+  const exportPayload = useMemo(() => {
+    const { filteredAccounts, filteredCenters, filteredServices, filteredProspects } = filteredData
+
+    if (!exportScope) {
+      return {
+        data: {
+          accounts: filteredAccounts,
+          centers: filteredCenters,
+          services: filteredServices,
+          prospects: filteredProspects,
+        },
+        isFiltered: activeFiltersCount > 0,
+        filtersSnapshot: filters,
+        accountNames: Array.from(
+          new Set(
+            filteredAccounts
+              .map((a) => a.account_global_legal_name)
+              .filter((name): name is string => Boolean(name))
+          )
+        ),
+        centerKeys: Array.from(
+          new Set(
+            filteredCenters
+              .map((c) => c.cn_unique_key)
+              .filter((key): key is string => Boolean(key))
+          )
+        ),
+        allowedDatasets: undefined as ExportDatasetKey[] | undefined,
+      }
+    }
+
+    // A row selection exports only the selected entity's sheet, never the
+    // related datasets. The dialog is locked to that single dataset.
+    const emptyData = { accounts: [], centers: [], services: [], prospects: [] }
+    const snapshot = { ...(filters as object), selection: exportScope }
+
+    if (exportScope.dataset === "centers") {
+      const keySet = new Set(exportScope.centerKeys)
+      const scopedCenters = filteredCenters.filter(
+        (c) => c.cn_unique_key && keySet.has(c.cn_unique_key)
+      )
+      return {
+        data: { ...emptyData, centers: scopedCenters },
+        isFiltered: true,
+        filtersSnapshot: snapshot,
+        accountNames: [],
+        centerKeys: exportScope.centerKeys,
+        allowedDatasets: ["centers"] as ExportDatasetKey[],
+      }
+    }
+
+    const nameSet = new Set(exportScope.accountNames)
+    if (exportScope.dataset === "prospects") {
+      const scopedProspects = filteredProspects.filter(
+        (p) => p.account_global_legal_name && nameSet.has(p.account_global_legal_name)
+      )
+      return {
+        data: { ...emptyData, prospects: scopedProspects },
+        isFiltered: true,
+        filtersSnapshot: snapshot,
+        accountNames: exportScope.accountNames,
+        centerKeys: [],
+        allowedDatasets: ["prospects"] as ExportDatasetKey[],
+      }
+    }
+
+    const scopedAccounts = filteredAccounts.filter(
+      (a) => a.account_global_legal_name && nameSet.has(a.account_global_legal_name)
+    )
+    return {
+      data: { ...emptyData, accounts: scopedAccounts },
+      isFiltered: true,
+      filtersSnapshot: snapshot,
+      accountNames: exportScope.accountNames,
+      centerKeys: [],
+      allowedDatasets: ["accounts"] as ExportDatasetKey[],
+    }
+  }, [exportScope, filteredData, filters, activeFiltersCount])
 
   const handleExportCompleted = useCallback(() => {
     exportCountRef.current += 1
@@ -664,6 +791,85 @@ function DashboardContent(): React.JSX.Element | null {
     [setSearchQuery]
   )
 
+  const handleOpenFavorites = useCallback(() => {
+    captureEvent(ANALYTICS_EVENTS.FAVORITES_VIEW_OPENED, { count: favorites.length })
+    setFavoritesDialogOpen(true)
+  }, [favorites.length])
+
+  const handleToggleFavorite = useCallback(
+    async (item: FavoriteInput) => {
+      const { ok, added } = await toggleFavorite(item)
+      if (!ok) {
+        toast.error("Could not update favorites. Please try again.")
+        return
+      }
+      toast.success(added ? "Added to favorites" : "Removed from favorites")
+    },
+    [toggleFavorite]
+  )
+
+  const handleFavoriteMany = useCallback(
+    async (items: FavoriteInput[]) => {
+      if (items.length === 0) return
+      const ok = await addFavorites(items)
+      if (!ok) {
+        toast.error("Could not add to favorites. Please try again.")
+        return
+      }
+      toast.success(`Added ${items.length} ${items.length === 1 ? "item" : "items"} to favorites`)
+    },
+    [addFavorites]
+  )
+
+  const handleRemoveFavorite = useCallback(
+    async (item: FavoriteItem) => {
+      const ok = await removeFavorite(item.entity_type, item.entity_id)
+      toast[ok ? "success" : "error"](ok ? "Removed from favorites" : "Could not remove favorite. Please try again.")
+    },
+    [removeFavorite]
+  )
+
+  const handleUnfavoriteMany = useCallback(
+    async (items: FavoriteInput[]) => {
+      if (items.length === 0) return
+      const ok = await removeFavorites(items)
+      if (!ok) {
+        toast.error("Could not remove from favorites. Please try again.")
+        return
+      }
+      toast.success(`Removed ${items.length} ${items.length === 1 ? "item" : "items"} from favorites`)
+    },
+    [removeFavorites]
+  )
+
+  const handleClearFavorites = useCallback(async () => {
+    const ok = await clearFavorites()
+    toast[ok ? "success" : "error"](ok ? "Cleared all favorites" : "Could not clear favorites. Please try again.")
+  }, [clearFavorites])
+
+  const handleOpenFavorite = useCallback(
+    (item: FavoriteItem) => {
+      setFavoritesDialogOpen(false)
+      if (item.entity_type === "account") {
+        const account = accounts.find((a) => a.account_global_legal_name === item.entity_id)
+        if (!account) return toast.info("This account is not available in the current dataset.")
+        setSearchSelectedAccount(account)
+        setSearchAccountDialogOpen(true)
+      } else if (item.entity_type === "center") {
+        const center = centers.find((c) => c.cn_unique_key === item.entity_id)
+        if (!center) return toast.info("This center is not available in the current dataset.")
+        setSearchSelectedCenter(center)
+        setSearchCenterDialogOpen(true)
+      } else {
+        const prospect = prospects.find((p) => getProspectRecordId(p) === item.entity_id)
+        if (!prospect) return toast.info("This prospect is not available in the current dataset.")
+        setSearchSelectedProspect(prospect)
+        setSearchProspectDialogOpen(true)
+      }
+    },
+    [accounts, centers, prospects]
+  )
+
   const handleSearchActionSelect = useCallback(
     (action: string) => {
       handleSearchClose()
@@ -736,8 +942,16 @@ function DashboardContent(): React.JSX.Element | null {
       >
         Skip to main content
       </a>
-      <Header onRefresh={handleRefresh} onStartTour={startTour} onOpenSearch={handleSearchOpen} onOpenExports={() => setExportsDialogOpen(true)} onOpenHistory={() => setHistoryDialogOpen(true)} />
+      <Header onRefresh={handleRefresh} onStartTour={startTour} onOpenSearch={handleSearchOpen} onOpenExports={() => setExportsDialogOpen(true)} onOpenHistory={() => setHistoryDialogOpen(true)} onOpenFavorites={handleOpenFavorites} />
       <ExportsDialog open={exportsDialogOpen} onOpenChange={setExportsDialogOpen} />
+      <FavoritesDialog
+        open={favoritesDialogOpen}
+        onOpenChange={setFavoritesDialogOpen}
+        favorites={favorites}
+        onOpenFavorite={handleOpenFavorite}
+        onRemove={handleRemoveFavorite}
+        onClearAll={handleClearFavorites}
+      />
       <HistoryDialog
         open={historyDialogOpen}
         onOpenChange={setHistoryDialogOpen}
@@ -812,30 +1026,15 @@ function DashboardContent(): React.JSX.Element | null {
         >
           <ExportDialog
             open={exportDialogOpen}
-            onOpenChange={setExportDialogOpen}
-            data={{
-              accounts: filteredData.filteredAccounts,
-              centers: filteredData.filteredCenters,
-              services: filteredData.filteredServices,
-              prospects: filteredData.filteredProspects,
-            }}
-            isFiltered={activeFiltersCount > 0}
-            filtersSnapshot={filters}
+            onOpenChange={handleExportDialogOpenChange}
+            data={exportPayload.data}
+            isFiltered={exportPayload.isFiltered}
+            filtersSnapshot={exportPayload.filtersSnapshot}
             lockedProspectsCount={filteredLockedProspectTeasers.length}
-            accountNames={Array.from(
-              new Set(
-                filteredData.filteredAccounts
-                  .map((a) => a.account_global_legal_name)
-                  .filter((name): name is string => Boolean(name))
-              )
-            )}
-            centerKeys={Array.from(
-              new Set(
-                filteredData.filteredCenters
-                  .map((c) => c.cn_unique_key)
-                  .filter((key): key is string => Boolean(key))
-              )
-            )}
+            accountNames={exportPayload.accountNames}
+            centerKeys={exportPayload.centerKeys}
+            allowedDatasets={exportPayload.allowedDatasets}
+            compact={Boolean(exportPayload.allowedDatasets)}
             onExportCompleted={handleExportCompleted}
           />
           <FiltersSidebar
@@ -904,6 +1103,11 @@ function DashboardContent(): React.JSX.Element | null {
                       setCurrentPage={setAccountsPage}
                       itemsPerPage={itemsPerPage}
                       onRecordOpened={addRecentItem}
+                      onDownloadSelection={canExport ? handleDownloadSelection : undefined}
+                      favoriteKeys={favoriteKeys}
+                      onToggleFavorite={handleToggleFavorite}
+                      onFavoriteMany={handleFavoriteMany}
+                      onUnfavoriteMany={handleUnfavoriteMany}
                     />
                   )}
 
@@ -924,6 +1128,11 @@ function DashboardContent(): React.JSX.Element | null {
                       setCurrentPage={setCentersPage}
                       itemsPerPage={itemsPerPage}
                       onRecordOpened={addRecentItem}
+                      onDownloadSelection={canExport ? handleDownloadSelection : undefined}
+                      favoriteKeys={favoriteKeys}
+                      onToggleFavorite={handleToggleFavorite}
+                      onFavoriteMany={handleFavoriteMany}
+                      onUnfavoriteMany={handleUnfavoriteMany}
                     />
                   )}
 
@@ -943,6 +1152,11 @@ function DashboardContent(): React.JSX.Element | null {
                       setCurrentPage={setProspectsPage}
                       itemsPerPage={itemsPerPage}
                       onRecordOpened={addRecentItem}
+                      onDownloadSelection={canExport ? handleDownloadSelection : undefined}
+                      favoriteKeys={favoriteKeys}
+                      onToggleFavorite={handleToggleFavorite}
+                      onFavoriteMany={handleFavoriteMany}
+                      onUnfavoriteMany={handleUnfavoriteMany}
                     />
                   )}
                 </Tabs>
