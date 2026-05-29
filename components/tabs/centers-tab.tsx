@@ -53,6 +53,7 @@ interface CentersTabProps {
   favoriteKeys?: Set<string>
   onToggleFavorite?: (item: FavoriteInput) => void
   onFavoriteMany?: (items: FavoriteInput[]) => void
+  onUnfavoriteMany?: (items: FavoriteInput[]) => void
 }
 
 export function CentersTab({
@@ -74,6 +75,7 @@ export function CentersTab({
   favoriteKeys,
   onToggleFavorite,
   onFavoriteMany,
+  onUnfavoriteMany,
 }: CentersTabProps) {
   const [selectedCenter, setSelectedCenter] = useState<Center | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -279,6 +281,9 @@ export function CentersTab({
     title: center.center_name || "Unknown Center",
     subtitle: [center.center_city, center.center_country].filter(Boolean).join(", ") || center.account_global_legal_name || null,
   })
+  const allSelectedFavorited =
+    selectedKeys.size > 0 &&
+    Array.from(selectedKeys).every((key) => Boolean(favoriteKeys?.has(`center:${key}`)))
 
   // Show empty state when no centers
   if (centers.length === 0) {
@@ -559,14 +564,17 @@ export function CentersTab({
         onClear={clearSelection}
         onExport={() => onDownloadSelection?.({ dataset: "centers", centerKeys: Array.from(selectedKeys) })}
         onFavorite={
-          onFavoriteMany
-            ? () => onFavoriteMany(centers.filter((c) => selectedKeys.has(c.cn_unique_key ?? "")).map(buildFavorite))
+          onFavoriteMany || onUnfavoriteMany
+            ? () => {
+                const items = centers
+                  .filter((c) => selectedKeys.has(c.cn_unique_key ?? ""))
+                  .map(buildFavorite)
+                if (allSelectedFavorited) onUnfavoriteMany?.(items)
+                else onFavoriteMany?.(items)
+              }
             : undefined
         }
-        favoriteActive={
-          selectedKeys.size > 0 &&
-          Array.from(selectedKeys).every((key) => Boolean(favoriteKeys?.has(`center:${key}`)))
-        }
+        favoriteActive={allSelectedFavorited}
       />
     </TabsContent>
   )

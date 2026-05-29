@@ -62,6 +62,7 @@ interface AccountsTabProps {
   favoriteKeys?: Set<string>
   onToggleFavorite?: (item: FavoriteInput) => void
   onFavoriteMany?: (items: FavoriteInput[]) => void
+  onUnfavoriteMany?: (items: FavoriteInput[]) => void
 }
 
 export function AccountsTab({
@@ -82,6 +83,7 @@ export function AccountsTab({
   favoriteKeys,
   onToggleFavorite,
   onFavoriteMany,
+  onUnfavoriteMany,
 }: AccountsTabProps) {
   const allowMapView = canAccessAccountsMapView()
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null)
@@ -269,6 +271,9 @@ export function AccountsTab({
     title: account.account_global_legal_name || "Unknown Account",
     subtitle: [account.account_hq_city, account.account_hq_country].filter(Boolean).join(", ") || null,
   })
+  const allSelectedFavorited =
+    selectedNames.size > 0 &&
+    Array.from(selectedNames).every((name) => Boolean(favoriteKeys?.has(`account:${name}`)))
 
   if (accounts.length === 0) {
     return (
@@ -532,14 +537,17 @@ export function AccountsTab({
         onClear={clearSelection}
         onExport={() => onDownloadSelection?.({ dataset: "accounts", accountNames: Array.from(selectedNames) })}
         onFavorite={
-          onFavoriteMany
-            ? () => onFavoriteMany(accounts.filter((a) => selectedNames.has(a.account_global_legal_name ?? "")).map(buildFavorite))
+          onFavoriteMany || onUnfavoriteMany
+            ? () => {
+                const items = accounts
+                  .filter((a) => selectedNames.has(a.account_global_legal_name ?? ""))
+                  .map(buildFavorite)
+                if (allSelectedFavorited) onUnfavoriteMany?.(items)
+                else onFavoriteMany?.(items)
+              }
             : undefined
         }
-        favoriteActive={
-          selectedNames.size > 0 &&
-          Array.from(selectedNames).every((name) => Boolean(favoriteKeys?.has(`account:${name}`)))
-        }
+        favoriteActive={allSelectedFavorited}
       />
 
       {/* Account Details Dialog */}

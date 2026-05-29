@@ -146,6 +146,36 @@ export function useFavorites() {
     [supabase, userId, loadFavorites]
   )
 
+  const removeFavorites = useCallback(
+    async (items: FavoriteInput[]): Promise<boolean> => {
+      if (!userId || items.length === 0) return false
+      const idsByType = new Map<FavoriteEntityType, string[]>()
+      for (const item of items) {
+        const ids = idsByType.get(item.entity_type) ?? []
+        ids.push(item.entity_id)
+        idsByType.set(item.entity_type, ids)
+      }
+      try {
+        for (const [type, ids] of idsByType) {
+          const { error } = await supabase
+            .from("user_favorites")
+            .delete()
+            .eq("user_id", userId)
+            .eq("entity_type", type)
+            .in("entity_id", ids)
+          if (error) throw error
+          captureEvent(ANALYTICS_EVENTS.FAVORITE_REMOVED, { entity_type: type, bulk: items.length > 1 })
+        }
+        await loadFavorites()
+        return true
+      } catch (error) {
+        devError("Failed to remove favorites:", error)
+        return false
+      }
+    },
+    [supabase, userId, loadFavorites]
+  )
+
   const clearFavorites = useCallback(async (): Promise<boolean> => {
     if (!userId) return false
     try {
@@ -178,6 +208,7 @@ export function useFavorites() {
     toggleFavorite,
     addFavorites,
     removeFavorite,
+    removeFavorites,
     clearFavorites,
     refreshFavorites: loadFavorites,
   }

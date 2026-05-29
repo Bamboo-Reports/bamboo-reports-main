@@ -49,6 +49,7 @@ interface ProspectsTabProps {
   favoriteKeys?: Set<string>
   onToggleFavorite?: (item: FavoriteInput) => void
   onFavoriteMany?: (items: FavoriteInput[]) => void
+  onUnfavoriteMany?: (items: FavoriteInput[]) => void
 }
 
 export function ProspectsTab({
@@ -70,6 +71,7 @@ export function ProspectsTab({
   favoriteKeys,
   onToggleFavorite,
   onFavoriteMany,
+  onUnfavoriteMany,
 }: ProspectsTabProps) {
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -305,6 +307,9 @@ export function ProspectsTab({
     title: getProspectDisplayName(prospect),
     subtitle: prospect.prospect_title || prospect.prospect_department || prospect.account_global_legal_name || null,
   })
+  const allSelectedFavorited =
+    selectedKeys.size > 0 &&
+    Array.from(selectedKeys).every((key) => Boolean(favoriteKeys?.has(`prospect:${key}`)))
 
   const handleExportSelection = () => {
     const names = new Set<string>()
@@ -554,14 +559,17 @@ export function ProspectsTab({
         onClear={clearSelection}
         onExport={handleExportSelection}
         onFavorite={
-          onFavoriteMany
-            ? () => onFavoriteMany(prospects.filter((p) => selectedKeys.has(getProspectRecordId(p))).map(buildFavorite))
+          onFavoriteMany || onUnfavoriteMany
+            ? () => {
+                const items = prospects
+                  .filter((p) => selectedKeys.has(getProspectRecordId(p)))
+                  .map(buildFavorite)
+                if (allSelectedFavorited) onUnfavoriteMany?.(items)
+                else onFavoriteMany?.(items)
+              }
             : undefined
         }
-        favoriteActive={
-          selectedKeys.size > 0 &&
-          Array.from(selectedKeys).every((key) => Boolean(favoriteKeys?.has(`prospect:${key}`)))
-        }
+        favoriteActive={allSelectedFavorited}
       />
     </TabsContent>
   )

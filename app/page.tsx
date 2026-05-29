@@ -175,6 +175,7 @@ function DashboardContent(): React.JSX.Element | null {
     toggleFavorite,
     addFavorites,
     removeFavorite,
+    removeFavorites,
     clearFavorites,
   } = useFavorites()
 
@@ -828,6 +829,19 @@ function DashboardContent(): React.JSX.Element | null {
     [removeFavorite]
   )
 
+  const handleUnfavoriteMany = useCallback(
+    async (items: FavoriteInput[]) => {
+      if (items.length === 0) return
+      const ok = await removeFavorites(items)
+      if (!ok) {
+        toast.error("Could not remove from favorites. Please try again.")
+        return
+      }
+      toast.success(`Removed ${items.length} ${items.length === 1 ? "item" : "items"} from favorites`)
+    },
+    [removeFavorites]
+  )
+
   const handleClearFavorites = useCallback(async () => {
     const ok = await clearFavorites()
     toast[ok ? "success" : "error"](ok ? "Cleared all favorites" : "Could not clear favorites. Please try again.")
@@ -1093,6 +1107,7 @@ function DashboardContent(): React.JSX.Element | null {
                       favoriteKeys={favoriteKeys}
                       onToggleFavorite={handleToggleFavorite}
                       onFavoriteMany={handleFavoriteMany}
+                      onUnfavoriteMany={handleUnfavoriteMany}
                     />
                   )}
 
@@ -1117,6 +1132,7 @@ function DashboardContent(): React.JSX.Element | null {
                       favoriteKeys={favoriteKeys}
                       onToggleFavorite={handleToggleFavorite}
                       onFavoriteMany={handleFavoriteMany}
+                      onUnfavoriteMany={handleUnfavoriteMany}
                     />
                   )}
 
@@ -1140,6 +1156,7 @@ function DashboardContent(): React.JSX.Element | null {
                       favoriteKeys={favoriteKeys}
                       onToggleFavorite={handleToggleFavorite}
                       onFavoriteMany={handleFavoriteMany}
+                      onUnfavoriteMany={handleUnfavoriteMany}
                     />
                   )}
                 </Tabs>
