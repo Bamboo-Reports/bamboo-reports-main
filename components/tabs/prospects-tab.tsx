@@ -9,6 +9,8 @@ import { ArrowDownAZ, ArrowUpAZ, ArrowUpDown, PieChartIcon, Table as TableIcon, 
 import { ProspectRow } from "@/components/tables/prospect-row"
 import { SelectionActionBar } from "@/components/tables/selection-action-bar"
 import { useRowSelection } from "@/hooks/use-row-selection"
+import { getProspectDisplayName as getProspectDisplayNameUtil, getProspectRecordId as getProspectRecordIdUtil } from "@/lib/dashboard/prospect-id"
+import type { FavoriteInput } from "@/hooks/use-favorites"
 import { ProspectGridCard } from "@/components/cards/prospect-grid-card"
 import { PieChartCard } from "@/components/charts/pie-chart-card"
 import { EmptyState } from "@/components/states/empty-state"
@@ -44,6 +46,9 @@ interface ProspectsTabProps {
   itemsPerPage: number
   onRecordOpened?: (item: { type: "prospect" | "account"; id: string; title: string; subtitle: string }) => void
   onDownloadSelection?: (scope: { dataset: "prospects"; accountNames: string[] }) => void
+  favoriteKeys?: Set<string>
+  onToggleFavorite?: (item: FavoriteInput) => void
+  onFavoriteMany?: (items: FavoriteInput[]) => void
 }
 
 export function ProspectsTab({
@@ -62,6 +67,9 @@ export function ProspectsTab({
   itemsPerPage,
   onRecordOpened,
   onDownloadSelection,
+  favoriteKeys,
+  onToggleFavorite,
+  onFavoriteMany,
 }: ProspectsTabProps) {
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -95,17 +103,15 @@ export function ProspectsTab({
     prospect: Prospect
   } | null>(null)
 
-  const getProspectDisplayName = React.useCallback((prospect: Prospect) => {
-    return (
-      prospect.prospect_full_name ||
-      [prospect.prospect_first_name, prospect.prospect_last_name].filter(Boolean).join(" ") ||
-      "Unknown Prospect"
-    )
-  }, [])
+  const getProspectDisplayName = React.useCallback(
+    (prospect: Prospect) => getProspectDisplayNameUtil(prospect),
+    []
+  )
 
-  const getProspectRecordId = React.useCallback((prospect: Prospect) => {
-    return prospect.ps_unique_key || `${prospect.account_global_legal_name}::${getProspectDisplayName(prospect)}`
-  }, [getProspectDisplayName])
+  const getProspectRecordId = React.useCallback(
+    (prospect: Prospect) => getProspectRecordIdUtil(prospect),
+    []
+  )
 
   const handleProspectClick = (prospect: Prospect, openedFrom: "table_row" | "grid_card") => {
     if (isDialogOpen && openedRecordRef.current) {
@@ -293,6 +299,13 @@ export function ProspectsTab({
   const allPageSelected = pageKeys.length > 0 && selectedOnPageCount === pageKeys.length
   const somePageSelected = selectedOnPageCount > 0 && !allPageSelected
 
+  const buildFavorite = (prospect: Prospect): FavoriteInput => ({
+    entity_type: "prospect",
+    entity_id: getProspectRecordId(prospect),
+    title: getProspectDisplayName(prospect),
+    subtitle: prospect.prospect_title || prospect.prospect_department || prospect.account_global_legal_name || null,
+  })
+
   const handleExportSelection = () => {
     const names = new Set<string>()
     for (const key of selectedKeys) {
@@ -448,6 +461,8 @@ export function ProspectsTab({
                             selectable
                             isSelected={selectedKeys.has(getProspectRecordId(item.prospect))}
                             onSelectChange={(checked) => toggleRow(getProspectRecordId(item.prospect), checked)}
+                            isFavorite={favoriteKeys?.has(`prospect:${getProspectRecordId(item.prospect)}`)}
+                            onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(buildFavorite(item.prospect)) : undefined}
                           />
                         ) : (
                           <LockedProspectTeaserRow
@@ -538,6 +553,15 @@ export function ProspectsTab({
         count={selectedKeys.size}
         onClear={clearSelection}
         onExport={handleExportSelection}
+        onFavorite={
+          onFavoriteMany
+            ? () => onFavoriteMany(prospects.filter((p) => selectedKeys.has(getProspectRecordId(p))).map(buildFavorite))
+            : undefined
+        }
+        favoriteActive={
+          selectedKeys.size > 0 &&
+          Array.from(selectedKeys).every((key) => Boolean(favoriteKeys?.has(`prospect:${key}`)))
+        }
       />
     </TabsContent>
   )

@@ -1,5 +1,5 @@
 import { memo } from "react"
-import { CircleCheck, Eye, ExternalLink, Globe } from "lucide-react"
+import { CircleCheck, Eye, ExternalLink, Globe, Star, StarOff } from "lucide-react"
 import { TableRow, TableCell } from "@/components/ui/table"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -20,9 +20,11 @@ interface AccountRowProps {
   selectable?: boolean
   isSelected?: boolean
   onSelectChange?: (checked: boolean) => void
+  isFavorite?: boolean
+  onToggleFavorite?: () => void
 }
 
-export const AccountRow = memo(({ account, onClick, visibleColumns, selectable, isSelected, onSelectChange }: AccountRowProps) => {
+export const AccountRow = memo(({ account, onClick, visibleColumns, selectable, isSelected, onSelectChange, isFavorite, onToggleFavorite }: AccountRowProps) => {
   const location = [account.account_hq_city, account.account_hq_country]
     .filter(Boolean)
     .join(", ")
@@ -128,6 +130,12 @@ export const AccountRow = memo(({ account, onClick, visibleColumns, selectable, 
           <Eye className="h-4 w-4" />
           View Details
         </ContextMenuItem>
+        {onToggleFavorite && (
+          <ContextMenuItem onClick={onToggleFavorite}>
+            {isFavorite ? <StarOff className="h-4 w-4" /> : <Star className="h-4 w-4" />}
+            {isFavorite ? "Remove from Favorites" : "Add to Favorites"}
+          </ContextMenuItem>
+        )}
         {account.account_hq_website && (
           <>
             <ContextMenuSeparator />

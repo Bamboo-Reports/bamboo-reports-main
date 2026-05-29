@@ -9,6 +9,7 @@ import { ArrowDownAZ, ArrowUpAZ, ArrowUpDown, PieChartIcon, Table as TableIcon, 
 import { CenterRow } from "@/components/tables"
 import { SelectionActionBar } from "@/components/tables/selection-action-bar"
 import { useRowSelection } from "@/hooks/use-row-selection"
+import type { FavoriteInput } from "@/hooks/use-favorites"
 import { CenterGridCard } from "@/components/cards/center-grid-card"
 import { PieChartCard } from "@/components/charts/pie-chart-card"
 import { EmptyState } from "@/components/states/empty-state"
@@ -49,6 +50,9 @@ interface CentersTabProps {
   itemsPerPage: number
   onRecordOpened?: (item: { type: "center" | "account"; id: string; title: string; subtitle: string }) => void
   onDownloadSelection?: (scope: { dataset: "centers"; centerKeys: string[] }) => void
+  favoriteKeys?: Set<string>
+  onToggleFavorite?: (item: FavoriteInput) => void
+  onFavoriteMany?: (items: FavoriteInput[]) => void
 }
 
 export function CentersTab({
@@ -67,6 +71,9 @@ export function CentersTab({
   itemsPerPage,
   onRecordOpened,
   onDownloadSelection,
+  favoriteKeys,
+  onToggleFavorite,
+  onFavoriteMany,
 }: CentersTabProps) {
   const [selectedCenter, setSelectedCenter] = useState<Center | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -265,6 +272,13 @@ export function CentersTab({
   const selectedOnPageCount = pageKeys.filter((key) => selectedKeys.has(key)).length
   const allPageSelected = pageKeys.length > 0 && selectedOnPageCount === pageKeys.length
   const somePageSelected = selectedOnPageCount > 0 && !allPageSelected
+
+  const buildFavorite = (center: Center): FavoriteInput => ({
+    entity_type: "center",
+    entity_id: center.cn_unique_key ?? "",
+    title: center.center_name || "Unknown Center",
+    subtitle: [center.center_city, center.center_country].filter(Boolean).join(", ") || center.account_global_legal_name || null,
+  })
 
   // Show empty state when no centers
   if (centers.length === 0) {
@@ -465,6 +479,8 @@ export function CentersTab({
                             selectable
                             isSelected={selectedKeys.has(center.cn_unique_key ?? "")}
                             onSelectChange={(checked) => toggleRow(center.cn_unique_key ?? "", checked)}
+                            isFavorite={favoriteKeys?.has(`center:${center.cn_unique_key ?? ""}`)}
+                            onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(buildFavorite(center)) : undefined}
                           />
                         )
                       )}
@@ -542,6 +558,15 @@ export function CentersTab({
         count={selectedKeys.size}
         onClear={clearSelection}
         onExport={() => onDownloadSelection?.({ dataset: "centers", centerKeys: Array.from(selectedKeys) })}
+        onFavorite={
+          onFavoriteMany
+            ? () => onFavoriteMany(centers.filter((c) => selectedKeys.has(c.cn_unique_key ?? "")).map(buildFavorite))
+            : undefined
+        }
+        favoriteActive={
+          selectedKeys.size > 0 &&
+          Array.from(selectedKeys).every((key) => Boolean(favoriteKeys?.has(`center:${key}`)))
+        }
       />
     </TabsContent>
   )

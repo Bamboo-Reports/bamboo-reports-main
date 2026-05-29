@@ -1,5 +1,5 @@
 import { memo } from "react"
-import { Copy, Eye, ExternalLink } from "lucide-react"
+import { Copy, Eye, ExternalLink, Star, StarOff } from "lucide-react"
 import { TableRow, TableCell } from "@/components/ui/table"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -21,9 +21,11 @@ interface ProspectRowProps {
   selectable?: boolean
   isSelected?: boolean
   onSelectChange?: (checked: boolean) => void
+  isFavorite?: boolean
+  onToggleFavorite?: () => void
 }
 
-export const ProspectRow = memo(({ prospect, onClick, visibleColumns, selectable, isSelected, onSelectChange }: ProspectRowProps) => {
+export const ProspectRow = memo(({ prospect, onClick, visibleColumns, selectable, isSelected, onSelectChange, isFavorite, onToggleFavorite }: ProspectRowProps) => {
   const copy = useCopyToClipboard()
   const fullName =
     prospect.prospect_full_name ||
@@ -117,6 +119,12 @@ export const ProspectRow = memo(({ prospect, onClick, visibleColumns, selectable
           <Eye className="h-4 w-4" />
           View Details
         </ContextMenuItem>
+        {onToggleFavorite && (
+          <ContextMenuItem onClick={onToggleFavorite}>
+            {isFavorite ? <StarOff className="h-4 w-4" /> : <Star className="h-4 w-4" />}
+            {isFavorite ? "Remove from Favorites" : "Add to Favorites"}
+          </ContextMenuItem>
+        )}
         {prospect.prospect_email && (
           <>
             <ContextMenuSeparator />

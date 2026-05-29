@@ -19,6 +19,7 @@ import {
 import { AccountRow } from "@/components/tables"
 import { SelectionActionBar } from "@/components/tables/selection-action-bar"
 import { useRowSelection } from "@/hooks/use-row-selection"
+import type { FavoriteInput } from "@/hooks/use-favorites"
 import { AccountGridCard } from "@/components/cards/account-grid-card"
 import { PieChartCard } from "@/components/charts/pie-chart-card"
 import { EmptyState } from "@/components/states/empty-state"
@@ -58,6 +59,9 @@ interface AccountsTabProps {
   itemsPerPage: number
   onRecordOpened?: (item: { type: "account"; id: string; title: string; subtitle: string }) => void
   onDownloadSelection?: (scope: { dataset: "accounts"; accountNames: string[] }) => void
+  favoriteKeys?: Set<string>
+  onToggleFavorite?: (item: FavoriteInput) => void
+  onFavoriteMany?: (items: FavoriteInput[]) => void
 }
 
 export function AccountsTab({
@@ -75,6 +79,9 @@ export function AccountsTab({
   itemsPerPage,
   onRecordOpened,
   onDownloadSelection,
+  favoriteKeys,
+  onToggleFavorite,
+  onFavoriteMany,
 }: AccountsTabProps) {
   const allowMapView = canAccessAccountsMapView()
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null)
@@ -255,6 +262,13 @@ export function AccountsTab({
   const selectedOnPageCount = pageNames.filter((name) => selectedNames.has(name)).length
   const allPageSelected = pageNames.length > 0 && selectedOnPageCount === pageNames.length
   const somePageSelected = selectedOnPageCount > 0 && !allPageSelected
+
+  const buildFavorite = (account: Account): FavoriteInput => ({
+    entity_type: "account",
+    entity_id: account.account_global_legal_name ?? "",
+    title: account.account_global_legal_name || "Unknown Account",
+    subtitle: [account.account_hq_city, account.account_hq_country].filter(Boolean).join(", ") || null,
+  })
 
   if (accounts.length === 0) {
     return (
@@ -458,6 +472,8 @@ export function AccountsTab({
                           onSelectChange={(checked) =>
                             toggleRow(account.account_global_legal_name ?? "", checked)
                           }
+                          isFavorite={favoriteKeys?.has(`account:${account.account_global_legal_name ?? ""}`)}
+                          onToggleFavorite={onToggleFavorite ? () => onToggleFavorite(buildFavorite(account)) : undefined}
                         />
                       )
                     )}
@@ -515,6 +531,15 @@ export function AccountsTab({
         count={selectedNames.size}
         onClear={clearSelection}
         onExport={() => onDownloadSelection?.({ dataset: "accounts", accountNames: Array.from(selectedNames) })}
+        onFavorite={
+          onFavoriteMany
+            ? () => onFavoriteMany(accounts.filter((a) => selectedNames.has(a.account_global_legal_name ?? "")).map(buildFavorite))
+            : undefined
+        }
+        favoriteActive={
+          selectedNames.size > 0 &&
+          Array.from(selectedNames).every((name) => Boolean(favoriteKeys?.has(`account:${name}`)))
+        }
       />
 
       {/* Account Details Dialog */}

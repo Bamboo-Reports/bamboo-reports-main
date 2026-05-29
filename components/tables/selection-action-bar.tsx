@@ -1,8 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Download } from "lucide-react"
+import { Download, Star, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 
 interface SelectionActionBarProps {
   /** Whether the bar should be visible (e.g. in data view with rows selected). */
@@ -11,10 +12,14 @@ interface SelectionActionBarProps {
   count: number
   onClear: () => void
   onExport: () => void
+  /** When provided, shows a bulk "favorite selected" action. */
+  onFavorite?: () => void
+  /** When true, the favorite button turns blue (the selection is already favorited). */
+  favoriteActive?: boolean
 }
 
 /** Floating bottom-center bar for selective export. Animates in and out. */
-export function SelectionActionBar({ show, count, onClear, onExport }: SelectionActionBarProps) {
+export function SelectionActionBar({ show, count, onClear, onExport, onFavorite, favoriteActive }: SelectionActionBarProps) {
   const [mounted, setMounted] = useState(false)
   const [exiting, setExiting] = useState(false)
   const [displayCount, setDisplayCount] = useState(0)
@@ -47,16 +52,34 @@ export function SelectionActionBar({ show, count, onClear, onExport }: Selection
             : "animate-in fade-in slide-in-from-bottom-4 duration-300")
         }
       >
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 rounded-full"
+          onClick={onClear}
+          aria-label="Clear selection"
+        >
+          <X className="h-4 w-4" />
+        </Button>
         <span className="text-sm font-medium">{displayCount} selected</span>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="h-8 rounded-full px-3 text-xs" onClick={onClear}>
-            Clear
+        {onFavorite && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "h-8 gap-2 rounded-full px-3 text-xs",
+              favoriteActive && "text-blue-500 hover:text-blue-500"
+            )}
+            onClick={onFavorite}
+          >
+            <Star className={cn("h-3.5 w-3.5", favoriteActive && "fill-blue-500 text-blue-500")} />
+            {favoriteActive ? "Favorited" : "Favorite"}
           </Button>
-          <Button size="sm" className="h-8 gap-2 rounded-full px-4 text-xs" onClick={onExport}>
-            <Download className="h-3.5 w-3.5" />
-            Export
-          </Button>
-        </div>
+        )}
+        <Button size="sm" className="h-8 gap-2 rounded-full px-4 text-xs" onClick={onExport}>
+          <Download className="h-3.5 w-3.5" />
+          Export
+        </Button>
       </div>
     </div>
   )
