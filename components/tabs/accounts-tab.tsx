@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TabsContent } from "@/components/ui/tabs"
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   ArrowDownAZ,
   ArrowUpAZ,
@@ -16,6 +17,8 @@ import {
   Layers,
 } from "lucide-react"
 import { AccountRow } from "@/components/tables"
+import { SelectionActionBar } from "@/components/tables/selection-action-bar"
+import { useRowSelection } from "@/hooks/use-row-selection"
 import { AccountGridCard } from "@/components/cards/account-grid-card"
 import { PieChartCard } from "@/components/charts/pie-chart-card"
 import { EmptyState } from "@/components/states/empty-state"
@@ -54,6 +57,7 @@ interface AccountsTabProps {
   setCurrentPage: (page: number | ((prev: number) => number)) => void
   itemsPerPage: number
   onRecordOpened?: (item: { type: "account"; id: string; title: string; subtitle: string }) => void
+  onDownloadSelection?: (scope: { dataset: "accounts"; accountNames: string[] }) => void
 }
 
 export function AccountsTab({
@@ -70,6 +74,7 @@ export function AccountsTab({
   setCurrentPage,
   itemsPerPage,
   onRecordOpened,
+  onDownloadSelection,
 }: AccountsTabProps) {
   const allowMapView = canAccessAccountsMapView()
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null)
@@ -83,6 +88,15 @@ export function AccountsTab({
   })
   const [dataLayout, setDataLayout] = useState<"table" | "grid">("table")
   const [mapMode, setMapMode] = useState<"city" | "state">("state")
+  const availableNames = React.useMemo(
+    () =>
+      accounts
+        .map((account) => account.account_global_legal_name)
+        .filter((name): name is string => Boolean(name)),
+    [accounts]
+  )
+  const { selected: selectedNames, toggle: toggleRow, toggleMany, clear: clearSelection } =
+    useRowSelection(availableNames)
   const {
     columns,
     visibleColumnSet,
@@ -230,6 +244,17 @@ export function AccountsTab({
     const sorted = [...accounts].sort((a, b) => compare(getValue(a), getValue(b)))
     return sort.direction === "asc" ? sorted : sorted.reverse()
   }, [accounts, sort])
+
+  const pageNames = React.useMemo(
+    () =>
+      getPaginatedData(sortedAccounts, currentPage, itemsPerPage)
+        .map((account) => account.account_global_legal_name)
+        .filter((name): name is string => Boolean(name)),
+    [sortedAccounts, currentPage, itemsPerPage]
+  )
+  const selectedOnPageCount = pageNames.filter((name) => selectedNames.has(name)).length
+  const allPageSelected = pageNames.length > 0 && selectedOnPageCount === pageNames.length
+  const somePageSelected = selectedOnPageCount > 0 && !allPageSelected
 
   if (accounts.length === 0) {
     return (
@@ -391,6 +416,13 @@ export function AccountsTab({
                 <Table className="table-fixed">
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-[44px]">
+                        <Checkbox
+                          checked={allPageSelected ? true : somePageSelected ? "indeterminate" : false}
+                          onCheckedChange={(checked) => toggleMany(pageNames, checked === true)}
+                          aria-label="Select all accounts on this page"
+                        />
+                      </TableHead>
                       {isColumnVisible("name") && (
                       <TableHead className="w-[280px]">
                         <SortButton label="Account Name" sortKey="name" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
@@ -421,6 +453,11 @@ export function AccountsTab({
                           account={account}
                           onClick={() => handleAccountClick(account, "table_row")}
                           visibleColumns={visibleColumnSet}
+                          selectable
+                          isSelected={selectedNames.has(account.account_global_legal_name ?? "")}
+                          onSelectChange={(checked) =>
+                            toggleRow(account.account_global_legal_name ?? "", checked)
+                          }
                         />
                       )
                     )}
@@ -471,6 +508,14 @@ export function AccountsTab({
           </CardContent>
         </Card>
       )}
+
+      {/* Floating selection action bar */}
+      <SelectionActionBar
+        show={accountsView === "data" && selectedNames.size > 0}
+        count={selectedNames.size}
+        onClear={clearSelection}
+        onExport={() => onDownloadSelection?.({ dataset: "accounts", accountNames: Array.from(selectedNames) })}
+      />
 
       {/* Account Details Dialog */}
       <AccountDetailsDialog

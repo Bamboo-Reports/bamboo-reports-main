@@ -45,6 +45,10 @@ interface ExportDialogProps {
   centerKeys?: string[] | null
   /** Locked prospect teasers matching the current export scope. */
   lockedProspectsCount?: number
+  /** When set, restricts the dialog to these datasets (e.g. a single-sheet selection export). */
+  allowedDatasets?: ExportDatasetKey[]
+  /** Compact single-dataset layout for selection exports (no dataset picker). */
+  compact?: boolean
   onExportCompleted?: () => void
 }
 
@@ -94,6 +98,8 @@ export function ExportDialog({
   accountNames,
   centerKeys,
   lockedProspectsCount = 0,
+  allowedDatasets,
+  compact = false,
   onExportCompleted,
 }: ExportDialogProps) {
   const [selection, setSelection] = useState<Record<ExportDatasetKey, boolean>>({
@@ -108,8 +114,16 @@ export function ExportDialog({
   const [stage, setStage] = useState("Preparing export...")
   const [error, setError] = useState<string | null>(null)
   const [exportResult, setExportResult] = useState<ServerExportResponse | null>(null)
+  // Result is held back until the progress bar visually fills to 100%.
+  const [isComplete, setIsComplete] = useState(false)
   const wasOpenRef = useRef(false)
   const rafRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (exportResult && progress >= 100 && displayedProgress >= 100) {
+      setIsComplete(true)
+    }
+  }, [exportResult, progress, displayedProgress])
 
   useEffect(() => {
     if (rafRef.current !== null) {
@@ -149,6 +163,12 @@ export function ExportDialog({
   const getSelectedDatasets = (currentSelection: Record<ExportDatasetKey, boolean>) =>
     (Object.keys(currentSelection) as ExportDatasetKey[]).filter((dataset) => currentSelection[dataset])
 
+  const isDatasetAllowed = (key: ExportDatasetKey) => !allowedDatasets || allowedDatasets.includes(key)
+  const visibleDatasetMeta = useMemo(
+    () => (allowedDatasets ? DATASET_META.filter((meta) => allowedDatasets.includes(meta.key)) : DATASET_META),
+    [allowedDatasets]
+  )
+
   useEffect(() => {
     if (!open) {
       wasOpenRef.current = false
@@ -159,11 +179,12 @@ export function ExportDialog({
     }
     wasOpenRef.current = true
 
+    const allow = (key: ExportDatasetKey) => !allowedDatasets || allowedDatasets.includes(key)
     const initialSelection = {
-      accounts: isDatasetEnabled("accounts") && data.accounts.length > 0,
-      centers: isDatasetEnabled("centers") && data.centers.length > 0,
-      services: isDatasetEnabled("services") && data.services.length > 0,
-      prospects: isDatasetEnabled("prospects") && data.prospects.length > 0,
+      accounts: allow("accounts") && isDatasetEnabled("accounts") && data.accounts.length > 0,
+      centers: allow("centers") && isDatasetEnabled("centers") && data.centers.length > 0,
+      services: allow("services") && isDatasetEnabled("services") && data.services.length > 0,
+      prospects: allow("prospects") && isDatasetEnabled("prospects") && data.prospects.length > 0,
     }
     setSelection(initialSelection)
     setIsExporting(false)
@@ -172,6 +193,7 @@ export function ExportDialog({
     setStage("Preparing export...")
     setError(null)
     setExportResult(null)
+    setIsComplete(false)
 
     const initiallySelectedDatasets = getSelectedDatasets(initialSelection)
 
@@ -185,7 +207,7 @@ export function ExportDialog({
       selected_datasets: initiallySelectedDatasets,
       selected_dataset_count: initiallySelectedDatasets.length,
     })
-  }, [open, data, isFiltered, lockedProspectsCount])
+  }, [open, data, isFiltered, lockedProspectsCount, allowedDatasets])
 
   const totalSelected = useMemo(
     () => Object.values(selection).filter(Boolean).length,
@@ -199,12 +221,12 @@ export function ExportDialog({
     [selection, data]
   )
   const readinessItems = useMemo(
-    () => DATASET_META.map((item) => ({
+    () => visibleDatasetMeta.map((item) => ({
       ...item,
       count: selection[item.key] ? data[item.key].length : 0,
       selected: selection[item.key],
     })),
-    [selection, data]
+    [selection, data, visibleDatasetMeta]
   )
 
   const handleToggle = (key: ExportDatasetKey) => {
@@ -223,10 +245,10 @@ export function ExportDialog({
   const handleSelectAll = (value: boolean) => {
     if (isExporting) return
     const next = {
-      accounts: isDatasetEnabled("accounts") ? value : false,
-      centers: isDatasetEnabled("centers") ? value : false,
-      services: isDatasetEnabled("services") ? value : false,
-      prospects: isDatasetEnabled("prospects") ? value : false,
+      accounts: isDatasetAllowed("accounts") && isDatasetEnabled("accounts") ? value : false,
+      centers: isDatasetAllowed("centers") && isDatasetEnabled("centers") ? value : false,
+      services: isDatasetAllowed("services") && isDatasetEnabled("services") ? value : false,
+      prospects: isDatasetAllowed("prospects") && isDatasetEnabled("prospects") ? value : false,
     }
     setSelection(next)
     captureEvent(value ? ANALYTICS_EVENTS.EXPORT_SELECT_ALL_CLICKED : ANALYTICS_EVENTS.EXPORT_CLEAR_CLICKED, {
@@ -242,6 +264,7 @@ export function ExportDialog({
     setError(null)
     setProgress(0)
     setDisplayedProgress(0)
+    setIsComplete(false)
     setStage("Requesting export...")
     const startedAt = Date.now()
     const selectedDatasets = getSelectedDatasets(selection)
@@ -340,6 +363,95 @@ export function ExportDialog({
     onOpenChange(nextOpen)
   }
 
+  const compactLabel = visibleDatasetMeta[0]?.label ?? "data"
+
+  // After the server responds we keep showing the progress bar until it
+  // visually fills, only then revealing the download view.
+  const showResult = Boolean(exportResult) && isComplete
+  const fillingBar = isExporting || (Boolean(exportResult) && !isComplete)
+
+  const statusBlock = showResult && exportResult ? (
+    <div className="flex flex-col items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-6 py-5 text-center">
+      <CheckCircle2 className="h-9 w-9 text-emerald-500" />
+      <div>
+        <p className="text-sm font-semibold">Your file is ready</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          {exportResult.filename}
+          {exportResult.totalRows > 0 && (
+            <span className="ml-1">({exportResult.totalRows.toLocaleString()} rows)</span>
+          )}
+        </p>
+      </div>
+      <Button
+        size="sm"
+        className="gap-2"
+        onClick={async () => {
+          try {
+            const url = await resolveExportDownloadUrl(exportResult.id)
+            window.open(url, "_self")
+          } catch (err) {
+            setError(err instanceof Error ? err.message : "Failed to download export.")
+          }
+        }}
+      >
+        <Download className="h-4 w-4" />
+        Download file
+      </Button>
+    </div>
+  ) : (fillingBar || error) ? (
+    <div className="rounded-lg border bg-muted/20 p-4">
+      {fillingBar && (
+        <>
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>{stage}</span>
+            <span className="tabular-nums">{Math.round(displayedProgress)}%</span>
+          </div>
+          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full rounded-full bg-primary"
+              style={{ width: `${displayedProgress}%` }}
+            />
+          </div>
+        </>
+      )}
+      {error && <p className={fillingBar ? "mt-2 text-xs text-destructive" : "text-xs text-destructive"}>{error}</p>}
+    </div>
+  ) : null
+
+  if (compact) {
+    return (
+      <Dialog open={open} onOpenChange={handleDialogOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl">Export {compactLabel.toLowerCase()}</DialogTitle>
+            <DialogDescription>
+              {selectedRowCount.toLocaleString()} {compactLabel.toLowerCase()} {selectedRowCount === 1 ? "row" : "rows"} will be exported.
+            </DialogDescription>
+          </DialogHeader>
+
+          {statusBlock && <div className="space-y-4">{statusBlock}</div>}
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            {showResult ? (
+              <Button variant="ghost" onClick={() => onOpenChange(false)}>
+                Close
+              </Button>
+            ) : (
+              <>
+                <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={fillingBar}>
+                  Cancel
+                </Button>
+                <Button onClick={handleExport} disabled={fillingBar || totalSelected === 0}>
+                  {fillingBar ? "Exporting..." : "Export"}
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    )
+  }
+
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="sm:max-w-2xl">
@@ -421,7 +533,7 @@ export function ExportDialog({
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            {DATASET_META.map((item) => {
+            {visibleDatasetMeta.map((item) => {
               const Icon = item.icon
               const count = data[item.key].length
               const isChecked = selection[item.key]
@@ -466,64 +578,23 @@ export function ExportDialog({
             })}
           </div>
 
-          {exportResult ? (
-            <div className="flex flex-col items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-6 py-5 text-center">
-              <CheckCircle2 className="h-9 w-9 text-emerald-500" />
-              <div>
-                <p className="text-sm font-semibold">Your file is ready</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {exportResult.filename}
-                  {exportResult.totalRows > 0 && (
-                    <span className="ml-1">({exportResult.totalRows.toLocaleString()} rows)</span>
-                  )}
-                </p>
-              </div>
-              <Button
-                size="sm"
-                className="gap-2"
-                onClick={async () => {
-                  try {
-                    const url = await resolveExportDownloadUrl(exportResult.id)
-                    window.open(url, "_self")
-                  } catch (err) {
-                    setError(err instanceof Error ? err.message : "Failed to download export.")
-                  }
-                }}
-              >
-                <Download className="h-4 w-4" />
-                Download file
-              </Button>
-            </div>
-          ) : (isExporting || error) ? (
-            <div className="rounded-lg border bg-muted/20 p-4">
-              {isExporting && (
-                <>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{stage}</span>
-                    <span className="tabular-nums">{Math.round(displayedProgress)}%</span>
-                  </div>
-                  <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
-                    <div
-                      className="h-full rounded-full bg-primary"
-                      style={{ width: `${displayedProgress}%` }}
-                    />
-                  </div>
-                </>
-              )}
-              {error && <p className={isExporting ? "mt-2 text-xs text-destructive" : "text-xs text-destructive"}>{error}</p>}
-            </div>
-          ) : null}
+          {statusBlock}
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
-          {exportResult ? (
+          {showResult ? (
             <>
               <Button variant="ghost" onClick={() => onOpenChange(false)}>
                 Close
               </Button>
               <Button
                 variant="outline"
-                onClick={() => setExportResult(null)}
+                onClick={() => {
+                  setExportResult(null)
+                  setIsComplete(false)
+                  setProgress(0)
+                  setDisplayedProgress(0)
+                }}
               >
                 Export again
               </Button>
@@ -533,12 +604,12 @@ export function ExportDialog({
               <Button
                 variant="ghost"
                 onClick={() => onOpenChange(false)}
-                disabled={isExporting}
+                disabled={fillingBar}
               >
                 Cancel
               </Button>
-              <Button onClick={handleExport} disabled={isExporting || totalSelected === 0}>
-                {isExporting ? "Exporting..." : "Export Selected"}
+              <Button onClick={handleExport} disabled={fillingBar || totalSelected === 0}>
+                {fillingBar ? "Exporting..." : "Export Selected"}
               </Button>
             </>
           )}

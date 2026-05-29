@@ -4,8 +4,11 @@ import React, { useEffect, useRef, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TabsContent } from "@/components/ui/tabs"
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Checkbox } from "@/components/ui/checkbox"
 import { ArrowDownAZ, ArrowUpAZ, ArrowUpDown, PieChartIcon, Table as TableIcon, MapIcon, LayoutGrid, Layers, MapPin } from "lucide-react"
 import { CenterRow } from "@/components/tables"
+import { SelectionActionBar } from "@/components/tables/selection-action-bar"
+import { useRowSelection } from "@/hooks/use-row-selection"
 import { CenterGridCard } from "@/components/cards/center-grid-card"
 import { PieChartCard } from "@/components/charts/pie-chart-card"
 import { EmptyState } from "@/components/states/empty-state"
@@ -45,6 +48,7 @@ interface CentersTabProps {
   setCurrentPage: (page: number | ((prev: number) => number)) => void
   itemsPerPage: number
   onRecordOpened?: (item: { type: "center" | "account"; id: string; title: string; subtitle: string }) => void
+  onDownloadSelection?: (scope: { dataset: "centers"; centerKeys: string[] }) => void
 }
 
 export function CentersTab({
@@ -62,6 +66,7 @@ export function CentersTab({
   setCurrentPage,
   itemsPerPage,
   onRecordOpened,
+  onDownloadSelection,
 }: CentersTabProps) {
   const [selectedCenter, setSelectedCenter] = useState<Center | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -244,6 +249,23 @@ export function CentersTab({
     return sort.direction === "asc" ? sorted : sorted.reverse()
   }, [centers, sort])
 
+  const availableKeys = React.useMemo(
+    () => centers.map((center) => center.cn_unique_key).filter((key): key is string => Boolean(key)),
+    [centers]
+  )
+  const { selected: selectedKeys, toggle: toggleRow, toggleMany, clear: clearSelection } =
+    useRowSelection(availableKeys)
+  const pageKeys = React.useMemo(
+    () =>
+      getPaginatedData(sortedCenters, currentPage, itemsPerPage)
+        .map((center) => center.cn_unique_key)
+        .filter((key): key is string => Boolean(key)),
+    [sortedCenters, currentPage, itemsPerPage]
+  )
+  const selectedOnPageCount = pageKeys.filter((key) => selectedKeys.has(key)).length
+  const allPageSelected = pageKeys.length > 0 && selectedOnPageCount === pageKeys.length
+  const somePageSelected = selectedOnPageCount > 0 && !allPageSelected
+
   // Show empty state when no centers
   if (centers.length === 0) {
     return (
@@ -403,6 +425,13 @@ export function CentersTab({
                   <Table className="table-fixed">
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-[44px]">
+                          <Checkbox
+                            checked={allPageSelected ? true : somePageSelected ? "indeterminate" : false}
+                            onCheckedChange={(checked) => toggleMany(pageKeys, checked === true)}
+                            aria-label="Select all centers on this page"
+                          />
+                        </TableHead>
                         {isColumnVisible("name") && (
                         <TableHead className="w-[260px]">
                           <SortButton label="Center Name" sortKey="name" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
@@ -433,6 +462,9 @@ export function CentersTab({
                             center={center}
                             onClick={() => handleCenterClick(center, "table_row")}
                             visibleColumns={visibleColumnSet}
+                            selectable
+                            isSelected={selectedKeys.has(center.cn_unique_key ?? "")}
+                            onSelectChange={(checked) => toggleRow(center.cn_unique_key ?? "", checked)}
                           />
                         )
                       )}
@@ -503,6 +535,13 @@ export function CentersTab({
         tech={tech}
         open={isAccountDialogOpen}
         onOpenChange={setIsAccountDialogOpen}
+      />
+
+      <SelectionActionBar
+        show={centersView === "data" && selectedKeys.size > 0}
+        count={selectedKeys.size}
+        onClear={clearSelection}
+        onExport={() => onDownloadSelection?.({ dataset: "centers", centerKeys: Array.from(selectedKeys) })}
       />
     </TabsContent>
   )

@@ -1,6 +1,7 @@
 import { memo } from "react"
 import { Eye, ExternalLink, Globe } from "lucide-react"
 import { TableRow, TableCell } from "@/components/ui/table"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   ContextMenu,
   ContextMenuContent,
@@ -16,9 +17,12 @@ interface CenterRowProps {
   center: Center
   onClick: () => void
   visibleColumns: Set<CenterTableColumnKey>
+  selectable?: boolean
+  isSelected?: boolean
+  onSelectChange?: (checked: boolean) => void
 }
 
-export const CenterRow = memo(({ center, onClick, visibleColumns }: CenterRowProps) => {
+export const CenterRow = memo(({ center, onClick, visibleColumns, selectable, isSelected, onSelectChange }: CenterRowProps) => {
   const location = [center.center_city, center.center_state].filter(Boolean).join(", ")
 
   return (
@@ -36,6 +40,19 @@ export const CenterRow = memo(({ center, onClick, visibleColumns }: CenterRowPro
           tabIndex={0}
           aria-label={`View center details for ${center.center_name || "center"}`}
         >
+          {selectable && (
+          <TableCell
+            className="w-[44px]"
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
+          >
+            <Checkbox
+              checked={Boolean(isSelected)}
+              onCheckedChange={(checked) => onSelectChange?.(checked === true)}
+              aria-label={`Select ${center.center_name || "center"}`}
+            />
+          </TableCell>
+          )}
           {visibleColumns.has("name") && (
           <TableCell className="font-medium max-w-[260px]">
             <div className="flex items-center gap-3">

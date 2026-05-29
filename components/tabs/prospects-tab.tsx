@@ -4,8 +4,11 @@ import React, { useEffect, useRef, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TabsContent } from "@/components/ui/tabs"
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Checkbox } from "@/components/ui/checkbox"
 import { ArrowDownAZ, ArrowUpAZ, ArrowUpDown, PieChartIcon, Table as TableIcon, LayoutGrid } from "lucide-react"
 import { ProspectRow } from "@/components/tables/prospect-row"
+import { SelectionActionBar } from "@/components/tables/selection-action-bar"
+import { useRowSelection } from "@/hooks/use-row-selection"
 import { ProspectGridCard } from "@/components/cards/prospect-grid-card"
 import { PieChartCard } from "@/components/charts/pie-chart-card"
 import { EmptyState } from "@/components/states/empty-state"
@@ -40,6 +43,7 @@ interface ProspectsTabProps {
   setCurrentPage: (page: number | ((prev: number) => number)) => void
   itemsPerPage: number
   onRecordOpened?: (item: { type: "prospect" | "account"; id: string; title: string; subtitle: string }) => void
+  onDownloadSelection?: (scope: { dataset: "prospects"; accountNames: string[] }) => void
 }
 
 export function ProspectsTab({
@@ -57,6 +61,7 @@ export function ProspectsTab({
   setCurrentPage,
   itemsPerPage,
   onRecordOpened,
+  onDownloadSelection,
 }: ProspectsTabProps) {
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -263,6 +268,40 @@ export function ProspectsTab({
     [sortedProspects, lockedProspectTeasers]
   )
 
+  const accountNameByKey = React.useMemo(() => {
+    const map = new Map<string, string>()
+    for (const prospect of prospects) {
+      const key = getProspectRecordId(prospect)
+      if (prospect.account_global_legal_name) map.set(key, prospect.account_global_legal_name)
+    }
+    return map
+  }, [prospects, getProspectRecordId])
+  const availableKeys = React.useMemo(
+    () => prospects.map((prospect) => getProspectRecordId(prospect)),
+    [prospects, getProspectRecordId]
+  )
+  const { selected: selectedKeys, toggle: toggleRow, toggleMany, clear: clearSelection } =
+    useRowSelection(availableKeys)
+  const pageKeys = React.useMemo(
+    () =>
+      getPaginatedData(tableItems, currentPage, itemsPerPage)
+        .filter((item) => item.type === "visible")
+        .map((item) => getProspectRecordId(item.prospect)),
+    [tableItems, currentPage, itemsPerPage, getProspectRecordId]
+  )
+  const selectedOnPageCount = pageKeys.filter((key) => selectedKeys.has(key)).length
+  const allPageSelected = pageKeys.length > 0 && selectedOnPageCount === pageKeys.length
+  const somePageSelected = selectedOnPageCount > 0 && !allPageSelected
+
+  const handleExportSelection = () => {
+    const names = new Set<string>()
+    for (const key of selectedKeys) {
+      const name = accountNameByKey.get(key)
+      if (name) names.add(name)
+    }
+    onDownloadSelection?.({ dataset: "prospects", accountNames: Array.from(names) })
+  }
+
   // Show empty state when no prospects
   if (prospects.length === 0 && lockedProspectTeasers.length === 0) {
     return (
@@ -366,6 +405,13 @@ export function ProspectsTab({
                   <Table className="table-fixed">
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-[44px]">
+                          <Checkbox
+                            checked={allPageSelected ? true : somePageSelected ? "indeterminate" : false}
+                            onCheckedChange={(checked) => toggleMany(pageKeys, checked === true)}
+                            aria-label="Select all prospects on this page"
+                          />
+                        </TableHead>
                         {isColumnVisible("avatar") && (
                         <TableHead className="w-16"></TableHead>
                         )}
@@ -399,6 +445,9 @@ export function ProspectsTab({
                             prospect={item.prospect}
                             onClick={() => handleProspectClick(item.prospect, "table_row")}
                             visibleColumns={visibleColumnSet}
+                            selectable
+                            isSelected={selectedKeys.has(getProspectRecordId(item.prospect))}
+                            onSelectChange={(checked) => toggleRow(getProspectRecordId(item.prospect), checked)}
                           />
                         ) : (
                           <LockedProspectTeaserRow
@@ -406,6 +455,7 @@ export function ProspectsTab({
                             teaser={item.teaser}
                             remainingCount={lockedTeaserCountsByAccount.get(item.teaser.account_global_legal_name) ?? 0}
                             visibleColumns={visibleColumnSet}
+                            selectable
                           />
                         )
                       )}
@@ -481,6 +531,13 @@ export function ProspectsTab({
         tech={tech}
         open={isAccountDialogOpen}
         onOpenChange={setIsAccountDialogOpen}
+      />
+
+      <SelectionActionBar
+        show={prospectsView === "data" && selectedKeys.size > 0}
+        count={selectedKeys.size}
+        onClear={clearSelection}
+        onExport={handleExportSelection}
       />
     </TabsContent>
   )

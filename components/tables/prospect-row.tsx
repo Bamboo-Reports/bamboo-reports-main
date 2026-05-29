@@ -1,6 +1,7 @@
 import { memo } from "react"
 import { Copy, Eye, ExternalLink } from "lucide-react"
 import { TableRow, TableCell } from "@/components/ui/table"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   ContextMenu,
   ContextMenuContent,
@@ -17,9 +18,12 @@ interface ProspectRowProps {
   prospect: Prospect
   onClick: () => void
   visibleColumns: Set<ProspectTableColumnKey>
+  selectable?: boolean
+  isSelected?: boolean
+  onSelectChange?: (checked: boolean) => void
 }
 
-export const ProspectRow = memo(({ prospect, onClick, visibleColumns }: ProspectRowProps) => {
+export const ProspectRow = memo(({ prospect, onClick, visibleColumns, selectable, isSelected, onSelectChange }: ProspectRowProps) => {
   const copy = useCopyToClipboard()
   const fullName =
     prospect.prospect_full_name ||
@@ -48,6 +52,19 @@ export const ProspectRow = memo(({ prospect, onClick, visibleColumns }: Prospect
           tabIndex={0}
           aria-label={`View prospect details for ${fullName || "prospect"}`}
         >
+          {selectable && (
+          <TableCell
+            className="w-[44px]"
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
+          >
+            <Checkbox
+              checked={Boolean(isSelected)}
+              onCheckedChange={(checked) => onSelectChange?.(checked === true)}
+              aria-label={`Select ${fullName || "prospect"}`}
+            />
+          </TableCell>
+          )}
           {visibleColumns.has("avatar") && (
           <TableCell>
             <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">

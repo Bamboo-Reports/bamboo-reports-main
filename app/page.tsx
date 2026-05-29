@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTheme } from "next-themes"
 import { toast } from "sonner"
 import { ExportDialog } from "@/components/export/export-dialog"
+import type { ExportDatasetKey } from "@/lib/utils/export-helpers"
 import { ExportsDialog } from "@/components/exports/exports-dialog"
 import { HistoryDialog } from "@/components/history/history-dialog"
 import { FiltersSidebar } from "@/components/filters/filters-sidebar"
@@ -115,6 +116,12 @@ function DashboardContent(): React.JSX.Element | null {
   const [prospectsView, setProspectsView] = useState<"chart" | "data">("chart")
   const [activeSection, setActiveSection] = useState<"accounts" | "centers" | "prospects">(defaultSection)
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
+  const [exportScope, setExportScope] = useState<
+    | { dataset: "accounts"; accountNames: string[] }
+    | { dataset: "centers"; centerKeys: string[] }
+    | { dataset: "prospects"; accountNames: string[] }
+    | null
+  >(null)
   const [exportsDialogOpen, setExportsDialogOpen] = useState(false)
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
@@ -562,8 +569,114 @@ function DashboardContent(): React.JSX.Element | null {
     if (!canExport) {
       return
     }
+    setExportScope(null)
     setExportDialogOpen(true)
   }, [canExport])
+
+  const handleDownloadSelection = useCallback(
+    (
+      scope:
+        | { dataset: "accounts"; accountNames: string[] }
+        | { dataset: "centers"; centerKeys: string[] }
+        | { dataset: "prospects"; accountNames: string[] }
+    ) => {
+      const values = "accountNames" in scope ? scope.accountNames : scope.centerKeys
+      if (!canExport || values.length === 0) {
+        return
+      }
+      setExportScope(scope)
+      setExportDialogOpen(true)
+    },
+    [canExport]
+  )
+
+  const handleExportDialogOpenChange = useCallback((open: boolean) => {
+    setExportDialogOpen(open)
+    if (!open) {
+      // Defer clearing the scope until the close animation (300ms) finishes,
+      // otherwise the dialog briefly re-renders in its full multi-dataset form.
+      window.setTimeout(() => setExportScope(null), 350)
+    }
+  }, [])
+
+  const exportPayload = useMemo(() => {
+    const { filteredAccounts, filteredCenters, filteredServices, filteredProspects } = filteredData
+
+    if (!exportScope) {
+      return {
+        data: {
+          accounts: filteredAccounts,
+          centers: filteredCenters,
+          services: filteredServices,
+          prospects: filteredProspects,
+        },
+        isFiltered: activeFiltersCount > 0,
+        filtersSnapshot: filters,
+        accountNames: Array.from(
+          new Set(
+            filteredAccounts
+              .map((a) => a.account_global_legal_name)
+              .filter((name): name is string => Boolean(name))
+          )
+        ),
+        centerKeys: Array.from(
+          new Set(
+            filteredCenters
+              .map((c) => c.cn_unique_key)
+              .filter((key): key is string => Boolean(key))
+          )
+        ),
+        allowedDatasets: undefined as ExportDatasetKey[] | undefined,
+      }
+    }
+
+    // A row selection exports only the selected entity's sheet, never the
+    // related datasets. The dialog is locked to that single dataset.
+    const emptyData = { accounts: [], centers: [], services: [], prospects: [] }
+    const snapshot = { ...(filters as object), selection: exportScope }
+
+    if (exportScope.dataset === "centers") {
+      const keySet = new Set(exportScope.centerKeys)
+      const scopedCenters = filteredCenters.filter(
+        (c) => c.cn_unique_key && keySet.has(c.cn_unique_key)
+      )
+      return {
+        data: { ...emptyData, centers: scopedCenters },
+        isFiltered: true,
+        filtersSnapshot: snapshot,
+        accountNames: [],
+        centerKeys: exportScope.centerKeys,
+        allowedDatasets: ["centers"] as ExportDatasetKey[],
+      }
+    }
+
+    const nameSet = new Set(exportScope.accountNames)
+    if (exportScope.dataset === "prospects") {
+      const scopedProspects = filteredProspects.filter(
+        (p) => p.account_global_legal_name && nameSet.has(p.account_global_legal_name)
+      )
+      return {
+        data: { ...emptyData, prospects: scopedProspects },
+        isFiltered: true,
+        filtersSnapshot: snapshot,
+        accountNames: exportScope.accountNames,
+        centerKeys: [],
+        allowedDatasets: ["prospects"] as ExportDatasetKey[],
+      }
+    }
+
+    const scopedAccounts = filteredAccounts.filter(
+      (a) => a.account_global_legal_name && nameSet.has(a.account_global_legal_name)
+    )
+    return {
+      data: { ...emptyData, accounts: scopedAccounts },
+      isFiltered: true,
+      filtersSnapshot: snapshot,
+      accountNames: exportScope.accountNames,
+      centerKeys: [],
+      allowedDatasets: ["accounts"] as ExportDatasetKey[],
+    }
+  }, [exportScope, filteredData, filters, activeFiltersCount])
 
   const handleExportCompleted = useCallback(() => {
     exportCountRef.current += 1
@@ -812,30 +925,15 @@ function DashboardContent(): React.JSX.Element | null {
         >
           <ExportDialog
             open={exportDialogOpen}
-            onOpenChange={setExportDialogOpen}
-            data={{
-              accounts: filteredData.filteredAccounts,
-              centers: filteredData.filteredCenters,
-              services: filteredData.filteredServices,
-              prospects: filteredData.filteredProspects,
-            }}
-            isFiltered={activeFiltersCount > 0}
-            filtersSnapshot={filters}
+            onOpenChange={handleExportDialogOpenChange}
+            data={exportPayload.data}
+            isFiltered={exportPayload.isFiltered}
+            filtersSnapshot={exportPayload.filtersSnapshot}
             lockedProspectsCount={filteredLockedProspectTeasers.length}
-            accountNames={Array.from(
-              new Set(
-                filteredData.filteredAccounts
-                  .map((a) => a.account_global_legal_name)
-                  .filter((name): name is string => Boolean(name))
-              )
-            )}
-            centerKeys={Array.from(
-              new Set(
-                filteredData.filteredCenters
-                  .map((c) => c.cn_unique_key)
-                  .filter((key): key is string => Boolean(key))
-              )
-            )}
+            accountNames={exportPayload.accountNames}
+            centerKeys={exportPayload.centerKeys}
+            allowedDatasets={exportPayload.allowedDatasets}
+            compact={Boolean(exportPayload.allowedDatasets)}
             onExportCompleted={handleExportCompleted}
           />
           <FiltersSidebar
@@ -904,6 +1002,7 @@ function DashboardContent(): React.JSX.Element | null {
                       setCurrentPage={setAccountsPage}
                       itemsPerPage={itemsPerPage}
                       onRecordOpened={addRecentItem}
+                      onDownloadSelection={canExport ? handleDownloadSelection : undefined}
                     />
                   )}
 
@@ -924,6 +1023,7 @@ function DashboardContent(): React.JSX.Element | null {
                       setCurrentPage={setCentersPage}
                       itemsPerPage={itemsPerPage}
                       onRecordOpened={addRecentItem}
+                      onDownloadSelection={canExport ? handleDownloadSelection : undefined}
                     />
                   )}
 
@@ -943,6 +1043,7 @@ function DashboardContent(): React.JSX.Element | null {
                       setCurrentPage={setProspectsPage}
                       itemsPerPage={itemsPerPage}
                       onRecordOpened={addRecentItem}
+                      onDownloadSelection={canExport ? handleDownloadSelection : undefined}
                     />
                   )}
                 </Tabs>

@@ -37,6 +37,7 @@ interface LockedProspectTeaserRowProps {
   remainingCount: number
   accountContext?: string
   visibleColumns: Set<ProspectTableColumnKey>
+  selectable?: boolean
 }
 
 export function LockedProspectTeaserCard({
@@ -162,6 +163,7 @@ export function LockedProspectTeaserRow({
   remainingCount,
   accountContext,
   visibleColumns,
+  selectable,
 }: LockedProspectTeaserRowProps) {
   const [isOpen, setIsOpen] = useState(false)
   const location = [teaser.prospect_city, teaser.prospect_state].filter(Boolean).join(", ") || teaser.prospect_country || ""
@@ -180,6 +182,7 @@ export function LockedProspectTeaserRow({
         tabIndex={0}
         aria-label={`View locked contact details for ${accountContext ?? teaser.account_global_legal_name}`}
       >
+        {selectable && <TableCell className="w-[44px]" aria-hidden="true" />}
         {visibleColumns.has("avatar") && (
         <TableCell>
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground">
