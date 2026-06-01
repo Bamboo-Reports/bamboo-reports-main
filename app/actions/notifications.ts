@@ -162,16 +162,17 @@ export async function getUnreadSummaries(params: {
           SELECT
             e.table_name,
             CASE WHEN e.field_name = ${ROW_ADDED_FIELD} THEN 'added' ELSE 'updated' END AS change_type,
-            COALESCE(NULLIF(e.record_label, ''), e.record_identity) AS record_label,
+            COALESCE(NULLIF(e.record_uuid, ''), e.record_identity, e.record_label) AS record_key,
+            COALESCE(NULLIF(MAX(e.record_label), ''), MAX(e.record_identity), COALESCE(NULLIF(e.record_uuid, ''), e.record_identity, e.record_label)) AS record_label,
             MAX(e.changed_at) AS latest_changed_at
           FROM audit.field_change_events e
           WHERE e.changed_at > ${lastReadAt}
             AND e.changed_at > NOW() - INTERVAL '90 days'
             AND e.field_name <> ${ROW_REMOVED_FIELD}
             AND e.table_name = ANY(${UI_VISIBLE_NOTIFICATION_TABLES})
-          GROUP BY e.table_name, change_type, COALESCE(NULLIF(e.record_label, ''), e.record_identity)
+            AND COALESCE(NULLIF(e.record_uuid, ''), e.record_identity, e.record_label) IS NOT NULL
+          GROUP BY e.table_name, change_type, COALESCE(NULLIF(e.record_uuid, ''), e.record_identity, e.record_label)
         ) r
-        WHERE r.record_label IS NOT NULL
         GROUP BY r.table_name, r.change_type
         ORDER BY MAX(r.latest_changed_at) DESC
       `
