@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto"
 import { z } from "zod"
 import { extractBearerToken, resolveAuthenticatedUserId } from "@/lib/auth/server"
+import { canExportData, normalizeUserRole, type UserRole } from "@/lib/auth/roles"
 import { createLogger } from "@/lib/logger"
 import { getSupabaseServiceRoleClient, USER_EXPORTS_BUCKET } from "@/lib/supabase/server"
 import type { SupabaseClient } from "@supabase/supabase-js"
@@ -64,6 +65,20 @@ async function isRateLimited(supabase: SupabaseClient, userId: string): Promise<
   return (count ?? 0) >= EXPORT_RATE_LIMIT_MAX
 }
 
+async function resolveUserRole(supabase: SupabaseClient, userId: string): Promise<UserRole> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("user_id", userId)
+    .maybeSingle()
+
+  if (error) {
+    throw error
+  }
+
+  return normalizeUserRole((data as { role?: unknown } | null)?.role)
+}
+
 const VALID_DATASETS: ServerExportDatasetKey[] = ["accounts", "centers", "services", "prospects"]
 
 export async function POST(request: Request) {
@@ -102,6 +117,19 @@ export async function POST(request: Request) {
   }
 
   const supabase = getSupabaseServiceRoleClient()
+
+  let role: UserRole
+  try {
+    role = await resolveUserRole(supabase, userId)
+  } catch (err) {
+    logger.error("role_check_failed", { error: err, user_id: userId })
+    return json({ error: "Failed to verify export permissions" }, 500)
+  }
+
+  if (!canExportData(role)) {
+    logger.warn("generate_denied", { user_id: userId, role })
+    return json({ error: "Export access denied" }, 403)
+  }
 
   if (await isRateLimited(supabase, userId)) {
     return json({ error: "Export rate limit reached. Please wait before generating more exports." }, 429)

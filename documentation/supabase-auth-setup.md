@@ -66,19 +66,27 @@ to authenticated
 using (auth.uid() = user_id);
 
 -- 3. Insert Policy: Users can create their own profile
--- (Usually triggered by a signup flow or a trigger on auth.users)
+-- (Usually triggered by a signup flow or a trigger on auth.users).
+-- New self-service profiles must start as viewers.
 create policy "Profiles are insertable by owner"
 on public.profiles
 for insert
 to authenticated
-with check (auth.uid() = user_id);
+with check (auth.uid() = user_id and role = 'viewer');
 
 -- 4. Update Policy: Users can update their own profile
 create policy "Profiles are updatable by owner"
 on public.profiles
 for update
 to authenticated
-using (auth.uid() = user_id);
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+-- 5. Column Privileges: authenticated users can manage profile details,
+-- but cannot set or update role from the browser.
+revoke insert, update on public.profiles from authenticated;
+grant insert (user_id, first_name, last_name, email, phone) on public.profiles to authenticated;
+grant update (first_name, last_name, email, phone) on public.profiles to authenticated;
 ```
 
 ### 2.3 Auto-Update Trigger
@@ -131,15 +139,36 @@ begin
     check (role in ('viewer', 'admin'));
   end if;
 end $$;
+
+drop policy if exists "Profiles are insertable by owner" on public.profiles;
+create policy "Profiles are insertable by owner"
+on public.profiles
+for insert
+to authenticated
+with check (auth.uid() = user_id and role = 'viewer');
+
+drop policy if exists "Profiles are updatable by owner" on public.profiles;
+create policy "Profiles are updatable by owner"
+on public.profiles
+for update
+to authenticated
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+revoke insert, update on public.profiles from authenticated;
+grant insert (user_id, first_name, last_name, email, phone) on public.profiles to authenticated;
+grant update (first_name, last_name, email, phone) on public.profiles to authenticated;
 ```
 
-Then assign your test/admin user:
+Then assign your test/admin user from the Supabase SQL Editor, service-role code, or another trusted admin path:
 
 ```sql
 update public.profiles
 set role = 'admin'
 where email = 'your-admin-email@example.com';
 ```
+
+Do not expose role promotion through browser Supabase clients. Authenticated users intentionally do not receive `insert` or `update` privileges on the `role` column.
 
 You can also run the same SQL from: `documentation/sql/profiles-role-migration.sql`.
 
@@ -155,7 +184,7 @@ The application uses `@supabase/auth-helpers-nextjs` or `@supabase/ssr` (dependi
 - **Profile Fetching:**
     - On load, the app can fetch the user's profile using `supabase.from('profiles').select('*').single()`.
     - Because of RLS, this query requires no `where` clause security-wise, but `eq('user_id', user.id)` is good practice.
-    - Use `profile.role` for app-level permissions (example: only `admin` can export data).
+    - Use `profile.role` for UI hints only. Server endpoints must re-check role permissions before protected operations such as exports.
 
 ### 3.2 Server-Side (Actions/API)
 When accessing data server-side (e.g., in `app/actions.ts` or API routes):
