@@ -14,6 +14,7 @@ import {
   toTrackedFilterValueArray,
   toTrackedStringArray,
 } from "@/lib/analytics/tracking"
+import { getFilterMetadataProperties } from "@/lib/analytics/filter-metadata"
 import type { Account, Center, Function, Prospect, Service, Tech, Filters, AvailableOptions, FilterValue } from "@/lib/types"
 import { isFilterEnabled } from "@/lib/config/filters"
 import { createDefaultFilters } from "@/lib/dashboard/defaults"
@@ -515,6 +516,7 @@ export function useDashboardFilters({
       for (const filterKey of filterKeys) {
         const previousValue = previousFilters[filterKey]
         const currentValue = filters[filterKey]
+        const filterMetadataProperties = getFilterMetadataProperties(filterKey)
 
         if (JSON.stringify(previousValue) === JSON.stringify(currentValue)) {
           continue
@@ -524,6 +526,7 @@ export function useDashboardFilters({
           const previousRange = isNumberRange(previousValue) ? previousValue : null
           captureEvent(ANALYTICS_EVENTS.FILTER_CHANGED, {
             filter_key: filterKey,
+            ...filterMetadataProperties,
             change_type: "range_change",
             range_min: currentValue[0],
             range_max: currentValue[1],
@@ -539,6 +542,7 @@ export function useDashboardFilters({
         if (typeof currentValue === "boolean") {
           captureEvent(ANALYTICS_EVENTS.FILTER_CHANGED, {
             filter_key: filterKey,
+            ...filterMetadataProperties,
             change_type: "toggle",
             null_toggle_value: currentValue,
             previous_null_toggle_value: typeof previousValue === "boolean" ? previousValue : null,
@@ -550,6 +554,7 @@ export function useDashboardFilters({
         if (typeof currentValue === "string") {
           captureEvent(ANALYTICS_EVENTS.FILTER_CHANGED, {
             filter_key: filterKey,
+            ...filterMetadataProperties,
             change_type: "select",
             selected_value: currentValue,
             previous_selected_value: typeof previousValue === "string" ? previousValue : null,
@@ -612,6 +617,7 @@ export function useDashboardFilters({
 
         captureEvent(ANALYTICS_EVENTS.FILTER_CHANGED, {
           filter_key: filterKey,
+          ...filterMetadataProperties,
           change_type: changeType,
           include_count: includeCount,
           exclude_count: excludeCount,
