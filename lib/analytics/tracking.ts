@@ -1,4 +1,5 @@
 import { calculateActiveFilters } from "@/lib/dashboard/filter-summary"
+import { getFilterMetadata } from "@/lib/analytics/filter-metadata"
 import type { FilterValue, Filters } from "@/lib/types"
 
 export const MAX_TRACKED_VALUES = 100
@@ -75,14 +76,14 @@ export const buildTrackedFiltersSnapshot = (
     "accountHqRevenueRange",
     baselineRanges.accountHqRevenueRange
       ? hasRangeChanged(filters.accountHqRevenueRange, baselineRanges.accountHqRevenueRange)
-      : true
+      : false
   )
   pushIfActive("accountHqRevenueIncludeNull", filters.accountHqRevenueIncludeNull)
   pushIfActive(
     "accountYearsInIndiaRange",
     baselineRanges.accountYearsInIndiaRange
       ? hasRangeChanged(filters.accountYearsInIndiaRange, baselineRanges.accountYearsInIndiaRange)
-      : true
+      : false
   )
   pushIfActive("yearsInIndiaIncludeNull", filters.yearsInIndiaIncludeNull)
   pushIfActive("accountGlobalLegalNameKeywords", filters.accountGlobalLegalNameKeywords.length > 0)
@@ -97,7 +98,7 @@ export const buildTrackedFiltersSnapshot = (
     "centerIncYearRange",
     baselineRanges.centerIncYearRange
       ? hasRangeChanged(filters.centerIncYearRange, baselineRanges.centerIncYearRange)
-      : true
+      : false
   )
   pushIfActive("centerIncYearIncludeNull", filters.centerIncYearIncludeNull)
   pushIfActive("functionNameValues", filters.functionNameValues.length > 0)
@@ -111,6 +112,16 @@ export const buildTrackedFiltersSnapshot = (
   return {
     active_filters_count: calculateActiveFilters(filters),
     active_filter_keys: activeFilterKeys,
+    active_filter_names: activeFilterKeys.map((key) => getFilterMetadata(key as keyof Filters).label),
+    active_filter_details: activeFilterKeys.map((key) => {
+      const metadata = getFilterMetadata(key as keyof Filters)
+      return {
+        key,
+        name: metadata.label,
+        group: metadata.group,
+        input_type: metadata.inputType,
+      }
+    }),
     account_visibility_mode: filters.accountVisibilityMode ?? "gcc",
     account_regions: toTrackedFilterValueArray(filters.accountHqRegionValues),
     account_countries: toTrackedFilterValueArray(filters.accountHqCountryValues),

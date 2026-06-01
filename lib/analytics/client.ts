@@ -85,8 +85,8 @@ export const initAnalytics = () => {
           : {}
 
       const mergedProperties: Record<string, unknown> = {
-        ...currentProperties,
         ...sanitizeProperties(analyticsContext as Record<string, unknown>),
+        ...currentProperties,
       }
 
       if (!mergedProperties.session_id) {

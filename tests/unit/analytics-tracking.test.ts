@@ -40,4 +40,18 @@ describe("analytics tracking helpers", () => {
     expect(snapshot.account_revenue_range_min).toBe(100)
     expect(snapshot.account_revenue_range_max).toBe(500)
   })
+
+  it("does not mark range filters active without baseline ranges", () => {
+    const filters = makeFilters({
+      accountHqRevenueIncludeNull: false,
+      yearsInIndiaIncludeNull: false,
+      centerIncYearIncludeNull: false,
+    })
+    const snapshot = buildTrackedFiltersSnapshot(filters)
+
+    expect(snapshot.active_filter_keys).not.toEqual(
+      expect.arrayContaining(["accountHqRevenueRange", "accountYearsInIndiaRange", "centerIncYearRange"])
+    )
+    expect(snapshot.active_filters_count).toBe(0)
+  })
 })

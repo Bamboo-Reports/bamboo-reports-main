@@ -1,6 +1,8 @@
 "use client"
 
 import { useMemo, useState, useCallback, useRef, useEffect } from "react"
+import { captureEvent } from "@/lib/analytics/client"
+import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import type { Account, Alias, Center, Prospect } from "@/lib/types"
 import { buildSearchIndex, searchIndex, type GroupedResults } from "@/lib/search"
 
@@ -66,6 +68,23 @@ export function useGlobalSearch({
     () => searchIndex(index, debouncedQuery),
     [index, debouncedQuery]
   )
+
+  useEffect(() => {
+    const normalizedQuery = debouncedQuery.trim()
+    if (!isOpen || !normalizedQuery) {
+      return
+    }
+
+    captureEvent(ANALYTICS_EVENTS.SEARCH_QUERY_TYPED, {
+      query: normalizedQuery,
+      query_length: normalizedQuery.length,
+      debounce_ms: DEBOUNCE_MS,
+      total_results_count: results.total,
+      account_results_count: results.accounts.totalMatches,
+      center_results_count: results.centers.totalMatches,
+      prospect_results_count: results.prospects.totalMatches,
+    })
+  }, [debouncedQuery, isOpen, results])
 
   const handleOpen = useCallback(() => {
     setIsOpen(true)

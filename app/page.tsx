@@ -332,6 +332,8 @@ function DashboardContent(): React.JSX.Element | null {
       screen: currentScreenRef.current,
     })
 
+    const HEARTBEAT_INTERVAL_MS = 60000
+
     heartbeatIntervalRef.current = window.setInterval(() => {
       const elapsedSeconds = sessionStartRef.current
         ? Math.max(0, Math.round((Date.now() - sessionStartRef.current) / 1000))
@@ -342,7 +344,7 @@ function DashboardContent(): React.JSX.Element | null {
         view_switch_count: viewSwitchCountRef.current,
         exports_count: exportCountRef.current,
       })
-    }, 30000)
+    }, HEARTBEAT_INTERVAL_MS)
 
     const IDLE_TIMEOUT_MS = 60000
 
