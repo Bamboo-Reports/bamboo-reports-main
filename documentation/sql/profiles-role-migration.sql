@@ -24,7 +24,29 @@ begin
   end if;
 end $$;
 
--- Promote your test user to admin (replace placeholder).
+-- Keep self-service profile writes from changing authorization roles.
+-- Browser clients can create/update profile details, but role promotion must
+-- happen through the SQL Editor, service-role code, or another trusted admin path.
+drop policy if exists "Profiles are insertable by owner" on public.profiles;
+create policy "Profiles are insertable by owner"
+on public.profiles
+for insert
+to authenticated
+with check (auth.uid() = user_id and role = 'viewer');
+
+drop policy if exists "Profiles are updatable by owner" on public.profiles;
+create policy "Profiles are updatable by owner"
+on public.profiles
+for update
+to authenticated
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+revoke insert, update on public.profiles from authenticated;
+grant insert (user_id, first_name, last_name, email, phone) on public.profiles to authenticated;
+grant update (first_name, last_name, email, phone) on public.profiles to authenticated;
+
+-- Promote your test user to admin from a trusted SQL/admin context (replace placeholder).
 update public.profiles
 set role = 'admin'
 where email = 'your-admin-email@example.com';
