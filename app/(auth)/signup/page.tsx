@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AuthShell } from "@/components/auth/auth-shell"
-import { captureEvent, identifyUser } from "@/lib/analytics/client"
+import { captureEvent, identifyUser, resetAnalytics } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { signUpSchema, type SignUpValues } from "@/lib/validators/auth"
@@ -109,6 +109,7 @@ export default function SignUpPage() {
         requires_email_confirmation: false,
       })
       await supabase.auth.signOut()
+      resetAnalytics()
       router.replace("/signin?signup=success")
       return
     }

@@ -75,14 +75,14 @@ export const buildTrackedFiltersSnapshot = (
     "accountHqRevenueRange",
     baselineRanges.accountHqRevenueRange
       ? hasRangeChanged(filters.accountHqRevenueRange, baselineRanges.accountHqRevenueRange)
-      : true
+      : false
   )
   pushIfActive("accountHqRevenueIncludeNull", filters.accountHqRevenueIncludeNull)
   pushIfActive(
     "accountYearsInIndiaRange",
     baselineRanges.accountYearsInIndiaRange
       ? hasRangeChanged(filters.accountYearsInIndiaRange, baselineRanges.accountYearsInIndiaRange)
-      : true
+      : false
   )
   pushIfActive("yearsInIndiaIncludeNull", filters.yearsInIndiaIncludeNull)
   pushIfActive("accountGlobalLegalNameKeywords", filters.accountGlobalLegalNameKeywords.length > 0)
@@ -97,7 +97,7 @@ export const buildTrackedFiltersSnapshot = (
     "centerIncYearRange",
     baselineRanges.centerIncYearRange
       ? hasRangeChanged(filters.centerIncYearRange, baselineRanges.centerIncYearRange)
-      : true
+      : false
   )
   pushIfActive("centerIncYearIncludeNull", filters.centerIncYearIncludeNull)
   pushIfActive("functionNameValues", filters.functionNameValues.length > 0)
