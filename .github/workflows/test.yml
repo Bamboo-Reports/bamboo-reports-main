@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -25,4 +28,186 @@ jobs:
         run: npm run typecheck
 
       - name: Run tests
-        run: npm test
+        run: |
+          set +e
+          npm test -- --reporter=default --reporter=json --outputFile=vitest-results.json
+          status=$?
+          echo "VITEST_EXIT_CODE=$status" >> "$GITHUB_ENV"
+          exit 0
+
+      - name: Write test summary
+        if: always()
+        run: |
+          node <<'NODE'
+          const fs = require("node:fs")
+          const path = require("node:path")
+
+          const summaryPath = process.env.GITHUB_STEP_SUMMARY
+          if (!summaryPath) {
+            process.exit(0)
+          }
+
+          const reportPath = path.join(process.cwd(), "vitest-results.json")
+          const now = new Date().toISOString()
+
+          const write = (content) => fs.appendFileSync(summaryPath, content)
+          const duration = (ms) => {
+            if (!Number.isFinite(ms)) return "0 ms"
+            if (ms < 1000) return `${Math.round(ms)} ms`
+            return `${(ms / 1000).toFixed(2)} s`
+          }
+          const statusLabel = (status) => {
+            if (status === "passed") return "Passed"
+            if (status === "failed") return "Failed"
+            if (status === "pending") return "Skipped"
+            if (status === "todo") return "Todo"
+            return status || "Unknown"
+          }
+          const rel = (file) => path.relative(process.cwd(), file).replaceAll(path.sep, "/")
+          const folderLabel = (file) => {
+            const parts = rel(file).split("/")
+            if (parts[0] !== "tests" || !parts[1]) return "Other"
+            return `tests/${parts[1]}`
+          }
+          const escapeCell = (value) =>
+            String(value ?? "")
+              .replaceAll("|", "\\|")
+              .replaceAll("\n", "<br>")
+
+          write(`# Vitest Test Report\n\n`)
+          write(`Generated at: ${now}\n\n`)
+
+          if (!fs.existsSync(reportPath)) {
+            write(`## Summary\n\n`)
+            write(`Vitest did not produce a JSON report. Check the test step logs for the raw failure output.\n\n`)
+            write(`Recorded exit code: ${process.env.VITEST_EXIT_CODE || "unknown"}\n`)
+            process.exit(0)
+          }
+
+          const report = JSON.parse(fs.readFileSync(reportPath, "utf8"))
+          const files = report.testResults || []
+          const assertions = files.flatMap((file) => file.assertionResults || [])
+          const fileCounts = {
+            total: files.length,
+            passed: files.filter((file) => file.status === "passed").length,
+            failed: files.filter((file) => file.status === "failed").length,
+            skipped: files.filter((file) => file.status === "pending").length,
+          }
+          const testCounts = {
+            total: assertions.length || report.numTotalTests || 0,
+            passed: assertions.filter((test) => test.status === "passed").length || report.numPassedTests || 0,
+            failed: assertions.filter((test) => test.status === "failed").length || report.numFailedTests || 0,
+            skipped:
+              assertions.filter((test) => test.status === "pending").length ||
+              report.numPendingTests ||
+              0,
+            todo:
+              assertions.filter((test) => test.status === "todo").length ||
+              report.numTodoTests ||
+              0,
+          }
+          const totalDuration = files.reduce((sum, file) => sum + Math.max(0, (file.endTime || 0) - (file.startTime || 0)), 0)
+          const outcome = report.success ? "Passed" : "Failed"
+
+          write(`## Summary\n\n`)
+          write(`Outcome: ${outcome}\n\n`)
+          write(`Command: \`npm test -- --reporter=default --reporter=json --outputFile=vitest-results.json\`\n\n`)
+          write(`Total duration from Vitest JSON: ${duration(totalDuration)}\n\n`)
+          write(`| Metric | Passed | Failed | Skipped | Todo | Total |\n`)
+          write(`| --- | ---: | ---: | ---: | ---: | ---: |\n`)
+          write(`| Test files | ${fileCounts.passed} | ${fileCounts.failed} | ${fileCounts.skipped} | 0 | ${fileCounts.total} |\n`)
+          write(`| Test cases | ${testCounts.passed} | ${testCounts.failed} | ${testCounts.skipped} | ${testCounts.todo} | ${testCounts.total} |\n\n`)
+
+          const folders = new Map()
+          for (const file of files) {
+            const key = folderLabel(file.name)
+            const bucket = folders.get(key) || {
+              files: 0,
+              passedFiles: 0,
+              failedFiles: 0,
+              tests: 0,
+              passedTests: 0,
+              failedTests: 0,
+              skippedTests: 0,
+              todoTests: 0,
+              durationMs: 0,
+            }
+            const fileAssertions = file.assertionResults || []
+            bucket.files += 1
+            bucket.passedFiles += file.status === "passed" ? 1 : 0
+            bucket.failedFiles += file.status === "failed" ? 1 : 0
+            bucket.tests += fileAssertions.length
+            bucket.passedTests += fileAssertions.filter((test) => test.status === "passed").length
+            bucket.failedTests += fileAssertions.filter((test) => test.status === "failed").length
+            bucket.skippedTests += fileAssertions.filter((test) => test.status === "pending").length
+            bucket.todoTests += fileAssertions.filter((test) => test.status === "todo").length
+            bucket.durationMs += Math.max(0, (file.endTime || 0) - (file.startTime || 0))
+            folders.set(key, bucket)
+          }
+
+          write(`## Breakdown by Test Folder\n\n`)
+          write(`| Folder | Files | Passed Files | Failed Files | Tests | Passed Tests | Failed Tests | Skipped Tests | Todo Tests | Duration |\n`)
+          write(`| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n`)
+          for (const [folder, data] of [...folders.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+            write(`| ${escapeCell(folder)} | ${data.files} | ${data.passedFiles} | ${data.failedFiles} | ${data.tests} | ${data.passedTests} | ${data.failedTests} | ${data.skippedTests} | ${data.todoTests} | ${duration(data.durationMs)} |\n`)
+          }
+          write(`\n`)
+
+          write(`## Slowest Test Files\n\n`)
+          write(`| File | Status | Tests | Duration |\n`)
+          write(`| --- | --- | ---: | ---: |\n`)
+          for (const file of [...files].sort((a, b) => ((b.endTime || 0) - (b.startTime || 0)) - ((a.endTime || 0) - (a.startTime || 0))).slice(0, 10)) {
+            write(`| ${escapeCell(rel(file.name))} | ${statusLabel(file.status)} | ${(file.assertionResults || []).length} | ${duration((file.endTime || 0) - (file.startTime || 0))} |\n`)
+          }
+          write(`\n`)
+
+          const slowestTests = assertions
+            .filter((test) => Number.isFinite(test.duration))
+            .sort((a, b) => (b.duration || 0) - (a.duration || 0))
+            .slice(0, 10)
+
+          write(`## Slowest Test Cases\n\n`)
+          if (slowestTests.length === 0) {
+            write(`No individual test durations were reported.\n\n`)
+          } else {
+            write(`| Test | Status | Duration |\n`)
+            write(`| --- | --- | ---: |\n`)
+            for (const test of slowestTests) {
+              write(`| ${escapeCell(test.fullName || test.title)} | ${statusLabel(test.status)} | ${duration(test.duration || 0)} |\n`)
+            }
+            write(`\n`)
+          }
+
+          const failedTests = assertions.filter((test) => test.status === "failed")
+          write(`## Failed Tests\n\n`)
+          if (failedTests.length === 0) {
+            write(`No failed tests.\n\n`)
+          } else {
+            for (const test of failedTests) {
+              write(`### ${escapeCell(test.fullName || test.title)}\n\n`)
+              for (const message of test.failureMessages || []) {
+                write("```text\n")
+                write(`${message}\n`)
+                write("```\n\n")
+              }
+            }
+          }
+
+          write(`## Raw Report\n\n`)
+          write(`The JSON report is uploaded as the \`vitest-json-report\` workflow artifact when available.\n`)
+          NODE
+
+      - name: Upload Vitest JSON report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-json-report
+          path: vitest-results.json
+          if-no-files-found: ignore
+
+      - name: Fail if tests failed
+        if: always()
+        run: |
+          if [ "${VITEST_EXIT_CODE:-1}" -ne 0 ]; then
+            exit "${VITEST_EXIT_CODE:-1}"
+          fi
