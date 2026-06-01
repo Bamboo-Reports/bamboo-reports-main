@@ -177,4 +177,44 @@ describe("export API routes", () => {
     expect(exportBuilderMocks.buildServerExport).not.toHaveBeenCalled()
     expect(supabaseMocks.storageUpload).not.toHaveBeenCalled()
   })
+
+  it("rejects export generation when the authenticated user has no profile role", async () => {
+    supabaseMocks.profileMaybeSingle.mockResolvedValue({ data: null, error: null })
+
+    const res = await generateExport(new Request("https://example.com/api/exports/generate", {
+      method: "POST",
+      headers: { authorization: "Bearer token-1" },
+      body: JSON.stringify({ datasets: ["accounts"] }),
+    }))
+
+    expect(res.status).toBe(403)
+    await expect(res.json()).resolves.toEqual({ error: "Export access denied" })
+    expect(exportBuilderMocks.buildServerExport).not.toHaveBeenCalled()
+    expect(supabaseMocks.rateLimitGte).not.toHaveBeenCalled()
+  })
+
+  it("allows admin users to generate exports after the server-side role check", async () => {
+    const res = await generateExport(new Request("https://example.com/api/exports/generate", {
+      method: "POST",
+      headers: { authorization: "Bearer token-1" },
+      body: JSON.stringify({ datasets: ["accounts"] }),
+    }))
+
+    expect(res.status).toBe(201)
+    await expect(res.json()).resolves.toEqual(expect.objectContaining({
+      filename: expect.stringMatching(/^dashboard-export-.*\.xlsx$/),
+      rowCounts: { accounts: 1 },
+      totalRows: 1,
+    }))
+    expect(supabaseMocks.profileMaybeSingle).toHaveBeenCalled()
+    expect(supabaseMocks.rateLimitGte).toHaveBeenCalled()
+    expect(exportBuilderMocks.buildServerExport).toHaveBeenCalledWith({
+      datasets: ["accounts"],
+      accountNames: null,
+      centerKeys: null,
+      prospectKeys: null,
+    })
+    expect(supabaseMocks.storageUpload).toHaveBeenCalled()
+    expect(supabaseMocks.exportInsertSingle).toHaveBeenCalled()
+  })
 })
