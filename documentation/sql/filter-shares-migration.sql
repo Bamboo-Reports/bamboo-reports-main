@@ -19,22 +19,28 @@ CREATE INDEX IF NOT EXISTS filter_shares_shared_with_idx
 CREATE INDEX IF NOT EXISTS filter_shares_filter_idx
   ON public.filter_shares (filter_id);
 
+CREATE INDEX IF NOT EXISTS profiles_email_lower_idx
+  ON public.profiles (lower(email));
+
 -- 3. Enable RLS
 ALTER TABLE public.filter_shares ENABLE ROW LEVEL SECURITY;
 
 -- 4. RLS Policies
 
 -- Owners can manage (insert, update, delete) their shares
+DROP POLICY IF EXISTS "Owners can manage their shares" ON public.filter_shares;
 CREATE POLICY "Owners can manage their shares"
   ON public.filter_shares FOR ALL
   USING (auth.uid() = owner_user_id);
 
 -- Recipients can view shares directed at them
+DROP POLICY IF EXISTS "Recipients can view their shares" ON public.filter_shares;
 CREATE POLICY "Recipients can view their shares"
   ON public.filter_shares FOR SELECT
   USING (auth.uid() = shared_with_user_id);
 
 -- 5. Allow reading shared filters (recipients need SELECT on saved_filters for shared ones)
+DROP POLICY IF EXISTS "Users can view filters shared with them" ON public.saved_filters;
 CREATE POLICY "Users can view filters shared with them"
   ON public.saved_filters FOR SELECT
   USING (
@@ -48,7 +54,23 @@ CREATE POLICY "Users can view filters shared with them"
 -- 6. Allow authenticated users to look up profiles by email (for sharing)
 -- Note: This broadens the existing profiles SELECT policy.
 -- If this is too broad, consider using a database function instead.
+DROP POLICY IF EXISTS "Authenticated users can look up profiles by email" ON public.profiles;
 CREATE POLICY "Authenticated users can look up profiles by email"
   ON public.profiles FOR SELECT
   TO authenticated
   USING (true);
+
+-- 7. Case-insensitive exact profile lookup for sharing.
+CREATE OR REPLACE FUNCTION public.lookup_profile_by_email(input_email TEXT)
+RETURNS TABLE(user_id UUID, email TEXT)
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT p.user_id, p.email
+  FROM public.profiles p
+  WHERE lower(p.email) = lower(trim(input_email))
+  LIMIT 1
+$$;
+
+REVOKE ALL ON FUNCTION public.lookup_profile_by_email(TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.lookup_profile_by_email(TEXT) TO authenticated;

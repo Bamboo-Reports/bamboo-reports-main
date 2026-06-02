@@ -72,25 +72,6 @@ function normalizeTableName(tableName?: string | null): string | null {
   return normalized || null
 }
 
-/**
- * Resolves the user's last_read_at timestamp from audit.user_notification_state.
- * Returns epoch (1970-01-01) if no row exists (i.e. everything is unread).
- */
-async function getUserLastReadAt(
-  sqlClient: ReturnType<typeof getSqlOrThrow>,
-  userId: string
-): Promise<string> {
-  const rows = (await fetchWithRetry(
-    () => sqlClient`
-      SELECT last_read_at
-      FROM audit.user_notification_state
-      WHERE user_id = ${userId}
-    `
-  )) as Array<{ last_read_at: string }>
-
-  return rows[0]?.last_read_at ?? "1970-01-01T00:00:00Z"
-}
-
 // ---------------------------------------------------------------------------
 // Server Actions
 // ---------------------------------------------------------------------------
@@ -104,19 +85,29 @@ export async function getUnreadCount(
   try {
     const userId = await resolveAuthenticatedUserId(accessToken)
     const sqlClient = getSqlOrThrow()
-    const lastReadAt = await getUserLastReadAt(sqlClient, userId)
 
     const result = (await fetchWithRetry(
       () => sqlClient`
+        WITH notification_state AS (
+          SELECT COALESCE(
+            (
+              SELECT last_read_at
+              FROM audit.user_notification_state
+              WHERE user_id = ${userId}
+            ),
+            '1970-01-01T00:00:00Z'::timestamptz
+          ) AS last_read_at
+        )
         SELECT COUNT(*)::int AS unread_count
         FROM (
           SELECT DISTINCT
             e.table_name,
             COALESCE(NULLIF(e.record_uuid, ''), e.record_identity, e.record_label)
           FROM audit.field_change_events e
+          CROSS JOIN notification_state s
           WHERE e.field_name <> ${ROW_REMOVED_FIELD}
             AND e.table_name = ANY(${UI_VISIBLE_NOTIFICATION_TABLES})
-            AND e.changed_at > ${lastReadAt}
+            AND e.changed_at > s.last_read_at
             AND e.changed_at > NOW() - INTERVAL '90 days'
         ) AS unread_records
       `
@@ -147,11 +138,20 @@ export async function getUnreadSummaries(params: {
   try {
     const userId = await resolveAuthenticatedUserId(params.accessToken)
     const sqlClient = getSqlOrThrow()
-    const lastReadAt = await getUserLastReadAt(sqlClient, userId)
     const ROW_ADDED_FIELD = "__row_added__"
 
     const rows = (await fetchWithRetry(
       () => sqlClient`
+        WITH notification_state AS (
+          SELECT COALESCE(
+            (
+              SELECT last_read_at
+              FROM audit.user_notification_state
+              WHERE user_id = ${userId}
+            ),
+            '1970-01-01T00:00:00Z'::timestamptz
+          ) AS last_read_at
+        )
         SELECT
           r.table_name,
           r.change_type,
@@ -166,7 +166,8 @@ export async function getUnreadSummaries(params: {
             COALESCE(NULLIF(MAX(e.record_label), ''), MAX(e.record_identity), COALESCE(NULLIF(e.record_uuid, ''), e.record_identity, e.record_label)) AS record_label,
             MAX(e.changed_at) AS latest_changed_at
           FROM audit.field_change_events e
-          WHERE e.changed_at > ${lastReadAt}
+          CROSS JOIN notification_state s
+          WHERE e.changed_at > s.last_read_at
             AND e.changed_at > NOW() - INTERVAL '90 days'
             AND e.field_name <> ${ROW_REMOVED_FIELD}
             AND e.table_name = ANY(${UI_VISIBLE_NOTIFICATION_TABLES})
@@ -221,10 +222,19 @@ export async function getUnreadRecordSummaries(params: {
 
     const limit = clampLimit(params.limit)
     const offset = clampOffset(params.offset)
-    const lastReadAt = await getUserLastReadAt(sqlClient, userId)
 
     const data = (await fetchWithRetry(
       () => sqlClient`
+        WITH notification_state AS (
+          SELECT COALESCE(
+            (
+              SELECT last_read_at
+              FROM audit.user_notification_state
+              WHERE user_id = ${userId}
+            ),
+            '1970-01-01T00:00:00Z'::timestamptz
+          ) AS last_read_at
+        )
         SELECT
           COALESCE(NULLIF(e.record_uuid, ''), e.record_identity, e.record_label) AS record_key,
           MAX(NULLIF(e.record_uuid, '')) AS record_uuid,
@@ -233,7 +243,8 @@ export async function getUnreadRecordSummaries(params: {
           COUNT(*)::int AS unread_count,
           MAX(e.changed_at) AS latest_changed_at
         FROM audit.field_change_events e
-        WHERE e.changed_at > ${lastReadAt}
+        CROSS JOIN notification_state s
+        WHERE e.changed_at > s.last_read_at
           AND e.changed_at > NOW() - INTERVAL '90 days'
           AND e.table_name = ${normalizedTableName}
           AND e.field_name <> ${ROW_REMOVED_FIELD}

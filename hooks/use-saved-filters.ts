@@ -237,17 +237,22 @@ export function useSavedFilters() {
 
   const shareFilter = useCallback(async (filterId: string, email: string): Promise<{ success: boolean; error?: string }> => {
     if (!userId) return { success: false, error: "Not authenticated" }
+    const normalizedEmail = email.trim().toLowerCase()
 
     setLoading(true)
     try {
       // Look up recipient by email in profiles
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("user_id, email")
-        .eq("email", email.trim().toLowerCase())
-        .single()
+      const { data: profileData, error: profileError } = await supabase
+        .rpc("lookup_profile_by_email", { input_email: normalizedEmail })
+        .maybeSingle()
+      const profile = profileData as { user_id?: unknown; email?: unknown } | null
 
-      if (profileError || !profile) {
+      if (
+        profileError ||
+        !profile ||
+        typeof profile.user_id !== "string" ||
+        typeof profile.email !== "string"
+      ) {
         return { success: false, error: "No user found with that email address" }
       }
 

@@ -178,6 +178,8 @@ Enables users to share saved filter configurations with specific teammates by em
 
 **Unique constraint:** `(filter_id, shared_with_user_id)` — a filter can only be shared once per recipient.
 
+**Lookup helper:** `public.lookup_profile_by_email(input_email text)` performs a case-insensitive exact email lookup for the share flow. The migration also adds `profiles_email_lower_idx` on `lower(email)` so lookups stay index-friendly.
+
 ### 5.2 SQL Definition
 
 ```sql

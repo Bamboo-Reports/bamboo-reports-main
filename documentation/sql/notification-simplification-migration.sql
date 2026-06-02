@@ -21,9 +21,21 @@ on conflict (user_id) do update
     excluded.last_read_at
   );
 
--- 3. Index for fast unread queries (covers the common query pattern).
+-- 3. Indexes for fast unread queries (cover the common query patterns).
 create index if not exists field_change_events_table_changed_at_idx
   on audit.field_change_events (table_name, changed_at desc);
+
+create index if not exists field_change_events_unread_record_idx
+  on audit.field_change_events (
+    table_name,
+    changed_at desc,
+    (coalesce(nullif(record_uuid, ''), record_identity, record_label))
+  )
+  where field_name <> '__row_removed__';
+
+-- Remove the older duplicate index if this migration is applied after
+-- account-notifications-migration.sql.
+drop index if exists audit.field_change_events_table_changed_idx;
 
 -- 4. Clean up events older than 90 days (optional, run periodically).
 -- delete from audit.field_change_events
