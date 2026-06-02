@@ -69,4 +69,21 @@ describe("server export builder", () => {
       ])
     )
   })
+
+  it("targets selected keyless prospects by composite row id instead of account fallback", async () => {
+    await buildServerExport({
+      datasets: ["prospects"],
+      accountNames: ["Acme Corp"],
+      keylessProspectIds: ["Acme Corp::Ada One::Head of Ops|Ops|Bengaluru"],
+    })
+
+    expect(mocks.sql).toHaveBeenCalledTimes(1)
+    const [strings, ...values] = mocks.sql.mock.calls[0] as [TemplateStringsArray, ...unknown[]]
+    const query = strings.join(" ")
+    expect(query).toContain("ps_unique_key IS NULL")
+    expect(query).toContain("CONCAT(")
+    expect(query).not.toContain("account_global_legal_name = ANY")
+    expect(values).toContainEqual(["Acme Corp::Ada One::Head of Ops|Ops|Bengaluru"])
+    expect(values).not.toContainEqual(["Acme Corp"])
+  })
 })

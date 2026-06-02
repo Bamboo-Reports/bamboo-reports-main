@@ -17,5 +17,6 @@ export {
   type NotificationCountResponse,
   type NotificationSummaryListResponse,
   type RecordUpdateSummaryListResponse,
+  type RecordUpdateSummaryCursor,
   type NotificationMarkResponse,
 } from "@/app/actions/notifications"

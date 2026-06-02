@@ -45,6 +45,8 @@ interface ExportDialogProps {
   centerKeys?: string[] | null
   /** Prospect ps_unique_keys to include; null = filter prospects by accountNames instead. */
   prospectKeys?: string[] | null
+  /** Prospect composite row ids for selected prospects that do not have ps_unique_key. */
+  keylessProspectIds?: string[] | null
   /** Locked prospect teasers matching the current export scope. */
   lockedProspectsCount?: number
   /** When set, restricts the dialog to these datasets (e.g. a single-sheet selection export). */
@@ -100,6 +102,7 @@ export function ExportDialog({
   accountNames,
   centerKeys,
   prospectKeys,
+  keylessProspectIds,
   lockedProspectsCount = 0,
   allowedDatasets,
   compact = false,
@@ -318,6 +321,7 @@ export function ExportDialog({
         accountNames: isFiltered ? accountNames ?? null : null,
         centerKeys: isFiltered ? centerKeys ?? null : null,
         prospectKeys: isFiltered ? prospectKeys ?? null : null,
+        keylessProspectIds: isFiltered ? keylessProspectIds ?? null : null,
         isFiltered,
         filtersApplied: filtersSnapshot ?? null,
       })

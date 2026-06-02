@@ -52,67 +52,7 @@ async function measureRows<T>(label: string, query: () => Promise<T[]>): Promise
   }
 }
 
-// ============================================
-// BASIC DATA FETCHING FUNCTIONS
-// ============================================
-
-export async function getAccounts(): Promise<Account[]> {
-  try {
-    const sqlClient = getSqlOrThrow()
-    return (await measureRows(
-      "accounts",
-      () => sqlClient`SELECT * FROM accounts ORDER BY account_global_legal_name`
-    )) as Account[]
-  } catch (error) {
-    logger.error("fetch_accounts_failed", { error })
-    return []
-  }
-}
-
-export async function getCenters(): Promise<Center[]> {
-  try {
-    const sqlClient = getSqlOrThrow()
-    return (await measureRows("centers", () => sqlClient`SELECT * FROM centers ORDER BY center_name`)) as Center[]
-  } catch (error) {
-    logger.error("fetch_centers_failed", { error })
-    return []
-  }
-}
-
-export async function getFunctions(): Promise<Function[]> {
-  try {
-    const sqlClient = getSqlOrThrow()
-    return (await measureRows("functions", () => sqlClient`SELECT * FROM functions ORDER BY cn_unique_key`)) as Function[]
-  } catch (error) {
-    logger.error("fetch_functions_failed", { error })
-    return []
-  }
-}
-
-export async function getServices(): Promise<Service[]> {
-  try {
-    const sqlClient = getSqlOrThrow()
-    return (await measureRows("services", () => sqlClient`SELECT * FROM services ORDER BY center_name`)) as Service[]
-  } catch (error) {
-    logger.error("fetch_services_failed", { error })
-    return []
-  }
-}
-
-export async function getTech(): Promise<Tech[]> {
-  try {
-    const sqlClient = getSqlOrThrow()
-    return (await measureRows(
-      "tech",
-      () => sqlClient`SELECT * FROM tech ORDER BY account_global_legal_name, software_category, software_in_use`
-    )) as Tech[]
-  } catch (error) {
-    logger.error("fetch_tech_failed", { error })
-    return []
-  }
-}
-
-export async function getAliases(): Promise<Alias[]> {
+async function getAliases(): Promise<Alias[]> {
   try {
     const sqlClient = getSqlOrThrow()
     return (await measureRows(
@@ -123,19 +63,6 @@ export async function getAliases(): Promise<Alias[]> {
     )) as Alias[]
   } catch (error) {
     logger.error("fetch_aliases_failed", { error })
-    return []
-  }
-}
-
-export async function getProspects(): Promise<Prospect[]> {
-  try {
-    const sqlClient = getSqlOrThrow()
-    return (await measureRows(
-      "prospects",
-      () => sqlClient`SELECT * FROM prospects ORDER BY prospect_last_name, prospect_first_name`
-    )) as Prospect[]
-  } catch (error) {
-    logger.error("fetch_prospects_failed", { error })
     return []
   }
 }
@@ -329,133 +256,10 @@ export type AllDataResult = {
   error: string | null
 }
 
-export async function getAllData(): Promise<AllDataResult> {
-  const startedAt = Date.now()
-  try {
-    // Check if DATABASE_URL is available
-    if (!process.env.DATABASE_URL) {
-      logger.error("database_url_missing")
-      return {
-        accounts: [],
-        centers: [],
-        functions: [],
-        services: [],
-        tech: [],
-        prospects: [],
-        aliases: [],
-        lockedProspectTeasers: [],
-        summary: { ...EMPTY_SUMMARY_METRICS },
-        error: "Database configuration missing",
-      }
-    }
-
-    // Ensure we can get the SQL client
-    try {
-      getSqlOrThrow()
-    } catch {
-      logger.error("database_connection_unavailable")
-      return {
-        accounts: [],
-        centers: [],
-        functions: [],
-        services: [],
-        tech: [],
-        prospects: [],
-        aliases: [],
-        lockedProspectTeasers: [],
-        summary: { ...EMPTY_SUMMARY_METRICS },
-        error: "Database connection failed",
-      }
-    }
-
-    // Fetch all data in parallel with retry logic
-    const [accounts, centers, functions, services, tech, prospects, aliases] = await Promise.all([
-      getAccounts(),
-      getCenters(),
-      getFunctions(),
-      getServices(),
-      getTech(),
-      getProspects(),
-      getAliases(),
-    ])
-
-    const excludedAccountNames = new Set(
-      accounts
-        .filter((account) => account.account_visibility === "exclude")
-        .map((account) => account.account_global_legal_name)
-    )
-    const isCenterVisible = (center: Center) => !excludedAccountNames.has(center.account_global_legal_name)
-    const isProspectVisible = (prospect: Prospect) => !excludedAccountNames.has(prospect.account_global_legal_name)
-
-    const totalAccountsCountFull = accounts.length
-    const totalAccountsCount = accounts.length - excludedAccountNames.size
-    const totalCentersCountFull = centers.length
-    const totalCentersCount = centers.filter(isCenterVisible).length
-    const totalUpcomingCentersCountFull = centers.filter((c) => c.center_status === "Upcoming").length
-    const totalUpcomingCentersCount = centers.filter((c) => c.center_status === "Upcoming" && isCenterVisible(c)).length
-    const totalProspectsCountFull = prospects.length
-    const totalProspectsCount = prospects.filter(isProspectVisible).length
-    const totalHeadcountFull = centers.reduce((sum, c) => sum + (c.center_employees ?? 0), 0)
-    const totalHeadcount = centers.reduce((sum, c) => sum + (isCenterVisible(c) ? (c.center_employees ?? 0) : 0), 0)
-
-    logger.info("all_data_loaded", {
-      duration_ms: Date.now() - startedAt,
-      accounts_count: accounts.length,
-      centers_count: centers.length,
-      functions_count: functions.length,
-      services_count: services.length,
-      tech_count: tech.length,
-      prospects_count: prospects.length,
-      aliases_count: aliases.length,
-      excluded_accounts_count: excludedAccountNames.size,
-    })
-
-    return {
-      accounts,
-      centers,
-      functions,
-      services,
-      tech,
-      prospects,
-      aliases,
-      lockedProspectTeasers: [],
-      summary: {
-        totalAccountsCount,
-        totalAccountsCountFull,
-        totalCentersCount,
-        totalCentersCountFull,
-        totalUpcomingCentersCount,
-        totalUpcomingCentersCountFull,
-        totalProspectsCount,
-        totalProspectsCountFull,
-        totalHeadcount,
-        totalHeadcountFull,
-      },
-      error: null,
-    } satisfies AllDataResult
-  } catch (error) {
-    logger.error("all_data_load_failed", {
-      duration_ms: Date.now() - startedAt,
-      error,
-    })
-    return {
-      accounts: [],
-      centers: [],
-      functions: [],
-      services: [],
-      tech: [],
-      prospects: [],
-      aliases: [],
-      lockedProspectTeasers: [],
-      summary: { ...EMPTY_SUMMARY_METRICS },
-      error: error instanceof Error ? error.message : "Unknown database error",
-    }
-  }
-}
-
 /**
  * Dashboard-optimized data fetch (specific columns, smaller payload).
- * Used by the /api/dashboard route. Exports use getAllData() for full columns.
+ * Used by the /api/dashboard route. Full-schema exports live in
+ * lib/exports/server-builder.ts and are gated by the export API.
  */
 export async function getDashboardData(): Promise<AllDataResult> {
   const startedAt = Date.now()
@@ -551,30 +355,5 @@ export async function getDashboardData(): Promise<AllDataResult> {
       summary: { ...EMPTY_SUMMARY_METRICS },
       error: error instanceof Error ? error.message : "Unknown database error",
     }
-  }
-}
-
-// ============================================
-// LEGACY COMPATIBILITY FUNCTIONS
-// ============================================
-
-export async function loadData(_filters: unknown): Promise<{ success: boolean; data?: AllDataResult; error?: string }> {
-  try {
-    const data = await getAllData()
-    return { success: true, data }
-  } catch (error) {
-    logger.error("legacy_load_data_failed", { error })
-    return { success: false, error: error instanceof Error ? error.message : "Unknown error" }
-  }
-}
-
-export async function exportToExcel(data: unknown[]): Promise<{ success: boolean; downloadUrl?: string; error?: string }> {
-  try {
-    // This function handles the Excel export
-    // The actual Excel generation happens on the client side with the exceljs library
-    return { success: true, downloadUrl: "#" }
-  } catch (error) {
-    logger.error("legacy_export_to_excel_failed", { error })
-    return { success: false, error: error instanceof Error ? error.message : "Unknown error" }
   }
 }

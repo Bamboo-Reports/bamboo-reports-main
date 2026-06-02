@@ -33,6 +33,7 @@ const exportRequestSchema = z.object({
   accountNames: z.array(z.string()).max(MAX_FILTER_VALUES).nullish(),
   centerKeys: z.array(z.string()).max(MAX_FILTER_VALUES).nullish(),
   prospectKeys: z.array(z.string()).max(MAX_FILTER_VALUES).nullish(),
+  keylessProspectIds: z.array(z.string()).max(MAX_FILTER_VALUES).nullish(),
   isFiltered: z.boolean().optional(),
   filtersApplied: z.unknown().optional(),
   clientPublicIp: z.string().nullish(),
@@ -142,6 +143,7 @@ export async function POST(request: Request) {
       accountNames: body.accountNames ?? null,
       centerKeys: body.centerKeys ?? null,
       prospectKeys: body.prospectKeys ?? null,
+      keylessProspectIds: body.keylessProspectIds ?? null,
     })
   } catch (err) {
     logger.error("build_failed", { error: err })
