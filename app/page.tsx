@@ -669,6 +669,7 @@ function DashboardContent(): React.JSX.Element | null {
           )
         ),
         prospectKeys: undefined as string[] | undefined,
+        keylessProspectIds: undefined as string[] | undefined,
         allowedDatasets: undefined as ExportDatasetKey[] | undefined,
       }
     }
@@ -690,6 +691,7 @@ function DashboardContent(): React.JSX.Element | null {
         accountNames: [],
         centerKeys: exportScope.centerKeys,
         prospectKeys: undefined as string[] | undefined,
+        keylessProspectIds: undefined as string[] | undefined,
         allowedDatasets: ["centers"] as ExportDatasetKey[],
       }
     }
@@ -715,13 +717,21 @@ function DashboardContent(): React.JSX.Element | null {
             .filter((name): name is string => Boolean(name))
         )
       )
+      const keylessProspectIds = Array.from(
+        new Set(
+          scopedProspects
+            .filter((p) => !p.ps_unique_key)
+            .map(getProspectRecordId)
+        )
+      )
       return {
         data: { ...emptyData, prospects: scopedProspects },
         isFiltered: true,
         filtersSnapshot: snapshot,
-        accountNames: fallbackAccountNames,
+        accountNames: keylessProspectIds.length > 0 ? [] : fallbackAccountNames,
         centerKeys: [],
         prospectKeys,
+        keylessProspectIds,
         allowedDatasets: ["prospects"] as ExportDatasetKey[],
       }
     }
@@ -737,6 +747,7 @@ function DashboardContent(): React.JSX.Element | null {
       accountNames: exportScope.accountNames,
       centerKeys: [],
       prospectKeys: undefined as string[] | undefined,
+      keylessProspectIds: undefined as string[] | undefined,
       allowedDatasets: ["accounts"] as ExportDatasetKey[],
     }
   }, [exportScope, filteredData, filters, activeFiltersCount])
@@ -1085,6 +1096,7 @@ function DashboardContent(): React.JSX.Element | null {
             accountNames={exportPayload.accountNames}
             centerKeys={exportPayload.centerKeys}
             prospectKeys={exportPayload.prospectKeys}
+            keylessProspectIds={exportPayload.keylessProspectIds}
             allowedDatasets={exportPayload.allowedDatasets}
             compact={Boolean(exportPayload.allowedDatasets)}
             onExportCompleted={handleExportCompleted}

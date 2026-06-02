@@ -213,6 +213,7 @@ describe("export API routes", () => {
       accountNames: null,
       centerKeys: null,
       prospectKeys: null,
+      keylessProspectIds: null,
     })
     expect(supabaseMocks.storageUpload).toHaveBeenCalled()
     expect(supabaseMocks.exportInsertSingle).toHaveBeenCalled()

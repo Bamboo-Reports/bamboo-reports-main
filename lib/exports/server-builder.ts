@@ -27,10 +27,14 @@ export type ServerExportSelection = {
   centerKeys?: string[] | null
   /**
    * When provided, limits prospects to these ps_unique_keys (a precise row
-   * selection). Prospects without a stable key are targeted via accountNames
-   * instead, so they are still included.
+   * selection).
    */
   prospectKeys?: string[] | null
+  /**
+   * When provided, limits keyless prospects to these composite row identities.
+   * Used for precise row-selection exports where ps_unique_key is missing.
+   */
+  keylessProspectIds?: string[] | null
 }
 
 export type ServerExportResult = {
@@ -65,11 +69,60 @@ async function fetchServices(centerKeys: string[] | null | undefined): Promise<S
 
 async function fetchProspects(
   accountNames: string[] | null | undefined,
-  prospectKeys: string[] | null | undefined
+  prospectKeys: string[] | null | undefined,
+  keylessProspectIds: string[] | null | undefined
 ): Promise<Prospect[]> {
   const sql = getSqlOrThrow()
   const keys = prospectKeys && prospectKeys.length > 0 ? prospectKeys : null
+  const keylessIds = keylessProspectIds && keylessProspectIds.length > 0 ? keylessProspectIds : null
   const names = accountNames && accountNames.length > 0 ? accountNames : null
+  if (keys && keylessIds) {
+    return (await sql`
+      SELECT * FROM prospects
+      WHERE ps_unique_key = ANY(${keys})
+        OR (
+          (ps_unique_key IS NULL OR ps_unique_key = '')
+          AND CONCAT(
+            COALESCE(account_global_legal_name, ''),
+            '::',
+            COALESCE(
+              NULLIF(prospect_full_name, ''),
+              NULLIF(CONCAT_WS(' ', NULLIF(prospect_first_name, ''), NULLIF(prospect_last_name, '')), ''),
+              'Unknown Prospect'
+            ),
+            '::',
+            COALESCE(
+              NULLIF(prospect_email, ''),
+              NULLIF(prospect_linkedin_url, ''),
+              CONCAT_WS('|', NULLIF(prospect_title, ''), NULLIF(prospect_department, ''), NULLIF(prospect_city, ''))
+            )
+          ) = ANY(${keylessIds})
+        )
+      ORDER BY prospect_last_name, prospect_first_name
+    `) as Prospect[]
+  }
+  if (keylessIds) {
+    return (await sql`
+      SELECT * FROM prospects
+      WHERE (ps_unique_key IS NULL OR ps_unique_key = '')
+        AND CONCAT(
+          COALESCE(account_global_legal_name, ''),
+          '::',
+          COALESCE(
+            NULLIF(prospect_full_name, ''),
+            NULLIF(CONCAT_WS(' ', NULLIF(prospect_first_name, ''), NULLIF(prospect_last_name, '')), ''),
+            'Unknown Prospect'
+          ),
+          '::',
+          COALESCE(
+            NULLIF(prospect_email, ''),
+            NULLIF(prospect_linkedin_url, ''),
+            CONCAT_WS('|', NULLIF(prospect_title, ''), NULLIF(prospect_department, ''), NULLIF(prospect_city, ''))
+          )
+        ) = ANY(${keylessIds})
+      ORDER BY prospect_last_name, prospect_first_name
+    `) as Prospect[]
+  }
   // A precise row selection targets ps_unique_key; any keyless prospects in the
   // selection fall back to their account so nothing selected is dropped.
   if (keys && names) {
@@ -121,14 +174,14 @@ function addWorksheet<T extends Record<string, unknown>>(
 export async function buildServerExport(
   selection: ServerExportSelection
 ): Promise<ServerExportResult> {
-  const { datasets, accountNames, centerKeys, prospectKeys } = selection
+  const { datasets, accountNames, centerKeys, prospectKeys, keylessProspectIds } = selection
   const prospectsPerAccountLimit = getProspectsPerAccountLimit()
 
   const [accounts, centers, services, rawProspects] = await Promise.all([
     datasets.includes("accounts") ? fetchAccounts(accountNames) : Promise.resolve([] as Account[]),
     datasets.includes("centers") ? fetchCenters(centerKeys) : Promise.resolve([] as Center[]),
     datasets.includes("services") ? fetchServices(centerKeys) : Promise.resolve([] as Service[]),
-    datasets.includes("prospects") ? fetchProspects(accountNames, prospectKeys) : Promise.resolve([] as Prospect[]),
+    datasets.includes("prospects") ? fetchProspects(accountNames, prospectKeys, keylessProspectIds) : Promise.resolve([] as Prospect[]),
   ])
   const { visibleProspects: prospects } = partitionProspectsByAccess(rawProspects, prospectsPerAccountLimit)
 

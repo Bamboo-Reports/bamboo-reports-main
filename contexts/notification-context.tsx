@@ -144,19 +144,22 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       setLoadingRecords((prev) => ({ ...prev, [tableName]: true }))
       try {
         const merged: RecordUpdateSummary[] = []
+        let cursor: { changedAt: string; recordKey: string } | null = null
         for (let page = 0; page < MAX_RECORD_SUMMARY_PAGES; page++) {
           const result = await getUnreadRecordSummaries({
             accessToken,
             tableName,
             limit: RECORD_SUMMARIES_PAGE_SIZE,
-            offset: page * RECORD_SUMMARIES_PAGE_SIZE,
+            cursorChangedAt: cursor?.changedAt ?? null,
+            cursorRecordKey: cursor?.recordKey ?? null,
           })
           if (!result.success) {
             setError(result.error ?? "Failed to fetch record summaries.")
             return
           }
           merged.push(...result.data)
-          if (result.data.length < RECORD_SUMMARIES_PAGE_SIZE) break
+          cursor = result.nextCursor ?? null
+          if (!cursor) break
         }
         setRecordSummaries((prev) => ({ ...prev, [tableName]: merged }))
         setError(null)
