@@ -641,10 +641,19 @@ def ensure_notification_tables(engine: Engine):
             END IF;
         END $$;
         """,
+        f"DROP INDEX IF EXISTS {NOTIFICATION_SCHEMA}.field_change_events_table_changed_idx;",
         f"CREATE INDEX IF NOT EXISTS field_change_events_changed_at_idx ON {CHANGE_EVENTS_TABLE} (changed_at DESC);",
         f"CREATE INDEX IF NOT EXISTS field_change_events_identity_field_idx ON {CHANGE_EVENTS_TABLE} (table_name, record_identity, field_name, changed_at DESC);",
-        f"CREATE INDEX IF NOT EXISTS field_change_events_table_changed_idx ON {CHANGE_EVENTS_TABLE} (table_name, changed_at DESC);",
         f"CREATE INDEX IF NOT EXISTS field_change_events_table_changed_at_idx ON {CHANGE_EVENTS_TABLE} (table_name, changed_at DESC);",
+        f"""
+        CREATE INDEX IF NOT EXISTS field_change_events_unread_record_idx
+        ON {CHANGE_EVENTS_TABLE} (
+            table_name,
+            changed_at DESC,
+            (COALESCE(NULLIF(record_uuid, ''), record_identity, record_label))
+        )
+        WHERE field_name <> '{ROW_REMOVED_FIELD}';
+        """,
         f"CREATE INDEX IF NOT EXISTS field_change_events_record_uuid_idx ON {CHANGE_EVENTS_TABLE} (record_uuid, changed_at DESC);",
         f"CREATE INDEX IF NOT EXISTS notification_reads_user_read_at_idx ON {NOTIFICATION_READS_TABLE} (user_id, read_at DESC);",
     ]

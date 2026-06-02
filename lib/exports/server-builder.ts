@@ -73,7 +73,15 @@ async function fetchProspects(
   // A precise row selection targets ps_unique_key; any keyless prospects in the
   // selection fall back to their account so nothing selected is dropped.
   if (keys && names) {
-    return (await sql`SELECT * FROM prospects WHERE ps_unique_key = ANY(${keys}) OR account_global_legal_name = ANY(${names}) ORDER BY prospect_last_name, prospect_first_name`) as Prospect[]
+    return (await sql`
+      SELECT * FROM prospects
+      WHERE ps_unique_key = ANY(${keys})
+      UNION ALL
+      SELECT * FROM prospects
+      WHERE account_global_legal_name = ANY(${names})
+        AND (ps_unique_key IS NULL OR ps_unique_key <> ALL(${keys}))
+      ORDER BY prospect_last_name, prospect_first_name
+    `) as Prospect[]
   }
   if (keys) {
     return (await sql`SELECT * FROM prospects WHERE ps_unique_key = ANY(${keys}) ORDER BY prospect_last_name, prospect_first_name`) as Prospect[]
