@@ -239,11 +239,14 @@ function DashboardContent(): React.JSX.Element | null {
     return prospectsPage
   }, [activeSection, accountsPage, centersPage, prospectsPage])
 
+  // Filters may be replaced with an equal object by the filter hook; reset pagination only on value changes.
+  const filtersPaginationResetKey = useMemo(() => JSON.stringify(filters), [filters])
+
   useEffect(() => {
     setAccountsPage(1)
     setCentersPage(1)
     setProspectsPage(1)
-  }, [filters])
+  }, [filtersPaginationResetKey])
 
   useEffect(() => {
     const storedSidebarState = window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY)

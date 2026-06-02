@@ -117,7 +117,7 @@ export async function getAliases(): Promise<Alias[]> {
     const sqlClient = getSqlOrThrow()
     return (await measureRows(
       "aliases",
-      () => sqlClient`SELECT uuid, account_global_legal_name, short_legal_name, brand_name,
+      () => sqlClient`SELECT account_global_legal_name, short_legal_name, brand_name,
         abbreviated_name, flagship_products, currently_known_as, notes
         FROM alias`
     )) as Alias[]
@@ -239,13 +239,12 @@ async function getDashboardProspects(): Promise<Prospect[]> {
     const sqlClient = getSqlOrThrow()
     return (await measureRows(
       "dashboard_prospects",
-      () => sqlClient`SELECT uuid, last_update_date, ps_unique_key, account_global_legal_name,
-        center_name, prospect_full_name, prospect_first_name, prospect_last_name,
-        prospect_title, prospect_in_company_year, prospect_current_year,
-        prospect_department, prospect_level, head_type, prospect_linkedin_url,
-        prospect_other_source_url, prospect_email, prospect_city, prospect_state,
+      () => sqlClient`SELECT ps_unique_key, account_global_legal_name,
+        prospect_full_name, prospect_first_name, prospect_last_name,
+        prospect_title, prospect_department, prospect_level, head_type, prospect_linkedin_url,
+        prospect_email, prospect_city, prospect_state,
         prospect_country
-        FROM prospects ORDER BY prospect_last_name, prospect_first_name`
+        FROM prospects`
     )) as Prospect[]
   } catch (error) {
     logger.error("fetch_dashboard_prospects_failed", { error })
