@@ -218,4 +218,93 @@ describe("export API routes", () => {
     expect(supabaseMocks.storageUpload).toHaveBeenCalled()
     expect(supabaseMocks.exportInsertSingle).toHaveBeenCalled()
   })
+
+  it("rejects export list requests with an invalid or expired token", async () => {
+    authMocks.resolveAuthenticatedUserId.mockRejectedValueOnce(new Error("invalid"))
+    const res = await listExports(new Request("https://example.com/api/exports", {
+      headers: { authorization: "Bearer token-1" },
+    }))
+    expect(res.status).toBe(401)
+    await expect(res.json()).resolves.toEqual({ error: "Invalid or expired token" })
+  })
+
+  it("fails export list requests when supabase config is missing", async () => {
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "")
+    const res = await listExports(new Request("https://example.com/api/exports", {
+      headers: { authorization: "Bearer token-1" },
+    }))
+    expect(res.status).toBe(500)
+    await expect(res.json()).resolves.toEqual({ error: "Supabase server config missing" })
+  })
+
+  it("returns 500 when looking up export fails in downloadExport", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Network down")))
+    
+    const res = await downloadExport(
+      new Request("https://example.com/api/exports/export-1/download", {
+        headers: { authorization: "Bearer token-1" },
+      }),
+      { params: Promise.resolve({ id: "export-1" }) }
+    )
+
+    expect(res.status).toBe(500)
+    await expect(res.json()).resolves.toEqual({ error: "Failed to look up export" })
+  })
+
+  it("handles fetch failures gracefully when listing exports", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      text: () => Promise.resolve("Internal Error"),
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const res = await listExports(new Request("https://example.com/api/exports", {
+      headers: { authorization: "Bearer token-1" },
+    }))
+
+    expect(res.status).toBe(500)
+    await expect(res.json()).resolves.toEqual({ error: "Failed to list exports" })
+  })
+
+
+  it("returns 500 when signed URL generation fails in downloadExport", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify([
+      { id: "export-1", user_id: "user-1", filename: "file.xlsx", storage_path: "user-1/export-1.xlsx" },
+    ]), { status: 200 })))
+    supabaseMocks.createSignedUrl.mockResolvedValue({
+      data: null,
+      error: new Error("Storage offline"),
+    })
+
+    const res = await downloadExport(
+      new Request("https://example.com/api/exports/export-1/download", {
+        headers: { authorization: "Bearer token-1" },
+      }),
+      { params: Promise.resolve({ id: "export-1" }) }
+    )
+
+    expect(res.status).toBe(500)
+    await expect(res.json()).resolves.toEqual({ error: "Failed to generate download URL" })
+  })
+
+  it("redirects to the signed URL if accept header does not include application/json", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify([
+      { id: "export-1", user_id: "user-1", filename: "file.xlsx", storage_path: "user-1/export-1.xlsx" },
+    ]), { status: 200 })))
+    supabaseMocks.createSignedUrl.mockResolvedValue({
+      data: { signedUrl: "https://signed.example/redirect" },
+      error: null,
+    })
+
+    const res = await downloadExport(
+      new Request("https://example.com/api/exports/export-1/download", {
+        headers: { authorization: "Bearer token-1", accept: "text/html" },
+      }),
+      { params: Promise.resolve({ id: "export-1" }) }
+    )
+
+    expect(res.status).toBe(302)
+    expect(res.headers.get("Location")).toBe("https://signed.example/redirect")
+  })
 })

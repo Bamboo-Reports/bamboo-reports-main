@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import {
   formatRevenueInMillions,
   getPageInfo,
@@ -86,5 +86,26 @@ describe("getPageInfo", () => {
 
   it("clamps the end item to the total on the last page", () => {
     expect(getPageInfo(3, 25, 10)).toEqual({ startItem: 21, endItem: 25, totalItems: 25 })
+  })
+})
+
+describe("copyToClipboard", () => {
+  it("writes text to navigator.clipboard", async () => {
+    const writeTextMock = vi.fn()
+    
+    // Setup mock
+    vi.stubGlobal('navigator', {
+      clipboard: {
+        writeText: writeTextMock,
+      },
+    })
+    
+    // Import copyToClipboard inline since it wasn't imported at top
+    const { copyToClipboard } = await import("@/lib/utils/helpers")
+    copyToClipboard("test-text")
+    expect(writeTextMock).toHaveBeenCalledWith("test-text")
+    
+    // Cleanup mock
+    vi.unstubAllGlobals()
   })
 })

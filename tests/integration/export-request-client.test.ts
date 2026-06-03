@@ -83,4 +83,68 @@ describe("export request client", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: "denied" }), { status: 403 })))
     await expect(resolveExportDownloadUrl("export-1")).rejects.toThrow("Download failed (403): denied")
   })
+
+  it("surfaces API errors when JSON parsing fails in requestServerExport", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ip: "203.0.113.20" }), { status: 200 }))
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: () => Promise.reject(new Error("not json")),
+        text: () => Promise.resolve("Internal Server Error Text"),
+      })
+    vi.stubGlobal("fetch", fetchMock)
+
+    await expect(requestServerExport({
+      datasets: ["accounts"],
+      accountNames: null,
+      centerKeys: null,
+      prospectKeys: null,
+      isFiltered: false,
+      filtersApplied: null,
+    })).rejects.toThrow("Export failed (500): Internal Server Error Text")
+  })
+
+  it("surfaces API errors when both JSON and text parsing fail in requestServerExport", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ip: "203.0.113.20" }), { status: 200 }))
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 502,
+        json: () => Promise.reject(new Error("invalid json")),
+        text: () => Promise.reject(new Error("invalid text")),
+      })
+    vi.stubGlobal("fetch", fetchMock)
+
+    await expect(requestServerExport({
+      datasets: ["accounts"],
+      accountNames: null,
+      centerKeys: null,
+      prospectKeys: null,
+      isFiltered: false,
+      filtersApplied: null,
+    })).rejects.toThrow("Export failed (502): no detail")
+  })
+
+  it("throws when no active session exists for download", async () => {
+    getSession.mockResolvedValue({ data: { session: null } })
+    await expect(resolveExportDownloadUrl("export-1")).rejects.toThrow("No active session; cannot download export.")
+  })
+
+  it("surfaces API errors when JSON parsing fails in resolveExportDownloadUrl", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: () => Promise.reject(new Error("not json")),
+      text: () => Promise.resolve("Not Found Text"),
+    }))
+    await expect(resolveExportDownloadUrl("export-1")).rejects.toThrow("Download failed (404): Not Found Text")
+  })
+
+  it("throws when payload url is missing in resolveExportDownloadUrl", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ notUrl: "hello" }), { status: 200 })))
+    await expect(resolveExportDownloadUrl("export-1")).rejects.toThrow("Download URL missing from response.")
+  })
 })
