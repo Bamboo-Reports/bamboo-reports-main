@@ -1,18 +1,23 @@
 {
-  "name": "my-v0-project",
+  "name": "bamboo-reports",
   "version": "0.1.0",
   "private": true,
+  "description": "BI dashboard for GCC delivery center intelligence by ResearchNXT",
   "type": "module",
   "scripts": {
-    "build": "next build",
-    "dev": "next dev",
+    "build": "node scripts/preinit.mjs && next build",
+    "dev": "node scripts/preinit.mjs && next dev",
     "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "start": "next start",
-    "benchmark": "node --env-file=.env scripts/benchmark-loading.mjs"
+    "benchmark": "node --env-file=.env scripts/benchmark-loading.mjs",
+    "prepare": "husky"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -91,10 +96,23 @@
     "baseline-browser-mapping": "^2.9.18",
     "eslint": "^9.39.2",
     "eslint-config-next": "^16.2.6",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.7",
     "postcss": "^8.5.15",
+    "prettier": "^3.8.3",
     "tailwindcss": "^3.4.17",
     "typescript": "^5",
     "vitest": "^4.1.7"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,mjs,cjs}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,css,html}": [
+      "prettier --write"
+    ]
   },
   "overrides": {
     "postcss": "$postcss",

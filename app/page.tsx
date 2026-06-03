@@ -4,7 +4,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTheme } from "next-themes"
 import { toast } from "sonner"
 import { ExportDialog } from "@/components/export/export-dialog"
-import type { ExportDatasetKey } from "@/lib/utils/export-helpers"
 import { ExportsDialog } from "@/components/exports/exports-dialog"
 import { HistoryDialog } from "@/components/history/history-dialog"
 import { FavoritesDialog } from "@/components/favorites/favorites-dialog"
@@ -25,16 +24,9 @@ import { useDashboardData } from "@/hooks/use-dashboard-data"
 import { useDashboardFilters } from "@/hooks/use-dashboard-filters"
 import { useGlobalSearch } from "@/hooks/use-global-search"
 import { useRecentItems } from "@/hooks/use-recent-items"
-import { useFavorites, type FavoriteItem, type FavoriteInput } from "@/hooks/use-favorites"
-import { getProspectRecordId } from "@/lib/dashboard/prospect-id"
-import {
-  captureEvent,
-  ensureAnalyticsSession,
-  identifyUser,
-  setAnalyticsContext,
-} from "@/lib/analytics/client"
+import { useFavorites } from "@/hooks/use-favorites"
+import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
-import { buildTrackedFiltersSnapshot } from "@/lib/analytics/tracking"
 import { canExportData } from "@/lib/auth/roles"
 import {
   canAccessAccountsMapView,
@@ -43,9 +35,11 @@ import {
   isSectionEnabled,
 } from "@/lib/config/dashboard-access"
 import { useProductTour } from "@/hooks/use-product-tour"
+import { useAnalytics } from "@/hooks/use-analytics"
+import { useSearchHandlers } from "@/hooks/use-search-handlers"
+import { useFavoriteHandlers } from "@/hooks/use-favorite-handlers"
+import { buildExportPayload } from "@/lib/exports/payload-builder"
 import { formatRevenueInMillions } from "@/lib/utils/helpers"
-import type { SearchResult } from "@/lib/search"
-import type { RecentItem } from "@/hooks/use-recent-items"
 import type { Account, Center, Prospect } from "@/lib/types"
 import type { AccountVisibilityInfo } from "@/components/filters/account-autocomplete"
 
@@ -161,23 +155,10 @@ function DashboardContent(): React.JSX.Element | null {
     aliases: accountsEnabled ? aliases : [],
   })
 
-  const {
-    recentItems,
-    recentSearches,
-    addRecentItem,
-    addRecentSearch,
-    clearRecentItems,
-  } = useRecentItems()
+  const { recentItems, recentSearches, addRecentItem, addRecentSearch, clearRecentItems } = useRecentItems()
 
-  const {
-    favorites,
-    favoriteKeys,
-    toggleFavorite,
-    addFavorites,
-    removeFavorite,
-    removeFavorites,
-    clearFavorites,
-  } = useFavorites()
+  const { favorites, favoriteKeys, toggleFavorite, addFavorites, removeFavorite, removeFavorites, clearFavorites } =
+    useFavorites()
 
   // Search-triggered detail dialogs (separate from tab-level dialogs)
   const [searchSelectedAccount, setSearchSelectedAccount] = useState<Account | null>(null)
@@ -187,26 +168,7 @@ function DashboardContent(): React.JSX.Element | null {
   const [searchSelectedProspect, setSearchSelectedProspect] = useState<Prospect | null>(null)
   const [searchProspectDialogOpen, setSearchProspectDialogOpen] = useState(false)
 
-  const hasTrackedDashboardLoadRef = useRef(false)
-  const sessionStartRef = useRef<number | null>(null)
-  const currentScreenStartRef = useRef<number | null>(null)
-  const currentScreenRef = useRef<"accounts" | "centers" | "prospects">(defaultSection)
-  const previousPageRef = useRef<Record<"accounts" | "centers" | "prospects", number>>({
-    accounts: 1,
-    centers: 1,
-    prospects: 1,
-  })
-  const previousAccountsViewRef = useRef<"chart" | "data" | "map">(accountsMapEnabled ? "map" : "chart")
-  const previousCentersViewRef = useRef<"chart" | "data" | "map">("map")
-  const previousProspectsViewRef = useRef<"chart" | "data">("chart")
-  const viewSwitchCountRef = useRef(0)
-  const exportCountRef = useRef(0)
   const exportScopeClearRef = useRef<number | null>(null)
-  const heartbeatIntervalRef = useRef<number | null>(null)
-  const idleTimeoutRef = useRef<number | null>(null)
-  const isIdleRef = useRef(false)
-  const noResultsSignatureRef = useRef<string | null>(null)
-  const previousSidebarCollapsedRef = useRef<boolean | null>(null)
 
   const activeFiltersCount = getTotalActiveFilters()
   const filteredLockedProspectTeasers = useMemo(() => {
@@ -220,26 +182,17 @@ function DashboardContent(): React.JSX.Element | null {
   }, [filteredData.filteredAccounts, lockedProspectTeasers])
 
   const currentScreenView = useMemo(() => {
-    if (activeSection === "accounts") {
-      return accountsView
-    }
-    if (activeSection === "centers") {
-      return centersView
-    }
+    if (activeSection === "accounts") return accountsView
+    if (activeSection === "centers") return centersView
     return prospectsView
   }, [activeSection, accountsView, centersView, prospectsView])
 
   const activePage = useMemo(() => {
-    if (activeSection === "accounts") {
-      return accountsPage
-    }
-    if (activeSection === "centers") {
-      return centersPage
-    }
+    if (activeSection === "accounts") return accountsPage
+    if (activeSection === "centers") return centersPage
     return prospectsPage
   }, [activeSection, accountsPage, centersPage, prospectsPage])
 
-  // Filters may be replaced with an equal object by the filter hook; reset pagination only on value changes.
   const filtersPaginationResetKey = useMemo(() => JSON.stringify(filters), [filters])
 
   useEffect(() => {
@@ -250,308 +203,12 @@ function DashboardContent(): React.JSX.Element | null {
 
   useEffect(() => {
     const storedSidebarState = window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY)
-    if (storedSidebarState === "true") {
-      setIsSidebarCollapsed(true)
-    }
+    if (storedSidebarState === "true") setIsSidebarCollapsed(true)
   }, [])
 
   useEffect(() => {
     window.localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, String(isSidebarCollapsed))
   }, [isSidebarCollapsed])
-
-  useEffect(() => {
-    if (previousSidebarCollapsedRef.current === null) {
-      previousSidebarCollapsedRef.current = isSidebarCollapsed
-      return
-    }
-
-    if (previousSidebarCollapsedRef.current !== isSidebarCollapsed) {
-      captureEvent(ANALYTICS_EVENTS.SIDEBAR_TOGGLED, {
-        is_collapsed: isSidebarCollapsed,
-      })
-      previousSidebarCollapsedRef.current = isSidebarCollapsed
-    }
-  }, [isSidebarCollapsed])
-
-  useEffect(() => {
-    setAnalyticsContext({
-      screen: activeSection,
-      screen_view: currentScreenView,
-      active_filters_count: activeFiltersCount,
-      filtered_accounts_count: filteredData.filteredAccounts.length,
-      filtered_centers_count: filteredData.filteredCenters.length,
-      filtered_prospects_count: filteredData.filteredProspects.length,
-      is_filtered: activeFiltersCount > 0,
-    })
-  }, [
-    activeSection,
-    currentScreenView,
-    activeFiltersCount,
-    accountsEnabled,
-    centersEnabled,
-    prospectsEnabled,
-    filteredData.filteredAccounts.length,
-    filteredData.filteredCenters.length,
-    filteredData.filteredProspects.length,
-  ])
-
-  const captureCurrentScreenTime = useCallback(
-    (endedReason: "section_change" | "session_end") => {
-      if (!currentScreenStartRef.current) {
-        return
-      }
-
-      const durationSeconds = Math.max(0, Math.round((Date.now() - currentScreenStartRef.current) / 1000))
-      captureEvent(ANALYTICS_EVENTS.SCREEN_TIME_SPENT, {
-        screen: currentScreenRef.current,
-        duration_seconds: durationSeconds,
-        ended_reason: endedReason,
-      })
-    },
-    []
-  )
-
-  useEffect(() => {
-    if (!authReady || !userId) {
-      return
-    }
-
-    ensureAnalyticsSession()
-    identifyUser({ id: userId, email: userEmail, authProvider: "email" })
-
-    hasTrackedDashboardLoadRef.current = false
-    sessionStartRef.current = Date.now()
-    currentScreenStartRef.current = Date.now()
-    currentScreenRef.current = defaultSection
-    previousPageRef.current = {
-      accounts: 1,
-      centers: 1,
-      prospects: 1,
-    }
-    viewSwitchCountRef.current = 0
-    exportCountRef.current = 0
-
-    captureEvent(ANALYTICS_EVENTS.SESSION_STARTED, {
-      screen: currentScreenRef.current,
-    })
-
-    const HEARTBEAT_INTERVAL_MS = 60000
-
-    heartbeatIntervalRef.current = window.setInterval(() => {
-      const elapsedSeconds = sessionStartRef.current
-        ? Math.max(0, Math.round((Date.now() - sessionStartRef.current) / 1000))
-        : 0
-
-      captureEvent(ANALYTICS_EVENTS.SESSION_HEARTBEAT, {
-        elapsed_seconds: elapsedSeconds,
-        view_switch_count: viewSwitchCountRef.current,
-        exports_count: exportCountRef.current,
-      })
-    }, HEARTBEAT_INTERVAL_MS)
-
-    const IDLE_TIMEOUT_MS = 60000
-
-    const clearIdleTimer = () => {
-      if (idleTimeoutRef.current !== null) {
-        window.clearTimeout(idleTimeoutRef.current)
-      }
-    }
-
-    const startIdleTimer = () => {
-      clearIdleTimer()
-      idleTimeoutRef.current = window.setTimeout(() => {
-        if (isIdleRef.current) {
-          return
-        }
-        isIdleRef.current = true
-        captureEvent(ANALYTICS_EVENTS.SESSION_IDLE_STARTED, {
-          idle_timeout_ms: IDLE_TIMEOUT_MS,
-        })
-      }, IDLE_TIMEOUT_MS)
-    }
-
-    const handleActivity = () => {
-      if (isIdleRef.current) {
-        isIdleRef.current = false
-        captureEvent(ANALYTICS_EVENTS.SESSION_RESUMED, {
-          resumed_via: "user_activity",
-        })
-      }
-      startIdleTimer()
-    }
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "hidden") {
-        clearIdleTimer()
-        return
-      }
-      handleActivity()
-    }
-
-    startIdleTimer()
-
-    window.addEventListener("mousemove", handleActivity, { passive: true })
-    window.addEventListener("keydown", handleActivity)
-    window.addEventListener("click", handleActivity)
-    window.addEventListener("scroll", handleActivity, { passive: true })
-    document.addEventListener("visibilitychange", handleVisibilityChange)
-
-    return () => {
-      if (heartbeatIntervalRef.current !== null) {
-        window.clearInterval(heartbeatIntervalRef.current)
-      }
-      if (idleTimeoutRef.current !== null) {
-        window.clearTimeout(idleTimeoutRef.current)
-      }
-      window.removeEventListener("mousemove", handleActivity)
-      window.removeEventListener("keydown", handleActivity)
-      window.removeEventListener("click", handleActivity)
-      window.removeEventListener("scroll", handleActivity)
-      document.removeEventListener("visibilitychange", handleVisibilityChange)
-
-      captureCurrentScreenTime("session_end")
-
-      const durationSeconds = sessionStartRef.current
-        ? Math.max(0, Math.round((Date.now() - sessionStartRef.current) / 1000))
-        : 0
-
-      captureEvent(ANALYTICS_EVENTS.SESSION_ENDED, {
-        duration_seconds: durationSeconds,
-        view_switch_count: viewSwitchCountRef.current,
-        exports_count: exportCountRef.current,
-      })
-    }
-  }, [authReady, userId, userEmail, captureCurrentScreenTime, defaultSection])
-
-  useEffect(() => {
-    const totalVisible =
-      (accountsEnabled ? filteredData.filteredAccounts.length : 0) +
-      (centersEnabled ? filteredData.filteredCenters.length : 0) +
-      (prospectsEnabled ? filteredData.filteredProspects.length : 0)
-    const signature = `${activeFiltersCount}:${totalVisible}`
-
-    if (activeFiltersCount > 0 && totalVisible === 0 && noResultsSignatureRef.current !== signature) {
-      captureEvent(ANALYTICS_EVENTS.NO_RESULTS_AFTER_FILTER, {
-        active_filters_count: activeFiltersCount,
-        active_section: activeSection,
-        active_view: currentScreenView,
-        filters_snapshot: buildTrackedFiltersSnapshot(filters, {
-          accountHqRevenueRange: [revenueRange.min, revenueRange.max],
-          accountYearsInIndiaRange: [yearsInIndiaRange.min, yearsInIndiaRange.max],
-          centerIncYearRange: [centerIncYearRange.min, centerIncYearRange.max],
-        }),
-      })
-      noResultsSignatureRef.current = signature
-      return
-    }
-
-    if (totalVisible > 0 || activeFiltersCount === 0) {
-      noResultsSignatureRef.current = null
-    }
-  }, [
-    activeFiltersCount,
-    accountsEnabled,
-    centersEnabled,
-    prospectsEnabled,
-    filteredData.filteredAccounts.length,
-    filteredData.filteredCenters.length,
-    filteredData.filteredProspects.length,
-    activeSection,
-    currentScreenView,
-    filters,
-    revenueRange.min,
-    revenueRange.max,
-    yearsInIndiaRange.min,
-    yearsInIndiaRange.max,
-    centerIncYearRange.min,
-    centerIncYearRange.max,
-  ])
-
-  useEffect(() => {
-    if (!error) {
-      return
-    }
-
-    captureEvent(ANALYTICS_EVENTS.ERROR_STATE_SHOWN, {
-      error_message: error,
-    })
-  }, [error])
-
-  useEffect(() => {
-    if (currentScreenRef.current === activeSection) {
-      return
-    }
-
-    captureCurrentScreenTime("section_change")
-
-    captureEvent(ANALYTICS_EVENTS.SECTION_CHANGED, {
-      from_screen: currentScreenRef.current,
-      to_screen: activeSection,
-    })
-
-    viewSwitchCountRef.current += 1
-    currentScreenRef.current = activeSection
-    currentScreenStartRef.current = Date.now()
-  }, [activeSection, captureCurrentScreenTime])
-
-  useEffect(() => {
-    if (previousAccountsViewRef.current === accountsView) {
-      return
-    }
-
-    captureEvent(ANALYTICS_EVENTS.SECTION_VIEW_CHANGED, {
-      screen: "accounts",
-      from_view: previousAccountsViewRef.current,
-      to_view: accountsView,
-    })
-
-    viewSwitchCountRef.current += 1
-    previousAccountsViewRef.current = accountsView
-  }, [accountsView])
-
-  useEffect(() => {
-    if (previousCentersViewRef.current === centersView) {
-      return
-    }
-
-    captureEvent(ANALYTICS_EVENTS.SECTION_VIEW_CHANGED, {
-      screen: "centers",
-      from_view: previousCentersViewRef.current,
-      to_view: centersView,
-    })
-
-    viewSwitchCountRef.current += 1
-    previousCentersViewRef.current = centersView
-  }, [centersView])
-
-  useEffect(() => {
-    if (previousProspectsViewRef.current === prospectsView) {
-      return
-    }
-
-    captureEvent(ANALYTICS_EVENTS.SECTION_VIEW_CHANGED, {
-      screen: "prospects",
-      from_view: previousProspectsViewRef.current,
-      to_view: prospectsView,
-    })
-
-    viewSwitchCountRef.current += 1
-    previousProspectsViewRef.current = prospectsView
-  }, [prospectsView])
-
-  useEffect(() => {
-    if (previousPageRef.current[activeSection] === activePage) {
-      return
-    }
-
-    captureEvent(ANALYTICS_EVENTS.PAGE_CHANGED, {
-      page: activePage,
-      items_per_page: itemsPerPage,
-      screen: activeSection,
-    })
-
-    previousPageRef.current[activeSection] = activePage
-  }, [activePage, itemsPerPage, activeSection])
 
   const dataLoaded = !loading && !error
 
@@ -559,21 +216,6 @@ function DashboardContent(): React.JSX.Element | null {
     (activeSection === "accounts" && accountsMapEnabled && accountsView === "map") ||
     (activeSection === "centers" && centersEnabled && centersView === "map")
   const { startTour } = useProductTour({ userId, dataLoaded, hasMapView, isSidebarCollapsed })
-
-  useEffect(() => {
-    if (!dataLoaded || hasTrackedDashboardLoadRef.current) {
-      return
-    }
-
-    captureEvent(ANALYTICS_EVENTS.DASHBOARD_LOADED, {
-      total_accounts_count: accounts.length,
-      total_centers_count: centers.length,
-      total_services_count: services.length,
-      total_prospects_count: prospects.length,
-    })
-
-    hasTrackedDashboardLoadRef.current = true
-  }, [dataLoaded, accounts.length, centers.length, services.length, prospects.length])
 
   const handleRefresh = useCallback(() => {
     captureEvent(ANALYTICS_EVENTS.DATA_REFRESH_CLICKED)
@@ -626,135 +268,64 @@ function DashboardContent(): React.JSX.Element | null {
     [canExport, cancelPendingScopeClear]
   )
 
-  const handleExportDialogOpenChange = useCallback((open: boolean) => {
-    setExportDialogOpen(open)
-    if (!open) {
-      // Defer clearing the scope until the close animation (300ms) finishes,
-      // otherwise the dialog briefly re-renders in its full multi-dataset form.
-      cancelPendingScopeClear()
-      exportScopeClearRef.current = window.setTimeout(() => {
-        exportScopeClearRef.current = null
-        setExportScope(null)
-      }, 350)
-    }
-  }, [cancelPendingScopeClear])
+  const handleExportDialogOpenChange = useCallback(
+    (open: boolean) => {
+      setExportDialogOpen(open)
+      if (!open) {
+        // Defer clearing the scope until the close animation (300ms) finishes,
+        // otherwise the dialog briefly re-renders in its full multi-dataset form.
+        cancelPendingScopeClear()
+        exportScopeClearRef.current = window.setTimeout(() => {
+          exportScopeClearRef.current = null
+          setExportScope(null)
+        }, 350)
+      }
+    },
+    [cancelPendingScopeClear]
+  )
 
   useEffect(() => cancelPendingScopeClear, [cancelPendingScopeClear])
 
-  const exportPayload = useMemo(() => {
-    const { filteredAccounts, filteredCenters, filteredServices, filteredProspects } = filteredData
+  const exportPayload = useMemo(
+    () => buildExportPayload({ exportScope, filteredData, filters, activeFiltersCount }),
+    [exportScope, filteredData, filters, activeFiltersCount]
+  )
 
-    if (!exportScope) {
-      return {
-        data: {
-          accounts: filteredAccounts,
-          centers: filteredCenters,
-          services: filteredServices,
-          prospects: filteredProspects,
-        },
-        isFiltered: activeFiltersCount > 0,
-        filtersSnapshot: filters,
-        accountNames: Array.from(
-          new Set(
-            filteredAccounts
-              .map((a) => a.account_global_legal_name)
-              .filter((name): name is string => Boolean(name))
-          )
-        ),
-        centerKeys: Array.from(
-          new Set(
-            filteredCenters
-              .map((c) => c.cn_unique_key)
-              .filter((key): key is string => Boolean(key))
-          )
-        ),
-        prospectKeys: undefined as string[] | undefined,
-        keylessProspectIds: undefined as string[] | undefined,
-        allowedDatasets: undefined as ExportDatasetKey[] | undefined,
-      }
-    }
-
-    // A row selection exports only the selected entity's sheet, never the
-    // related datasets. The dialog is locked to that single dataset.
-    const emptyData = { accounts: [], centers: [], services: [], prospects: [] }
-    const snapshot = { ...(filters as object), selection: exportScope }
-
-    if (exportScope.dataset === "centers") {
-      const keySet = new Set(exportScope.centerKeys)
-      const scopedCenters = filteredCenters.filter(
-        (c) => c.cn_unique_key && keySet.has(c.cn_unique_key)
-      )
-      return {
-        data: { ...emptyData, centers: scopedCenters },
-        isFiltered: true,
-        filtersSnapshot: snapshot,
-        accountNames: [],
-        centerKeys: exportScope.centerKeys,
-        prospectKeys: undefined as string[] | undefined,
-        keylessProspectIds: undefined as string[] | undefined,
-        allowedDatasets: ["centers"] as ExportDatasetKey[],
-      }
-    }
-
-    if (exportScope.dataset === "prospects") {
-      // Match the exact prospects the user selected (by stable record id), then
-      // target them server-side via ps_unique_key. Selected prospects without a
-      // key fall back to their account so they are still included.
-      const idSet = new Set(exportScope.prospectIds)
-      const scopedProspects = filteredProspects.filter((p) => idSet.has(getProspectRecordId(p)))
-      const prospectKeys = Array.from(
-        new Set(
-          scopedProspects
-            .map((p) => p.ps_unique_key)
-            .filter((key): key is string => Boolean(key))
-        )
-      )
-      const fallbackAccountNames = Array.from(
-        new Set(
-          scopedProspects
-            .filter((p) => !p.ps_unique_key)
-            .map((p) => p.account_global_legal_name)
-            .filter((name): name is string => Boolean(name))
-        )
-      )
-      const keylessProspectIds = Array.from(
-        new Set(
-          scopedProspects
-            .filter((p) => !p.ps_unique_key)
-            .map(getProspectRecordId)
-        )
-      )
-      return {
-        data: { ...emptyData, prospects: scopedProspects },
-        isFiltered: true,
-        filtersSnapshot: snapshot,
-        accountNames: keylessProspectIds.length > 0 ? [] : fallbackAccountNames,
-        centerKeys: [],
-        prospectKeys,
-        keylessProspectIds,
-        allowedDatasets: ["prospects"] as ExportDatasetKey[],
-      }
-    }
-
-    const nameSet = new Set(exportScope.accountNames)
-    const scopedAccounts = filteredAccounts.filter(
-      (a) => a.account_global_legal_name && nameSet.has(a.account_global_legal_name)
-    )
-    return {
-      data: { ...emptyData, accounts: scopedAccounts },
-      isFiltered: true,
-      filtersSnapshot: snapshot,
-      accountNames: exportScope.accountNames,
-      centerKeys: [],
-      prospectKeys: undefined as string[] | undefined,
-      keylessProspectIds: undefined as string[] | undefined,
-      allowedDatasets: ["accounts"] as ExportDatasetKey[],
-    }
-  }, [exportScope, filteredData, filters, activeFiltersCount])
+  const { exportCountRef } = useAnalytics({
+    authReady,
+    userId,
+    userEmail,
+    activeSection,
+    accountsView,
+    centersView,
+    prospectsView,
+    accountsPage,
+    centersPage,
+    prospectsPage,
+    activeFiltersCount,
+    accountsCount: accounts.length,
+    centersCount: centers.length,
+    servicesCount: services.length,
+    prospectsCount: prospects.length,
+    filteredAccountsLength: filteredData.filteredAccounts.length,
+    filteredCentersLength: filteredData.filteredCenters.length,
+    filteredProspectsLength: filteredData.filteredProspects.length,
+    loading,
+    error,
+    isSidebarCollapsed,
+    isAccountsMapEnabled: accountsMapEnabled,
+    filters,
+    revenueRange,
+    yearsInIndiaRange,
+    centerIncYearRange,
+    accountsEnabled,
+    centersEnabled,
+    prospectsEnabled,
+  })
 
   const handleExportCompleted = useCallback(() => {
     exportCountRef.current += 1
-  }, [])
+  }, [exportCountRef])
 
   const handleToggleSidebar = useCallback(() => {
     setIsSidebarCollapsed((current) => !current)
@@ -768,195 +339,65 @@ function DashboardContent(): React.JSX.Element | null {
     setActiveSection(section)
   }, [])
 
-  const handleSearchResultSelect = useCallback(
-    (result: SearchResult) => {
-      handleSearchClose()
-      addRecentItem({
-        type: result.type,
-        id: result.id,
-        title: result.title,
-        subtitle: result.subtitle,
-      })
-      if (searchQuery.trim()) {
-        addRecentSearch(searchQuery.trim())
-      }
-      captureEvent(ANALYTICS_EVENTS.SEARCH_RESULT_SELECTED, {
-        result_type: result.type,
-        query: searchQuery,
-      })
+  const searchHandlersContext = {
+    accounts,
+    centers,
+    prospects,
+    accountsEnabled,
+    centersEnabled,
+    prospectsEnabled,
+    searchQuery,
+    handleSearchClose,
+    handleSectionSelect,
+    addRecentItem,
+    addRecentSearch,
+    setSearchQuery,
+    setSearchSelectedAccount,
+    setSearchAccountDialogOpen,
+    setSearchSelectedCenter,
+    setSearchCenterDialogOpen,
+    setSearchSelectedProspect,
+    setSearchProspectDialogOpen,
+    loadData,
+    setTheme,
+    resolvedTheme,
+  }
 
-      if (result.type === "account") {
-        setSearchSelectedAccount(result.data as Account)
-        setSearchAccountDialogOpen(true)
-      } else if (result.type === "center") {
-        setSearchSelectedCenter(result.data as Center)
-        setSearchCenterDialogOpen(true)
-      } else if (result.type === "prospect") {
-        setSearchSelectedProspect(result.data as Prospect)
-        setSearchProspectDialogOpen(true)
-      }
-    },
-    [handleSearchClose, addRecentItem, addRecentSearch, searchQuery]
-  )
+  const {
+    handleSearchResultSelect,
+    handleSearchRecentItemSelect,
+    handleSearchRecentSearchSelect,
+    handleSearchActionSelect,
+  } = useSearchHandlers(searchHandlersContext)
 
-  const handleSearchRecentItemSelect = useCallback(
-    (item: RecentItem) => {
-      handleSearchClose()
-      captureEvent(ANALYTICS_EVENTS.SEARCH_RECENT_ITEM_SELECTED, {
-        result_type: item.type,
-      })
+  const favoriteHandlersContext = {
+    accounts,
+    centers,
+    prospects,
+    favorites,
+    toggleFavorite,
+    addFavorites,
+    removeFavorite,
+    removeFavorites,
+    clearFavorites,
+    setFavoritesDialogOpen,
+    setSearchSelectedAccount,
+    setSearchAccountDialogOpen,
+    setSearchSelectedCenter,
+    setSearchCenterDialogOpen,
+    setSearchSelectedProspect,
+    setSearchProspectDialogOpen,
+  }
 
-      // Find the record in current data and open dialog
-      if (item.type === "account") {
-        if (!accountsEnabled) {
-          toast.info(getSectionUnavailableMessage("accounts"))
-          return
-        }
-        const account = accounts.find((a) => a.account_global_legal_name === item.id)
-        if (account) {
-          setSearchSelectedAccount(account)
-          setSearchAccountDialogOpen(true)
-        }
-      } else if (item.type === "center") {
-        if (!centersEnabled) {
-          toast.info(getSectionUnavailableMessage("centers"))
-          return
-        }
-        const center = centers.find((c) => c.cn_unique_key === item.id)
-        if (center) {
-          setSearchSelectedCenter(center)
-          setSearchCenterDialogOpen(true)
-        }
-      } else if (item.type === "prospect") {
-        if (!prospectsEnabled) {
-          toast.info(getSectionUnavailableMessage("prospects"))
-          return
-        }
-        const prospect = prospects.find(
-          (p) => `${p.account_global_legal_name}::${p.prospect_full_name ?? `${p.prospect_first_name ?? ""} ${p.prospect_last_name ?? ""}`.trim()}` === item.id
-        )
-        if (prospect) {
-          setSearchSelectedProspect(prospect)
-          setSearchProspectDialogOpen(true)
-        }
-      }
-    },
-    [handleSearchClose, accounts, centers, prospects, accountsEnabled, centersEnabled, prospectsEnabled]
-  )
-
-  const handleSearchRecentSearchSelect = useCallback(
-    (query: string) => {
-      setSearchQuery(query)
-    },
-    [setSearchQuery]
-  )
-
-  const handleOpenFavorites = useCallback(() => {
-    captureEvent(ANALYTICS_EVENTS.FAVORITES_VIEW_OPENED, { count: favorites.length })
-    setFavoritesDialogOpen(true)
-  }, [favorites.length])
-
-  const handleToggleFavorite = useCallback(
-    async (item: FavoriteInput) => {
-      const result = await toggleFavorite(item)
-      // null means a toggle for this item is already in flight; ignore it.
-      if (!result) return
-      if (!result.ok) {
-        toast.error("Could not update favorites. Please try again.")
-        return
-      }
-      toast.success(result.added ? "Added to favorites" : "Removed from favorites")
-    },
-    [toggleFavorite]
-  )
-
-  const handleFavoriteMany = useCallback(
-    async (items: FavoriteInput[]) => {
-      if (items.length === 0) return
-      const ok = await addFavorites(items)
-      if (!ok) {
-        toast.error("Could not add to favorites. Please try again.")
-        return
-      }
-      toast.success(`Added ${items.length} ${items.length === 1 ? "item" : "items"} to favorites`)
-    },
-    [addFavorites]
-  )
-
-  const handleRemoveFavorite = useCallback(
-    async (item: FavoriteItem) => {
-      const ok = await removeFavorite(item.entity_type, item.entity_id)
-      toast[ok ? "success" : "error"](ok ? "Removed from favorites" : "Could not remove favorite. Please try again.")
-    },
-    [removeFavorite]
-  )
-
-  const handleUnfavoriteMany = useCallback(
-    async (items: FavoriteInput[]) => {
-      if (items.length === 0) return
-      const ok = await removeFavorites(items)
-      if (!ok) {
-        toast.error("Could not remove from favorites. Please try again.")
-        return
-      }
-      toast.success(`Removed ${items.length} ${items.length === 1 ? "item" : "items"} from favorites`)
-    },
-    [removeFavorites]
-  )
-
-  const handleClearFavorites = useCallback(async () => {
-    const ok = await clearFavorites()
-    toast[ok ? "success" : "error"](ok ? "Cleared all favorites" : "Could not clear favorites. Please try again.")
-  }, [clearFavorites])
-
-  const handleOpenFavorite = useCallback(
-    (item: FavoriteItem) => {
-      setFavoritesDialogOpen(false)
-      if (item.entity_type === "account") {
-        const account = accounts.find((a) => a.account_global_legal_name === item.entity_id)
-        if (!account) return toast.info("This account is not available in the current dataset.")
-        setSearchSelectedAccount(account)
-        setSearchAccountDialogOpen(true)
-      } else if (item.entity_type === "center") {
-        const center = centers.find((c) => c.cn_unique_key === item.entity_id)
-        if (!center) return toast.info("This center is not available in the current dataset.")
-        setSearchSelectedCenter(center)
-        setSearchCenterDialogOpen(true)
-      } else {
-        const prospect = prospects.find((p) => getProspectRecordId(p) === item.entity_id)
-        if (!prospect) return toast.info("This prospect is not available in the current dataset.")
-        setSearchSelectedProspect(prospect)
-        setSearchProspectDialogOpen(true)
-      }
-    },
-    [accounts, centers, prospects]
-  )
-
-  const handleSearchActionSelect = useCallback(
-    (action: string) => {
-      handleSearchClose()
-      captureEvent(ANALYTICS_EVENTS.SEARCH_ACTION_SELECTED, { action })
-
-      switch (action) {
-        case "go-accounts":
-          handleSectionSelect("accounts")
-          break
-        case "go-centers":
-          handleSectionSelect("centers")
-          break
-        case "go-prospects":
-          handleSectionSelect("prospects")
-          break
-        case "refresh":
-          loadData()
-          break
-        case "toggle-theme":
-          setTheme(resolvedTheme === "dark" ? "light" : "dark")
-          break
-      }
-    },
-    [handleSearchClose, handleSectionSelect, loadData, setTheme, resolvedTheme]
-  )
+  const {
+    handleOpenFavorites,
+    handleToggleFavorite,
+    handleFavoriteMany,
+    handleRemoveFavorite,
+    handleUnfavoriteMany,
+    handleClearFavorites,
+    handleOpenFavorite,
+  } = useFavoriteHandlers(favoriteHandlersContext)
 
   useEffect(() => {
     if (!accountsMapEnabled && accountsView === "map") {
@@ -988,12 +429,7 @@ function DashboardContent(): React.JSX.Element | null {
   }
 
   if (error) {
-    return (
-      <ErrorState
-        error={error}
-        onRetry={handleErrorRetry}
-      />
-    )
+    return <ErrorState error={error} onRetry={handleErrorRetry} />
   }
 
   return (
@@ -1004,7 +440,14 @@ function DashboardContent(): React.JSX.Element | null {
       >
         Skip to main content
       </a>
-      <Header onRefresh={handleRefresh} onStartTour={startTour} onOpenSearch={handleSearchOpen} onOpenExports={() => setExportsDialogOpen(true)} onOpenHistory={() => setHistoryDialogOpen(true)} onOpenFavorites={handleOpenFavorites} />
+      <Header
+        onRefresh={handleRefresh}
+        onStartTour={startTour}
+        onOpenSearch={handleSearchOpen}
+        onOpenExports={() => setExportsDialogOpen(true)}
+        onOpenHistory={() => setHistoryDialogOpen(true)}
+        onOpenFavorites={handleOpenFavorites}
+      />
       <ExportsDialog open={exportsDialogOpen} onOpenChange={setExportsDialogOpen} />
       <FavoritesDialog
         open={favoritesDialogOpen}
@@ -1140,11 +583,16 @@ function DashboardContent(): React.JSX.Element | null {
                   totalAccountsCount={summary.totalAccountsCountFull}
                   filteredCentersCount={filteredData.filteredCenters.length}
                   totalCentersCount={summary.totalCentersCountFull}
-                  filteredUpcomingCentersCount={filteredData.filteredCenters.filter((c) => c.center_status === "Upcoming").length}
+                  filteredUpcomingCentersCount={
+                    filteredData.filteredCenters.filter((c) => c.center_status === "Upcoming").length
+                  }
                   totalUpcomingCentersCount={summary.totalUpcomingCentersCountFull}
                   filteredProspectsCount={filteredData.filteredProspects.length}
                   totalProspectsCount={summary.totalProspectsCountFull}
-                  filteredHeadcount={filteredData.filteredCenters.reduce((sum, c) => sum + (c.center_employees ?? 0), 0)}
+                  filteredHeadcount={filteredData.filteredCenters.reduce(
+                    (sum, c) => sum + (c.center_employees ?? 0),
+                    0
+                  )}
                   totalHeadcount={summary.totalHeadcountFull}
                   activeView={activeSection}
                   onSelect={handleSectionSelect}
