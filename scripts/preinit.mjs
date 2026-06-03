@@ -244,10 +244,44 @@ function checkDependencies() {
   }
 }
 
+const IS_VERCEL = !!process.env.VERCEL
+
 async function main() {
   console.clear()
   banner()
   await wait(200)
+
+  if (IS_VERCEL) {
+    log("ENV", `${C.purple}Vercel deployment detected, skipping .env checks${RESET}`, () => "ok")
+    await wait(150)
+    const depsOk = checkDependencies()
+    if (depsOk) {
+      log("DEPS", `${C.green}node_modules installed${RESET}`, () => "ok")
+    }
+    await wait(150)
+    const prismaOk = checkPrismaClient()
+    if (prismaOk) {
+      log("PRISMA", `${C.green}client generated${RESET}`, () => "ok")
+    } else if (depsOk) {
+      await wait(100)
+      logSpinner("PRISMA", `${C.yellow}generating${RESET}`)
+      const generated = runPrismaGenerate()
+      logSpinnerDone(generated ? "ok" : "fail")
+    }
+    await wait(200)
+    console.log()
+    console.log(
+      `  ${C.green}\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501${RESET}`
+    )
+    console.log(
+      `  ${BG.green}${BOLD}${C.white}  READY  ${RESET}  ${C.white}${BOLD}Vercel build \u2713${RESET}  ${C.grey}${DIM}continuing to Next.js build${RESET}`
+    )
+    console.log(
+      `  ${C.green}\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501${RESET}`
+    )
+    console.log()
+    return
+  }
 
   // ── Step 1: .env file ──────────────────────────────────────────
   const env = loadEnv()
