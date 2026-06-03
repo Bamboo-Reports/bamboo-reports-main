@@ -46,7 +46,7 @@ const EnhancedSelectBadge = React.memo(({
     <Badge
       variant="secondary"
       className={cn(
-        "mr-1 mb-1 flex items-center gap-1 pr-1",
+        "mr-1 mb-1 flex min-w-0 max-w-full items-center gap-1 pr-1",
         isInclude
           ? "bg-green-500/20 text-green-700 dark:bg-green-500/30 dark:text-green-300 border-green-500/50 hover:bg-green-500/25"
           : "bg-red-500/20 text-red-700 dark:bg-red-500/30 dark:text-red-300 border-red-500/50 hover:bg-red-500/25"
@@ -60,7 +60,7 @@ const EnhancedSelectBadge = React.memo(({
           onToggleMode()
         }}
         className={cn(
-          "flex items-center justify-center w-4 h-4 rounded-sm",
+          "flex h-4 w-4 shrink-0 items-center justify-center rounded-sm",
           isInclude
             ? "bg-green-600/30 hover:bg-green-600/40"
             : "bg-red-600/30 hover:bg-red-600/40"
@@ -74,7 +74,9 @@ const EnhancedSelectBadge = React.memo(({
           <Minus className="h-3 w-3" />
         )}
       </button>
-      <span className="text-xs">{item.value}</span>
+      <span className="min-w-0 truncate text-xs" title={item.value}>
+        {item.value}
+      </span>
       <button
         type="button"
         onClick={(e) => {
@@ -82,7 +84,8 @@ const EnhancedSelectBadge = React.memo(({
           e.stopPropagation()
           onRemove()
         }}
-        className="ml-1"
+        className="ml-1 shrink-0"
+        title={`Remove ${item.value}`}
         aria-label={`Remove ${item.value}`}
       >
         <X className="h-3 w-3" />
@@ -426,7 +429,7 @@ export const EnhancedMultiSelect = React.memo(function EnhancedMultiSelect({
                 }
               }}
             >
-              <div className="flex gap-1 flex-wrap items-center w-full">
+              <div className="flex min-w-0 flex-wrap items-center gap-1">
                 {selected.length === 0 && <span className="text-muted-foreground">{placeholder}</span>}
                 {selected.length > 0 && (
                   <div className="flex items-center gap-2 mr-2">
