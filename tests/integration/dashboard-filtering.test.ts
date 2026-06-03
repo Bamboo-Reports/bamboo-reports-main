@@ -117,4 +117,28 @@ describe("dashboard filtering", () => {
     ])
     expect(options.centerCityValues).toEqual([{ value: "Bengaluru", count: 1 }])
   })
+
+  it("handles prospectsEnabled isolated selection logic", () => {
+    const result = getFilteredData(
+      accounts,
+      centers,
+      functions,
+      services,
+      prospects,
+      tech,
+      makeFilters({ prospectDepartmentValues: [fv("Engineering")] }),
+      { accountsEnabled: false, centersEnabled: false, prospectsEnabled: true }
+    )
+    expect(result.filteredAccounts).toEqual([])
+    expect(result.filteredCenters).toEqual([])
+    expect(result.filteredProspects.map(p => p.prospect_full_name)).toEqual(["Ada Lovelace"])
+  })
+
+  it("handles dynamic revenue range with no matching accounts", () => {
+    const range = getDynamicRevenueRange(
+      [],
+      makeFilters()
+    )
+    expect(range).toEqual({ min: 0, max: 1000000 })
+  })
 })

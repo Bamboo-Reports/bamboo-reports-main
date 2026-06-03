@@ -97,4 +97,42 @@ describe("server export builder", () => {
     expect(values).toContainEqual(["Acme Corp::Ada One::Head of Ops|Ops|Bengaluru"])
     expect(values).not.toContainEqual(["Acme Corp"])
   })
+
+  it("builds empty selection (no names, no keys) for services and prospects", async () => {
+    await buildServerExport({
+      datasets: ["services", "prospects"],
+    })
+    // queryRaw will be called for services and prospects without filters
+    const queryStrings = mocks.queryRaw.mock.calls.map(([strings]) => String(strings))
+    expect(queryStrings).toContainEqual(expect.stringContaining("SELECT * FROM services ORDER BY center_name"))
+    expect(queryStrings).toContainEqual(expect.stringContaining("SELECT * FROM prospects ORDER BY prospect_last_name, prospect_first_name"))
+  })
+
+  it("builds prospect query with both prospectKeys and keylessProspectIds", async () => {
+    await buildServerExport({
+      datasets: ["prospects"],
+      prospectKeys: ["PS-1"],
+      keylessProspectIds: ["id1"],
+    })
+    const queryStrings = mocks.queryRaw.mock.calls.map(([strings]) => String(strings))
+    expect(queryStrings).toContainEqual(expect.stringContaining("ps_unique_key = ANY"))
+  })
+
+  it("builds prospect query with only prospectKeys", async () => {
+    await buildServerExport({
+      datasets: ["prospects"],
+      prospectKeys: ["PS-1"],
+    })
+    const queryStrings = mocks.queryRaw.mock.calls.map(([strings]) => String(strings))
+    expect(queryStrings).toContainEqual(expect.stringContaining("SELECT * FROM prospects WHERE ps_unique_key = ANY"))
+  })
+
+  it("builds prospect query with only accountNames", async () => {
+    await buildServerExport({
+      datasets: ["prospects"],
+      accountNames: ["Acme Corp"],
+    })
+    const queryStrings = mocks.queryRaw.mock.calls.map(([strings]) => String(strings))
+    expect(queryStrings).toContainEqual(expect.stringContaining("SELECT * FROM prospects WHERE account_global_legal_name = ANY"))
+  })
 })
