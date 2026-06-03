@@ -10,9 +10,19 @@ import { FavoritesDialog } from "@/components/favorites/favorites-dialog"
 import { FiltersSidebar } from "@/components/filters/filters-sidebar"
 import { Header } from "@/components/layout/header"
 import { GlobalSearch } from "@/components/search/global-search"
-import { AccountDetailsDialog } from "@/components/dialogs/account-details-tabbed-dialog"
-import { CenterDetailsDialog } from "@/components/dialogs/center-details-dialog"
-import { ProspectDetailsDialog } from "@/components/dialogs/prospect-details-dialog"
+import dynamic from "next/dynamic"
+const AccountDetailsDialog = dynamic(
+  () => import("@/components/dialogs/account-details-tabbed-dialog").then((m) => m.AccountDetailsDialog),
+  { ssr: false }
+)
+const CenterDetailsDialog = dynamic(
+  () => import("@/components/dialogs/center-details-dialog").then((m) => m.CenterDetailsDialog),
+  { ssr: false }
+)
+const ProspectDetailsDialog = dynamic(
+  () => import("@/components/dialogs/prospect-details-dialog").then((m) => m.ProspectDetailsDialog),
+  { ssr: false }
+)
 import { ErrorState } from "@/components/states/error-state"
 import { LoadingState } from "@/components/states/loading-state"
 import { AccountsTab, CentersTab } from "@/components/tabs"
@@ -499,7 +509,7 @@ function DashboardContent(): React.JSX.Element | null {
           tech={tech}
           open={searchCenterDialogOpen}
           onOpenChange={setSearchCenterDialogOpen}
-          onAccountOpen={(accountName) => {
+          onAccountOpen={(accountName: string) => {
             const account = accounts.find((item) => item.account_global_legal_name === accountName)
             if (!account) return
             setSearchCenterDialogOpen(false)
@@ -514,7 +524,7 @@ function DashboardContent(): React.JSX.Element | null {
           allProspects={prospects}
           open={searchProspectDialogOpen}
           onOpenChange={setSearchProspectDialogOpen}
-          onAccountOpen={(accountName) => {
+          onAccountOpen={(accountName: string) => {
             const account = accounts.find((item) => item.account_global_legal_name === accountName)
             if (!account) return
             setSearchProspectDialogOpen(false)
