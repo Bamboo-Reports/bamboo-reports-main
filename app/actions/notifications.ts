@@ -1,7 +1,7 @@
 "use server"
 
 import { resolveAuthenticatedUserId } from "@/lib/auth/server"
-import { getSqlOrThrow, fetchWithRetry } from "@/lib/db/connection"
+import { getPrismaOrThrow, queryWithRetry } from "@/lib/db/prisma"
 
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100
@@ -101,10 +101,10 @@ export async function getUnreadCount(
 ): Promise<NotificationCountResponse> {
   try {
     const userId = await resolveAuthenticatedUserId(accessToken)
-    const sqlClient = getSqlOrThrow()
+    const prisma = getPrismaOrThrow()
 
-    const result = (await fetchWithRetry(
-      () => sqlClient`
+    const result = (await queryWithRetry(
+      () => prisma.$queryRaw`
         WITH notification_state AS (
           SELECT COALESCE(
             (
@@ -154,11 +154,11 @@ export async function getUnreadSummaries(params: {
 }): Promise<NotificationSummaryListResponse> {
   try {
     const userId = await resolveAuthenticatedUserId(params.accessToken)
-    const sqlClient = getSqlOrThrow()
+    const prisma = getPrismaOrThrow()
     const ROW_ADDED_FIELD = "__row_added__"
 
-    const rows = (await fetchWithRetry(
-      () => sqlClient`
+    const rows = (await queryWithRetry(
+      () => prisma.$queryRaw`
         WITH notification_state AS (
           SELECT COALESCE(
             (
@@ -245,7 +245,7 @@ export async function getUnreadRecordSummaries(params: {
 }): Promise<RecordUpdateSummaryListResponse> {
   try {
     const userId = await resolveAuthenticatedUserId(params.accessToken)
-    const sqlClient = getSqlOrThrow()
+    const prisma = getPrismaOrThrow()
     const normalizedTableName = normalizeTableName(params.tableName)
     if (!normalizedTableName || !UI_VISIBLE_NOTIFICATION_TABLES.includes(normalizedTableName)) {
       return { success: true, data: [] }
@@ -257,8 +257,8 @@ export async function getUnreadRecordSummaries(params: {
     const cursorChangedAt = cursor?.changedAt ?? null
     const cursorRecordKey = cursor?.recordKey ?? null
 
-    const rows = (await fetchWithRetry(
-      () => sqlClient`
+    const rows = (await queryWithRetry(
+      () => prisma.$queryRaw`
         WITH notification_state AS (
           SELECT COALESCE(
             (
@@ -332,10 +332,10 @@ export async function markAllAsRead(
 ): Promise<NotificationMarkResponse> {
   try {
     const userId = await resolveAuthenticatedUserId(accessToken)
-    const sqlClient = getSqlOrThrow()
+    const prisma = getPrismaOrThrow()
 
-    await fetchWithRetry(
-      () => sqlClient`
+    await queryWithRetry(
+      () => prisma.$executeRaw`
         INSERT INTO audit.user_notification_state (user_id, last_read_at)
         VALUES (${userId}, NOW())
         ON CONFLICT (user_id)

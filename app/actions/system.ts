@@ -1,4 +1,4 @@
-import { getSqlOrThrow, fetchWithRetry, getSql } from "@/lib/db/connection"
+import { getPrisma, getPrismaOrThrow, queryWithRetry } from "@/lib/db/prisma"
 import { createLogger } from "@/lib/logger"
 
 const logger = createLogger("actions/system")
@@ -16,14 +16,14 @@ export async function testConnection(): Promise<{ success: boolean; message: str
       }
     }
 
-    if (!getSql()) {
+    if (!getPrisma()) {
       return {
         success: false,
         message: "Database connection could not be initialized",
       }
     }
 
-    await fetchWithRetry(() => getSqlOrThrow()`SELECT 1 as test`)
+    await queryWithRetry(() => getPrismaOrThrow().$queryRaw`SELECT 1 as test`)
     return { success: true, message: "Database connection successful" }
   } catch (error) {
     logger.error("database_connection_test_failed", { error })
@@ -43,7 +43,7 @@ export async function getDatabaseStatus(): Promise<{
 }> {
   try {
     const hasUrl = !!process.env.DATABASE_URL
-    const hasConnection = !!getSql()
+    const hasConnection = !!getPrisma()
 
     return {
       hasUrl,

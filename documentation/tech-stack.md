@@ -214,13 +214,13 @@ Technologies for storing and querying data.
 | | |
 |---|---|
 | **What it is** | A serverless PostgreSQL platform with autoscaling and branching |
-| **Version** | `@neondatabase/serverless` 1.0.x |
-| **Why we use it** | Acts as the primary Business Intelligence data warehouse. Serverless architecture means zero cold-start issues in production. Native support for Vercel Edge functions |
-| **Access pattern** | Read-only SQL queries via `@neondatabase/serverless` driver |
-| **Key features** | Connection pooling, serverless WebSocket connections, parameterized queries (SQL injection safe) |
+| **Version** | Accessed through Prisma ORM 7.x with `@prisma/adapter-neon` |
+| **Why we use it** | Acts as the primary Business Intelligence data warehouse. Serverless architecture supports Vercel deployments and Neon connection pooling |
+| **Access pattern** | Prisma model reads for keyed warehouse tables; Prisma raw SQL for analytical/no-key queries |
+| **Key features** | Connection pooling, generated TypeScript client, parameterized queries |
 | **Tables** | `accounts`, `centers`, `services`, `functions`, `tech`, `prospects`, plus audit tables |
-| **Retry logic** | 3 retries with exponential backoff (1s, 2s, 4s) |
-| **Package** | `@neondatabase/serverless` |
+| **Retry logic** | Exponential retry wrapper in `lib/db/prisma.ts` |
+| **Package** | `prisma`, `@prisma/client`, `@prisma/adapter-neon` |
 
 ### Dashboard API Route (`/api/dashboard`)
 
@@ -393,7 +393,7 @@ Third-party services the application communicates with at runtime.
 
 | Service | Purpose | Required | Environment Variable |
 |---------|---------|----------|---------------------|
-| **Neon PostgreSQL** | Primary BI data warehouse | Yes | `DATABASE_URL` |
+| **Neon PostgreSQL** | Primary BI data warehouse | Yes | `DATABASE_URL`; `DIRECT_URL` optional for Prisma CLI |
 | **Supabase** | Authentication, profiles, saved filters | Yes | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` |
 | **MapTiler** | Map tiles for geospatial views | Yes | `NEXT_PUBLIC_MAPTILER_KEY` |
 | **Logo.dev** | Company logo images | No | `NEXT_PUBLIC_LOGO_DEV_KEY` |
@@ -409,8 +409,8 @@ A summary of key technology choices and the reasoning behind them.
 ### Why Server Actions (with one Route Handler) instead of REST/GraphQL?
 The vast majority of data fetching uses Server Actions, which eliminate the boilerplate of building and maintaining a separate API layer and keep data fetching co-located with the UI code. The one exception is `/api/dashboard`, a Next.js Route Handler that wraps the dashboard Server Action to add an in-memory SWR cache, gzip compression, and explicit bearer-token auth — capabilities that don't fit neatly into the Server Action model. The Route Handler is gated by Supabase JWT validation so the small expansion of attack surface stays bounded.
 
-### Why raw SQL instead of an ORM (e.g., Prisma)?
-The data warehouse queries are primarily read-only and require fine-grained control over joins, aggregations, and filtering logic. Raw SQL with parameterized queries via `@neondatabase/serverless` provides maximum performance and flexibility without the overhead of an ORM abstraction layer.
+### Why Prisma with some raw SQL?
+Prisma provides a typed server-side client for straightforward warehouse reads while preserving parameterized raw SQL for joins, aggregations, and tables that do not expose stable Prisma identifiers. This keeps the common data path typed without forcing analytical queries into awkward ORM shapes.
 
 ### Why two databases (Neon + Supabase)?
 Each database serves a distinct purpose:

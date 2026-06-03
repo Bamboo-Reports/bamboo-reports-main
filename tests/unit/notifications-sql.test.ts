@@ -5,7 +5,8 @@ import {
 } from "@/app/actions/notifications"
 
 const mocks = vi.hoisted(() => ({
-  sql: vi.fn(),
+  queryRaw: vi.fn(),
+  executeRaw: vi.fn(),
   resolveAuthenticatedUserId: vi.fn(),
 }))
 
@@ -13,9 +14,12 @@ vi.mock("@/lib/auth/server", () => ({
   resolveAuthenticatedUserId: mocks.resolveAuthenticatedUserId,
 }))
 
-vi.mock("@/lib/db/connection", () => ({
-  getSqlOrThrow: () => mocks.sql,
-  fetchWithRetry: <T>(fn: () => Promise<T>) => fn(),
+vi.mock("@/lib/db/prisma", () => ({
+  getPrismaOrThrow: () => ({
+    $queryRaw: mocks.queryRaw,
+    $executeRaw: mocks.executeRaw,
+  }),
+  queryWithRetry: <T>(fn: () => Promise<T>) => fn(),
 }))
 
 describe("notification SQL actions", () => {
@@ -25,7 +29,7 @@ describe("notification SQL actions", () => {
   })
 
   it("limits notification summary labels inside SQL", async () => {
-    mocks.sql.mockResolvedValue([
+    mocks.queryRaw.mockResolvedValue([
       {
         table_name: "accounts",
         change_type: "updated",
@@ -39,7 +43,7 @@ describe("notification SQL actions", () => {
 
     expect(result.success).toBe(true)
     expect(result.data[0]?.record_labels).toEqual(["A", "B", "C", "D", "E"])
-    const [strings] = mocks.sql.mock.calls[0] as [TemplateStringsArray]
+    const [strings] = mocks.queryRaw.mock.calls[0] as [TemplateStringsArray]
     const query = strings.join("?")
     expect(query).toContain("unread_records AS")
     expect(query).toContain("LIMIT 5")
@@ -47,7 +51,7 @@ describe("notification SQL actions", () => {
   })
 
   it("returns cursor pagination metadata for unread record summaries", async () => {
-    mocks.sql.mockResolvedValue([
+    mocks.queryRaw.mockResolvedValue([
       {
         record_key: "record-a",
         record_uuid: null,
@@ -88,7 +92,7 @@ describe("notification SQL actions", () => {
       changedAt: "2026-06-01T09:00:00.000Z",
       recordKey: "record-b",
     })
-    const [strings, ...values] = mocks.sql.mock.calls[0] as [TemplateStringsArray, ...unknown[]]
+    const [strings, ...values] = mocks.queryRaw.mock.calls[0] as [TemplateStringsArray, ...unknown[]]
     const query = strings.join("?")
     expect(query).toContain("ORDER BY latest_changed_at DESC, record_key ASC")
     expect(query).toContain("record_key >")

@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model AccountWarehouse {
+  uuid                                  String?
+  account_last_update_date              String?
+  account_nasscom_status                String?
+  account_nasscom_member_status         String?
+  account_data_coverage                 String?
+  account_source                        String?
+  account_type                          String?
+  account_global_legal_name             String  @id
+  account_hq_stock_ticker               String?
+  account_about                         String?
+  account_hq_address                    String?
+  account_hq_city                       String?
+  account_hq_state                      String?
+  account_hq_zip_code                   String?
+  account_hq_country                    String?
+  account_hq_region                     String?
+  account_hq_boardline                  String?
+  account_hq_website                    String?
+  account_hq_linkedin_link              String?
+  account_hq_key_offerings              String?
+  account_key_offerings_source_link     String?
+  account_hq_sub_industry               String?
+  account_hq_industry                   String?
+  account_primary_category              String?
+  account_primary_nature                String?
+  account_hq_forbes_2000_rank           Int?
+  account_hq_fortune_500_rank           Int?
+  account_hq_company_type               String?
+  account_hq_revenue                    BigInt?
+  account_hq_revenue_range              String?
+  account_hq_fy_end                     String?
+  account_hq_revenue_year               Int?
+  account_hq_revenue_source_type        String?
+  account_hq_revenue_source_link        String?
+  account_hq_employee_count             Int?
+  account_hq_employee_range             String?
+  account_hq_employee_source_type       String?
+  account_hq_employee_source_link       String?
+  account_center_employees              Int?
+  account_center_employees_range        String?
+  years_in_india                        Int?
+  account_first_center_year             Int?
+  account_comments                      String?
+  account_coverage                      String?
+  account_visibility                    String?
+  account_visibility_note               String?
+
+  @@map("accounts")
+}
+
+model CenterWarehouse {
+  uuid                               String?
+  last_update_date                   String?
+  cn_unique_key                      String  @id
+  account_global_legal_name          String?
+  center_status                      String?
+  center_inc_year                    Int?
+  announced_year                     Int?
+  announced_month                    String?
+  center_inc_year_notes              String?
+  center_inc_year_updated_link       String?
+  center_timeline                    String?
+  center_end_year                    Int?
+  center_account_website             String?
+  center_name                        String?
+  center_business_segment            String?
+  center_business_sub_segment        String?
+  center_management_partner          String?
+  center_jv_status                   String?
+  center_jv_name                     String?
+  center_type                        String?
+  center_focus                       String?
+  center_source_link                 String?
+  center_website                     String?
+  center_linkedin                    String?
+  center_address                     String?
+  center_city                        String?
+  center_state                       String?
+  center_zip_code                    String?
+  center_country                     String?
+  center_country_iso2                String?
+  lat                                Float?
+  lng                                Float?
+  center_region                      String?
+  center_boardline                   String?
+  center_employees                   Int?
+  center_employees_range             String?
+  center_employees_range_source_link String?
+  center_services                    String?
+  center_first_year                  Int?
+  center_comments                    String?
+
+  @@map("centers")
+}

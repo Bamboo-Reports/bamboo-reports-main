@@ -4,12 +4,18 @@ import { buildServerExport } from "@/lib/exports/server-builder"
 import { makeAccount, makeCenter, makeProspect, makeService } from "../fixtures/domain"
 
 const mocks = vi.hoisted(() => ({
-  sql: vi.fn(),
+  accountFindMany: vi.fn(),
+  centerFindMany: vi.fn(),
+  queryRaw: vi.fn(),
   getProspectsPerAccountLimit: vi.fn(),
 }))
 
-vi.mock("@/lib/db/connection", () => ({
-  getSqlOrThrow: () => mocks.sql,
+vi.mock("@/lib/db/prisma", () => ({
+  getPrismaOrThrow: () => ({
+    accountWarehouse: { findMany: mocks.accountFindMany },
+    centerWarehouse: { findMany: mocks.centerFindMany },
+    $queryRaw: mocks.queryRaw,
+  }),
 }))
 
 vi.mock("@/lib/config/dashboard-access", () => ({
@@ -20,10 +26,10 @@ describe("server export builder", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.getProspectsPerAccountLimit.mockReturnValue(null)
-    mocks.sql.mockImplementation(async (strings: TemplateStringsArray) => {
+    mocks.accountFindMany.mockResolvedValue([makeAccount({ account_global_legal_name: "Acme Corp" })])
+    mocks.centerFindMany.mockResolvedValue([makeCenter({ cn_unique_key: "CN-1" })])
+    mocks.queryRaw.mockImplementation(async (strings: TemplateStringsArray) => {
       const query = strings.join(" ")
-      if (query.includes("FROM accounts")) return [makeAccount({ account_global_legal_name: "Acme Corp" })]
-      if (query.includes("FROM centers")) return [makeCenter({ cn_unique_key: "CN-1" })]
       if (query.includes("FROM services")) return [makeService({ cn_unique_key: "CN-1" })]
       if (query.includes("FROM prospects")) {
         return [
@@ -53,17 +59,22 @@ describe("server export builder", () => {
     expect(result.totalRows).toBe(1)
   })
 
-  it("passes precise account, center, and prospect selections into tagged queries", async () => {
+  it("passes precise account, center, and prospect selections into Prisma queries", async () => {
     await buildServerExport({
       datasets: ["accounts", "centers", "services", "prospects"],
       accountNames: ["Acme Corp"],
       centerKeys: ["CN-1"],
       prospectKeys: ["PS-1"],
     })
-    expect(mocks.sql).toHaveBeenCalledTimes(4)
-    expect(mocks.sql.mock.calls.map(([strings]) => String(strings))).toEqual(
+    expect(mocks.accountFindMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { account_global_legal_name: { in: ["Acme Corp"] } },
+    }))
+    expect(mocks.centerFindMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { cn_unique_key: { in: ["CN-1"] } },
+    }))
+    expect(mocks.queryRaw).toHaveBeenCalledTimes(2)
+    expect(mocks.queryRaw.mock.calls.map(([strings]) => String(strings))).toEqual(
       expect.arrayContaining([
-        expect.stringContaining("account_global_legal_name = ANY"),
         expect.stringContaining("cn_unique_key = ANY"),
         expect.stringContaining("ps_unique_key = ANY"),
       ])
@@ -77,8 +88,8 @@ describe("server export builder", () => {
       keylessProspectIds: ["Acme Corp::Ada One::Head of Ops|Ops|Bengaluru"],
     })
 
-    expect(mocks.sql).toHaveBeenCalledTimes(1)
-    const [strings, ...values] = mocks.sql.mock.calls[0] as [TemplateStringsArray, ...unknown[]]
+    expect(mocks.queryRaw).toHaveBeenCalledTimes(1)
+    const [strings, ...values] = mocks.queryRaw.mock.calls[0] as [TemplateStringsArray, ...unknown[]]
     const query = strings.join(" ")
     expect(query).toContain("ps_unique_key IS NULL")
     expect(query).toContain("CONCAT(")
