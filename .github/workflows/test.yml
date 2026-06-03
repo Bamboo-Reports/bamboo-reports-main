@@ -30,7 +30,7 @@ jobs:
       - name: Run tests
         run: |
           set +e
-          npm test -- --reporter=default --reporter=json --outputFile=vitest-results.json
+          npm test -- --coverage --reporter=default --reporter=json --outputFile=vitest-results.json
           status=$?
           echo "VITEST_EXIT_CODE=$status" >> "$GITHUB_ENV"
           exit 0
@@ -111,7 +111,7 @@ jobs:
 
           write(`## Summary\n\n`)
           write(`Outcome: ${outcome}\n\n`)
-          write(`Command: \`npm test -- --reporter=default --reporter=json --outputFile=vitest-results.json\`\n\n`)
+          write(`Command: \`npm test -- --coverage --reporter=default --reporter=json --outputFile=vitest-results.json\`\n\n`)
           write(`Total duration from Vitest JSON: ${duration(totalDuration)}\n\n`)
           write(`| Metric | Passed | Failed | Skipped | Todo | Total |\n`)
           write(`| --- | ---: | ---: | ---: | ---: | ---: |\n`)
@@ -203,6 +203,14 @@ jobs:
         with:
           name: vitest-json-report
           path: vitest-results.json
+          if-no-files-found: ignore
+
+      - name: Upload Vitest Coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-coverage-report
+          path: coverage/
           if-no-files-found: ignore
 
       - name: Fail if tests failed
