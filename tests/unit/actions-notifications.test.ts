@@ -107,5 +107,115 @@ describe("notifications actions error handling and edge cases", () => {
       const result = await markAllAsRead("token")
       expect(result.error).toBe("Failed to mark all notifications as read.")
     })
+
+    it("marks all as read successfully", async () => {
+      vi.mocked(authServer.resolveAuthenticatedUserId).mockResolvedValueOnce("user-1")
+      vi.mocked(dbPrisma.getPrismaOrThrow).mockReturnValueOnce({} as any)
+      vi.mocked(dbPrisma.queryWithRetry).mockResolvedValueOnce(undefined)
+
+      const result = await markAllAsRead("token")
+      expect(result).toEqual({ success: true })
+    })
+  })
+
+  describe("happy paths for query functions", () => {
+    it("gets unread count successfully", async () => {
+      vi.mocked(authServer.resolveAuthenticatedUserId).mockResolvedValueOnce("user-1")
+      vi.mocked(dbPrisma.getPrismaOrThrow).mockReturnValueOnce({} as any)
+      vi.mocked(dbPrisma.queryWithRetry).mockResolvedValueOnce([{ unread_count: 5 }])
+
+      const result = await getUnreadCount("token")
+      expect(result).toEqual({ success: true, unreadCount: 5 })
+    })
+
+    it("handles empty unread count result", async () => {
+      vi.mocked(authServer.resolveAuthenticatedUserId).mockResolvedValueOnce("user-1")
+      vi.mocked(dbPrisma.getPrismaOrThrow).mockReturnValueOnce({} as any)
+      vi.mocked(dbPrisma.queryWithRetry).mockResolvedValueOnce([])
+
+      const result = await getUnreadCount("token")
+      expect(result).toEqual({ success: true, unreadCount: 0 })
+    })
+
+    it("gets unread summaries successfully", async () => {
+      vi.mocked(authServer.resolveAuthenticatedUserId).mockResolvedValueOnce("user-1")
+      vi.mocked(dbPrisma.getPrismaOrThrow).mockReturnValueOnce({} as any)
+      vi.mocked(dbPrisma.queryWithRetry).mockResolvedValueOnce([
+        {
+          table_name: "accounts",
+          change_type: "added",
+          record_count: 2,
+          record_labels: ["Acme Corp"],
+          latest_changed_at: "2024-01-01T00:00:00Z",
+        },
+      ])
+
+      const result = await getUnreadSummaries({ accessToken: "token" })
+      expect(result.success).toBe(true)
+      expect(result.data).toHaveLength(1)
+      expect(result.data[0]).toEqual(expect.objectContaining({
+        table_name: "accounts",
+        change_type: "added",
+        record_labels: ["Acme Corp"],
+      }))
+    })
+
+    it("gets unread record summaries successfully", async () => {
+      vi.mocked(authServer.resolveAuthenticatedUserId).mockResolvedValueOnce("user-1")
+      vi.mocked(dbPrisma.getPrismaOrThrow).mockReturnValueOnce({} as any)
+      vi.mocked(dbPrisma.queryWithRetry).mockResolvedValueOnce([
+        {
+          record_key: "rec-1",
+          record_uuid: "uuid-1",
+          record_identity: "ident-1",
+          record_label: "label-1",
+          unread_count: 1,
+          latest_changed_at: "2024-01-01T00:00:00Z",
+        },
+      ])
+
+      const result = await getUnreadRecordSummaries({ accessToken: "token", tableName: "accounts", limit: 10, cursorChangedAt: "2024-01-01T00:00:00Z", cursorRecordKey: "prev-key" })
+      expect(result.success).toBe(true)
+      expect(result.data).toHaveLength(1)
+      expect(result.data[0].record_key).toBe("rec-1")
+      expect(result.nextCursor).toBeNull()
+    })
+
+    it("returns nextCursor when rows exceed limit", async () => {
+      vi.mocked(authServer.resolveAuthenticatedUserId).mockResolvedValueOnce("user-1")
+      vi.mocked(dbPrisma.getPrismaOrThrow).mockReturnValueOnce({} as any)
+      
+      const mockRows = [
+        { record_key: "rec-1", latest_changed_at: "2024-01-01T00:00:00Z", unread_count: 1 },
+        { record_key: "rec-2", latest_changed_at: "2024-01-02T00:00:00Z", unread_count: 1 },
+        { record_key: "rec-3", latest_changed_at: "2024-01-03T00:00:00Z", unread_count: 1 },
+      ]
+      vi.mocked(dbPrisma.queryWithRetry).mockResolvedValueOnce(mockRows)
+
+      const result = await getUnreadRecordSummaries({ accessToken: "token", tableName: "accounts", limit: 2 })
+      expect(result.success).toBe(true)
+      expect(result.data).toHaveLength(2)
+      expect(result.nextCursor).toEqual({
+        changedAt: "2024-01-02T00:00:00Z",
+        recordKey: "rec-2"
+      })
+    })
+
+    it("normalizes limits and handles empty cursors", async () => {
+      vi.mocked(authServer.resolveAuthenticatedUserId).mockResolvedValueOnce("user-1")
+      vi.mocked(dbPrisma.getPrismaOrThrow).mockReturnValueOnce({} as any)
+      vi.mocked(dbPrisma.queryWithRetry).mockResolvedValueOnce([])
+
+      const result = await getUnreadRecordSummaries({ 
+        accessToken: "token", 
+        tableName: "accounts", 
+        limit: Infinity,
+        offset: -5,
+        cursorChangedAt: "   ",
+        cursorRecordKey: ""
+      })
+      expect(result.success).toBe(true)
+      expect(result.data).toEqual([])
+    })
   })
 })

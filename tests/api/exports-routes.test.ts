@@ -307,4 +307,101 @@ describe("export API routes", () => {
     expect(res.status).toBe(302)
     expect(res.headers.get("Location")).toBe("https://signed.example/redirect")
   })
+
+  // Generate Route Edge Cases
+  it("returns 400 for invalid JSON body during generation", async () => {
+    const res = await generateExport(new Request("https://example.com/api/exports/generate", {
+      method: "POST",
+      headers: { authorization: "Bearer token-1" },
+      body: "invalid-json", // Not JSON
+    }))
+    expect(res.status).toBe(400)
+    await expect(res.json()).resolves.toEqual({ error: "Invalid JSON body" })
+  })
+
+  it("returns 400 for an invalid request schema", async () => {
+    const res = await generateExport(new Request("https://example.com/api/exports/generate", {
+      method: "POST",
+      headers: { authorization: "Bearer token-1" },
+      body: JSON.stringify({ datasets: "not-an-array" }),
+    }))
+    expect(res.status).toBe(400)
+    await expect(res.json()).resolves.toEqual({ error: "Invalid request body" })
+  })
+
+  it("returns 400 when no datasets are selected", async () => {
+    const res = await generateExport(new Request("https://example.com/api/exports/generate", {
+      method: "POST",
+      headers: { authorization: "Bearer token-1" },
+      body: JSON.stringify({ datasets: [] }),
+    }))
+    expect(res.status).toBe(400)
+    await expect(res.json()).resolves.toEqual({ error: "At least one dataset must be selected" })
+  })
+
+  it("returns 500 when resolving user role fails", async () => {
+    supabaseMocks.profileMaybeSingle.mockResolvedValue({ data: null, error: new Error("DB Error") })
+    const res = await generateExport(new Request("https://example.com/api/exports/generate", {
+      method: "POST",
+      headers: { authorization: "Bearer token-1" },
+      body: JSON.stringify({ datasets: ["accounts"] }),
+    }))
+    expect(res.status).toBe(500)
+    await expect(res.json()).resolves.toEqual({ error: "Failed to verify export permissions" })
+  })
+
+  it("fails open if rate limit lookup throws, allowing export", async () => {
+    supabaseMocks.rateLimitGte.mockResolvedValue({ count: null, error: new Error("Rate limit check failed") })
+    const res = await generateExport(new Request("https://example.com/api/exports/generate", {
+      method: "POST",
+      headers: { authorization: "Bearer token-1" },
+      body: JSON.stringify({ datasets: ["accounts"] }),
+    }))
+    expect(res.status).toBe(201)
+  })
+
+  it("returns 429 when rate limit is exceeded", async () => {
+    supabaseMocks.rateLimitGte.mockResolvedValue({ count: 20, error: null })
+    const res = await generateExport(new Request("https://example.com/api/exports/generate", {
+      method: "POST",
+      headers: { authorization: "Bearer token-1" },
+      body: JSON.stringify({ datasets: ["accounts"] }),
+    }))
+    expect(res.status).toBe(429)
+    await expect(res.json()).resolves.toEqual({ error: "Export rate limit reached. Please wait before generating more exports." })
+  })
+
+  it("returns 500 if the server export builder fails", async () => {
+    exportBuilderMocks.buildServerExport.mockRejectedValue(new Error("Build fail"))
+    const res = await generateExport(new Request("https://example.com/api/exports/generate", {
+      method: "POST",
+      headers: { authorization: "Bearer token-1" },
+      body: JSON.stringify({ datasets: ["accounts"] }),
+    }))
+    expect(res.status).toBe(500)
+    await expect(res.json()).resolves.toEqual({ error: "Failed to build export" })
+  })
+
+  it("returns 500 if archiving the export (storage upload) fails", async () => {
+    supabaseMocks.storageUpload.mockResolvedValue({ error: new Error("Storage fail") })
+    const res = await generateExport(new Request("https://example.com/api/exports/generate", {
+      method: "POST",
+      headers: { authorization: "Bearer token-1" },
+      body: JSON.stringify({ datasets: ["accounts"] }),
+    }))
+    expect(res.status).toBe(500)
+    await expect(res.json()).resolves.toEqual({ error: "Failed to archive export" })
+  })
+
+  it("returns 500 and cleans up storage if recording the export to db fails", async () => {
+    supabaseMocks.exportInsertSingle.mockResolvedValue({ data: null, error: new Error("Insert fail") })
+    const res = await generateExport(new Request("https://example.com/api/exports/generate", {
+      method: "POST",
+      headers: { authorization: "Bearer token-1" },
+      body: JSON.stringify({ datasets: ["accounts"] }),
+    }))
+    expect(res.status).toBe(500)
+    await expect(res.json()).resolves.toEqual({ error: "Failed to record export" })
+    expect(supabaseMocks.storageRemove).toHaveBeenCalled()
+  })
 })

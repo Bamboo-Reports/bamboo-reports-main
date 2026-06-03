@@ -44,4 +44,9 @@ describe("chart helpers", () => {
     expect(getProspectChartData([makeProspect()]).departmentData).toEqual([{ name: "Engineering", value: 1 }])
     expect(calculateCenterChartData([makeCenter()], "center_type")).toEqual([{ name: "Captive", value: 1 }])
   })
+
+  it("handles missing function and center fields gracefully", () => {
+    expect(calculateCenterChartData([makeCenter({ center_type: null })], "center_type")).toEqual([{ name: "Unknown", value: 1 }])
+    expect(calculateFunctionChartData([makeFunction({ cn_unique_key: "CN-1", function_name: null })], ["CN-1"])).toEqual([{ name: "Unknown", value: 1 }])
+  })
 })
