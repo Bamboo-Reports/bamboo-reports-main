@@ -22,7 +22,7 @@ For operations requiring fresh data (initial load, saved filters, notifications)
 ```
 Component Mount / User Action
     → Server Action (app/actions/*.ts)
-    → SQL Query with Retry Logic (lib/db/connection.ts)
+    → Prisma Client Query with Retry Logic (lib/db/prisma.ts)
     → Neon PostgreSQL / Supabase
     → Serialized Response
     → React State Update
@@ -36,7 +36,7 @@ Component Mount / User Action
 ### 2.1 `app/` (Routes & Actions)
 
 -   **`actions.ts`**: Central re-export point for all server action modules.
--   **`actions/data.ts`**: Core data fetching — accounts, centers, services, functions, tech, prospects. Raw SQL queries using `@neondatabase/serverless` with parameterized inputs.
+-   **`actions/data.ts`**: Core data fetching — accounts, centers, services, functions, tech, prospects. Prisma model reads for keyed warehouse tables and Prisma raw SQL for analytical/no-key queries.
 -   **`actions/saved-filters.ts`**: CRUD operations for user-saved filter configurations (Supabase).
 -   **`actions/financial.ts`**: Financial data queries (Yahoo Finance integration for stock data).
 -   **`actions/notifications.ts`**: Notification tracking — recently updated accounts and records, read status.
@@ -46,7 +46,7 @@ Component Mount / User Action
 -   **`(auth)/`**: Auth route group containing `signin/` and `signup/` pages.
 -   **`api/dashboard/`**: Route Handler that serves the full dashboard dataset with an in-memory SWR cache and gzip compression (see `documentation/api-caching-swr.md`).
 -   **`api/exports/`**: Route Handlers for generating, listing, and re-downloading user exports.
--   **Rule:** Database access is isolated to `app/actions/*`, `app/api/*`, and `lib/db/connection.ts`. Components should never import DB drivers directly.
+-   **Rule:** Database access is isolated to `app/actions/*`, `app/api/*`, and `lib/db/prisma.ts`. Components should never import database clients directly.
 
 ### 2.2 `components/` (UI Composition)
 
@@ -101,7 +101,7 @@ Key components:
 | `auth/` | Role-based access control (`UserRole`, `canExportData()`) |
 | `config/` | Environment label, dashboard access, premium filter reveal, MapTiler configuration, notification settings |
 | `dashboard/` | Dashboard-specific data transformation utilities |
-| `db/` | Neon PostgreSQL connection client with retry logic |
+| `db/` | Prisma Client singleton for Neon PostgreSQL with retry logic |
 | `exports/` | Export request client and server-side ExcelJS workbook builder |
 | `finance/` | Financial data transformation utilities |
 | `notifications/` | Notification message formatting helpers |
@@ -155,21 +155,20 @@ Managed by `useNotifications` hook.
 
 ### 4.1 Neon PostgreSQL (Data Warehouse)
 
-We use raw SQL (via template literals) instead of an ORM for maximum control over performance and query structure.
+We use Prisma ORM over Neon PostgreSQL. Keyed warehouse tables (`accounts`, `centers`) use Prisma model reads; aggregation-heavy queries and tables without stable Prisma identifiers use Prisma raw SQL for control over query structure.
 
 ```typescript
 // app/actions/data.ts
-const results = await fetchWithRetry(() => sql`
-  SELECT * FROM accounts
-  WHERE account_region = ${region}
-  ORDER BY revenue DESC
-  LIMIT 50
-`)
+const accounts = await queryWithRetry(() =>
+  prisma.accountWarehouse.findMany({
+    orderBy: { account_global_legal_name: "asc" },
+  })
+)
 ```
 
--   **Safety:** Parameterized queries prevent SQL injection.
+-   **Safety:** Prisma model queries and Prisma tagged raw queries keep dynamic values parameterized.
 -   **Performance:** `Promise.all` in `getAllData` fetches Accounts, Centers, and Prospects concurrently.
--   **Retry Logic:** 3 retries with exponential backoff (1s, 2s, 4s) via `fetchWithRetry` in `lib/db/connection.ts`.
+-   **Retry Logic:** Exponential retry handling via `queryWithRetry` in `lib/db/prisma.ts`.
 -   **Caching:** Server Actions themselves keep no cross-request cache and fetch fresh data. The `GET /api/dashboard` Route Handler layers an in-memory stale-while-revalidate cache (default 1-hour TTL, configurable via `DASHBOARD_CACHE_TTL_MS`) over the dashboard query. See `documentation/api-caching-swr.md`.
 
 ### 4.2 Supabase PostgreSQL (User Data)

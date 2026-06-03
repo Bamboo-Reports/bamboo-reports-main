@@ -1,7 +1,7 @@
 import type { Account, Alias, Center, Function, Service, Tech, Prospect, LockedProspectTeaser } from "@/lib/types"
 import { getProspectsPerAccountLimit, isSectionEnabled } from "@/lib/config/dashboard-access"
 import { partitionProspectsByAccess } from "@/lib/dashboard/prospect-access"
-import { getSqlOrThrow, fetchWithRetry } from "@/lib/db/connection"
+import { getPrismaOrThrow, queryWithRetry } from "@/lib/db/prisma"
 import { createLogger } from "@/lib/logger"
 
 export type DashboardSummaryMetrics = {
@@ -32,10 +32,20 @@ const EMPTY_SUMMARY_METRICS: DashboardSummaryMetrics = {
 
 const logger = createLogger("actions/data")
 
+function normalizeAccount(row: Account & { account_hq_revenue?: bigint | number | null }): Account {
+  return {
+    ...row,
+    account_hq_revenue:
+      typeof row.account_hq_revenue === "bigint"
+        ? Number(row.account_hq_revenue)
+        : row.account_hq_revenue ?? null,
+  }
+}
+
 async function measureRows<T>(label: string, query: () => Promise<T[]>): Promise<T[]> {
   const startedAt = Date.now()
   try {
-    const rows = await fetchWithRetry(query)
+    const rows = await queryWithRetry(query)
     logger.debug("query_succeeded", {
       label,
       row_count: rows.length,
@@ -54,10 +64,10 @@ async function measureRows<T>(label: string, query: () => Promise<T[]>): Promise
 
 async function getAliases(): Promise<Alias[]> {
   try {
-    const sqlClient = getSqlOrThrow()
+    const prisma = getPrismaOrThrow()
     return (await measureRows(
       "aliases",
-      () => sqlClient`SELECT account_global_legal_name, short_legal_name, brand_name,
+      () => prisma.$queryRaw`SELECT account_global_legal_name, short_legal_name, brand_name,
         abbreviated_name, flagship_products, currently_known_as, notes
         FROM alias`
     )) as Alias[]
@@ -73,22 +83,48 @@ async function getAliases(): Promise<Alias[]> {
 
 async function getDashboardAccounts(): Promise<Account[]> {
   try {
-    const sqlClient = getSqlOrThrow()
-    return (await measureRows(
+    const prisma = getPrismaOrThrow()
+    const rows = await measureRows(
       "dashboard_accounts",
-      () => sqlClient`SELECT account_nasscom_status, account_nasscom_member_status, account_data_coverage,
-        account_source, account_type, account_global_legal_name, account_hq_stock_ticker,
-        account_hq_company_type, account_about, account_hq_key_offerings,
-        account_hq_city, account_hq_state, account_hq_country, account_hq_region,
-        account_hq_sub_industry, account_hq_industry, account_hq_linkedin_link,
-        account_primary_category, account_primary_nature, account_hq_revenue,
-        account_hq_revenue_range, account_hq_employee_count, account_hq_employee_range,
-        account_hq_forbes_2000_rank, account_hq_fortune_500_rank,
-        account_first_center_year, years_in_india, account_hq_website,
-        account_center_employees, account_center_employees_range,
-        account_visibility, account_visibility_note
-        FROM accounts ORDER BY account_global_legal_name`
-    )) as Account[]
+      () => prisma.accountWarehouse.findMany({
+        select: {
+          account_nasscom_status: true,
+          account_nasscom_member_status: true,
+          account_data_coverage: true,
+          account_source: true,
+          account_type: true,
+          account_global_legal_name: true,
+          account_hq_stock_ticker: true,
+          account_hq_company_type: true,
+          account_about: true,
+          account_hq_key_offerings: true,
+          account_hq_city: true,
+          account_hq_state: true,
+          account_hq_country: true,
+          account_hq_region: true,
+          account_hq_sub_industry: true,
+          account_hq_industry: true,
+          account_hq_linkedin_link: true,
+          account_primary_category: true,
+          account_primary_nature: true,
+          account_hq_revenue: true,
+          account_hq_revenue_range: true,
+          account_hq_employee_count: true,
+          account_hq_employee_range: true,
+          account_hq_forbes_2000_rank: true,
+          account_hq_fortune_500_rank: true,
+          account_first_center_year: true,
+          years_in_india: true,
+          account_hq_website: true,
+          account_center_employees: true,
+          account_center_employees_range: true,
+          account_visibility: true,
+          account_visibility_note: true,
+        },
+        orderBy: { account_global_legal_name: "asc" },
+      })
+    )
+    return rows.map((row) => normalizeAccount(row as Account & { account_hq_revenue?: bigint | null }))
   } catch (error) {
     logger.error("fetch_dashboard_accounts_failed", { error })
     return []
@@ -97,18 +133,45 @@ async function getDashboardAccounts(): Promise<Account[]> {
 
 async function getDashboardCenters(): Promise<Center[]> {
   try {
-    const sqlClient = getSqlOrThrow()
+    const prisma = getPrismaOrThrow()
     return (await measureRows(
       "dashboard_centers",
-      () => sqlClient`SELECT account_global_legal_name, cn_unique_key, center_status, center_inc_year,
-        announced_year, announced_month, center_end_year, center_name,
-        center_management_partner, center_jv_status, center_jv_name,
-        center_type, center_focus, center_website, center_linkedin,
-        center_city, center_state, center_country, center_country_iso2,
-        center_region, center_employees, center_employees_range,
-        center_business_segment, center_business_sub_segment,
-        center_boardline, center_account_website, center_timeline, center_address, center_zip_code, lat, lng
-        FROM centers ORDER BY center_name`
+      () => prisma.centerWarehouse.findMany({
+        select: {
+          account_global_legal_name: true,
+          cn_unique_key: true,
+          center_status: true,
+          center_inc_year: true,
+          announced_year: true,
+          announced_month: true,
+          center_end_year: true,
+          center_name: true,
+          center_management_partner: true,
+          center_jv_status: true,
+          center_jv_name: true,
+          center_type: true,
+          center_focus: true,
+          center_website: true,
+          center_linkedin: true,
+          center_city: true,
+          center_state: true,
+          center_country: true,
+          center_country_iso2: true,
+          center_region: true,
+          center_employees: true,
+          center_employees_range: true,
+          center_business_segment: true,
+          center_business_sub_segment: true,
+          center_boardline: true,
+          center_account_website: true,
+          center_timeline: true,
+          center_address: true,
+          center_zip_code: true,
+          lat: true,
+          lng: true,
+        },
+        orderBy: { center_name: "asc" },
+      })
     )) as Center[]
   } catch (error) {
     logger.error("fetch_dashboard_centers_failed", { error })
@@ -118,10 +181,10 @@ async function getDashboardCenters(): Promise<Center[]> {
 
 async function getDashboardFunctions(): Promise<Function[]> {
   try {
-    const sqlClient = getSqlOrThrow()
+    const prisma = getPrismaOrThrow()
     return (await measureRows(
       "dashboard_functions",
-      () => sqlClient`SELECT cn_unique_key, function_name FROM functions ORDER BY cn_unique_key`
+      () => prisma.$queryRaw`SELECT cn_unique_key, function_name FROM functions ORDER BY cn_unique_key`
     )) as Function[]
   } catch (error) {
     logger.error("fetch_dashboard_functions_failed", { error })
@@ -131,10 +194,10 @@ async function getDashboardFunctions(): Promise<Function[]> {
 
 async function getDashboardServices(): Promise<Service[]> {
   try {
-    const sqlClient = getSqlOrThrow()
+    const prisma = getPrismaOrThrow()
     return (await measureRows(
       "dashboard_services",
-      () => sqlClient`SELECT cn_unique_key, center_name, primary_service, focus_region,
+      () => prisma.$queryRaw`SELECT cn_unique_key, center_name, primary_service, focus_region,
         service_it, service_erd, service_fna, service_hr,
         service_procurement, service_sales_marketing, service_customer_support,
         service_others, software_vendor, software_in_use
@@ -148,10 +211,10 @@ async function getDashboardServices(): Promise<Service[]> {
 
 async function getDashboardTech(): Promise<Tech[]> {
   try {
-    const sqlClient = getSqlOrThrow()
+    const prisma = getPrismaOrThrow()
     return (await measureRows(
       "dashboard_tech",
-      () => sqlClient`SELECT account_global_legal_name, cn_unique_key, software_in_use,
+      () => prisma.$queryRaw`SELECT account_global_legal_name, cn_unique_key, software_in_use,
         software_vendor, software_category
         FROM tech ORDER BY account_global_legal_name, software_category, software_in_use`
     )) as Tech[]
@@ -163,10 +226,10 @@ async function getDashboardTech(): Promise<Tech[]> {
 
 async function getDashboardProspects(): Promise<Prospect[]> {
   try {
-    const sqlClient = getSqlOrThrow()
+    const prisma = getPrismaOrThrow()
     return (await measureRows(
       "dashboard_prospects",
-      () => sqlClient`SELECT ps_unique_key, account_global_legal_name,
+      () => prisma.$queryRaw`SELECT ps_unique_key, account_global_legal_name,
         prospect_full_name, prospect_first_name, prospect_last_name,
         prospect_title, prospect_department, prospect_level, head_type, prospect_linkedin_url,
         prospect_email, prospect_city, prospect_state,
@@ -181,16 +244,23 @@ async function getDashboardProspects(): Promise<Prospect[]> {
 
 async function getDashboardSummaryMetrics(): Promise<DashboardSummaryMetrics> {
   try {
-    const sqlClient = getSqlOrThrow()
+    const prisma = getPrismaOrThrow()
 
     const [accountsCountRows, centersSummaryRows, prospectsCountRows] = await Promise.all([
-      measureRows("dashboard_summary_accounts", () => sqlClient`
+      measureRows("dashboard_summary_accounts", () => prisma.$queryRaw<Array<{ total_full: number; total_visible: number }>>`
         SELECT
           COUNT(*)::int AS total_full,
           COUNT(*) FILTER (WHERE account_visibility IS DISTINCT FROM 'exclude')::int AS total_visible
         FROM accounts
       `),
-      measureRows("dashboard_summary_centers", () => sqlClient`
+      measureRows("dashboard_summary_centers", () => prisma.$queryRaw<Array<{
+        total_centers_full: number
+        total_centers_visible: number
+        total_upcoming_full: number
+        total_upcoming_visible: number
+        total_headcount_full: number
+        total_headcount_visible: number
+      }>>`
         SELECT
           COUNT(*)::int AS total_centers_full,
           COUNT(*) FILTER (WHERE a.account_visibility IS DISTINCT FROM 'exclude')::int AS total_centers_visible,
@@ -201,7 +271,7 @@ async function getDashboardSummaryMetrics(): Promise<DashboardSummaryMetrics> {
         FROM centers c
         LEFT JOIN accounts a ON a.account_global_legal_name = c.account_global_legal_name
       `),
-      measureRows("dashboard_summary_prospects", () => sqlClient`
+      measureRows("dashboard_summary_prospects", () => prisma.$queryRaw<Array<{ total_full: number; total_visible: number }>>`
         SELECT
           COUNT(*)::int AS total_full,
           COUNT(*) FILTER (WHERE a.account_visibility IS DISTINCT FROM 'exclude')::int AS total_visible
@@ -281,7 +351,7 @@ export async function getDashboardData(): Promise<AllDataResult> {
     }
 
     try {
-      getSqlOrThrow()
+      getPrismaOrThrow()
     } catch {
       logger.error("dashboard_database_connection_unavailable")
       return {

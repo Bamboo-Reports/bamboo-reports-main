@@ -17,6 +17,22 @@ function formatCompactNumber(num: number): string {
   return num.toLocaleString()
 }
 
+export function calculateAnimatedNumberValue(params: {
+  startValue: number
+  targetValue: number
+  progress: number
+}): number {
+  const { startValue, targetValue, progress } = params
+  const t = Math.min(Math.max(progress, 0), 1)
+  const eased = 1 - Math.pow(1 - t, 4)
+  const baseValue = startValue + (targetValue - startValue) * eased
+  const overshoot = Math.sin(t * Math.PI) * (targetValue - startValue) * 0.018
+  const nextValue = baseValue + overshoot
+  const min = Math.min(startValue, targetValue)
+  const max = Math.max(startValue, targetValue)
+  return Math.max(0, Math.round(Math.min(max, Math.max(min, nextValue))))
+}
+
 const AnimatedNumber = React.memo(function AnimatedNumber({
   value,
   compact = false,
@@ -53,12 +69,11 @@ const AnimatedNumber = React.memo(function AnimatedNumber({
     const step = () => {
       const elapsed = performance.now() - startTime
       const progress = Math.min(elapsed / duration, 1)
-      const t = progress
-      const eased = 1 - Math.pow(1 - t, 4)
-      const baseValue = startValueRef.current + (value - startValueRef.current) * eased
-      const overshoot = Math.sin(t * Math.PI) * (value - startValueRef.current) * 0.018
-      const nextValue = baseValue + overshoot
-      setDisplayValue(Math.max(0, Math.round(nextValue)))
+      setDisplayValue(calculateAnimatedNumberValue({
+        startValue: startValueRef.current,
+        targetValue: value,
+        progress,
+      }))
 
       if (progress < 1) {
         frameRef.current = requestAnimationFrame(step)

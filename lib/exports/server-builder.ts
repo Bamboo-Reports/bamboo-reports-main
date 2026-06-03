@@ -1,5 +1,5 @@
 import ExcelJS from "exceljs"
-import { getSqlOrThrow } from "@/lib/db/connection"
+import { getPrismaOrThrow } from "@/lib/db/prisma"
 import { getProspectsPerAccountLimit } from "@/lib/config/dashboard-access"
 import { partitionProspectsByAccess } from "@/lib/dashboard/prospect-access"
 import type { Account, Center, Prospect, Service } from "@/lib/types"
@@ -43,28 +43,43 @@ export type ServerExportResult = {
   totalRows: number
 }
 
-async function fetchAccounts(accountNames: string[] | null | undefined): Promise<Account[]> {
-  const sql = getSqlOrThrow()
-  if (accountNames && accountNames.length > 0) {
-    return (await sql`SELECT * FROM accounts WHERE account_global_legal_name = ANY(${accountNames}) ORDER BY account_global_legal_name`) as Account[]
+function normalizeAccount(row: Account & { account_hq_revenue?: bigint | number | null }): Account {
+  return {
+    ...row,
+    account_hq_revenue:
+      typeof row.account_hq_revenue === "bigint"
+        ? Number(row.account_hq_revenue)
+        : row.account_hq_revenue ?? null,
   }
-  return (await sql`SELECT * FROM accounts ORDER BY account_global_legal_name`) as Account[]
+}
+
+async function fetchAccounts(accountNames: string[] | null | undefined): Promise<Account[]> {
+  const prisma = getPrismaOrThrow()
+  const rows = await prisma.accountWarehouse.findMany({
+    ...(accountNames && accountNames.length > 0
+      ? { where: { account_global_legal_name: { in: accountNames } } }
+      : {}),
+    orderBy: { account_global_legal_name: "asc" },
+  })
+  return rows.map((row) => normalizeAccount(row as Account & { account_hq_revenue?: bigint | null }))
 }
 
 async function fetchCenters(centerKeys: string[] | null | undefined): Promise<Center[]> {
-  const sql = getSqlOrThrow()
-  if (centerKeys && centerKeys.length > 0) {
-    return (await sql`SELECT * FROM centers WHERE cn_unique_key = ANY(${centerKeys}) ORDER BY center_name`) as Center[]
-  }
-  return (await sql`SELECT * FROM centers ORDER BY center_name`) as Center[]
+  const prisma = getPrismaOrThrow()
+  return (await prisma.centerWarehouse.findMany({
+    ...(centerKeys && centerKeys.length > 0
+      ? { where: { cn_unique_key: { in: centerKeys } } }
+      : {}),
+    orderBy: { center_name: "asc" },
+  })) as Center[]
 }
 
 async function fetchServices(centerKeys: string[] | null | undefined): Promise<Service[]> {
-  const sql = getSqlOrThrow()
+  const prisma = getPrismaOrThrow()
   if (centerKeys && centerKeys.length > 0) {
-    return (await sql`SELECT * FROM services WHERE cn_unique_key = ANY(${centerKeys}) ORDER BY center_name`) as Service[]
+    return (await prisma.$queryRaw`SELECT * FROM services WHERE cn_unique_key = ANY(${centerKeys}) ORDER BY center_name`) as Service[]
   }
-  return (await sql`SELECT * FROM services ORDER BY center_name`) as Service[]
+  return (await prisma.$queryRaw`SELECT * FROM services ORDER BY center_name`) as Service[]
 }
 
 async function fetchProspects(
@@ -72,12 +87,12 @@ async function fetchProspects(
   prospectKeys: string[] | null | undefined,
   keylessProspectIds: string[] | null | undefined
 ): Promise<Prospect[]> {
-  const sql = getSqlOrThrow()
+  const prisma = getPrismaOrThrow()
   const keys = prospectKeys && prospectKeys.length > 0 ? prospectKeys : null
   const keylessIds = keylessProspectIds && keylessProspectIds.length > 0 ? keylessProspectIds : null
   const names = accountNames && accountNames.length > 0 ? accountNames : null
   if (keys && keylessIds) {
-    return (await sql`
+    return (await prisma.$queryRaw`
       SELECT * FROM prospects
       WHERE ps_unique_key = ANY(${keys})
         OR (
@@ -102,7 +117,7 @@ async function fetchProspects(
     `) as Prospect[]
   }
   if (keylessIds) {
-    return (await sql`
+    return (await prisma.$queryRaw`
       SELECT * FROM prospects
       WHERE (ps_unique_key IS NULL OR ps_unique_key = '')
         AND CONCAT(
@@ -126,7 +141,7 @@ async function fetchProspects(
   // A precise row selection targets ps_unique_key; any keyless prospects in the
   // selection fall back to their account so nothing selected is dropped.
   if (keys && names) {
-    return (await sql`
+    return (await prisma.$queryRaw`
       SELECT * FROM prospects
       WHERE ps_unique_key = ANY(${keys})
       UNION ALL
@@ -137,12 +152,12 @@ async function fetchProspects(
     `) as Prospect[]
   }
   if (keys) {
-    return (await sql`SELECT * FROM prospects WHERE ps_unique_key = ANY(${keys}) ORDER BY prospect_last_name, prospect_first_name`) as Prospect[]
+    return (await prisma.$queryRaw`SELECT * FROM prospects WHERE ps_unique_key = ANY(${keys}) ORDER BY prospect_last_name, prospect_first_name`) as Prospect[]
   }
   if (names) {
-    return (await sql`SELECT * FROM prospects WHERE account_global_legal_name = ANY(${names}) ORDER BY prospect_last_name, prospect_first_name`) as Prospect[]
+    return (await prisma.$queryRaw`SELECT * FROM prospects WHERE account_global_legal_name = ANY(${names}) ORDER BY prospect_last_name, prospect_first_name`) as Prospect[]
   }
-  return (await sql`SELECT * FROM prospects ORDER BY prospect_last_name, prospect_first_name`) as Prospect[]
+  return (await prisma.$queryRaw`SELECT * FROM prospects ORDER BY prospect_last_name, prospect_first_name`) as Prospect[]
 }
 
 function addWorksheet<T extends Record<string, unknown>>(
