@@ -28,6 +28,25 @@ describe("parseRevenue", () => {
   it("returns 0 for an unparseable string", () => {
     expect(parseRevenue("N/A")).toBe(0)
   })
+
+  it("handles string with leading whitespace", () => {
+    expect(parseRevenue("  500")).toBe(500)
+  })
+
+  it("handles decimal revenue values", () => {
+    expect(parseRevenue(99.99)).toBeCloseTo(99.99)
+    expect(parseRevenue("99.99")).toBeCloseTo(99.99)
+  })
+
+  it("handles negative revenue values", () => {
+    expect(parseRevenue(-100)).toBe(-100)
+    expect(parseRevenue("-200")).toBe(-200)
+  })
+
+  it("handles zero revenue", () => {
+    expect(parseRevenue(0)).toBe(0)
+    expect(parseRevenue("0")).toBe(0)
+  })
 })
 
 describe("formatRevenueInMillions", () => {
@@ -37,6 +56,14 @@ describe("formatRevenueInMillions", () => {
 
   it("uses locale grouping for large values", () => {
     expect(formatRevenueInMillions(1000)).toBe(`${(1000).toLocaleString()}M`)
+  })
+
+  it("handles zero", () => {
+    expect(formatRevenueInMillions(0)).toBe("0M")
+  })
+
+  it("handles negative values", () => {
+    expect(formatRevenueInMillions(-500)).toBe(`${(-500).toLocaleString()}M`)
   })
 })
 
@@ -58,6 +85,22 @@ describe("getPaginatedData", () => {
   it("returns an empty array past the end", () => {
     expect(getPaginatedData(data, 10, 2)).toEqual([])
   })
+
+  it("handles page 0 by returning empty array (page number treated as negative offset)", () => {
+    expect(getPaginatedData(data, 0, 2)).toEqual([])
+  })
+
+  it("handles empty data array", () => {
+    expect(getPaginatedData([], 1, 10)).toEqual([])
+  })
+
+  it("handles single item per page", () => {
+    expect(getPaginatedData(data, 2, 1)).toEqual([2])
+  })
+
+  it("handles itemsPerPage larger than data", () => {
+    expect(getPaginatedData(data, 1, 100)).toEqual(data)
+  })
 })
 
 describe("getTotalPages", () => {
@@ -77,6 +120,14 @@ describe("getTotalPages", () => {
   it("returns 0 pages for no items", () => {
     expect(getTotalPages(0, 10)).toBe(0)
   })
+
+  it("handles single item", () => {
+    expect(getTotalPages(1, 10)).toBe(1)
+  })
+
+  it("handles items per page of 1", () => {
+    expect(getTotalPages(5, 1)).toBe(5)
+  })
 })
 
 describe("getPageInfo", () => {
@@ -86,5 +137,17 @@ describe("getPageInfo", () => {
 
   it("clamps the end item to the total on the last page", () => {
     expect(getPageInfo(3, 25, 10)).toEqual({ startItem: 21, endItem: 25, totalItems: 25 })
+  })
+
+  it("handles single item total", () => {
+    expect(getPageInfo(1, 1, 10)).toEqual({ startItem: 1, endItem: 1, totalItems: 1 })
+  })
+
+  it("handles exactly one full page", () => {
+    expect(getPageInfo(1, 10, 10)).toEqual({ startItem: 1, endItem: 10, totalItems: 10 })
+  })
+
+  it("handles empty dataset", () => {
+    expect(getPageInfo(1, 0, 10)).toEqual({ startItem: 1, endItem: 0, totalItems: 0 })
   })
 })

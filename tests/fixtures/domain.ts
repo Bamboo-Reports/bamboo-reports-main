@@ -1,5 +1,21 @@
-import { createDefaultFilters } from "@/lib/dashboard/defaults"
-import type { Account, Alias, Center, Filters, FilterValue, Function, Prospect, Service, Tech } from "@/lib/types"
+import {
+  createDefaultFilters,
+  DEFAULT_CENTER_INC_YEAR_RANGE,
+  DEFAULT_REVENUE_RANGE,
+  DEFAULT_YEARS_IN_INDIA_RANGE,
+} from "@/lib/dashboard/defaults"
+import type {
+  Account,
+  Alias,
+  AvailableOptions,
+  Center,
+  Filters,
+  FilterValue,
+  Function,
+  Prospect,
+  Service,
+  Tech,
+} from "@/lib/types"
 
 export const fv = (value: string, mode: FilterValue["mode"] = "include"): FilterValue => ({ value, mode })
 
@@ -123,3 +139,35 @@ export function makeAlias(overrides: Partial<Alias> = {}): Alias {
     ...overrides,
   }
 }
+
+export const makeDefaultRanges = () => ({
+  revenueRange: DEFAULT_REVENUE_RANGE,
+  yearsInIndiaRange: DEFAULT_YEARS_IN_INDIA_RANGE,
+  centerIncYearRange: DEFAULT_CENTER_INC_YEAR_RANGE,
+})
+
+export const makeEmptyAvailableOptions = (): AvailableOptions => ({
+  accountHqRegionValues: [],
+  accountHqCountryValues: [],
+  accountHqIndustryValues: [],
+  accountDataCoverageValues: [],
+  accountSourceValues: [],
+  accountTypeValues: [],
+  accountPrimaryCategoryValues: [],
+  accountPrimaryNatureValues: [],
+  accountNasscomStatusValues: [],
+  accountHqEmployeeRangeValues: [],
+  accountCenterEmployeesRangeValues: [],
+  centerTypeValues: [],
+  centerFocusValues: [],
+  centerCityValues: [],
+  centerStateValues: [],
+  centerCountryValues: [],
+  centerEmployeesRangeValues: [],
+  centerStatusValues: [],
+  functionNameValues: [],
+  prospectDepartmentValues: [],
+  prospectHeadTypeValues: [],
+  prospectLevelValues: [],
+  prospectCityValues: [],
+})

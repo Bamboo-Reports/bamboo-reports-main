@@ -52,10 +52,7 @@ describe("calculateBaseRanges", () => {
   })
 
   it("computes the years-in-India range", () => {
-    const accounts = [
-      makeAccount({ years_in_india: 5 }),
-      makeAccount({ years_in_india: 12 }),
-    ]
+    const accounts = [makeAccount({ years_in_india: 5 }), makeAccount({ years_in_india: 12 })]
     expect(calculateBaseRanges(accounts, []).yearsInIndiaRange).toEqual({ min: 5, max: 12 })
   })
 
@@ -66,5 +63,64 @@ describe("calculateBaseRanges", () => {
       makeCenter({ center_inc_year: 2015 }),
     ]
     expect(calculateBaseRanges([], centers).centerIncYearRange).toEqual({ min: 2010, max: 2022 })
+  })
+
+  it("handles Infinity and NaN revenue values", () => {
+    const accounts = [
+      makeAccount({ account_hq_revenue: Infinity }),
+      makeAccount({ account_hq_revenue: NaN }),
+      makeAccount({ account_hq_revenue: 500 }),
+    ]
+    expect(calculateBaseRanges(accounts, []).revenueRange).toEqual({ min: 500, max: 500 })
+  })
+
+  it("handles negative revenue values", () => {
+    const accounts = [makeAccount({ account_hq_revenue: -100 }), makeAccount({ account_hq_revenue: 200 })]
+    expect(calculateBaseRanges(accounts, []).revenueRange).toEqual({ min: 200, max: 200 })
+  })
+
+  it("handles string revenue values via parseRevenue", () => {
+    const accounts = [
+      makeAccount({ account_hq_revenue: "1500" as unknown as number }),
+      makeAccount({ account_hq_revenue: "3500" as unknown as number }),
+    ]
+    expect(calculateBaseRanges(accounts, []).revenueRange).toEqual({ min: 1500, max: 3500 })
+  })
+
+  it("returns default range when accounts have unparseable revenue values", () => {
+    const accounts = [
+      makeAccount({ account_hq_revenue: "N/A" as unknown as number }),
+      makeAccount({ account_hq_revenue: "unknown" as unknown as number }),
+    ]
+    expect(calculateBaseRanges(accounts, []).revenueRange).toEqual(DEFAULT_RANGE)
+  })
+
+  it("handles single account scenario", () => {
+    const accounts = [makeAccount({ account_hq_revenue: 750 })]
+    expect(calculateBaseRanges(accounts, []).revenueRange).toEqual({ min: 750, max: 750 })
+  })
+
+  it("handles single center scenario", () => {
+    const centers = [makeCenter({ center_inc_year: 2020 })]
+    expect(calculateBaseRanges([], centers).centerIncYearRange).toEqual({ min: 2020, max: 2020 })
+  })
+
+  it("combines accounts and centers data simultaneously", () => {
+    const accounts = [makeAccount({ account_hq_revenue: 100, years_in_india: 5 })]
+    const centers = [makeCenter({ center_inc_year: 2015 })]
+    const result = calculateBaseRanges(accounts, centers)
+    expect(result.revenueRange).toEqual({ min: 100, max: 100 })
+    expect(result.yearsInIndiaRange).toEqual({ min: 5, max: 5 })
+    expect(result.centerIncYearRange).toEqual({ min: 2015, max: 2015 })
+  })
+
+  it("handles years_in_india with 0 values", () => {
+    const accounts = [makeAccount({ years_in_india: 0 }), makeAccount({ years_in_india: 10 })]
+    expect(calculateBaseRanges(accounts, []).yearsInIndiaRange).toEqual({ min: 10, max: 10 })
+  })
+
+  it("handles center_inc_year with null values", () => {
+    const centers = [makeCenter({ center_inc_year: null }), makeCenter({ center_inc_year: 2020 })]
+    expect(calculateBaseRanges([], centers).centerIncYearRange).toEqual({ min: 2020, max: 2020 })
   })
 })

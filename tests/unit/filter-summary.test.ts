@@ -79,4 +79,87 @@ describe("calculateActiveFilters", () => {
     const filters = { ...cleanFilters(), accountHqRevenueIncludeNull: true }
     expect(calculateActiveFilters(filters)).toBe(1)
   })
+
+  it("counts years-in-india range when different from default", () => {
+    const filters = { ...cleanFilters(), accountYearsInIndiaRange: [5, 20] as [number, number] }
+    expect(calculateActiveFilters(filters)).toBe(1)
+  })
+
+  it("counts center-inc-year range when different from default", () => {
+    const filters = { ...cleanFilters(), centerIncYearRange: [2010, 2020] as [number, number] }
+    expect(calculateActiveFilters(filters)).toBe(1)
+  })
+
+  it("counts keyword filter entries", () => {
+    const filters = {
+      ...cleanFilters(),
+      accountGlobalLegalNameKeywords: [{ value: "Acme", mode: "include" as const }],
+    }
+    expect(calculateActiveFilters(filters)).toBe(1)
+  })
+
+  it("counts multiple keyword entries", () => {
+    const filters = {
+      ...cleanFilters(),
+      techSoftwareInUseKeywords: [
+        { value: "Salesforce", mode: "include" as const },
+        { value: "SAP", mode: "include" as const },
+      ],
+    }
+    expect(calculateActiveFilters(filters)).toBe(2)
+  })
+
+  it("counts prospect multi-select filters", () => {
+    const filters = {
+      ...cleanFilters(),
+      prospectDepartmentValues: [{ value: "Engineering", mode: "include" as const }],
+      prospectHeadTypeValues: [{ value: "Decision Maker", mode: "include" as const }],
+    }
+    expect(calculateActiveFilters(filters)).toBe(2)
+  })
+
+  it("counts all active filter types together", () => {
+    const filters = {
+      ...cleanFilters(),
+      accountVisibilityMode: "nonGcc" as const,
+      accountHqCountryValues: [
+        { value: "India", mode: "include" as const },
+        { value: "USA", mode: "include" as const },
+      ],
+      centerTypeValues: [{ value: "Captive", mode: "include" as const }],
+      accountHqRevenueRange: [500, 5000] as [number, number],
+    }
+    expect(calculateActiveFilters(filters)).toBe(5)
+  })
+
+  it("handles center-state and center-country filters", () => {
+    const filters = {
+      ...cleanFilters(),
+      centerStateValues: [{ value: "Karnataka", mode: "include" as const }],
+      centerCountryValues: [{ value: "India", mode: "include" as const }],
+    }
+    expect(calculateActiveFilters(filters)).toBe(2)
+  })
+
+  it("handles function and software keyword filters", () => {
+    const filters = {
+      ...cleanFilters(),
+      functionNameValues: [{ value: "Engineering", mode: "include" as const }],
+      techSoftwareInUseKeywords: [{ value: "AWS", mode: "include" as const }],
+    }
+    expect(calculateActiveFilters(filters)).toBe(2)
+  })
+
+  it("counts all account multi-select filter arrays", () => {
+    const filters = {
+      ...cleanFilters(),
+      accountHqIndustryValues: [{ value: "Software", mode: "include" as const }],
+      accountPrimaryCategoryValues: [{ value: "Technology", mode: "include" as const }],
+      accountPrimaryNatureValues: [{ value: "Enterprise", mode: "include" as const }],
+      accountNasscomStatusValues: [{ value: "Listed", mode: "include" as const }],
+      accountHqEmployeeRangeValues: [{ value: "1001-5000", mode: "include" as const }],
+      accountCenterEmployeesRangeValues: [{ value: "501-1000", mode: "include" as const }],
+    }
+    expect(calculateActiveFilters(filters)).toBe(6)
+  })
 })
