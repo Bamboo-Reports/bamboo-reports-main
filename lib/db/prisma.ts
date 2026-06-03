@@ -1,10 +1,14 @@
 import "server-only"
 
+import { neonConfig } from "@neondatabase/serverless"
 import { PrismaNeon } from "@prisma/adapter-neon"
 import { PrismaClient } from "@/lib/generated/prisma/client"
 import { createLogger } from "@/lib/logger"
+import ws from "ws"
 
 const logger = createLogger("db/prisma")
+
+neonConfig.webSocketConstructor = ws
 
 declare global {
   var __bambooPrisma: PrismaClient | undefined
