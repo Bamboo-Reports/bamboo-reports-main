@@ -59,94 +59,6 @@ const OPTIONAL_ENV_KEYS = [
   "NEXT_PUBLIC_NOTIFICATIONS_ENABLED",
 ]
 
-function banner() {
-  const lines = [
-    [
-      "  ▗▄▄▖  ▗▄▖ ▗▖  ▗▖▗▄▄▖  ▗▄▖  ▗▄▖     ▗▄▄▖ ▗▄▄▄▖▗▄▄▖  ▗▄▖ ▗▄▄▖▗▄▄▄▖▗▄▄▖",
-      C.orange,
-      C.gold,
-      C.green,
-      C.teal,
-      C.blue,
-      C.purple,
-      C.magenta,
-      C.pink,
-      C.orange,
-      C.gold,
-      C.green,
-      C.teal,
-      C.blue,
-      C.purple,
-      C.magenta,
-    ],
-    [
-      "  ▐▌ ▐▌▐▌ ▐▌▐▛▚▞▜▌▐▌ ▐▌▐▌ ▐▌▐▌ ▐▌    ▐▌ ▐▌▐▌   ▐▌ ▐▌▐▌ ▐▌▐▌ ▐▌ █ ▐▌   ",
-      C.blue,
-      C.purple,
-      C.magenta,
-      C.orange,
-      C.gold,
-      C.green,
-      C.teal,
-      C.cyan,
-      C.blue,
-      C.purple,
-      C.magenta,
-      C.orange,
-      C.gold,
-      C.green,
-      C.teal,
-    ],
-    [
-      "  ▐▛▀▚▖▐▛▀▜▌▐▌  ▐▌▐▛▀▚▖▐▌ ▐▌▐▌ ▐▌    ▐▛▀▚▖▐▛▀▀▘▐▛▀▘ ▐▌ ▐▌▐▛▀▚▖ █  ▝▀▚▖",
-      C.purple,
-      C.magenta,
-      C.orange,
-      C.gold,
-      C.green,
-      C.teal,
-      C.cyan,
-      C.blue,
-      C.purple,
-      C.magenta,
-      C.orange,
-      C.gold,
-      C.green,
-      C.teal,
-      C.cyan,
-    ],
-    [
-      "  ▐▙▄▞▘▐▌ ▐▌▐▌  ▐▌▐▙▄▞▘▝▚▄▞▘▝▚▄▞▘    ▐▌ ▐▌▐▙▄▄▖▐▌   ▝▚▄▞▘▐▌ ▐▌ █ ▗▄▄▞▘",
-      C.magenta,
-      C.orange,
-      C.gold,
-      C.green,
-      C.teal,
-      C.cyan,
-      C.blue,
-      C.purple,
-      C.magenta,
-      C.orange,
-      C.gold,
-      C.green,
-      C.teal,
-      C.cyan,
-      C.blue,
-    ],
-  ]
-  for (const [text, ...colors] of lines) {
-    let out = ""
-    const chars = [...text]
-    for (let i = 0; i < chars.length; i++) {
-      const color = colors[i % colors.length]
-      out += color + BOLD + chars[i]
-    }
-    console.log(out + RESET)
-  }
-  console.log(`  ${DIM}${C.grey}By ResearchNXT  v${version}${RESET}`)
-  console.log()
-}
-
 function coloredBadge(text, bgColor, fgColor = C.white) {
   return `${bgColor}${BOLD}${fgColor} ${text} ${RESET}`
 }
@@ -248,7 +160,6 @@ const IS_VERCEL = !!process.env.VERCEL
 
 async function main() {
   console.clear()
-  banner()
   await wait(200)
 
   if (IS_VERCEL) {
