@@ -1,11 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  useTransition,
-} from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import {
@@ -15,8 +8,17 @@ import {
   toTrackedStringArray,
 } from "@/lib/analytics/tracking"
 import { getFilterMetadataProperties } from "@/lib/analytics/filter-metadata"
-import type { Account, Center, Function, Prospect, Service, Tech, Filters, AvailableOptions, FilterValue } from "@/lib/types"
-import { isFilterEnabled } from "@/lib/config/filters"
+import type {
+  Account,
+  Center,
+  Function,
+  Prospect,
+  Service,
+  Tech,
+  Filters,
+  AvailableOptions,
+  FilterValue,
+} from "@/lib/types"
 import { createDefaultFilters } from "@/lib/dashboard/defaults"
 import { calculateBaseRanges } from "@/lib/dashboard/ranges"
 import {
@@ -30,19 +32,15 @@ import {
 import { getAccountChartData, getCenterChartData, getProspectChartData } from "@/lib/dashboard/charts"
 import { isSectionEnabled } from "@/lib/config/dashboard-access"
 import { perfLog } from "@/lib/utils/dev-log"
+import {
+  changedFilterKeys,
+  isNumberRange,
+  serializeFilterValues,
+  getActiveFilterCountFor as getActiveFilterCountFor_,
+} from "@/lib/filter-utils"
+import { sanitizeFilters } from "@/lib/config/filters"
 
 // Returns the filter keys whose values differ between two filter objects.
-function changedFilterKeys(prev: Filters, next: Filters): string[] {
-  const keys = new Set<string>([...Object.keys(prev), ...Object.keys(next)])
-  const changed: string[] = []
-  for (const key of keys) {
-    if ((prev as unknown as Record<string, unknown>)[key] !== (next as unknown as Record<string, unknown>)[key]) {
-      changed.push(key)
-    }
-  }
-  return changed
-}
-import { sanitizeFilters } from "@/lib/config/filters"
 
 interface UseDashboardFiltersParams {
   accounts: Account[]
@@ -52,15 +50,6 @@ interface UseDashboardFiltersParams {
   prospects: Prospect[]
   tech: Tech[]
 }
-
-const isNumberRange = (value: unknown): value is [number, number] =>
-  Array.isArray(value) &&
-  value.length === 2 &&
-  typeof value[0] === "number" &&
-  typeof value[1] === "number"
-
-const serializeFilterValues = (values: FilterValue[]) =>
-  values.map(({ value, mode }) => `${mode}:${value}`).sort()
 
 export function useDashboardFilters({
   accounts,
@@ -131,15 +120,27 @@ export function useDashboardFilters({
 
   const accountNames = useMemo(() => getAccountNames(accounts), [accounts])
 
-  const filteredData: FilteredData = useMemo(
-    () => {
-      const start = performance.now()
-      const result = getFilteredData(accounts, centers, functions, services, prospects, tech, sanitizeFilters(filters), { accountsEnabled, centersEnabled, prospectsEnabled })
-      perfLog("getFilteredData recompute", performance.now() - start)
-      return result
-    },
-    [accounts, centers, functions, services, prospects, tech, filters, accountsEnabled, centersEnabled, prospectsEnabled]
-  )
+  const filteredData: FilteredData = useMemo(() => {
+    const start = performance.now()
+    const result = getFilteredData(accounts, centers, functions, services, prospects, tech, sanitizeFilters(filters), {
+      accountsEnabled,
+      centersEnabled,
+      prospectsEnabled,
+    })
+    perfLog("getFilteredData recompute", performance.now() - start)
+    return result
+  }, [
+    accounts,
+    centers,
+    functions,
+    services,
+    prospects,
+    tech,
+    filters,
+    accountsEnabled,
+    centersEnabled,
+    prospectsEnabled,
+  ])
 
   // Logs total perceived latency from a filter change to the painted update (dev only).
   useEffect(() => {
@@ -279,70 +280,38 @@ export function useDashboardFilters({
     [filters]
   )
 
-  const availableOptions: AvailableOptions = useMemo(
-    () => {
-      const start = performance.now()
-      const result = getAvailableOptions(accounts, centers, functions, prospects, tech, sanitizeFilters(filterStateForOptions as Filters), { accountsEnabled, centersEnabled, prospectsEnabled })
-      perfLog("getAvailableOptions recompute", performance.now() - start)
-      return result
-    },
-    [accounts, centers, functions, prospects, tech, filterStateForOptions, accountsEnabled, centersEnabled, prospectsEnabled]
-  )
+  const availableOptions: AvailableOptions = useMemo(() => {
+    const start = performance.now()
+    const result = getAvailableOptions(
+      accounts,
+      centers,
+      functions,
+      prospects,
+      tech,
+      sanitizeFilters(filterStateForOptions as Filters),
+      { accountsEnabled, centersEnabled, prospectsEnabled }
+    )
+    perfLog("getAvailableOptions recompute", performance.now() - start)
+    return result
+  }, [
+    accounts,
+    centers,
+    functions,
+    prospects,
+    tech,
+    filterStateForOptions,
+    accountsEnabled,
+    centersEnabled,
+    prospectsEnabled,
+  ])
 
   const getActiveFilterCountFor = useCallback(
     (sourceFilters: Filters) => {
-      let count = 0
-      const e = isFilterEnabled
-
-      // Multi-select filters: count selected values for enabled filters
-      if (e("accountHqRegionValues")) count += sourceFilters.accountHqRegionValues.length
-      if (e("accountVisibilityMode") && (sourceFilters.accountVisibilityMode ?? "gcc") !== "gcc") count += 1
-      if (e("accountHqCountryValues")) count += sourceFilters.accountHqCountryValues.length
-      if (e("accountHqIndustryValues")) count += sourceFilters.accountHqIndustryValues.length
-      if (e("accountDataCoverageValues")) count += sourceFilters.accountDataCoverageValues.length
-      if (e("accountSourceValues")) count += sourceFilters.accountSourceValues.length
-      if (e("accountTypeValues")) count += sourceFilters.accountTypeValues.length
-      if (e("accountPrimaryCategoryValues")) count += sourceFilters.accountPrimaryCategoryValues.length
-      if (e("accountPrimaryNatureValues")) count += sourceFilters.accountPrimaryNatureValues.length
-      if (e("accountNasscomStatusValues")) count += sourceFilters.accountNasscomStatusValues.length
-      if (e("accountHqEmployeeRangeValues")) count += sourceFilters.accountHqEmployeeRangeValues.length
-      if (e("accountCenterEmployeesRangeValues")) count += sourceFilters.accountCenterEmployeesRangeValues.length
-      if (e("accountGlobalLegalNameKeywords")) count += sourceFilters.accountGlobalLegalNameKeywords.length
-      if (e("centerTypeValues")) count += sourceFilters.centerTypeValues.length
-      if (e("centerFocusValues")) count += sourceFilters.centerFocusValues.length
-      if (e("centerCityValues")) count += sourceFilters.centerCityValues.length
-      if (e("centerStateValues")) count += sourceFilters.centerStateValues.length
-      if (e("centerCountryValues")) count += sourceFilters.centerCountryValues.length
-      if (e("centerEmployeesRangeValues")) count += sourceFilters.centerEmployeesRangeValues.length
-      if (e("centerStatusValues")) count += sourceFilters.centerStatusValues.length
-      if (e("functionNameValues")) count += sourceFilters.functionNameValues.length
-      if (e("techSoftwareInUseKeywords")) count += sourceFilters.techSoftwareInUseKeywords.length
-      if (e("prospectDepartmentValues")) count += sourceFilters.prospectDepartmentValues.length
-      if (e("prospectHeadTypeValues")) count += sourceFilters.prospectHeadTypeValues.length
-      if (e("prospectLevelValues")) count += sourceFilters.prospectLevelValues.length
-      if (e("prospectCityValues")) count += sourceFilters.prospectCityValues.length
-      if (e("prospectTitleKeywords")) count += sourceFilters.prospectTitleKeywords.length
-
-      // Range filters: count as 1 if range has been adjusted from default
-      if (e("accountHqRevenueRange") && (
-        sourceFilters.accountHqRevenueRange[0] !== revenueRange.min ||
-        sourceFilters.accountHqRevenueRange[1] !== revenueRange.max
-      )) count += 1
-      if (e("accountYearsInIndiaRange") && (
-        sourceFilters.accountYearsInIndiaRange[0] !== yearsInIndiaRange.min ||
-        sourceFilters.accountYearsInIndiaRange[1] !== yearsInIndiaRange.max
-      )) count += 1
-      if (e("centerIncYearRange") && (
-        sourceFilters.centerIncYearRange[0] !== centerIncYearRange.min ||
-        sourceFilters.centerIncYearRange[1] !== centerIncYearRange.max
-      )) count += 1
-
-      // Boolean toggles: count as 1 if toggled on
-      if (e("accountHqRevenueIncludeNull") && sourceFilters.accountHqRevenueIncludeNull) count += 1
-      if (e("yearsInIndiaIncludeNull") && sourceFilters.yearsInIndiaIncludeNull) count += 1
-      if (e("centerIncYearIncludeNull") && sourceFilters.centerIncYearIncludeNull) count += 1
-
-      return count
+      return getActiveFilterCountFor_(sourceFilters, {
+        revenueRange,
+        yearsInIndiaRange,
+        centerIncYearRange,
+      })
     },
     [revenueRange, yearsInIndiaRange, centerIncYearRange]
   )
@@ -383,33 +352,27 @@ export function useDashboardFilters({
     setFilters(sanitizedSavedFilters)
   }, [])
 
-  const handleMinRevenueChange = useCallback(
-    (value: string) => {
-      if (value === "") return
-      const numValue = Number.parseFloat(value)
-      if (Number.isNaN(numValue)) return
-      isRevenueRangeAutoRef.current = false
-      setPendingFilters((prev) => ({
-        ...prev,
-        accountHqRevenueRange: [numValue, prev.accountHqRevenueRange[1]],
-      }))
-    },
-    []
-  )
+  const handleMinRevenueChange = useCallback((value: string) => {
+    if (value === "") return
+    const numValue = Number.parseFloat(value)
+    if (Number.isNaN(numValue)) return
+    isRevenueRangeAutoRef.current = false
+    setPendingFilters((prev) => ({
+      ...prev,
+      accountHqRevenueRange: [numValue, prev.accountHqRevenueRange[1]],
+    }))
+  }, [])
 
-  const handleMaxRevenueChange = useCallback(
-    (value: string) => {
-      if (value === "") return
-      const numValue = Number.parseFloat(value)
-      if (Number.isNaN(numValue)) return
-      isRevenueRangeAutoRef.current = false
-      setPendingFilters((prev) => ({
-        ...prev,
-        accountHqRevenueRange: [prev.accountHqRevenueRange[0], numValue],
-      }))
-    },
-    []
-  )
+  const handleMaxRevenueChange = useCallback((value: string) => {
+    if (value === "") return
+    const numValue = Number.parseFloat(value)
+    if (Number.isNaN(numValue)) return
+    isRevenueRangeAutoRef.current = false
+    setPendingFilters((prev) => ({
+      ...prev,
+      accountHqRevenueRange: [prev.accountHqRevenueRange[0], numValue],
+    }))
+  }, [])
 
   const handleRevenueRangeChange = useCallback((value: [number, number]) => {
     isRevenueRangeAutoRef.current = false
@@ -419,31 +382,25 @@ export function useDashboardFilters({
     }))
   }, [])
 
-  const handleMinYearsInIndiaChange = useCallback(
-    (value: string) => {
-      if (value === "") return
-      const numValue = Number.parseFloat(value)
-      if (Number.isNaN(numValue)) return
-      setPendingFilters((prev) => ({
-        ...prev,
-        accountYearsInIndiaRange: [numValue, prev.accountYearsInIndiaRange[1]],
-      }))
-    },
-    []
-  )
+  const handleMinYearsInIndiaChange = useCallback((value: string) => {
+    if (value === "") return
+    const numValue = Number.parseFloat(value)
+    if (Number.isNaN(numValue)) return
+    setPendingFilters((prev) => ({
+      ...prev,
+      accountYearsInIndiaRange: [numValue, prev.accountYearsInIndiaRange[1]],
+    }))
+  }, [])
 
-  const handleMaxYearsInIndiaChange = useCallback(
-    (value: string) => {
-      if (value === "") return
-      const numValue = Number.parseFloat(value)
-      if (Number.isNaN(numValue)) return
-      setPendingFilters((prev) => ({
-        ...prev,
-        accountYearsInIndiaRange: [prev.accountYearsInIndiaRange[0], numValue],
-      }))
-    },
-    []
-  )
+  const handleMaxYearsInIndiaChange = useCallback((value: string) => {
+    if (value === "") return
+    const numValue = Number.parseFloat(value)
+    if (Number.isNaN(numValue)) return
+    setPendingFilters((prev) => ({
+      ...prev,
+      accountYearsInIndiaRange: [prev.accountYearsInIndiaRange[0], numValue],
+    }))
+  }, [])
 
   const handleYearsInIndiaRangeChange = useCallback((value: [number, number]) => {
     setPendingFilters((prev) => ({
@@ -452,31 +409,25 @@ export function useDashboardFilters({
     }))
   }, [])
 
-  const handleMinCenterIncYearChange = useCallback(
-    (value: string) => {
-      if (value === "") return
-      const numValue = Number.parseFloat(value)
-      if (Number.isNaN(numValue)) return
-      setPendingFilters((prev) => ({
-        ...prev,
-        centerIncYearRange: [numValue, prev.centerIncYearRange[1]],
-      }))
-    },
-    []
-  )
+  const handleMinCenterIncYearChange = useCallback((value: string) => {
+    if (value === "") return
+    const numValue = Number.parseFloat(value)
+    if (Number.isNaN(numValue)) return
+    setPendingFilters((prev) => ({
+      ...prev,
+      centerIncYearRange: [numValue, prev.centerIncYearRange[1]],
+    }))
+  }, [])
 
-  const handleMaxCenterIncYearChange = useCallback(
-    (value: string) => {
-      if (value === "") return
-      const numValue = Number.parseFloat(value)
-      if (Number.isNaN(numValue)) return
-      setPendingFilters((prev) => ({
-        ...prev,
-        centerIncYearRange: [prev.centerIncYearRange[0], numValue],
-      }))
-    },
-    []
-  )
+  const handleMaxCenterIncYearChange = useCallback((value: string) => {
+    if (value === "") return
+    const numValue = Number.parseFloat(value)
+    if (Number.isNaN(numValue)) return
+    setPendingFilters((prev) => ({
+      ...prev,
+      centerIncYearRange: [prev.centerIncYearRange[0], numValue],
+    }))
+  }, [])
 
   const handleCenterIncYearRangeChange = useCallback((value: [number, number]) => {
     setPendingFilters((prev) => ({
@@ -593,27 +544,14 @@ export function useDashboardFilters({
           }
         }
 
-        const includeValues = currentArray
-          .filter((item) => item.mode === "include")
-          .map((item) => item.value)
-        const excludeValues = currentArray
-          .filter((item) => item.mode === "exclude")
-          .map((item) => item.value)
-        const previousIncludeValues = previousArray
-          .filter((item) => item.mode === "include")
-          .map((item) => item.value)
-        const previousExcludeValues = previousArray
-          .filter((item) => item.mode === "exclude")
-          .map((item) => item.value)
+        const includeValues = currentArray.filter((item) => item.mode === "include").map((item) => item.value)
+        const excludeValues = currentArray.filter((item) => item.mode === "exclude").map((item) => item.value)
+        const previousIncludeValues = previousArray.filter((item) => item.mode === "include").map((item) => item.value)
+        const previousExcludeValues = previousArray.filter((item) => item.mode === "exclude").map((item) => item.value)
         const includeCount = includeValues.length
         const excludeCount = excludeValues.length
 
-        const changeType =
-          currentArray.length === 0
-            ? "clear"
-            : addedCount >= removedCount
-              ? "add"
-              : "remove"
+        const changeType = currentArray.length === 0 ? "clear" : addedCount >= removedCount ? "add" : "remove"
 
         captureEvent(ANALYTICS_EVENTS.FILTER_CHANGED, {
           filter_key: filterKey,
