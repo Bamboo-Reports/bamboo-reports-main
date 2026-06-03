@@ -120,10 +120,7 @@ const buildCenterSoftwareIndex = (tech: Tech[]) => {
   return centerSoftwareIndex
 }
 
-const matchAccountVisibility = (
-  visibility: Account["account_visibility"],
-  mode: Filters["accountVisibilityMode"]
-) => {
+const matchAccountVisibility = (visibility: Account["account_visibility"], mode: Filters["accountVisibilityMode"]) => {
   const resolvedMode = mode ?? "gcc"
   if (resolvedMode === "all") return true
   if (resolvedMode === "nonGcc") return visibility === "exclude"
@@ -131,9 +128,7 @@ const matchAccountVisibility = (
 }
 
 export function getAccountNames(accounts: Account[]) {
-  return Array.from(
-    new Set(accounts.map((account) => account.account_global_legal_name).filter(Boolean))
-  )
+  return Array.from(new Set(accounts.map((account) => account.account_global_legal_name).filter(Boolean)))
 }
 
 export function getFilteredData(
@@ -361,9 +356,7 @@ export function getFilteredData(
     : []
 
   const resolvedFilteredAccounts = accountsEnabled ? finalFilteredAccounts : []
-  const explicitExcludedSelected = resolvedFilteredAccounts.some(
-    (account) => account.account_visibility === "exclude"
-  )
+  const explicitExcludedSelected = resolvedFilteredAccounts.some((account) => account.account_visibility === "exclude")
 
   return {
     filteredAccounts: resolvedFilteredAccounts,
@@ -424,6 +417,187 @@ export function getDynamicRevenueRange(accounts: Account[], filters: RevenueRang
   }
 }
 
+function countOnly<T>(rows: T[], valueSelector: (row: T) => string | null | undefined): Map<string, number> {
+  const counts = new Map<string, number>()
+  for (const row of rows) {
+    const value = String(valueSelector(row) ?? "")
+    counts.set(value, (counts.get(value) || 0) + 1)
+  }
+  return counts
+}
+
+function toSortedOptions(map: Map<string, number>): FilterOption[] {
+  return Array.from(map.entries())
+    .map(([value, count]) => ({ value, count }))
+    .sort((a, b) => b.count - a.count)
+}
+
+function pickAccountValue(account: Account, key: string): string {
+  if (key === "accountHqRegionValues") return account.account_hq_region ?? ""
+  if (key === "accountHqCountryValues") return account.account_hq_country ?? ""
+  if (key === "accountHqIndustryValues") return account.account_hq_industry ?? ""
+  if (key === "accountDataCoverageValues") return account.account_data_coverage ?? ""
+  if (key === "accountSourceValues") return account.account_source ?? ""
+  if (key === "accountTypeValues") return account.account_type ?? ""
+  if (key === "accountPrimaryCategoryValues") return account.account_primary_category ?? ""
+  if (key === "accountPrimaryNatureValues") return account.account_primary_nature ?? ""
+  if (key === "accountNasscomStatusValues") return account.account_nasscom_status ?? ""
+  if (key === "accountHqEmployeeRangeValues") return account.account_hq_employee_range ?? ""
+  if (key === "accountCenterEmployeesRangeValues") return account.account_center_employees_range ?? ""
+  return ""
+}
+
+function pickCenterValue(center: Center, key: string): string {
+  if (key === "centerTypeValues") return center.center_type ?? ""
+  if (key === "centerFocusValues") return center.center_focus ?? ""
+  if (key === "centerCityValues") return center.center_city ?? ""
+  if (key === "centerStateValues") return center.center_state ?? ""
+  if (key === "centerCountryValues") return center.center_country ?? ""
+  if (key === "centerEmployeesRangeValues") return center.center_employees_range ?? ""
+  if (key === "centerStatusValues") return center.center_status ?? ""
+  return ""
+}
+
+function pickProspectValue(prospect: Prospect, key: string): string {
+  if (key === "prospectDepartmentValues") return prospect.prospect_department ?? ""
+  if (key === "prospectHeadTypeValues") return prospect.head_type ?? ""
+  if (key === "prospectLevelValues") return prospect.prospect_level ?? ""
+  if (key === "prospectCityValues") return prospect.prospect_city ?? ""
+  return ""
+}
+
+/**
+ * Entity-specific account filter that only runs account-level match
+ * functions and returns accounts that pass the scoped filters.
+ * Skips center/function/prospect/service looping entirely.
+ */
+function filterAccountsOnly(accounts: Account[], filters: AvailableOptionsFilterState): Account[] {
+  const matchRegion = createValueMatcher(filters.accountHqRegionValues)
+  const matchCountry = createValueMatcher(filters.accountHqCountryValues)
+  const matchIndustry = createValueMatcher(filters.accountHqIndustryValues)
+  const matchDataCoverage = createValueMatcher(filters.accountDataCoverageValues)
+  const matchSource = createValueMatcher(filters.accountSourceValues)
+  const matchType = createValueMatcher(filters.accountTypeValues)
+  const matchPrimaryCategory = createValueMatcher(filters.accountPrimaryCategoryValues)
+  const matchPrimaryNature = createValueMatcher(filters.accountPrimaryNatureValues)
+  const matchNasscom = createValueMatcher(filters.accountNasscomStatusValues)
+  const matchEmployeesRange = createValueMatcher(filters.accountHqEmployeeRangeValues)
+  const matchCenterEmployees = createValueMatcher(filters.accountCenterEmployeesRangeValues)
+  const matchRevenue = (v: number | string | null | undefined) =>
+    rangeFilterMatch(filters.accountHqRevenueRange, v, filters.accountHqRevenueIncludeNull, parseRevenueValue)
+  const matchYears = (v: number | string | null | undefined) =>
+    rangeFilterMatch(filters.accountYearsInIndiaRange, v, filters.yearsInIndiaIncludeNull)
+  const matchName = createKeywordMatcher(filters.accountGlobalLegalNameKeywords)
+  const hasExplicitNameSearch = filters.accountGlobalLegalNameKeywords.length > 0
+
+  return accounts.filter((account) => {
+    if (!matchRegion(account.account_hq_region)) return false
+    if (!matchCountry(account.account_hq_country)) return false
+    if (!matchIndustry(account.account_hq_industry)) return false
+    if (!matchDataCoverage(account.account_data_coverage)) return false
+    if (!matchSource(account.account_source)) return false
+    if (!matchType(account.account_type)) return false
+    if (!matchPrimaryCategory(account.account_primary_category)) return false
+    if (!matchPrimaryNature(account.account_primary_nature)) return false
+    if (!matchNasscom(account.account_nasscom_status)) return false
+    if (!matchEmployeesRange(account.account_hq_employee_range)) return false
+    if (!matchCenterEmployees(account.account_center_employees_range || "")) return false
+    if (!matchRevenue(account.account_hq_revenue)) return false
+    if (!matchYears(account.years_in_india)) return false
+    if (!matchName(account.account_global_legal_name)) return false
+    if (!hasExplicitNameSearch && !matchAccountVisibility(account.account_visibility, filters.accountVisibilityMode))
+      return false
+    return true
+  })
+}
+
+/**
+ * Entity-specific center filter that only runs center-level match
+ * functions and returns centers that pass the scoped filters.
+ * Skips account/function/prospect/service looping entirely.
+ */
+function filterCentersOnly(centers: Center[], filters: AvailableOptionsFilterState): Center[] {
+  const matchType = createValueMatcher(filters.centerTypeValues)
+  const matchFocus = createValueMatcher(filters.centerFocusValues)
+  const matchCity = createValueMatcher(filters.centerCityValues)
+  const matchState = createValueMatcher(filters.centerStateValues)
+  const matchCountry = createValueMatcher(filters.centerCountryValues)
+  const matchEmployees = createValueMatcher(filters.centerEmployeesRangeValues)
+  const matchStatus = createValueMatcher(filters.centerStatusValues)
+  const matchIncYear = (v: number | string | null | undefined) =>
+    rangeFilterMatch(filters.centerIncYearRange, v, filters.centerIncYearIncludeNull)
+
+  return centers.filter((center) => {
+    if (!matchType(center.center_type)) return false
+    if (!matchFocus(center.center_focus)) return false
+    if (!matchCity(center.center_city)) return false
+    if (!matchState(center.center_state)) return false
+    if (!matchCountry(center.center_country)) return false
+    if (!matchEmployees(center.center_employees_range)) return false
+    if (!matchStatus(center.center_status)) return false
+    if (!matchIncYear(center.center_inc_year)) return false
+    return true
+  })
+}
+
+/**
+ * Entity-specific prospect filter that only runs prospect-level match
+ * functions and returns prospects that pass the scoped filters.
+ * Skips account/center/function/service looping entirely.
+ */
+function filterProspectsOnly(prospects: Prospect[], filters: AvailableOptionsFilterState): Prospect[] {
+  const matchDepartment = createValueMatcher(filters.prospectDepartmentValues)
+  const matchHeadType = createValueMatcher(filters.prospectHeadTypeValues)
+  const matchLevel = createValueMatcher(filters.prospectLevelValues)
+  const matchCity = createValueMatcher(filters.prospectCityValues)
+  const matchTitle = createKeywordMatcher(filters.prospectTitleKeywords)
+
+  return prospects.filter((prospect) => {
+    if (!matchDepartment(prospect.prospect_department)) return false
+    if (!matchHeadType(prospect.head_type)) return false
+    if (!matchLevel(prospect.prospect_level)) return false
+    if (!matchCity(prospect.prospect_city)) return false
+    if (!matchTitle(prospect.prospect_title)) return false
+    return true
+  })
+}
+
+/**
+ * Returns a copy of `filters` with the given facet's filter cleared.
+ */
+function withoutFacet<T extends AvailableOptionsFilterState>(filters: T, key: keyof AvailableOptions): T {
+  const clone = { ...filters }
+  ;(clone as Record<string, unknown>)[key] = []
+  return clone
+}
+
+/**
+ * Which entity type a facet key maps to.
+ */
+const ACCOUNT_FACETS: ReadonlySet<string> = new Set([
+  "accountHqRegionValues",
+  "accountHqCountryValues",
+  "accountHqIndustryValues",
+  "accountDataCoverageValues",
+  "accountSourceValues",
+  "accountTypeValues",
+  "accountPrimaryCategoryValues",
+  "accountPrimaryNatureValues",
+  "accountNasscomStatusValues",
+  "accountHqEmployeeRangeValues",
+  "accountCenterEmployeesRangeValues",
+])
+
+const CENTER_FACETS: ReadonlySet<string> = new Set([
+  "centerTypeValues",
+  "centerFocusValues",
+  "centerCityValues",
+  "centerStateValues",
+  "centerCountryValues",
+  "centerEmployeesRangeValues",
+  "centerStatusValues",
+])
+
 export function getAvailableOptions(
   accounts: Account[],
   centers: Center[],
@@ -433,130 +607,81 @@ export function getAvailableOptions(
   filters: AvailableOptionsFilterState,
   access: FilteringAccess = {}
 ): AvailableOptions {
-  type FacetKey = keyof AvailableOptions
+  const baseFilteredData = getFilteredData(
+    accounts,
+    centers,
+    functions,
+    [],
+    prospects,
+    tech,
+    filters as Filters,
+    access
+  )
 
-  const facetDataCache = new Map<FacetKey, FilteredData>()
-  const baseFilteredData = getFilteredData(accounts, centers, functions, [], prospects, tech, filters as Filters, access)
-
-  const hasActiveFacetSelection = (key: FacetKey) => filters[key].length > 0
-
-  const getFacetData = (key: FacetKey) => {
-    if (!hasActiveFacetSelection(key)) {
-      return baseFilteredData
-    }
-
-    const cached = facetDataCache.get(key)
-    if (cached) return cached
-
-    const scopedFilters = {
-      ...filters,
-      [key]: [],
-    } as Filters
-
-    // Services are not needed to compute filter option counts.
-    const scopedData = getFilteredData(accounts, centers, functions, [], prospects, tech, scopedFilters, access)
-    facetDataCache.set(key, scopedData)
-    return scopedData
+  const hasSelection = (key: string): boolean => {
+    const val = (filters as Record<string, unknown>)[key]
+    return Array.isArray(val) && val.length > 0
   }
 
-  const countValues = <T,>(rows: T[], valueSelector: (row: T) => string | null | undefined) => {
-    const counts = new Map<string, number>()
-    for (const row of rows) {
-      const value = String(valueSelector(row) ?? "")
-      counts.set(value, (counts.get(value) || 0) + 1)
-    }
-    return counts
+  const baseAccountOpts = (key: string) =>
+    toSortedOptions(countOnly(baseFilteredData.filteredAccounts, (a) => pickAccountValue(a, key)))
+  const baseCenterOpts = (key: string) =>
+    toSortedOptions(countOnly(baseFilteredData.filteredCenters, (c) => pickCenterValue(c, key)))
+  const baseProspectOpts = (key: string) =>
+    toSortedOptions(countOnly(baseFilteredData.filteredProspects, (p) => pickProspectValue(p, key)))
+  const baseFunctionOpts = () => toSortedOptions(countOnly(baseFilteredData.filteredFunctions, (f) => f.function_name))
+
+  const excludedAccountOpts = (key: string) => {
+    const scoped = withoutFacet(filters, key as keyof AvailableOptions)
+    return toSortedOptions(countOnly(filterAccountsOnly(accounts, scoped), (a) => pickAccountValue(a, key)))
   }
 
-  const mapToSortedArray = (map: Map<string, number>): FilterOption[] =>
-    Array.from(map.entries())
-      .map(([value, count]) => ({ value, count }))
-      .sort((a, b) => b.count - a.count)
+  const excludedCenterOpts = (key: string) => {
+    const scoped = withoutFacet(filters, key as keyof AvailableOptions)
+    return toSortedOptions(countOnly(filterCentersOnly(centers, scoped), (c) => pickCenterValue(c, key)))
+  }
+
+  const excludedProspectOpts = (key: string) => {
+    const scoped = withoutFacet(filters, key as keyof AvailableOptions)
+    return toSortedOptions(countOnly(filterProspectsOnly(prospects, scoped), (p) => pickProspectValue(p, key)))
+  }
+
+  const resolve = (key: string) => {
+    if (hasSelection(key)) {
+      if (ACCOUNT_FACETS.has(key)) return excludedAccountOpts(key)
+      if (CENTER_FACETS.has(key)) return excludedCenterOpts(key)
+      if (key === "functionNameValues") return baseFunctionOpts()
+      return excludedProspectOpts(key)
+    }
+    if (ACCOUNT_FACETS.has(key)) return baseAccountOpts(key)
+    if (CENTER_FACETS.has(key)) return baseCenterOpts(key)
+    if (key === "functionNameValues") return baseFunctionOpts()
+    return baseProspectOpts(key)
+  }
 
   return {
-    accountHqRegionValues: mapToSortedArray(
-      countValues(getFacetData("accountHqRegionValues").filteredAccounts, (account) => account.account_hq_region)
-    ),
-    accountHqCountryValues: mapToSortedArray(
-      countValues(getFacetData("accountHqCountryValues").filteredAccounts, (account) => account.account_hq_country)
-    ),
-    accountHqIndustryValues: mapToSortedArray(
-      countValues(getFacetData("accountHqIndustryValues").filteredAccounts, (account) => account.account_hq_industry)
-    ),
-    accountDataCoverageValues: mapToSortedArray(
-      countValues(getFacetData("accountDataCoverageValues").filteredAccounts, (account) => account.account_data_coverage)
-    ),
-    accountSourceValues: mapToSortedArray(
-      countValues(getFacetData("accountSourceValues").filteredAccounts, (account) => account.account_source)
-    ),
-    accountTypeValues: mapToSortedArray(
-      countValues(getFacetData("accountTypeValues").filteredAccounts, (account) => account.account_type)
-    ),
-    accountPrimaryCategoryValues: mapToSortedArray(
-      countValues(
-        getFacetData("accountPrimaryCategoryValues").filteredAccounts,
-        (account) => account.account_primary_category
-      )
-    ),
-    accountPrimaryNatureValues: mapToSortedArray(
-      countValues(
-        getFacetData("accountPrimaryNatureValues").filteredAccounts,
-        (account) => account.account_primary_nature
-      )
-    ),
-    accountNasscomStatusValues: mapToSortedArray(
-      countValues(
-        getFacetData("accountNasscomStatusValues").filteredAccounts,
-        (account) => account.account_nasscom_status
-      )
-    ),
-    accountHqEmployeeRangeValues: mapToSortedArray(
-      countValues(
-        getFacetData("accountHqEmployeeRangeValues").filteredAccounts,
-        (account) => account.account_hq_employee_range
-      )
-    ),
-    accountCenterEmployeesRangeValues: mapToSortedArray(
-      countValues(
-        getFacetData("accountCenterEmployeesRangeValues").filteredAccounts,
-        (account) => account.account_center_employees_range || ""
-      )
-    ),
-    centerTypeValues: mapToSortedArray(
-      countValues(getFacetData("centerTypeValues").filteredCenters, (center) => center.center_type)
-    ),
-    centerFocusValues: mapToSortedArray(
-      countValues(getFacetData("centerFocusValues").filteredCenters, (center) => center.center_focus)
-    ),
-    centerCityValues: mapToSortedArray(
-      countValues(getFacetData("centerCityValues").filteredCenters, (center) => center.center_city)
-    ),
-    centerStateValues: mapToSortedArray(
-      countValues(getFacetData("centerStateValues").filteredCenters, (center) => center.center_state)
-    ),
-    centerCountryValues: mapToSortedArray(
-      countValues(getFacetData("centerCountryValues").filteredCenters, (center) => center.center_country)
-    ),
-    centerEmployeesRangeValues: mapToSortedArray(
-      countValues(getFacetData("centerEmployeesRangeValues").filteredCenters, (center) => center.center_employees_range)
-    ),
-    centerStatusValues: mapToSortedArray(
-      countValues(getFacetData("centerStatusValues").filteredCenters, (center) => center.center_status)
-    ),
-    functionNameValues: mapToSortedArray(
-      countValues(getFacetData("functionNameValues").filteredFunctions, (func) => func.function_name)
-    ),
-    prospectDepartmentValues: mapToSortedArray(
-      countValues(getFacetData("prospectDepartmentValues").filteredProspects, (prospect) => prospect.prospect_department)
-    ),
-    prospectHeadTypeValues: mapToSortedArray(
-      countValues(getFacetData("prospectHeadTypeValues").filteredProspects, (prospect) => prospect.head_type)
-    ),
-    prospectLevelValues: mapToSortedArray(
-      countValues(getFacetData("prospectLevelValues").filteredProspects, (prospect) => prospect.prospect_level)
-    ),
-    prospectCityValues: mapToSortedArray(
-      countValues(getFacetData("prospectCityValues").filteredProspects, (prospect) => prospect.prospect_city)
-    ),
+    accountHqRegionValues: resolve("accountHqRegionValues"),
+    accountHqCountryValues: resolve("accountHqCountryValues"),
+    accountHqIndustryValues: resolve("accountHqIndustryValues"),
+    accountDataCoverageValues: resolve("accountDataCoverageValues"),
+    accountSourceValues: resolve("accountSourceValues"),
+    accountTypeValues: resolve("accountTypeValues"),
+    accountPrimaryCategoryValues: resolve("accountPrimaryCategoryValues"),
+    accountPrimaryNatureValues: resolve("accountPrimaryNatureValues"),
+    accountNasscomStatusValues: resolve("accountNasscomStatusValues"),
+    accountHqEmployeeRangeValues: resolve("accountHqEmployeeRangeValues"),
+    accountCenterEmployeesRangeValues: resolve("accountCenterEmployeesRangeValues"),
+    centerTypeValues: resolve("centerTypeValues"),
+    centerFocusValues: resolve("centerFocusValues"),
+    centerCityValues: resolve("centerCityValues"),
+    centerStateValues: resolve("centerStateValues"),
+    centerCountryValues: resolve("centerCountryValues"),
+    centerEmployeesRangeValues: resolve("centerEmployeesRangeValues"),
+    centerStatusValues: resolve("centerStatusValues"),
+    functionNameValues: resolve("functionNameValues"),
+    prospectDepartmentValues: resolve("prospectDepartmentValues"),
+    prospectHeadTypeValues: resolve("prospectHeadTypeValues"),
+    prospectLevelValues: resolve("prospectLevelValues"),
+    prospectCityValues: resolve("prospectCityValues"),
   }
 }

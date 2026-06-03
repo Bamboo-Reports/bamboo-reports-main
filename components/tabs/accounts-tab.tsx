@@ -24,8 +24,12 @@ import { AccountGridCard } from "@/components/cards/account-grid-card"
 import { PieChartCard } from "@/components/charts/pie-chart-card"
 import { EmptyState } from "@/components/states/empty-state"
 import { AccountDetailsDialog } from "@/components/dialogs/account-details-tabbed-dialog"
-import { CentersMap } from "@/components/maps/centers-map"
-import { CentersChoroplethMap } from "@/components/maps/centers-choropleth-map"
+import dynamic from "next/dynamic"
+const CentersMap = dynamic(() => import("@/components/maps/centers-map").then((m) => m.CentersMap), { ssr: false })
+const CentersChoroplethMap = dynamic(
+  () => import("@/components/maps/centers-choropleth-map").then((m) => m.CentersChoroplethMap),
+  { ssr: false }
+)
 import { MapErrorBoundary } from "@/components/maps/map-error-boundary"
 import { ViewSwitcher } from "@/components/ui/view-switcher"
 import { SortButton } from "@/components/ui/sort-button"
@@ -109,13 +113,8 @@ export function AccountsTab({
   })
   const [dataLayout, setDataLayout] = useState<"table" | "grid">("table")
   const [mapMode, setMapMode] = useState<"city" | "state">("state")
-  const {
-    columns,
-    visibleColumnSet,
-    isColumnVisible,
-    setColumnVisible,
-    resetColumns,
-  } = useTableColumnPreferences("accounts")
+  const { columns, visibleColumnSet, isColumnVisible, setColumnVisible, resetColumns } =
+    useTableColumnPreferences("accounts")
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -135,40 +134,43 @@ export function AccountsTab({
     openedFrom: "table_row" | "grid_card"
     account: Account
   } | null>(null)
-  const handleAccountClick = React.useCallback((account: Account, openedFrom: "table_row" | "grid_card") => {
-    if (isDialogOpen && openedRecordRef.current) {
-      const dwellSeconds = Math.max(0, Math.round((Date.now() - openedRecordRef.current.openedAt) / 1000))
-      captureEvent(ANALYTICS_EVENTS.RECORD_CLOSED, {
-        entity: "account",
-        record_id: openedRecordRef.current.recordId,
-        dwell_seconds: dwellSeconds,
-        close_reason: "switch_to_another_record",
+  const handleAccountClick = React.useCallback(
+    (account: Account, openedFrom: "table_row" | "grid_card") => {
+      if (isDialogOpen && openedRecordRef.current) {
+        const dwellSeconds = Math.max(0, Math.round((Date.now() - openedRecordRef.current.openedAt) / 1000))
+        captureEvent(ANALYTICS_EVENTS.RECORD_CLOSED, {
+          entity: "account",
+          record_id: openedRecordRef.current.recordId,
+          dwell_seconds: dwellSeconds,
+          close_reason: "switch_to_another_record",
+        })
+      }
+      setSelectedAccount(account)
+      setIsDialogOpen(true)
+      openedRecordRef.current = {
+        recordId: account.account_global_legal_name,
+        openedAt: Date.now(),
+        openedFrom,
+        account,
+      }
+      onRecordOpened?.({
+        type: "account",
+        id: account.account_global_legal_name ?? "",
+        title: account.account_global_legal_name ?? "Unknown Account",
+        subtitle: [account.account_hq_city, account.account_hq_country].filter(Boolean).join(", "),
       })
-    }
-    setSelectedAccount(account)
-    setIsDialogOpen(true)
-    openedRecordRef.current = {
-      recordId: account.account_global_legal_name,
-      openedAt: Date.now(),
-      openedFrom,
-      account,
-    }
-    onRecordOpened?.({
-      type: "account",
-      id: account.account_global_legal_name ?? "",
-      title: account.account_global_legal_name ?? "Unknown Account",
-      subtitle: [account.account_hq_city, account.account_hq_country].filter(Boolean).join(", "),
-    })
-    captureEvent(ANALYTICS_EVENTS.RECORD_OPENED, {
-      entity: "account",
-      record_id: account.account_global_legal_name,
-      record_label: account.account_global_legal_name,
-      source_view: accountsView,
-      source_layout: accountsView === "data" ? dataLayout : null,
-      opened_from: openedFrom,
-      has_website: Boolean(account.account_hq_website),
-    })
-  }, [isDialogOpen, onRecordOpened, accountsView, dataLayout])
+      captureEvent(ANALYTICS_EVENTS.RECORD_OPENED, {
+        entity: "account",
+        record_id: account.account_global_legal_name,
+        record_label: account.account_global_legal_name,
+        source_view: accountsView,
+        source_layout: accountsView === "data" ? dataLayout : null,
+        opened_from: openedFrom,
+        has_website: Boolean(account.account_hq_website),
+      })
+    },
+    [isDialogOpen, onRecordOpened, accountsView, dataLayout]
+  )
 
   const handleSort = (key: typeof sort.key) => {
     let nextDirection: "asc" | "desc" | null = "asc"
@@ -232,7 +234,6 @@ export function AccountsTab({
     })
     openedRecordRef.current = null
   }, [isDialogOpen])
-
 
   const sortedAccounts = React.useMemo(() => {
     if (!sort.direction) return accounts
@@ -310,25 +311,21 @@ export function AccountsTab({
             {
               value: "chart",
               label: <span className="text-[hsl(var(--chart-1))]">Charts</span>,
-              icon: (
-                <PieChartIcon className="h-4 w-4 text-[hsl(var(--chart-1))]" />
-              ),
+              icon: <PieChartIcon className="h-4 w-4 text-[hsl(var(--chart-1))]" />,
             },
             ...(allowMapView
-              ? [{
-                  value: "map",
-                  label: <span className="text-[hsl(var(--chart-4))]">Map</span>,
-                  icon: (
-                    <MapIcon className="h-4 w-4 text-[hsl(var(--chart-4))]" />
-                  ),
-                }]
+              ? [
+                  {
+                    value: "map",
+                    label: <span className="text-[hsl(var(--chart-4))]">Map</span>,
+                    icon: <MapIcon className="h-4 w-4 text-[hsl(var(--chart-4))]" />,
+                  },
+                ]
               : []),
             {
               value: "data",
               label: <span className="text-[hsl(var(--chart-2))]">Data</span>,
-              icon: (
-                <TableIcon className="h-4 w-4 text-[hsl(var(--chart-2))]" />
-              ),
+              icon: <TableIcon className="h-4 w-4 text-[hsl(var(--chart-2))]" />,
             },
           ]}
           className="ml-auto"
@@ -369,7 +366,10 @@ export function AccountsTab({
 
       {/* Map Section */}
       {accountsView === "map" && (
-        <Card data-tour="map-view" className="w-full flex flex-col h-[var(--dashboard-panel-height)] border shadow-sm view-content">
+        <Card
+          data-tour="map-view"
+          className="w-full flex flex-col h-[var(--dashboard-panel-height)] border shadow-sm view-content"
+        >
           <CardHeader className="shrink-0 px-6 py-3">
             <div className="flex items-center gap-3">
               <CardTitle className="text-base">Accounts Map</CardTitle>
@@ -426,16 +426,12 @@ export function AccountsTab({
                     {
                       value: "table",
                       label: <span className="text-[hsl(var(--chart-2))]">Table</span>,
-                      icon: (
-                        <TableIcon className="h-4 w-4 text-[hsl(var(--chart-2))]" />
-                      ),
+                      icon: <TableIcon className="h-4 w-4 text-[hsl(var(--chart-2))]" />,
                     },
                     {
                       value: "grid",
                       label: <span className="text-[hsl(var(--chart-3))]">Grid</span>,
-                      icon: (
-                        <LayoutGrid className="h-4 w-4 text-[hsl(var(--chart-3))]" />
-                      ),
+                      icon: <LayoutGrid className="h-4 w-4 text-[hsl(var(--chart-3))]" />,
                     },
                   ]}
                 />
@@ -456,74 +452,96 @@ export function AccountsTab({
                         />
                       </TableHead>
                       {isColumnVisible("name") && (
-                      <TableHead className="w-[280px]">
-                        <SortButton label="Account Name" sortKey="name" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
-                      </TableHead>
+                        <TableHead className="w-[280px]">
+                          <SortButton
+                            label="Account Name"
+                            sortKey="name"
+                            currentKey={sort.key}
+                            direction={sort.direction}
+                            onClick={handleSort}
+                          />
+                        </TableHead>
                       )}
                       {isColumnVisible("industry") && (
-                      <TableHead className="w-[220px]">
-                        <SortButton label="Sub Industry" sortKey="industry" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
-                      </TableHead>
+                        <TableHead className="w-[220px]">
+                          <SortButton
+                            label="Sub Industry"
+                            sortKey="industry"
+                            currentKey={sort.key}
+                            direction={sort.direction}
+                            onClick={handleSort}
+                          />
+                        </TableHead>
                       )}
                       {isColumnVisible("revenue") && (
-                      <TableHead className="w-[140px]">
-                        <SortButton label="Revenue Range" sortKey="revenue" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
-                      </TableHead>
+                        <TableHead className="w-[140px]">
+                          <SortButton
+                            label="Revenue Range"
+                            sortKey="revenue"
+                            currentKey={sort.key}
+                            direction={sort.direction}
+                            onClick={handleSort}
+                          />
+                        </TableHead>
                       )}
                       {isColumnVisible("employees") && (
-                      <TableHead className="w-[200px]">
-                        <SortButton label="GCC Aggregate Headcount (India)" sortKey="employees" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
-                      </TableHead>
+                        <TableHead className="w-[200px]">
+                          <SortButton
+                            label="GCC Aggregate Headcount (India)"
+                            sortKey="employees"
+                            currentKey={sort.key}
+                            direction={sort.direction}
+                            onClick={handleSort}
+                          />
+                        </TableHead>
                       )}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {pageAccounts.map(
-                      (account) => (
-                        <AccountRow
-                          key={account.account_global_legal_name}
-                          account={account}
-                          onOpen={handleRowOpen}
-                          visibleColumns={visibleColumnSet}
-                          selectable
-                          isSelected={selectedNames.has(account.account_global_legal_name ?? "")}
-                          onSelectChange={getAccountKey(account) ? handleRowSelectChange : undefined}
-                          isFavorite={favoriteKeys?.has(`account:${account.account_global_legal_name ?? ""}`)}
-                          onToggleFavorite={onToggleFavorite && getAccountKey(account) ? handleRowToggleFavorite : undefined}
-                        />
-                      )
-                    )}
+                    {pageAccounts.map((account) => (
+                      <AccountRow
+                        key={account.account_global_legal_name}
+                        account={account}
+                        onOpen={handleRowOpen}
+                        visibleColumns={visibleColumnSet}
+                        selectable
+                        isSelected={selectedNames.has(account.account_global_legal_name ?? "")}
+                        onSelectChange={getAccountKey(account) ? handleRowSelectChange : undefined}
+                        isFavorite={favoriteKeys?.has(`account:${account.account_global_legal_name ?? ""}`)}
+                        onToggleFavorite={
+                          onToggleFavorite && getAccountKey(account) ? handleRowToggleFavorite : undefined
+                        }
+                      />
+                    ))}
                   </TableBody>
                 </Table>
               ) : (
-                  <div className="flex flex-col">
-                    <div className="flex items-center gap-2 px-6 py-3 border-b bg-muted/20">
-                      <span className="text-xs font-medium text-muted-foreground">Sort</span>
-                      <button
-                        type="button"
-                        onClick={() => handleSort("name")}
-                        className="inline-flex items-center justify-center rounded-md border border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground hover:border-accent-foreground/20 shadow-sm transition-colors h-7 w-7"
-                        aria-label="Sort by account name"
-                      >
-                        {sort.key !== "name" || sort.direction === null ? (
-                          <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
-                        ) : sort.direction === "asc" ? (
-                          <ArrowUpAZ className="h-3.5 w-3.5 text-muted-foreground" />
-                        ) : (
-                          <ArrowDownAZ className="h-3.5 w-3.5 text-muted-foreground" />
-                        )}
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
-                      {getPaginatedData(sortedAccounts, currentPage, itemsPerPage).map(
-                        (account) => (
-                        <AccountGridCard
-                          key={account.account_global_legal_name}
-                          account={account}
-                          onClick={() => handleAccountClick(account, "grid_card")}
-                        />
-                      )
-                    )}
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2 px-6 py-3 border-b bg-muted/20">
+                    <span className="text-xs font-medium text-muted-foreground">Sort</span>
+                    <button
+                      type="button"
+                      onClick={() => handleSort("name")}
+                      className="inline-flex items-center justify-center rounded-md border border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground hover:border-accent-foreground/20 shadow-sm transition-colors h-7 w-7"
+                      aria-label="Sort by account name"
+                    >
+                      {sort.key !== "name" || sort.direction === null ? (
+                        <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+                      ) : sort.direction === "asc" ? (
+                        <ArrowUpAZ className="h-3.5 w-3.5 text-muted-foreground" />
+                      ) : (
+                        <ArrowDownAZ className="h-3.5 w-3.5 text-muted-foreground" />
+                      )}
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
+                    {getPaginatedData(sortedAccounts, currentPage, itemsPerPage).map((account) => (
+                      <AccountGridCard
+                        key={account.account_global_legal_name}
+                        account={account}
+                        onClick={() => handleAccountClick(account, "grid_card")}
+                      />
+                    ))}
                   </div>
                 </div>
               )}
