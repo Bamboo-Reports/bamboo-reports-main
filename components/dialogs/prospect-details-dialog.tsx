@@ -352,20 +352,6 @@ export function ProspectDetailsDialog({
                 <MetaRow label="Center" value={p.center_name} />
                 <MetaRow label="Location" value={location} />
                 <MetaRow label="Country" value={p.prospect_country?.trim().toUpperCase() === "TBA" || location === "India" ? null : p.prospect_country} />
-                {p.prospect_other_source_url ? (
-                  <div className="flex items-start justify-between gap-4 py-1.5 text-sm border-b border-border/30 last:border-b-0">
-                    <span className="text-muted-foreground shrink-0">Other Source</span>
-                    <a
-                      href={p.prospect_other_source_url.startsWith("http") ? p.prospect_other_source_url : `https://${p.prospect_other_source_url}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex min-w-0 items-center gap-1 font-medium text-primary hover:underline"
-                    >
-                      <span className="truncate">Open source</span>
-                      <SquareArrowOutUpRight className="h-3.5 w-3.5 shrink-0" />
-                    </a>
-                  </div>
-                ) : null}
               </div>
             </div>
           </section>

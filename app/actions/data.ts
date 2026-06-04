@@ -233,7 +233,7 @@ async function getDashboardProspects(): Promise<Prospect[]> {
         prospect_full_name, prospect_first_name, prospect_last_name,
         prospect_title, prospect_department, prospect_level, head_type, prospect_linkedin_url,
         prospect_email, prospect_city, prospect_state,
-        prospect_country, prospect_in_company_year, prospect_current_year, center_name, prospect_other_source_url
+        prospect_country, prospect_in_company_year, prospect_current_year, center_name
         FROM prospects`
     )) as Prospect[]
   } catch (error) {
