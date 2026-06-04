@@ -124,7 +124,7 @@ export function GlobalSearch({
       }),
     [enabledSectionSet, recentItems]
   )
-  const searchPlaceholder = `Search ${enabledSections.join(", ")}...`
+  const searchPlaceholder = `Search ${enabledSections.join(", ")}…`
 
   // Register global Cmd+K / Ctrl+K shortcut
   useEffect(() => {
@@ -208,7 +208,7 @@ export function GlobalSearch({
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Start typing to search...
+              Start typing to search…
             </p>
           )}
         </CommandEmpty>
