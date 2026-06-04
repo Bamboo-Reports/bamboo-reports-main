@@ -102,7 +102,8 @@ describe("server export builder", () => {
     await buildServerExport({
       datasets: ["services", "prospects"],
     })
-    // queryRaw will be called for services and prospects without filters
+    // queryRaw is used for linked child tables that are intentionally not
+    // modelled as Prisma relations in the read-only BI warehouse.
     const queryStrings = mocks.queryRaw.mock.calls.map(([strings]) => String(strings))
     expect(queryStrings).toContainEqual(expect.stringContaining("SELECT * FROM services ORDER BY center_name"))
     expect(queryStrings).toContainEqual(expect.stringContaining("SELECT * FROM prospects ORDER BY prospect_last_name, prospect_first_name"))

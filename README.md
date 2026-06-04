@@ -404,21 +404,23 @@ The core BI data resides in **Neon PostgreSQL**. All tables follow strict `snake
 |-------|-------------|-------------|
 | `accounts` | Top-level company entities with HQ details, financials, workforce | `account_global_legal_name` |
 | `centers` | Delivery centers / office locations with geospatial data | `cn_unique_key` |
-| `services` | Service-line rows linked to centers | `uuid` |
-| `functions` | Function rows linked to centers | `uuid` |
-| `tech` | Technology stack rows (software, vendors, categories) | `uuid` |
-| `prospects` | Contact/lead rows linked to accounts | `uuid` |
-| `alias` | Alternate account names (brand, abbreviation, flagship products) | `uuid` |
+| `services` | Service-line rows linked to centers | `cn_unique_key` (composite) |
+| `functions` | Function rows linked to centers | *(no surrogate PK)* |
+| `tech` | Technology stack rows (software, vendors, categories) | `cn_unique_key` (composite) |
+| `prospects` | Contact/lead rows linked to accounts | `ps_unique_key` |
+| `alias` | Alternate account names (brand, abbreviation, flagship products) | `account_global_legal_name` |
 
 ### Audit Tables (in `audit` schema)
 - `audit.import_runs` — Data import tracking
-- `audit.field_change_events` — Field-level audit log
-- `audit.notification_reads` — Notification read status
+- `audit.field_change_events` — Field-level audit log linked to `import_runs`
+- `audit.notification_reads` — Notification read status per user, linked to `field_change_events`
+- `audit.user_notification_state` — Per-user bookmark of the last read timestamp
 
 ### Key Relationships
-- `centers` link to `accounts` via `account_global_legal_name`
-- `services`, `functions`, and `tech` link to `centers` via `cn_unique_key`
-- `prospects` and `alias` link to `accounts` via `account_global_legal_name`
+- `alias` links to `accounts` via `account_global_legal_name` (cascades on delete)
+- `centers` links to `accounts` via `account_global_legal_name` (cascades on delete)
+- `services`, `functions`, and `tech` link to `centers` via `cn_unique_key` (cascades on delete)
+- `prospects` links to `accounts` via `account_global_legal_name` (cascades on delete)
 
 > **Reference:** See the [Schema Migration Guide](documentation/schema-migration-guide.md) for complete column definitions and table relationships.
 

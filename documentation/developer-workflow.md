@@ -29,7 +29,7 @@ This guide is for developers maintaining or extending the Bamboo Reports applica
     ```
 
     Required variables:
-    - `DATABASE_URL` — Neon PostgreSQL pooled runtime connection string
+    - `DATABASE_URL` — Neon PostgreSQL pooled runtime connection string used by Prisma for warehouse data
     - `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL
     - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase public key
     - `NEXT_PUBLIC_MAPTILER_KEY` — MapTiler API key
@@ -193,7 +193,8 @@ If UI alignment needs tuning:
 - **Shared Types:** All entity types live in `lib/types.ts`. Keep them in sync with `etl/master-schema.json`.
 
 ### Performance Best Practices
-- **Server Actions:** Use the Prisma singleton from `lib/db/prisma.ts` and wrap database calls with `queryWithRetry`.
+- **Neon warehouse reads:** Use the Prisma singleton from `lib/db/prisma.ts` and wrap database calls with `queryWithRetry`.
+- **Supabase user data:** Keep Auth, profiles, saved filters, favorites, export metadata, and Storage on the existing Supabase clients so RLS and Storage behavior remain intact.
 - **Client Components:** Use `useMemo` for expensive data transformations (sorting/filtering 1000+ rows).
 - **Row Components:** Wrap table row components with `React.memo` to prevent unnecessary re-renders.
 - **Search Inputs:** Always debounce (300ms minimum).

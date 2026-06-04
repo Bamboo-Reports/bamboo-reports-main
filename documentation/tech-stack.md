@@ -216,9 +216,9 @@ Technologies for storing and querying data.
 | **What it is** | A serverless PostgreSQL platform with autoscaling and branching |
 | **Version** | Accessed through Prisma ORM 7.x with `@prisma/adapter-neon` |
 | **Why we use it** | Acts as the primary Business Intelligence data warehouse. Serverless architecture supports Vercel deployments and Neon connection pooling |
-| **Access pattern** | Prisma model reads for keyed warehouse tables; Prisma raw SQL for analytical/no-key queries |
+| **Access pattern** | Prisma model reads for `accounts` and `centers`; Prisma tagged raw SQL for linked child tables, analytical queries, and computed-selection queries |
 | **Key features** | Connection pooling, generated TypeScript client, parameterized queries |
-| **Tables** | `accounts`, `centers`, `services`, `functions`, `tech`, `prospects`, plus audit tables |
+| **Tables** | `accounts`, `centers`, `alias`, `services`, `functions`, `tech`, `prospects`, plus audit tables |
 | **Retry logic** | Exponential retry wrapper in `lib/db/prisma.ts` |
 | **Package** | `prisma`, `@prisma/client`, `@prisma/adapter-neon` |
 
@@ -239,8 +239,9 @@ Technologies for storing and querying data.
 |---|---|
 | **What it is** | An open-source Firebase alternative built on PostgreSQL |
 | **Version** | 2.106.x (JS client) |
-| **Why we use it** | Provides authentication, user profiles, and saved filter storage. Built-in Row-Level Security (RLS) ensures data isolation between users without custom middleware |
-| **Tables managed** | `public.profiles` (user metadata), `public.saved_filters` (filter configurations), `public.user_exports` (export audit log) |
+| **Why we use it** | Provides authentication, user profiles, saved filter/favorite storage, export audit metadata, and private export Storage. Built-in Row-Level Security (RLS) ensures data isolation between users without custom middleware |
+| **Tables managed** | `public.profiles`, `public.saved_filters`, `public.filter_shares`, `public.user_favorites`, `public.user_exports` |
+| **Access pattern** | Supabase JS client/service-role APIs; not Prisma |
 | **Package** | `@supabase/supabase-js` |
 
 ---
@@ -396,7 +397,7 @@ Third-party services the application communicates with at runtime.
 | Service | Purpose | Required | Environment Variable |
 |---------|---------|----------|---------------------|
 | **Neon PostgreSQL** | Primary BI data warehouse | Yes | `DATABASE_URL`; `DIRECT_URL` optional for Prisma CLI |
-| **Supabase** | Authentication, profiles, saved filters | Yes | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` |
+| **Supabase** | Authentication, profiles, saved filters, favorites, export Storage | Yes | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` for server-side Storage/export operations |
 | **MapTiler** | Map tiles for geospatial views | Yes | `NEXT_PUBLIC_MAPTILER_KEY` |
 | **Logo.dev** | Company logo images | No | `NEXT_PUBLIC_LOGO_DEV_KEY` |
 | **PostHog** | Product analytics | No | `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST` |

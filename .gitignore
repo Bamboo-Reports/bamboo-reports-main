@@ -48,6 +48,7 @@ bamboo-reports-*.json
 
 # Generated files
 /generated_schema/
+/coverage/
 
 # Python
 __pycache__/
