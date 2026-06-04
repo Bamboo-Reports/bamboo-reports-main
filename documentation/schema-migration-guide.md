@@ -1,9 +1,9 @@
 # Schema Migration & Reference Guide (2026-05)
 
-This guide documents the migration from the legacy column naming (uppercase, space-separated) to the new snake_case schema and provides a comprehensive reference for the current database structure (`etl/master-schema.json`).
+This guide documents the migration from the legacy column naming (uppercase, space-separated) to the new snake_case schema and provides a comprehensive reference for the current database columns (`etl/master-schema.json`). For table hierarchy, primary keys, and linking columns, use `documentation/table-relationships.md` as the source of truth.
 
 > Target Audience: Backend engineers, Data engineers, and Frontend developers wiring up UI components.
-> Source of Truth: The database schema definitions below are derived from the master schema JSON.
+> Source of Truth: Column definitions below are derived from the master schema JSON. Relationship and key semantics are defined in `documentation/table-relationships.md`.
 
 ---
 
@@ -12,9 +12,7 @@ This guide documents the migration from the legacy column naming (uppercase, spa
 - Core Tables: `accounts`, `centers`, `services`, `functions`, `tech`, `prospects`, `alias`.
 - Audit Tables: `audit.import_runs`, `audit.field_change_events`, `audit.notification_reads`.
 - Naming Convention: strict `snake_case`.
-- Primary Keys (PK):
-  - `accounts` -> `account_global_legal_name`
-  - `centers` -> `cn_unique_key`
+- Primary keys and table relationships: see `documentation/table-relationships.md`.
 - Linkage:
   - `centers` links to `accounts` via `account_global_legal_name`.
   - `services`, `functions`, and `tech` link to `centers` via `cn_unique_key`.
@@ -55,7 +53,7 @@ Notable columns:
 Description: Service-line rows linked to centers.
 
 Notable columns:
-- Keys and metadata: `uuid`, `last_update_date`
+- Keys and metadata: `cn_unique_key` (service row identity, see `documentation/table-relationships.md`), `uuid`, `last_update_date`
 - Linkage: `cn_unique_key`, `account_global_legal_name`
 - Denormalized center fields: `center_name`, `center_type`, `center_focus`, `center_city`
 - Service taxonomy: `primary_service`, `focus_region`, `service_it`, `service_erd`, `service_fna`, `service_hr`, `service_procurement`, `service_sales_marketing`, `service_customer_support`, `service_others`
@@ -69,6 +67,8 @@ Columns:
 - `cn_unique_key`
 - `function_name`
 
+Relationship identity: no surrogate primary key; rows link to centers via `cn_unique_key` and are interpreted with `function_name`.
+
 ### 2.5 Table: `tech`
 Description: Technology stack rows linked to centers/accounts. Used for software keyword filtering and tech visualizations.
 
@@ -80,13 +80,15 @@ Columns:
 - `software_vendor`
 - `software_category`
 
+Relationship identity: linked to centers by `cn_unique_key`; see `documentation/table-relationships.md` for the composite relationship semantics.
+
 ### 2.6 Table: `prospects`
 Description: Contact/lead rows linked to accounts.
 
 Columns:
 - `uuid`
 - `last_update_date`
-- `ps_unique_key`
+- `ps_unique_key` (prospect row identity, see `documentation/table-relationships.md`)
 - `account_global_legal_name`
 - `center_name`
 - `prospect_full_name`, `prospect_first_name`, `prospect_last_name`
@@ -99,8 +101,8 @@ Columns:
 Description: Alternate names and brands for an account, sourced from the "alias" sheet. Powers alias-aware account search (global search and the account filter autocomplete). Linked to `accounts` by a foreign key on `account_global_legal_name` with `ON UPDATE CASCADE` / `ON DELETE CASCADE`.
 
 Columns:
-- `uuid` (PK)
-- `account_global_legal_name` (FK to `accounts`)
+- `uuid`
+- `account_global_legal_name` (alias row identity and FK to `accounts`, see `documentation/table-relationships.md`)
 - `short_legal_name`
 - `brand_name`
 - `abbreviated_name`
@@ -108,7 +110,7 @@ Columns:
 - `currently_known_as`
 - `notes`
 
-> Migration: `documentation/sql/alias-table-migration.sql`.
+> Relationship reference: `documentation/table-relationships.md`.
 
 ---
 

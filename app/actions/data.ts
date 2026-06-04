@@ -67,7 +67,7 @@ async function getAliases(): Promise<Alias[]> {
     const prisma = getPrismaOrThrow()
     return (await measureRows(
       "aliases",
-      () => prisma.$queryRaw`SELECT account_global_legal_name, short_legal_name, brand_name,
+      () => prisma.$queryRaw`SELECT uuid, account_global_legal_name, short_legal_name, brand_name,
         abbreviated_name, flagship_products, currently_known_as, notes
         FROM alias`
     )) as Alias[]

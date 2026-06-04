@@ -17,17 +17,19 @@ User Interaction
     → UI Re-render (Tables, Charts, Maps, Summary Cards)
 ```
 
-For operations requiring fresh data (initial load, saved filters, notifications):
+For operations requiring fresh Neon warehouse data (initial load, dashboard refresh, notifications):
 
 ```
 Component Mount / User Action
     → Server Action (app/actions/*.ts)
     → Prisma Client Query with Retry Logic (lib/db/prisma.ts)
-    → Neon PostgreSQL / Supabase
+    → Neon PostgreSQL
     → Serialized Response
     → React State Update
     → UI Re-render
 ```
+
+Supabase-backed user data (auth, profiles, saved filters, favorites, export audit rows, and Storage) stays on the Supabase client/service-role APIs so RLS/Auth/Storage behavior remains unchanged.
 
 ---
 
@@ -36,8 +38,7 @@ Component Mount / User Action
 ### 2.1 `app/` (Routes & Actions)
 
 -   **`actions.ts`**: Central re-export point for all server action modules.
--   **`actions/data.ts`**: Core data fetching — accounts, centers, services, functions, tech, prospects. Prisma model reads for keyed warehouse tables and Prisma raw SQL for analytical/no-key queries.
--   **`actions/saved-filters.ts`**: CRUD operations for user-saved filter configurations (Supabase).
+-   **`actions/data.ts`**: Core Neon warehouse fetching — accounts, centers, services, functions, tech, prospects, and aliases. Uses Prisma model reads for `accounts`/`centers` and Prisma tagged raw SQL for the linked child tables and analytical queries.
 -   **`actions/financial.ts`**: Financial data queries (Yahoo Finance integration for stock data).
 -   **`actions/notifications.ts`**: Notification tracking — recently updated accounts and records, read status.
 -   **`actions/system.ts`**: System diagnostics and health checks.
@@ -46,7 +47,7 @@ Component Mount / User Action
 -   **`(auth)/`**: Auth route group containing `signin/` and `signup/` pages.
 -   **`api/dashboard/`**: Route Handler that serves the full dashboard dataset with an in-memory SWR cache and gzip compression (see `documentation/api-caching-swr.md`).
 -   **`api/exports/`**: Route Handlers for generating, listing, and re-downloading user exports.
--   **Rule:** Database access is isolated to `app/actions/*`, `app/api/*`, and `lib/db/prisma.ts`. Components should never import database clients directly.
+-   **Rule:** Neon database access is isolated to `app/actions/*`, `app/api/*`, and `lib/db/prisma.ts`. Supabase Auth, RLS-backed user tables, and Storage continue to use Supabase client/service-role APIs.
 
 ### 2.2 `components/` (UI Composition)
 
@@ -101,7 +102,7 @@ Key components:
 | `auth/` | Role-based access control (`UserRole`, `canExportData()`) |
 | `config/` | Environment label, dashboard access, premium filter reveal, MapTiler configuration, notification settings |
 | `dashboard/` | Dashboard-specific data transformation utilities |
-| `db/` | Prisma Client singleton for Neon PostgreSQL with retry logic |
+| `db/` | Prisma Client singleton for Neon PostgreSQL warehouse access with retry logic |
 | `exports/` | Export request client and server-side ExcelJS workbook builder |
 | `finance/` | Financial data transformation utilities |
 | `notifications/` | Notification message formatting helpers |
@@ -155,7 +156,7 @@ Managed by `useNotifications` hook.
 
 ### 4.1 Neon PostgreSQL (Data Warehouse)
 
-We use Prisma ORM over Neon PostgreSQL. Keyed warehouse tables (`accounts`, `centers`) use Prisma model reads; aggregation-heavy queries and tables without stable Prisma identifiers use Prisma raw SQL for control over query structure.
+We use Prisma ORM over Neon PostgreSQL only. `accounts` and `centers` are modelled in Prisma, matching `documentation/table-relationships.md`. The linked child tables (`alias`, `functions`, `services`, `tech`, `prospects`) stay on Prisma tagged raw SQL; their linkage is handled through `account_global_legal_name` and `cn_unique_key` in query logic and client-side filters. Aggregation-heavy queries and edge-case selection logic also use Prisma raw SQL for control over query structure.
 
 ```typescript
 // app/actions/data.ts
@@ -173,9 +174,10 @@ const accounts = await queryWithRetry(() =>
 
 ### 4.2 Supabase PostgreSQL (User Data)
 
--   **Tables:** `public.profiles`, `public.saved_filters`, `public.user_exports` (export audit log).
+-   **Tables:** `public.profiles`, `public.saved_filters`, `public.filter_shares`, `public.user_favorites`, `public.user_exports` (export audit log).
 -   **Security:** Row-Level Security (RLS) policies ensure users can only access their own data.
--   **Client:** Singleton Supabase client in `lib/supabase/client.ts`.
+-   **Client:** Singleton Supabase browser client in `lib/supabase/client.ts`; service-role client in `lib/supabase/server.ts` for trusted Storage/export operations.
+-   **Boundary:** Supabase data is not accessed through Prisma in this codebase. Keeping Supabase on its own APIs preserves Auth, RLS, and Storage semantics.
 
 ### 4.3 Account Visibility (`account_visibility` / `account_visibility_note`)
 
