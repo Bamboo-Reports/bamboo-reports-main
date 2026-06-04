@@ -5,7 +5,7 @@ const nextConfig = {
     browserToTerminal: true,
   },
   images: {
-    unoptimized: true,
+    minimumCacheTTL: 7776000, // cache for 90 days
     remotePatterns: [
       {
         protocol: "https",
