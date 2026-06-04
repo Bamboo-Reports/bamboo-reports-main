@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/context-menu"
 import type { Center } from "@/lib/types"
 import { ensureAbsoluteUrl } from "@/lib/utils"
+import { formatCenterLocation } from "@/lib/utils/helpers"
 interface CenterGridCardProps {
   center: Center
   onClick: () => void
@@ -27,7 +28,7 @@ const getStatusDotColor = (status: string | null | undefined) => {
 export const CenterGridCard = memo(({ center, onClick }: CenterGridCardProps) => {
   const centerName = center.center_name || "Center"
   const accountName = center.account_global_legal_name || "Account"
-  const location = [center.center_city, center.center_state].filter(Boolean).join(", ")
+  const location = formatCenterLocation(center.center_city, center.center_state)
   const statusColor = getStatusDotColor(center.center_status)
 
   return (
@@ -78,9 +79,9 @@ export const CenterGridCard = memo(({ center, onClick }: CenterGridCardProps) =>
                 <span className="text-muted-foreground">Location</span>
                 <span
                   className="font-medium text-foreground text-right truncate max-w-[160px]"
-                  title={location || center.center_state || center.center_city || "-"}
+                  title={location}
                 >
-                  {location || center.center_state || center.center_city || "-"}
+                  {location}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-3 min-w-0">

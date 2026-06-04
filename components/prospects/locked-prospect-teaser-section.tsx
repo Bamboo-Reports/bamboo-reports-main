@@ -16,6 +16,7 @@ import { Lock, ShieldAlert, Sparkles } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { LockedProspectTeaser } from "@/lib/types"
 import type { ProspectTableColumnKey } from "@/lib/dashboard/table-column-preferences"
+import { formatProspectLocation } from "@/lib/utils/helpers"
 
 interface LockedProspectTeaserSectionProps {
   teasers: LockedProspectTeaser[]
@@ -47,7 +48,7 @@ export function LockedProspectTeaserCard({
   className,
 }: LockedProspectTeaserCardProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const location = [teaser.prospect_city, teaser.prospect_state].filter(Boolean).join(", ") || teaser.prospect_country || ""
+  const location = formatProspectLocation(teaser.prospect_city, teaser.prospect_state, teaser.prospect_country)
 
   return (
     <>
@@ -166,7 +167,7 @@ export function LockedProspectTeaserRow({
   selectable,
 }: LockedProspectTeaserRowProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const location = [teaser.prospect_city, teaser.prospect_state].filter(Boolean).join(", ") || teaser.prospect_country || ""
+  const location = formatProspectLocation(teaser.prospect_city, teaser.prospect_state, teaser.prospect_country)
 
   return (
     <>

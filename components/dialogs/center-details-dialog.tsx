@@ -28,6 +28,7 @@ import type { Center, Service, Tech } from "@/lib/types"
 import { CompanyLogo } from "@/components/ui/company-logo"
 import { DialogBreadcrumb } from "@/components/ui/dialog-breadcrumb"
 import { TechTreemap } from "@/components/charts/tech-treemap"
+import { formatCenterLocation } from "@/lib/utils/helpers"
 
 interface CenterDetailsDialogProps {
   center: Center | null
@@ -147,10 +148,7 @@ export function CenterDetailsDialog({
   }
 
   const announcedCombined = [center.announced_month, center.announced_year].filter(Boolean).join(" ")
-  const centerLocation = [center.center_city, center.center_state]
-    .map((part) => (typeof part === "string" ? part.trim() : part))
-    .filter(Boolean)
-    .join(", ")
+  const centerLocation = formatCenterLocation(center.center_city, center.center_state)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -291,7 +289,7 @@ export function CenterDetailsDialog({
                 <MetaRow label="Center Type" value={center.center_type} />
                 <MetaRow label="Center Focus" value={center.center_focus} />
                 <MetaRow label="Location" value={centerLocation} />
-                <MetaRow label="Country" value={center.center_country} />
+                <MetaRow label="Country" value={center.center_country?.trim().toUpperCase() === "TBA" || centerLocation === "India" ? null : center.center_country} />
                 <MetaRow label="Zip Code" value={center.center_zip_code} />
                 <MetaRow label="Boardline" value={center.center_boardline} />
                 <MetaRow label="Business Segment" value={center.center_business_segment} />

@@ -48,3 +48,40 @@ export const getPageInfo = (currentPage: number, totalItems: number, itemsPerPag
 export const copyToClipboard = (text: string) => {
   navigator.clipboard.writeText(text)
 }
+
+/**
+ * Builds a human-readable location string for a prospect.
+ * Values that are null, empty, or exactly "TBA" (case-insensitive) are ignored.
+ * If nothing meaningful remains after filtering, falls back to `country`, then "India".
+ */
+export const formatProspectLocation = (
+  city: string | null | undefined,
+  state: string | null | undefined,
+  country?: string | null | undefined,
+): string => {
+  const isMeaningful = (v: string | null | undefined): v is string =>
+    !!v && v.trim() !== "" && v.trim().toUpperCase() !== "TBA"
+
+  if (isMeaningful(city)) {
+    return isMeaningful(state) ? `${city.trim()}, ${state.trim()}` : city.trim()
+  }
+  if (isMeaningful(country)) return country
+  return "India"
+}
+/**
+ * Builds a human-readable location string for a center.
+ * A city that is null, empty, or exactly "TBA" (case-insensitive) is treated as absent.
+ * If city is absent, returns "India" as the fallback.
+ */
+export const formatCenterLocation = (
+  city: string | null | undefined,
+  state: string | null | undefined,
+): string => {
+  const isMeaningful = (v: string | null | undefined): v is string =>
+    !!v && v.trim() !== "" && v.trim().toUpperCase() !== "TBA"
+
+  if (isMeaningful(city)) {
+    return isMeaningful(state) ? `${city.trim()}, ${state.trim()}` : city.trim()
+  }
+  return "India"
+}

@@ -13,6 +13,7 @@ import type { Prospect } from "@/lib/types"
 import { ensureAbsoluteUrl } from "@/lib/utils"
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard"
 import type { ProspectTableColumnKey } from "@/lib/dashboard/table-column-preferences"
+import { formatProspectLocation } from "@/lib/utils/helpers"
 
 interface ProspectRowProps {
   prospect: Prospect
@@ -40,7 +41,7 @@ export const ProspectRow = memo(({ prospect, onOpen, visibleColumns, selectable,
     .slice(0, 2)
     .map((part) => part[0])
     .join("")
-  const location = [prospect.prospect_city, prospect.prospect_state].filter(Boolean).join(", ") || prospect.prospect_country || ""
+  const location = formatProspectLocation(prospect.prospect_city, prospect.prospect_state, prospect.prospect_country)
 
   return (
     <ContextMenu>

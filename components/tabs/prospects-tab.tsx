@@ -17,7 +17,7 @@ import { EmptyState } from "@/components/states/empty-state"
 import { ProspectDetailsDialog } from "@/components/dialogs/prospect-details-dialog"
 import { AccountDetailsDialog } from "@/components/dialogs/account-details-tabbed-dialog"
 import { LockedProspectTeaserCard, LockedProspectTeaserRow } from "@/components/prospects/locked-prospect-teaser-section"
-import { getPaginatedData } from "@/lib/utils/helpers"
+import { getPaginatedData, formatProspectLocation } from "@/lib/utils/helpers"
 import { ViewSwitcher } from "@/components/ui/view-switcher"
 import { SortButton } from "@/components/ui/sort-button"
 import { PaginationControls } from "@/components/ui/pagination-controls"
@@ -251,7 +251,7 @@ export function ProspectsTab({
             [prospect.prospect_first_name, prospect.prospect_last_name].filter(Boolean).join(" ")
           )
         case "location":
-          return [prospect.prospect_city, prospect.prospect_state].filter(Boolean).join(", ") || prospect.prospect_country || ""
+          return formatProspectLocation(prospect.prospect_city, prospect.prospect_state, prospect.prospect_country)
         case "title":
           return prospect.prospect_title
         default:

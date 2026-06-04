@@ -13,6 +13,7 @@ import {
 import type { Prospect } from "@/lib/types"
 import { ensureAbsoluteUrl } from "@/lib/utils"
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard"
+import { formatProspectLocation } from "@/lib/utils/helpers"
 
 interface ProspectGridCardProps {
   prospect: Prospect
@@ -31,7 +32,7 @@ export const ProspectGridCard = memo(({ prospect, onClick }: ProspectGridCardPro
     .map((part) => part[0])
     .join("")
   const accountName = prospect.account_global_legal_name || "Account"
-  const location = [prospect.prospect_city, prospect.prospect_state].filter(Boolean).join(", ") || prospect.prospect_country || ""
+  const location = formatProspectLocation(prospect.prospect_city, prospect.prospect_state, prospect.prospect_country)
 
   return (
     <ContextMenu>
