@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -42,6 +42,7 @@ import { Badge } from "@/components/ui/badge"
 import { TechTreemap } from "@/components/charts/tech-treemap"
 import { getAccountFinancialInfo } from "@/app/actions/financial"
 import { isSectionEnabled } from "@/lib/config/dashboard-access"
+import { PaginationControls } from "@/components/ui/pagination-controls"
 import {
   ChartContainer,
   ChartTooltip,
@@ -97,10 +98,10 @@ function QuickFilterGroup({
       <button
         type="button"
         onClick={onClear}
-        className={`text-xs px-2.5 py-1 rounded-full border transition-colors inline-flex items-center gap-1.5 ${selected.size === 0 ? "bg-foreground text-background border-foreground" : "bg-background/40 text-muted-foreground border-border/60 hover:bg-background/60"}`}
+        className={`text-xs px-2.5 py-1 rounded-full border transition-colors inline-flex items-center gap-1.5 ${selected.size === 0 ? "bg-primary text-primary-foreground border-primary" : "bg-background/40 text-muted-foreground border-border/60 hover:bg-background/60"}`}
       >
         All
-        <span className={`text-[10px] tabular-nums ${selected.size === 0 ? "text-background/70" : "text-muted-foreground/70"}`}>{totalCount}</span>
+        <span className={`text-[10px] tabular-nums ${selected.size === 0 ? "text-primary-foreground/70" : "text-muted-foreground/70"}`}>{totalCount}</span>
       </button>
       {options.map((opt) => {
         const active = selected.has(opt.name)
@@ -109,10 +110,10 @@ function QuickFilterGroup({
             key={opt.name}
             type="button"
             onClick={() => onToggle(opt.name)}
-            className={`text-xs px-2.5 py-1 rounded-full border transition-colors inline-flex items-center gap-1.5 ${active ? "bg-foreground text-background border-foreground" : "bg-background/40 text-foreground border-border/60 hover:bg-background/60"}`}
+            className={`text-xs px-2.5 py-1 rounded-full border transition-colors inline-flex items-center gap-1.5 ${active ? "bg-primary text-primary-foreground border-primary" : "bg-background/40 text-foreground border-border/60 hover:bg-background/60"}`}
           >
             {opt.name}
-            <span className={`text-[10px] tabular-nums ${active ? "text-background/70" : "text-muted-foreground/70"}`}>{opt.count}</span>
+            <span className={`text-[10px] tabular-nums ${active ? "text-primary-foreground/70" : "text-muted-foreground/70"}`}>{opt.count}</span>
           </button>
         )
       })}
@@ -216,8 +217,12 @@ export function AccountDetailsDialog({
   const [financialTickerLoaded, setFinancialTickerLoaded] = useState<string | null>(null)
   const [centerTypeFilter, setCenterTypeFilter] = useState<Set<string>>(new Set())
   const [centerHeadcountFilter, setCenterHeadcountFilter] = useState<Set<string>>(new Set())
+  const [centerPage, setCenterPage] = useState(1)
+  const [prospectHeadTypeFilter, setProspectHeadTypeFilter] = useState<Set<string>>(new Set())
   const [prospectDeptFilter, setProspectDeptFilter] = useState<Set<string>>(new Set())
   const [prospectLevelFilter, setProspectLevelFilter] = useState<Set<string>>(new Set())
+  const [prospectPage, setProspectPage] = useState(1)
+  const ITEMS_PER_PAGE = 6
   const accountName = account?.account_global_legal_name ?? ""
   const ticker = account?.account_hq_stock_ticker?.trim() ?? ""
 
@@ -257,15 +262,26 @@ export function AccountDetailsDialog({
     .filter(Boolean)
     .join(", ")
 
-  const centerTypeOptions = React.useMemo(
-    () => sortByCount(accountCenters.map((c) => (c.center_type ?? "").trim())),
-    [accountCenters],
+  // Cascading center filters
+  const centerTypeOptions = useMemo(
+    () => sortByCount(
+      accountCenters
+        .filter((c) => centerHeadcountFilter.size === 0 || centerHeadcountFilter.has((c.center_employees_range ?? "").trim()))
+        .map((c) => (c.center_type ?? "").trim())
+        .filter(Boolean)
+    ),
+    [accountCenters, centerHeadcountFilter],
   )
-  const centerHeadcountOptions = React.useMemo(
-    () => sortByCount(accountCenters.map((c) => (c.center_employees_range ?? "").trim())),
-    [accountCenters],
+  const centerHeadcountOptions = useMemo(
+    () => sortByCount(
+      accountCenters
+        .filter((c) => centerTypeFilter.size === 0 || centerTypeFilter.has((c.center_type ?? "").trim()))
+        .map((c) => (c.center_employees_range ?? "").trim())
+        .filter(Boolean)
+    ),
+    [accountCenters, centerTypeFilter],
   )
-  const filteredCenters = React.useMemo(() => {
+  const filteredCenters = useMemo(() => {
     return accountCenters.filter((c) => {
       if (centerTypeFilter.size > 0 && !centerTypeFilter.has((c.center_type ?? "").trim())) return false
       if (centerHeadcountFilter.size > 0 && !centerHeadcountFilter.has((c.center_employees_range ?? "").trim())) return false
@@ -273,21 +289,67 @@ export function AccountDetailsDialog({
     })
   }, [accountCenters, centerTypeFilter, centerHeadcountFilter])
 
-  const prospectDeptOptions = React.useMemo(
-    () => sortByCount(accountProspects.map((p) => (p.prospect_department ?? "").trim())),
-    [accountProspects],
+  // Reset center page when filters change
+  useEffect(() => { setCenterPage(1) }, [centerTypeFilter, centerHeadcountFilter])
+
+  const pagedCenters = useMemo(
+    () => filteredCenters.slice((centerPage - 1) * ITEMS_PER_PAGE, centerPage * ITEMS_PER_PAGE),
+    [filteredCenters, centerPage, ITEMS_PER_PAGE],
   )
-  const prospectLevelOptions = React.useMemo(
-    () => sortByCount(accountProspects.map((p) => (p.prospect_level ?? "").trim())),
-    [accountProspects],
+
+  // Cascading prospect filters (head type → dept → level, all three cascade with each other)
+  const prospectHeadTypeOptions = useMemo(
+    () => sortByCount(
+      accountProspects
+        .filter((p) =>
+          (prospectDeptFilter.size === 0 || prospectDeptFilter.has((p.prospect_department ?? "").trim())) &&
+          (prospectLevelFilter.size === 0 || prospectLevelFilter.has((p.prospect_level ?? "").trim()))
+        )
+        .map((p) => (p.head_type ?? "").trim())
+        .filter(Boolean)
+    ),
+    [accountProspects, prospectDeptFilter, prospectLevelFilter],
   )
-  const filteredProspects = React.useMemo(() => {
+  const prospectDeptOptions = useMemo(
+    () => sortByCount(
+      accountProspects
+        .filter((p) =>
+          (prospectHeadTypeFilter.size === 0 || prospectHeadTypeFilter.has((p.head_type ?? "").trim())) &&
+          (prospectLevelFilter.size === 0 || prospectLevelFilter.has((p.prospect_level ?? "").trim()))
+        )
+        .map((p) => (p.prospect_department ?? "").trim())
+        .filter(Boolean)
+    ),
+    [accountProspects, prospectHeadTypeFilter, prospectLevelFilter],
+  )
+  const prospectLevelOptions = useMemo(
+    () => sortByCount(
+      accountProspects
+        .filter((p) =>
+          (prospectHeadTypeFilter.size === 0 || prospectHeadTypeFilter.has((p.head_type ?? "").trim())) &&
+          (prospectDeptFilter.size === 0 || prospectDeptFilter.has((p.prospect_department ?? "").trim()))
+        )
+        .map((p) => (p.prospect_level ?? "").trim())
+        .filter(Boolean)
+    ),
+    [accountProspects, prospectHeadTypeFilter, prospectDeptFilter],
+  )
+  const filteredProspects = useMemo(() => {
     return accountProspects.filter((p) => {
+      if (prospectHeadTypeFilter.size > 0 && !prospectHeadTypeFilter.has((p.head_type ?? "").trim())) return false
       if (prospectDeptFilter.size > 0 && !prospectDeptFilter.has((p.prospect_department ?? "").trim())) return false
       if (prospectLevelFilter.size > 0 && !prospectLevelFilter.has((p.prospect_level ?? "").trim())) return false
       return true
     })
-  }, [accountProspects, prospectDeptFilter, prospectLevelFilter])
+  }, [accountProspects, prospectHeadTypeFilter, prospectDeptFilter, prospectLevelFilter])
+
+  // Reset prospect page when filters change
+  useEffect(() => { setProspectPage(1) }, [prospectHeadTypeFilter, prospectDeptFilter, prospectLevelFilter])
+
+  const pagedProspects = useMemo(
+    () => filteredProspects.slice((prospectPage - 1) * ITEMS_PER_PAGE, prospectPage * ITEMS_PER_PAGE),
+    [filteredProspects, prospectPage, ITEMS_PER_PAGE],
+  )
   const lockedTeaserCountForAccount = accountLockedProspectTeasers.length
 
   const toggleInSet = (setter: React.Dispatch<React.SetStateAction<Set<string>>>, value: string) => {
@@ -325,8 +387,11 @@ export function AccountDetailsDialog({
     setFinancialTickerLoaded(null)
     setCenterTypeFilter(new Set())
     setCenterHeadcountFilter(new Set())
+    setCenterPage(1)
+    setProspectHeadTypeFilter(new Set())
     setProspectDeptFilter(new Set())
     setProspectLevelFilter(new Set())
+    setProspectPage(1)
   }, [accountName])
 
   useEffect(() => {
@@ -629,14 +694,23 @@ export function AccountDetailsDialog({
                   />
                 </div>
                 {filteredCenters.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredCenters.map((center, index) => (
-                      <CenterGridCard
-                        key={`${center.cn_unique_key}-${index}`}
-                        center={center}
-                        onClick={() => handleCenterClick(center)}
-                      />
-                    ))}
+                  <div className="rounded-xl border border-border/60 bg-background/40 backdrop-blur-sm dark:border-white/10 dark:bg-white/5 overflow-hidden">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+                      {pagedCenters.map((center, index) => (
+                        <CenterGridCard
+                          key={`${center.cn_unique_key}-${index}`}
+                          center={center}
+                          onClick={() => handleCenterClick(center)}
+                        />
+                      ))}
+                    </div>
+                    <PaginationControls
+                      currentPage={centerPage}
+                      totalItems={filteredCenters.length}
+                      itemsPerPage={ITEMS_PER_PAGE}
+                      onPageChange={setCenterPage}
+                      dataLength={filteredCenters.length}
+                    />
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground py-6 text-center">No centers match the selected filters.</p>
@@ -648,6 +722,13 @@ export function AccountDetailsDialog({
             {(accountProspects.length > 0 || accountLockedProspectTeasers.length > 0) && (
             <TabsContent value="prospects" className="mt-4 space-y-4">
                 <div className="space-y-2">
+                  <QuickFilterGroup
+                    label="Head Type"
+                    options={prospectHeadTypeOptions}
+                    selected={prospectHeadTypeFilter}
+                    onToggle={(v) => toggleInSet(setProspectHeadTypeFilter, v)}
+                    onClear={() => setProspectHeadTypeFilter(new Set())}
+                  />
                   <QuickFilterGroup
                     label="Department"
                     options={prospectDeptOptions}
@@ -664,22 +745,31 @@ export function AccountDetailsDialog({
                   />
                 </div>
                 {filteredProspects.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredProspects.map((prospect, index) => (
-                      <ProspectGridCard
-                        key={`${prospect.prospect_first_name}-${prospect.prospect_last_name}-${index}`}
-                        prospect={prospect}
-                        onClick={() => handleProspectClick(prospect)}
-                      />
-                    ))}
-                    {accountLockedProspectTeasers.map((teaser) => (
-                      <LockedProspectTeaserCard
-                        key={teaser.id}
-                        teaser={teaser}
-                        remainingCount={lockedTeaserCountForAccount}
-                        accountContext={account.account_global_legal_name}
-                      />
-                    ))}
+                  <div className="rounded-xl border border-border/60 bg-background/40 backdrop-blur-sm dark:border-white/10 dark:bg-white/5 overflow-hidden">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+                      {pagedProspects.map((prospect, index) => (
+                        <ProspectGridCard
+                          key={`${prospect.prospect_first_name}-${prospect.prospect_last_name}-${index}`}
+                          prospect={prospect}
+                          onClick={() => handleProspectClick(prospect)}
+                        />
+                      ))}
+                      {prospectPage === Math.ceil(filteredProspects.length / ITEMS_PER_PAGE) && accountLockedProspectTeasers.map((teaser) => (
+                        <LockedProspectTeaserCard
+                          key={teaser.id}
+                          teaser={teaser}
+                          remainingCount={lockedTeaserCountForAccount}
+                          accountContext={account.account_global_legal_name}
+                        />
+                      ))}
+                    </div>
+                    <PaginationControls
+                      currentPage={prospectPage}
+                      totalItems={filteredProspects.length}
+                      itemsPerPage={ITEMS_PER_PAGE}
+                      onPageChange={setProspectPage}
+                      dataLength={filteredProspects.length}
+                    />
                   </div>
                 ) : accountLockedProspectTeasers.length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

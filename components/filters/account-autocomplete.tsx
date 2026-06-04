@@ -279,7 +279,7 @@ export function AccountAutocomplete({
                 key={`${account.value}-${index}`}
                 variant="secondary"
                 className={cn(
-                  "group flex items-center gap-1 pr-1",
+                  "group flex items-center gap-1 pr-1 max-w-full",
                   isInclude
                     ? "bg-green-500/20 text-green-700 dark:bg-green-500/30 dark:text-green-300 border-green-500/50 hover:bg-green-500/30"
                     : "bg-red-500/20 text-red-700 dark:bg-red-500/30 dark:text-red-300 border-red-500/50 hover:bg-red-500/30"
@@ -289,7 +289,7 @@ export function AccountAutocomplete({
                   type="button"
                   onClick={() => handleToggleMode(index)}
                   className={cn(
-                    "flex items-center justify-center w-4 h-4 rounded-sm",
+                    "flex items-center justify-center w-4 h-4 rounded-sm shrink-0",
                     isInclude
                       ? "bg-green-600/30 hover:bg-green-600/50"
                       : "bg-red-600/30 hover:bg-red-600/50"
@@ -303,11 +303,11 @@ export function AccountAutocomplete({
                     <Minus className="h-3 w-3" />
                   )}
                 </button>
-                <span className="text-xs">{account.value}</span>
+                <span className="text-xs truncate max-w-[240px]" title={account.value}>{account.value}</span>
                 <button
                   type="button"
                   onClick={() => handleRemoveAccount(index)}
-                  className="ml-1 rounded-sm opacity-70 hover:opacity-100 hover:bg-accent p-0.5"
+                  className="ml-1 rounded-sm opacity-70 hover:opacity-100 hover:bg-accent p-0.5 shrink-0"
                   title="Remove"
                   aria-label={`Remove ${account.value}`}
                 >

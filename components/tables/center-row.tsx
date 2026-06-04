@@ -13,6 +13,7 @@ import type { Center } from "@/lib/types"
 import { ensureAbsoluteUrl } from "@/lib/utils"
 import { CompanyLogo } from "@/components/ui/company-logo"
 import type { CenterTableColumnKey } from "@/lib/dashboard/table-column-preferences"
+import { formatCenterLocation } from "@/lib/utils/helpers"
 interface CenterRowProps {
   center: Center
   // Entity-param callbacks keep a single stable handler shared across rows so a
@@ -28,7 +29,7 @@ interface CenterRowProps {
 
 export const CenterRow = memo(({ center, onOpen, visibleColumns, selectable, isSelected, onSelectChange, isFavorite, onToggleFavorite }: CenterRowProps) => {
   const handleOpen = () => onOpen(center)
-  const location = [center.center_city, center.center_state].filter(Boolean).join(", ")
+  const location = formatCenterLocation(center.center_city, center.center_state)
 
   return (
     <ContextMenu>

@@ -9,11 +9,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Check, Copy, Linkedin, Mail, SlidersHorizontal, SquareArrowOutUpRight } from "lucide-react"
+import { formatProspectLocation } from "@/lib/utils/helpers"
 import type { Prospect } from "@/lib/types"
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard"
 import { Badge } from "@/components/ui/badge"
 import { DialogBreadcrumb, type DialogBreadcrumbItem } from "@/components/ui/dialog-breadcrumb"
 import { ProspectGridCard } from "@/components/cards/prospect-grid-card"
+import { PaginationControls } from "@/components/ui/pagination-controls"
 
 interface ProspectDetailsDialogProps {
   prospect: Prospect | null
@@ -64,10 +66,10 @@ function QuickFilterGroup({
       <button
         type="button"
         onClick={onClear}
-        className={`text-xs px-2.5 py-1 rounded-full border transition-colors inline-flex items-center gap-1.5 ${selected.size === 0 ? "bg-foreground text-background border-foreground" : "bg-background/40 text-muted-foreground border-border/60 hover:bg-background/60"}`}
+        className={`text-xs px-2.5 py-1 rounded-full border transition-colors inline-flex items-center gap-1.5 ${selected.size === 0 ? "bg-primary text-primary-foreground border-primary" : "bg-background/40 text-muted-foreground border-border/60 hover:bg-background/60"}`}
       >
         All
-        <span className={`text-[10px] tabular-nums ${selected.size === 0 ? "text-background/70" : "text-muted-foreground/70"}`}>{totalCount}</span>
+        <span className={`text-[10px] tabular-nums ${selected.size === 0 ? "text-primary-foreground/70" : "text-muted-foreground/70"}`}>{totalCount}</span>
       </button>
       {options.map((opt) => {
         const active = selected.has(opt.name)
@@ -76,10 +78,10 @@ function QuickFilterGroup({
             key={opt.name}
             type="button"
             onClick={() => onToggle(opt.name)}
-            className={`text-xs px-2.5 py-1 rounded-full border transition-colors inline-flex items-center gap-1.5 ${active ? "bg-foreground text-background border-foreground" : "bg-background/40 text-foreground border-border/60 hover:bg-background/60"}`}
+            className={`text-xs px-2.5 py-1 rounded-full border transition-colors inline-flex items-center gap-1.5 ${active ? "bg-primary text-primary-foreground border-primary" : "bg-background/40 text-foreground border-border/60 hover:bg-background/60"}`}
           >
             {opt.name}
-            <span className={`text-[10px] tabular-nums ${active ? "text-background/70" : "text-muted-foreground/70"}`}>{opt.count}</span>
+            <span className={`text-[10px] tabular-nums ${active ? "text-primary-foreground/70" : "text-muted-foreground/70"}`}>{opt.count}</span>
           </button>
         )
       })}
@@ -98,13 +100,18 @@ export function ProspectDetailsDialog({
   const [copied, setCopied] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const [current, setCurrent] = useState<Prospect | null>(prospect)
+  const [headTypeFilter, setHeadTypeFilter] = useState<Set<string>>(new Set())
   const [deptFilter, setDeptFilter] = useState<Set<string>>(new Set())
   const [levelFilter, setLevelFilter] = useState<Set<string>>(new Set())
+  const [contactsPage, setContactsPage] = useState(1)
+  const CONTACTS_PER_PAGE = 6
 
   useEffect(() => {
     setCurrent(prospect)
+    setHeadTypeFilter(new Set())
     setDeptFilter(new Set())
     setLevelFilter(new Set())
+    setContactsPage(1)
   }, [prospect])
 
   const p = current
@@ -135,30 +142,77 @@ export function ProspectDetailsDialog({
       .map(([name, count]) => ({ name, count }))
   }
 
+  // Cascading filters: each filter's options are derived from contacts that already
+  // pass the *other two* filters, so counts and pills stay accurate.
+  const headTypeOptions = useMemo(
+    () =>
+      sortByCount(
+        companyContacts
+          .filter(
+            (c) =>
+              (deptFilter.size === 0 || deptFilter.has((c.prospect_department ?? "").trim())) &&
+              (levelFilter.size === 0 || levelFilter.has((c.prospect_level ?? "").trim())),
+          )
+          .map((c) => (c.head_type ?? "").trim())
+          .filter(Boolean),
+      ),
+    [companyContacts, deptFilter, levelFilter],
+  )
   const deptOptions = useMemo(
-    () => sortByCount(companyContacts.map((c) => (c.prospect_department ?? "").trim()).filter(Boolean)),
-    [companyContacts],
+    () =>
+      sortByCount(
+        companyContacts
+          .filter(
+            (c) =>
+              (headTypeFilter.size === 0 || headTypeFilter.has((c.head_type ?? "").trim())) &&
+              (levelFilter.size === 0 || levelFilter.has((c.prospect_level ?? "").trim())),
+          )
+          .map((c) => (c.prospect_department ?? "").trim())
+          .filter(Boolean),
+      ),
+    [companyContacts, headTypeFilter, levelFilter],
   )
   const levelOptions = useMemo(
-    () => sortByCount(companyContacts.map((c) => (c.prospect_level ?? "").trim()).filter(Boolean)),
-    [companyContacts],
+    () =>
+      sortByCount(
+        companyContacts
+          .filter(
+            (c) =>
+              (headTypeFilter.size === 0 || headTypeFilter.has((c.head_type ?? "").trim())) &&
+              (deptFilter.size === 0 || deptFilter.has((c.prospect_department ?? "").trim())),
+          )
+          .map((c) => (c.prospect_level ?? "").trim())
+          .filter(Boolean),
+      ),
+    [companyContacts, headTypeFilter, deptFilter],
   )
 
-  const filteredContacts = useMemo(
-    () =>
-      companyContacts.filter((c) => {
-        if (deptFilter.size > 0 && !deptFilter.has((c.prospect_department ?? "").trim())) return false
-        if (levelFilter.size > 0 && !levelFilter.has((c.prospect_level ?? "").trim())) return false
-        return true
-      }),
-    [companyContacts, deptFilter, levelFilter],
+  const filteredContacts = useMemo(() => {
+    const result = companyContacts.filter((c) => {
+      if (headTypeFilter.size > 0 && !headTypeFilter.has((c.head_type ?? "").trim())) return false
+      if (deptFilter.size > 0 && !deptFilter.has((c.prospect_department ?? "").trim())) return false
+      if (levelFilter.size > 0 && !levelFilter.has((c.prospect_level ?? "").trim())) return false
+      return true
+    })
+    return result
+  }, [companyContacts, headTypeFilter, deptFilter, levelFilter])
+
+  // Reset to page 1 whenever filters change
+  useEffect(() => {
+    setContactsPage(1)
+  }, [headTypeFilter, deptFilter, levelFilter])
+
+  const totalContactPages = Math.ceil(filteredContacts.length / CONTACTS_PER_PAGE)
+  const pagedContacts = useMemo(
+    () => filteredContacts.slice((contactsPage - 1) * CONTACTS_PER_PAGE, contactsPage * CONTACTS_PER_PAGE),
+    [filteredContacts, contactsPage, CONTACTS_PER_PAGE],
   )
 
   if (!p) return null
 
   const fullName = p.prospect_full_name || [p.prospect_first_name, p.prospect_last_name].filter(Boolean).join(" ").trim()
   const initials = [p.prospect_first_name?.[0], p.prospect_last_name?.[0]].filter(Boolean).join("")
-  const location = [p.prospect_city, p.prospect_state].filter(Boolean).join(", ")
+  const location = formatProspectLocation(p.prospect_city, p.prospect_state)
 
   const toggleInSet = (setter: React.Dispatch<React.SetStateAction<Set<string>>>, value: string) => {
     setter((prev) => {
@@ -297,7 +351,7 @@ export function ProspectDetailsDialog({
                 <MetaRow label="Current Role Since" value={p.prospect_current_year} />
                 <MetaRow label="Center" value={p.center_name} />
                 <MetaRow label="Location" value={location} />
-                <MetaRow label="Country" value={p.prospect_country} />
+                <MetaRow label="Country" value={p.prospect_country?.trim().toUpperCase() === "TBA" || location === "India" ? null : p.prospect_country} />
                 {p.prospect_other_source_url ? (
                   <div className="flex items-start justify-between gap-4 py-1.5 text-sm border-b border-border/30 last:border-b-0">
                     <span className="text-muted-foreground shrink-0">Other Source</span>
@@ -321,6 +375,13 @@ export function ProspectDetailsDialog({
               <SectionHeader title={`More Contacts From ${p.account_global_legal_name}`} />
               <div className="space-y-2">
                 <QuickFilterGroup
+                  label="Head Type"
+                  options={headTypeOptions}
+                  selected={headTypeFilter}
+                  onToggle={(v) => toggleInSet(setHeadTypeFilter, v)}
+                  onClear={() => setHeadTypeFilter(new Set())}
+                />
+                <QuickFilterGroup
                   label="Department"
                   options={deptOptions}
                   selected={deptFilter}
@@ -336,19 +397,30 @@ export function ProspectDetailsDialog({
                 />
               </div>
               {filteredContacts.length > 0 ? (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {filteredContacts.map((contact, idx) => (
-                    <ProspectGridCard
-                      key={`${contact.prospect_first_name}-${contact.prospect_last_name}-${idx}`}
-                      prospect={contact}
-                      onClick={() => {
-                        setCurrent(contact)
-                        setDeptFilter(new Set())
-                        setLevelFilter(new Set())
-                        scrollRef.current?.closest('[role="dialog"]')?.scrollTo({ top: 0, behavior: "smooth" })
-                      }}
-                    />
-                  ))}
+                <div className="rounded-xl border border-border/60 bg-background/40 backdrop-blur-sm dark:border-white/10 dark:bg-white/5 overflow-hidden">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 p-4">
+                    {pagedContacts.map((contact, idx) => (
+                      <ProspectGridCard
+                        key={`${contact.prospect_first_name}-${contact.prospect_last_name}-${(contactsPage - 1) * CONTACTS_PER_PAGE + idx}`}
+                        prospect={contact}
+                        onClick={() => {
+                          setCurrent(contact)
+                          setHeadTypeFilter(new Set())
+                          setDeptFilter(new Set())
+                          setLevelFilter(new Set())
+                          setContactsPage(1)
+                          scrollRef.current?.closest('[role="dialog"]')?.scrollTo({ top: 0, behavior: "smooth" })
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <PaginationControls
+                    currentPage={contactsPage}
+                    totalItems={filteredContacts.length}
+                    itemsPerPage={CONTACTS_PER_PAGE}
+                    onPageChange={setContactsPage}
+                    dataLength={filteredContacts.length}
+                  />
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 bg-background/40 py-10 text-center backdrop-blur-sm dark:bg-white/5 dark:border-white/10 animate-fade-in">

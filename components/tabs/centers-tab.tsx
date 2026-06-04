@@ -15,7 +15,7 @@ import { PieChartCard } from "@/components/charts/pie-chart-card"
 import { EmptyState } from "@/components/states/empty-state"
 import { CenterDetailsDialog } from "@/components/dialogs/center-details-dialog"
 import { AccountDetailsDialog } from "@/components/dialogs/account-details-tabbed-dialog"
-import { getPaginatedData } from "@/lib/utils/helpers"
+import { getPaginatedData, formatCenterLocation } from "@/lib/utils/helpers"
 import { CentersMap } from "@/components/maps/centers-map"
 import { CentersChoroplethMap } from "@/components/maps/centers-choropleth-map"
 import { MapErrorBoundary } from "@/components/maps/map-error-boundary"
@@ -64,7 +64,7 @@ function buildCenterFavorite(center: Center): FavoriteInput {
     entity_type: "center",
     entity_id: center.cn_unique_key ?? "",
     title: center.center_name || "Unknown Center",
-    subtitle: [center.center_city, center.center_country].filter(Boolean).join(", ") || center.account_global_legal_name || null,
+    subtitle: formatCenterLocation(center.center_city, center.center_state) || center.account_global_legal_name || null,
   }
 }
 
@@ -144,7 +144,7 @@ export function CentersTab({
       type: "center",
       id: center.cn_unique_key ?? "",
       title: center.center_name ?? "Unknown Center",
-      subtitle: [center.center_city, center.center_country].filter(Boolean).join(", "),
+      subtitle: formatCenterLocation(center.center_city, center.center_state),
     })
     captureEvent(ANALYTICS_EVENTS.RECORD_OPENED, {
       entity: "center",
@@ -256,7 +256,7 @@ export function CentersTab({
         case "name":
           return center.center_name
         case "location":
-          return [center.center_city, center.center_state].filter(Boolean).join(", ")
+          return formatCenterLocation(center.center_city, center.center_state)
         case "type":
           return center.center_type
         case "employees":
