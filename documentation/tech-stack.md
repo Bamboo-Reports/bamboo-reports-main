@@ -353,6 +353,8 @@ Tools used during development but not shipped to production.
 
 | Tool | Version | Purpose |
 |------|---------|---------|
+| **Vitest** | 4.1.x | Fast unit and integration testing framework |
+| **React Testing Library** | 16.3.x | UI component testing |
 | **ESLint** | 9.39.2 | JavaScript/TypeScript linting for code quality |
 | **eslint-config-next** | 16.2.6 | Next.js-specific ESLint rules (accessibility, best practices) |
 | **PostCSS** | 8.5 | CSS processing pipeline (required by Tailwind CSS) |

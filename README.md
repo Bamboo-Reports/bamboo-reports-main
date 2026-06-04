@@ -160,6 +160,12 @@ For a comprehensive breakdown of every technology used in this project, see the 
 | **ExcelJS** | Native `.xlsx` report generation |
 | **Zod** | Schema validation for forms and inputs |
 
+### Testing
+| Technology | Purpose |
+|------------|---------|
+| **Vitest** | Fast unit and integration testing framework |
+| **React Testing Library** | UI component testing |
+
 ### Analytics and Monitoring
 | Technology | Purpose |
 |------------|---------|
@@ -260,6 +266,7 @@ bamboo-reports-nextjs/
 │   └── map-disputed-boundaries.md  # Choropleth boundary handling
 │
 ├── scripts/                        # Standalone scripts (e.g. load benchmark)
+├── tests/                          # Vitest test suite (unit and integration tests)
 ├── types/                          # Additional type definitions
 ├── public/                         # Static assets (logos, images, data)
 └── styles/                         # Additional stylesheets
@@ -309,6 +316,9 @@ bamboo-reports-nextjs/
 | `npm run build` | Create production build |
 | `npm run start` | Start production server |
 | `npm run lint` | Run ESLint checks |
+| `npm run typecheck` | Run TypeScript compiler checks |
+| `npm run test` | Run Vitest test suite |
+| `npm run test:watch` | Run Vitest in watch mode |
 | `npm run prisma:generate` | Regenerate the Prisma Client after schema changes |
 | `npm run benchmark` | Benchmark dashboard data loading (`scripts/benchmark-loading.mjs`) |
 

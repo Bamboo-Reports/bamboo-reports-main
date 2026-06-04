@@ -58,6 +58,9 @@ This guide is for developers maintaining or extending the Bamboo Reports applica
 | `npm run build` | Create production build |
 | `npm run start` | Start production server |
 | `npm run lint` | Run ESLint checks |
+| `npm run typecheck` | Run TypeScript compiler checks |
+| `npm run test` | Run Vitest test suite |
+| `npm run test:watch` | Run Vitest in watch mode |
 | `npm run benchmark` | Benchmark dashboard data loading (`scripts/benchmark-loading.mjs`) |
 
 ---
@@ -203,6 +206,12 @@ If UI alignment needs tuning:
 - **Configuration** goes in `lib/config/`.
 - **Validation schemas** go in `lib/validators/`.
 - **Deployment packaging config** goes in `lib/config/dashboard-access.ts` and `lib/config/filters.ts`.
+- **Tests** go in `tests/` mimicking the structure of the application.
+
+### Testing
+- **Framework**: We use Vitest for unit and integration testing, and React Testing Library for UI components.
+- **Coverage**: Aim to maintain high test coverage, particularly for core logic and shared UI components.
+- **Execution**: Run `npm run test` before opening a pull request to ensure no regressions.
 
 ---
 
