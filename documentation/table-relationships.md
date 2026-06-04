@@ -27,15 +27,19 @@ accounts  (PK: account_global_legal_name)
 
 ## Core Tables
 
-| Table | Description | Primary Key |
-|-------|-------------|-------------|
-| `accounts` | Top-level company entities with HQ details, financials, workforce | `account_global_legal_name` |
-| `alias` | Alternate account names (brand, abbreviation, flagship products) | `account_global_legal_name` |
-| `centers` | Delivery centers / office locations with geospatial data | `cn_unique_key` |
-| `services` | Service-line rows linked to centers | `cn_unique_key` (composite) |
-| `functions` | Business function rows linked to centers | *(no surrogate PK)* |
-| `tech` | Technology stack rows (software, vendors, categories) | `cn_unique_key` (composite) |
-| `prospects` | Contact/lead rows linked to accounts | `ps_unique_key` |
+Only `accounts` and `centers` currently have database primary-key constraints in `etl/main.py`.
+The remaining child tables are linked through the hub keys below, but their ETL/logical identifiers are
+not database-enforced primary keys and should not be modelled as Prisma `@id` fields.
+
+| Table | Description | Database primary key | ETL/logical identity or link |
+|-------|-------------|----------------------|------------------------------|
+| `accounts` | Top-level company entities with HQ details, financials, workforce | `account_global_legal_name` | `account_global_legal_name` |
+| `alias` | Alternate account names (brand, abbreviation, flagship products) | *(none)* | `account_global_legal_name` |
+| `centers` | Delivery centers / office locations with geospatial data | `cn_unique_key` | `cn_unique_key` |
+| `services` | Service-line rows linked to centers | *(none)* | `cn_unique_key` |
+| `functions` | Business function rows linked to centers | *(none)* | `cn_unique_key`, `function_name` |
+| `tech` | Technology stack rows (software, vendors, categories) | *(none)* | `cn_unique_key` plus software fields |
+| `prospects` | Contact/lead rows linked to accounts | *(none)* | `ps_unique_key` |
 
 ---
 
