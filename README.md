@@ -400,15 +400,15 @@ The app delegates identity management to **Supabase Auth**.
 The core BI data resides in **Neon PostgreSQL**. All tables follow strict `snake_case` naming.
 
 ### Core Tables
-| Table | Description | Primary Key |
-|-------|-------------|-------------|
-| `accounts` | Top-level company entities with HQ details, financials, workforce | `account_global_legal_name` |
-| `centers` | Delivery centers / office locations with geospatial data | `cn_unique_key` |
-| `services` | Service-line rows linked to centers | `cn_unique_key` (composite) |
-| `functions` | Function rows linked to centers | *(no surrogate PK)* |
-| `tech` | Technology stack rows (software, vendors, categories) | `cn_unique_key` (composite) |
-| `prospects` | Contact/lead rows linked to accounts | `ps_unique_key` |
-| `alias` | Alternate account names (brand, abbreviation, flagship products) | `account_global_legal_name` |
+| Table | Description | Database primary key | ETL/logical identity or link |
+|-------|-------------|----------------------|------------------------------|
+| `accounts` | Top-level company entities with HQ details, financials, workforce | `account_global_legal_name` | `account_global_legal_name` |
+| `centers` | Delivery centers / office locations with geospatial data | `cn_unique_key` | `cn_unique_key` |
+| `services` | Service-line rows linked to centers | *(none)* | `cn_unique_key` |
+| `functions` | Function rows linked to centers | *(none)* | `cn_unique_key`, `function_name` |
+| `tech` | Technology stack rows (software, vendors, categories) | *(none)* | `cn_unique_key` plus software fields |
+| `prospects` | Contact/lead rows linked to accounts | *(none)* | `ps_unique_key` |
+| `alias` | Alternate account names (brand, abbreviation, flagship products) | *(none)* | `account_global_legal_name` |
 
 ### Audit Tables (in `audit` schema)
 - `audit.import_runs` — Data import tracking
