@@ -30,4 +30,17 @@ if [ ! -f "$STAMP" ] || [ "$(cat "$STAMP")" != "$CURRENT_HASH" ]; then
     echo "$CURRENT_HASH" > "$STAMP"
 fi
 
-exec "$PYTHON_BIN" "$SCRIPT_DIR/main.py" "$@"
+# Run the ETL (not exec — so the cache bust below can run after it)
+"$PYTHON_BIN" "$SCRIPT_DIR/main.py" "$@"
+ETL_EXIT=$?
+
+# Bust the dashboard Redis cache so users see fresh data immediately.
+# Only runs when the import succeeded (exit 0) and APP_URL is set.
+# bust-cache.sh is itself non-fatal — it will never fail this script.
+if [ "$ETL_EXIT" -eq 0 ] && [ -n "${APP_URL:-}" ]; then
+    bash "$SCRIPT_DIR/bust-cache.sh"
+elif [ "$ETL_EXIT" -eq 0 ]; then
+    echo "ℹ️   APP_URL not set — skipping cache bust (Redis will expire naturally)."
+fi
+
+exit "$ETL_EXIT"

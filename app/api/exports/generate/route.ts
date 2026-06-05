@@ -4,6 +4,7 @@ import { extractBearerToken, resolveAuthenticatedUserId } from "@/lib/auth/serve
 import { canExportData, normalizeUserRole, type UserRole } from "@/lib/auth/roles"
 import { createLogger } from "@/lib/logger"
 import { getSupabaseServiceRoleClient, USER_EXPORTS_BUCKET } from "@/lib/supabase/server"
+import { getRedis } from "@/lib/redis"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { getClientInfo } from "@/lib/request/client-info"
 import { getDatasetUnavailableMessage, isDatasetEnabled } from "@/lib/config/dashboard-access"
@@ -50,9 +51,31 @@ function isLocalIp(val: string | null) {
   return !val || val === "::1" || val === "127.0.0.1" || val.startsWith("::ffff:127.")
 }
 
-// Returns true when the user has hit the export cap. Fails open on lookup
-// errors so a transient DB issue never blocks legitimate exports.
+// Returns true when the user has hit the export cap.
+// Primary: Redis atomic counter (fast, distributed across all serverless instances).
+// Fallback: Supabase audit-table count (used when Redis is unavailable).
 async function isRateLimited(supabase: SupabaseClient, userId: string): Promise<boolean> {
+  const redis = getRedis()
+
+  if (redis) {
+    try {
+      const key = `rate_limit:exports:${userId}`
+      const ttlS = Math.ceil(EXPORT_RATE_LIMIT_WINDOW_MS / 1000)
+      // Atomically increment; set expiry only on the first call in the window
+      const count = await redis.incr(key)
+      if (count === 1) await redis.expire(key, ttlS)
+      const limited = count > EXPORT_RATE_LIMIT_MAX
+      if (limited) {
+        logger.warn("rate_limit_hit_redis", { user_id: userId, count, max: EXPORT_RATE_LIMIT_MAX })
+      }
+      return limited
+    } catch (err) {
+      // Redis error — fall through to Supabase fallback
+      logger.error("rate_limit_redis_failed", { error: err })
+    }
+  }
+
+  // Supabase fallback (fails open on DB errors so a transient issue never blocks exports)
   const since = new Date(Date.now() - EXPORT_RATE_LIMIT_WINDOW_MS).toISOString()
   const { count, error } = await supabase
     .from("user_exports")

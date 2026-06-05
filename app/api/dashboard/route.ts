@@ -1,6 +1,7 @@
 import { getDashboardData } from "@/app/actions/data"
 import { resolveAuthenticatedUserId, extractBearerToken } from "@/lib/auth/server"
 import { createLogger } from "@/lib/logger"
+import { getRedis } from "@/lib/redis"
 import { promisify } from "node:util"
 import { gzip as gzipCb } from "node:zlib"
 
@@ -10,63 +11,78 @@ const logger = createLogger("api/dashboard")
 export const dynamic = "force-dynamic"
 
 // ============================================
-// IN-MEMORY SWR CACHE
+// REDIS SWR CACHE
 // ============================================
 
-const CACHE_TTL = Number(process.env.DASHBOARD_CACHE_TTL_MS) || 60 * 60 * 1000 // 1 hour
+// Redis keys
+const CACHE_KEY = "dashboard:v1:json"
+const CACHE_TS_KEY = "dashboard:v1:ts"
+const REVALIDATING_KEY = "dashboard:v1:revalidating"
 
-let cache: {
-  gzipped: Buffer | null
-  json: string | null
-  timestamp: number
-  revalidating: boolean
-} = {
-  gzipped: null,
-  json: null,
-  timestamp: 0,
-  revalidating: false,
+// TTL in seconds (Redis uses seconds, not ms)
+const CACHE_TTL_S = Math.floor((Number(process.env.DASHBOARD_CACHE_TTL_MS) || 60 * 60 * 1000) / 1000)
+
+// In-memory fallback: holds the last known good gzipped buffer so gzip
+// doesn't have to re-run on every HIT when Redis returns raw JSON.
+let memGzip: { json: string; buf: Buffer } | null = null
+
+async function getGzipped(json: string): Promise<Buffer> {
+  if (memGzip?.json === json) return memGzip.buf
+  const buf = await gzip(Buffer.from(json))
+  memGzip = { json, buf }
+  return buf
 }
 
-async function fetchAndCache() {
+async function fetchAndCache(): Promise<{ json: string }> {
   const queryStart = Date.now()
   logger.info("dashboard_cache_populate_started")
   const data = await getDashboardData()
   const queryMs = Date.now() - queryStart
 
   const json = JSON.stringify(data)
-  const compressStart = Date.now()
-  const gzipped = await gzip(Buffer.from(json))
-  const compressMs = Date.now() - compressStart
 
-  cache = {
-    gzipped,
-    json,
-    timestamp: Date.now(),
-    revalidating: false,
+  const redis = getRedis()
+  if (redis) {
+    // Store JSON string + timestamp atomically
+    await redis.set(CACHE_KEY, json, { ex: CACHE_TTL_S })
+    await redis.set(CACHE_TS_KEY, Date.now(), { ex: CACHE_TTL_S + 3600 })
+    await redis.del(REVALIDATING_KEY)
   }
 
   logger.info("dashboard_cache_populated", {
     query_ms: queryMs,
-    gzip_ms: compressMs,
     raw_mb: Number((json.length / 1024 / 1024).toFixed(1)),
-    compressed_mb: Number((gzipped.length / 1024 / 1024).toFixed(1)),
     accounts_count: data.accounts.length,
     centers_count: data.centers.length,
     prospects_count: data.prospects.length,
     locked_prospect_teasers_count: data.lockedProspectTeasers.length,
+    redis_available: Boolean(redis),
     error: data.error,
   })
 
-  return { gzipped, json }
+  return { json }
 }
 
-function revalidateInBackground() {
-  if (cache.revalidating) return
-  cache.revalidating = true
+async function revalidateInBackground(): Promise<void> {
+  const redis = getRedis()
+  if (!redis) {
+    fetchAndCache().catch((err) =>
+      logger.error("dashboard_cache_background_revalidation_failed", { error: err })
+    )
+    return
+  }
+
+  // Use Redis as a distributed lock so only one instance revalidates at a time
+  const locked = await redis.set(REVALIDATING_KEY, "1", { ex: 60, nx: true })
+  if (!locked) {
+    logger.info("dashboard_cache_background_revalidation_already_running")
+    return
+  }
+
   logger.info("dashboard_cache_background_revalidation_started")
   fetchAndCache().catch((err) => {
     logger.error("dashboard_cache_background_revalidation_failed", { error: err })
-    cache.revalidating = false
+    redis.del(REVALIDATING_KEY).catch(() => {})
   })
 }
 
@@ -99,49 +115,94 @@ export async function GET(request: Request) {
 
   const start = Date.now()
   const acceptEncoding = request.headers.get("accept-encoding") || ""
-  const age = cache.timestamp ? Math.round((Date.now() - cache.timestamp) / 1000) : 0
-  const isFresh = cache.timestamp > 0 && Date.now() - cache.timestamp < CACHE_TTL
-  const isStale = cache.timestamp > 0 && !isFresh
+  const redis = getRedis()
 
-  // Cache HIT: fresh data, return immediately
-  if (isFresh && cache.gzipped && cache.json) {
-    logger.info("dashboard_cache_hit", {
-      age_seconds: age,
-      ttl_seconds: CACHE_TTL / 1000,
-      duration_ms: Date.now() - start,
-    })
-    return buildResponse(cache.gzipped, cache.json, acceptEncoding, "HIT", age)
+  // ── Try Redis first ──────────────────────────────────────────────────────
+  if (redis) {
+    const [cachedJson, cachedTs] = await Promise.all([
+      redis.get<string>(CACHE_KEY),
+      redis.get<string>(CACHE_TS_KEY),
+    ])
+
+    if (cachedJson) {
+      const ts = cachedTs ? Number(cachedTs) : 0
+      const age = ts ? Math.round((Date.now() - ts) / 1000) : 0
+      const ttlRemaining = await redis.ttl(CACHE_KEY)
+
+      // STALE: key exists but TTL expired — return immediately, revalidate async
+      if (ttlRemaining <= 0) {
+        logger.info("dashboard_cache_stale", { age_seconds: age, duration_ms: Date.now() - start })
+        revalidateInBackground()
+        const gzipped = await getGzipped(cachedJson)
+        return buildResponse(gzipped, cachedJson, acceptEncoding, "STALE", age)
+      }
+
+      // HIT: fresh data from Redis
+      logger.info("dashboard_cache_hit", {
+        age_seconds: age,
+        ttl_remaining_s: ttlRemaining,
+        duration_ms: Date.now() - start,
+      })
+      const gzipped = await getGzipped(cachedJson)
+      return buildResponse(gzipped, cachedJson, acceptEncoding, "HIT", age)
+    }
+  } else {
+    logger.warn("dashboard_redis_unavailable_falling_back_to_db")
   }
 
-  // Cache STALE: return stale data immediately, revalidate in background
-  if (isStale && cache.gzipped && cache.json) {
-    logger.info("dashboard_cache_stale", {
-      age_seconds: age,
-      ttl_seconds: CACHE_TTL / 1000,
-      duration_ms: Date.now() - start,
-    })
-    revalidateInBackground()
-    return buildResponse(cache.gzipped, cache.json, acceptEncoding, "STALE", age)
-  }
-
-  // Cache MISS: fetch from DB, cache, return
+  // ── Cache MISS: fetch from DB, store in Redis, return ────────────────────
   logger.info("dashboard_cache_miss")
-  const { gzipped, json } = await fetchAndCache()
+  const { json } = await fetchAndCache()
   logger.info("dashboard_cache_miss_completed", { duration_ms: Date.now() - start })
 
+  const gzipped = await getGzipped(json)
   return buildResponse(gzipped, json, acceptEncoding, "MISS", 0)
 }
 
 /**
  * POST handler to invalidate the cache.
- * Called by the client before a force-refresh.
+ * Accepts two auth paths:
+ *   1. Supabase user JWT  — used by the browser client before a force-refresh.
+ *   2. ETL_CACHE_BUST_SECRET — a static server-to-server secret used by the
+ *      ETL pipeline after a data import. No Supabase dependency required.
  */
 export async function POST(request: Request) {
-  const authError = await requireAuth(request)
-  if (authError) return authError
+  const token = extractBearerToken(request.headers.get("authorization"))
+  if (!token) {
+    return new Response(JSON.stringify({ error: "Missing authorization token" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    })
+  }
 
-  cache = { gzipped: null, json: null, timestamp: 0, revalidating: false }
-  logger.info("dashboard_cache_invalidated")
+  // ── Path 1: ETL shared secret (no Supabase round-trip needed) ──────────
+  const etlSecret = process.env.ETL_CACHE_BUST_SECRET
+  const isEtlSecret = etlSecret && token === etlSecret
+
+  // ── Path 2: Supabase user JWT (existing browser-client flow) ───────────
+  if (!isEtlSecret) {
+    const authError = await requireAuth(request)
+    if (authError) return authError
+  }
+
+  const redis = getRedis()
+  if (redis) {
+    await Promise.all([
+      redis.del(CACHE_KEY),
+      redis.del(CACHE_TS_KEY),
+      redis.del(REVALIDATING_KEY),
+    ])
+    logger.info("dashboard_cache_invalidated", {
+      store: "redis",
+      caller: isEtlSecret ? "etl" : "client",
+    })
+  } else {
+    logger.warn("dashboard_cache_invalidate_redis_unavailable")
+  }
+
+  // Also clear the local gzip memo
+  memGzip = null
+
   return new Response(JSON.stringify({ ok: true }), {
     headers: { "Content-Type": "application/json" },
   })
