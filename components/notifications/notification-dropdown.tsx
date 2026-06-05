@@ -13,7 +13,6 @@ import {
   formatSummaryTitle,
   formatRelativeEventDate,
   formatAbsoluteEventDate,
-  formatTableLabel,
 } from "@/lib/notifications/formatters"
 
 export function NotificationDropdown() {

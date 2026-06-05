@@ -221,7 +221,6 @@ bamboo-reports-nextjs/
 │   ├── use-global-search.ts        # Alias-aware global search
 │   ├── use-notifications.ts        # Notification tracking
 │   ├── use-product-tour.ts         # Guided product tour
-│   ├── use-range-filter.ts         # Range slider logic
 │   ├── use-recent-items.ts         # Recently viewed history tracking
 │   ├── use-saved-filters.ts        # Saved filter persistence
 │   └── use-table-column-preferences.ts  # Table column visibility prefs

@@ -202,7 +202,6 @@ export function ProspectDetailsDialog({
     setContactsPage(1)
   }, [headTypeFilter, deptFilter, levelFilter])
 
-  const totalContactPages = Math.ceil(filteredContacts.length / CONTACTS_PER_PAGE)
   const pagedContacts = useMemo(
     () => filteredContacts.slice((contactsPage - 1) * CONTACTS_PER_PAGE, contactsPage * CONTACTS_PER_PAGE),
     [filteredContacts, contactsPage, CONTACTS_PER_PAGE],

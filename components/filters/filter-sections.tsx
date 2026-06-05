@@ -69,9 +69,6 @@ export function AccountFiltersSection({
   const hiddenAccountFilterKeys = getPremiumFilterKeys("accounts")
   const canShowMoreAccountFilters = isShowMoreEnabled("accounts")
 
-  const hiddenEnabledCount = hiddenAccountFilterKeys.reduce((count, key) => (
-    isFilterEnabled(key) ? count + 1 : count
-  ), 0)
   const hasPremiumAccountFilters = hiddenAccountFilterKeys.length > 0
 
   return (
@@ -499,9 +496,6 @@ export function CenterFiltersSection({
   const hiddenCenterFilterKeys = getPremiumFilterKeys("centers")
   const canShowMoreCenterFilters = isShowMoreEnabled("centers")
 
-  const hiddenCenterEnabledCount = hiddenCenterFilterKeys.reduce((count, key) => (
-    isFilterEnabled(key) ? count + 1 : count
-  ), 0)
   const hasPremiumCenterFilters = hiddenCenterFilterKeys.length > 0
 
   return (

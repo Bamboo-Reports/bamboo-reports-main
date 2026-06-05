@@ -68,7 +68,7 @@ The component automatically requests a higher-resolution image than the containe
 ### 3.1 Usage Locations
 The `CompanyLogo` component is currently integrated in:
 
-1.  **Account Dialog:** `components/dialogs/account-details-dialog.tsx` (Size: `md`)
+1.  **Account Dialog:** `components/dialogs/account-details-tabbed-dialog.tsx` (Size: `md`)
 2.  **Center Dialog:** `components/dialogs/center-details-dialog.tsx` (Size: `md`)
 3.  **Account Table:** `components/tables/account-row.tsx` (Size: `sm`)
 4.  **Center Table:** `components/tables/center-row.tsx` (Size: `sm`)

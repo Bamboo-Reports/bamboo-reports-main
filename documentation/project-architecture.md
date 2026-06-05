@@ -89,7 +89,6 @@ Key components:
 | `use-global-search.ts` | Alias-aware global account search state |
 | `use-notifications.ts` | Notification state, unread counts, and read tracking |
 | `use-product-tour.ts` | Guided product tour orchestration (driver.js) |
-| `use-range-filter.ts` | Reusable range slider logic with logarithmic scaling |
 | `use-recent-items.ts` | Tracks recently viewed records for the History dialog |
 | `use-saved-filters.ts` | Saved filter CRUD with Supabase |
 | `use-table-column-preferences.ts` | Per-user table column visibility preferences |
