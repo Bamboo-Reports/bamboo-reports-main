@@ -823,7 +823,9 @@ def compute_table_field_changes(
     old_aligned = old_norm.loc[common_rows, available_fields]
     new_aligned = new_norm.loc[common_rows, available_fields]
 
-    fast_diff = (old_aligned != new_aligned) & ~(old_aligned.isna() & new_aligned.isna())
+    both_missing = old_aligned.isna() & new_aligned.isna()
+    fast_diff = old_aligned.ne(new_aligned).fillna(True) & ~both_missing
+    fast_diff = fast_diff.fillna(False).astype(bool)
     fast_changed_pairs = fast_diff.stack()
     fast_changed_pairs = fast_changed_pairs[fast_changed_pairs]
 

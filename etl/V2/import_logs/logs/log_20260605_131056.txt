@@ -1,0 +1,8 @@
+2026-06-05 13:10:56,165 | DEBUG | Log file: /home/avisek-rnxt/Documents/production/bamboo-reports-main/etl/V2/import_logs/logs/log_20260605_131056.txt
+2026-06-05 13:10:59,946 | INFO | Ensuring notification/audit tables...
+2026-06-05 13:11:02,191 | INFO | Started import run id=5
+2026-06-05 13:11:04,149 | INFO | Pre-import 'accounts' snapshot: 2669 rows
+2026-06-05 13:11:05,385 | INFO | Pre-import 'alias' snapshot: 2669 rows
+2026-06-05 13:11:07,416 | INFO | Pre-import 'centers' snapshot: 6252 rows
+2026-06-05 13:11:08,869 | INFO | Pre-import 'services' snapshot: 6212 rows
+2026-06-05 13:11:12,216 | INFO | Pre-import 'prospects' snapshot: 68544 rows
