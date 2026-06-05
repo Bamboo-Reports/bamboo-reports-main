@@ -392,18 +392,12 @@ export const EnhancedMultiSelect = React.memo(function EnhancedMultiSelect({
   const includeCount = selected.filter(s => s.mode === 'include').length
   const excludeCount = selected.filter(s => s.mode === 'exclude').length
 
-  // Handle isApplying changes to trigger success state
-  const [showSuccess, setShowSuccess] = React.useState(false)
   const prevIsApplying = React.useRef(isApplying)
 
   React.useEffect(() => {
     if (prevIsApplying.current && !isApplying) {
-      // Just finished applying
-      setShowSuccess(true)
-      const timer = setTimeout(() => {
-        setShowSuccess(false)
-      }, 500)
-      return () => clearTimeout(timer)
+      prevIsApplying.current = isApplying
+      return
     }
     prevIsApplying.current = isApplying
   }, [isApplying])

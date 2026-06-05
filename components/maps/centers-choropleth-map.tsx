@@ -248,7 +248,6 @@ export function CentersChoroplethMap({
   const mapViewpointIso2 = normalizeIso2(process.env.NEXT_PUBLIC_MAP_VIEWPOINT_ISO2)
   const [error, setError] = useState<string | null>(null)
   const [isClient, setIsClient] = useState(false)
-  const [isMapReady, setIsMapReady] = useState(false)
   const [hoverInfo, setHoverInfo] = useState<{
     x: number
     y: number
@@ -319,11 +318,6 @@ export function CentersChoroplethMap({
     })
     lastTooltipStateRef.current = stateKey
   }, [hoverInfo])
-
-  useEffect(() => {
-    const fallback = setTimeout(() => setIsMapReady(true), 700)
-    return () => clearTimeout(fallback)
-  }, [])
 
   useEffect(() => {
     if (!isClient || typeof ResizeObserver === "undefined") return
@@ -432,36 +426,6 @@ export function CentersChoroplethMap({
     ] as any
   }, [featureKeyExpression, hoveredFeatureKeys])
 
-  const bounds = useMemo(() => {
-    const coords = centers
-      .map((center) => ({ lat: center.lat, lng: center.lng }))
-      .filter((c) => typeof c.lat === "number" && typeof c.lng === "number") as Array<{
-      lat: number
-      lng: number
-    }>
-
-    if (coords.length === 0) return null
-
-    let minLat = coords[0].lat
-    let maxLat = coords[0].lat
-    let minLng = coords[0].lng
-    let maxLng = coords[0].lng
-
-    coords.forEach((coord) => {
-      minLat = Math.min(minLat, coord.lat)
-      maxLat = Math.max(maxLat, coord.lat)
-      minLng = Math.min(minLng, coord.lng)
-      maxLng = Math.max(maxLng, coord.lng)
-    })
-
-    return {
-      minLat,
-      maxLat,
-      minLng,
-      maxLng,
-    }
-  }, [centers])
-
   const maptilerKey = process.env.NEXT_PUBLIC_MAPTILER_KEY
   const mapStyle = maptilerKey
     ? getMaptilerStyleUrl("state", maptilerKey)
@@ -552,7 +516,6 @@ export function CentersChoroplethMap({
           setTimeout(() => {
             e.target.resize()
             handleRecenter()
-            setIsMapReady(true)
           }, 200)
         }}
         interactiveLayerIds={["admin1-fill"]}

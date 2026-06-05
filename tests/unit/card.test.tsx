@@ -1,5 +1,4 @@
 // @vitest-environment jsdom
-import React from "react"
 import { describe, expect, it } from "vitest"
 import { render } from "@testing-library/react"
 import { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent } from "@/components/ui/card"

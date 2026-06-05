@@ -28,9 +28,6 @@ interface AccountRowProps {
 
 export const AccountRow = memo(({ account, onOpen, visibleColumns, selectable, isSelected, onSelectChange, isFavorite, onToggleFavorite }: AccountRowProps) => {
   const handleOpen = () => onOpen(account)
-  const location = [account.account_hq_city, account.account_hq_country]
-    .filter(Boolean)
-    .join(", ")
   const isNasscomVerified = account.account_nasscom_status?.toLowerCase() === "yes"
   const visibilityNote =
     account.account_visibility === "exclude" && account.account_visibility_note

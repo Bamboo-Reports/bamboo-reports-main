@@ -1,6 +1,5 @@
-import { memo, useCallback } from "react"
-import { Calendar, ChevronDown, Edit2, Filter, Share2, Trash2, Users } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { memo } from "react"
+import { Calendar, Edit2, Filter, Share2, Trash2, Users } from "lucide-react"
 import {
   ContextMenu,
   ContextMenuContent,

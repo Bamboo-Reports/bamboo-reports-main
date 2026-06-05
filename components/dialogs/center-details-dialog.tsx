@@ -12,7 +12,6 @@ import {
   Calendar,
   Code,
   DollarSign,
-  ExternalLink,
   Globe,
   Headphones,
   Lightbulb,

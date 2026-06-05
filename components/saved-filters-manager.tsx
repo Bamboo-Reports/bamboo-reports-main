@@ -4,7 +4,6 @@ import { useState, useCallback, useEffect, useMemo, memo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
   DialogContent,
@@ -141,10 +140,6 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
       setEditName("")
     }
   }, [editingFilter, editName, updateFilter])
-
-  const getFilterSummary = useCallback((filters: Filters) => {
-    return calculateActiveFilters(filters)
-  }, [])
 
   const handleEdit = useCallback((filter: SavedFilter) => {
     setEditingFilter(filter)

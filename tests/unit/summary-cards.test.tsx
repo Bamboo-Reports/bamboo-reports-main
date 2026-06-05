@@ -1,5 +1,4 @@
 // @vitest-environment jsdom
-import React from "react"
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest"
 import { render, fireEvent, cleanup } from "@testing-library/react"
 import { SummaryCards, calculateAnimatedNumberValue } from "@/components/dashboard/summary-cards"

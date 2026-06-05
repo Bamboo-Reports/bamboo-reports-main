@@ -20,13 +20,11 @@ import {
   MapPin,
   DollarSign,
   Users,
-  Award,
   TrendingUp,
   Calendar,
   Package,
   Building,
   UserCircle,
-  ExternalLink,
   Globe,
   Linkedin,
 } from "lucide-react"
@@ -369,14 +367,6 @@ export function AccountDetailsDialog({
   const handleProspectClick = (prospect: Prospect) => {
     setSelectedProspect(prospect)
     setIsProspectDialogOpen(true)
-  }
-
-  // Get status indicator color
-  const getStatusColor = (status: string) => {
-    if (status === "Active Center") return "bg-green-500"
-    if (status === "Upcoming") return "bg-yellow-500"
-    if (status === "Non Operational") return "bg-red-500"
-    return "bg-gray-500"
   }
 
   useEffect(() => {

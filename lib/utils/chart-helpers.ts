@@ -1,4 +1,4 @@
-import type { Account, Center, Function, ChartData } from "../types"
+import type { Center, Function, ChartData } from "../types"
 
 // Color palette for charts
 export const CHART_COLORS = [
