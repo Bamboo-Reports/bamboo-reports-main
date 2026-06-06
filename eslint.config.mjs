@@ -3,7 +3,7 @@ import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
 
 export default defineConfig([
   {
-    ignores: ["lib/generated/prisma/**"],
+    ignores: ["coverage/**", "lib/generated/prisma/**"],
   },
   ...nextCoreWebVitals,
   {

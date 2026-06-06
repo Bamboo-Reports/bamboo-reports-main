@@ -1,6 +1,6 @@
 -- Alias table for account name variants sourced from the "alias" sheet.
 -- Relationship/source-of-truth: documentation/table-relationships.md and
--- etl/main.py. The alias row identity is account_global_legal_name; uuid is
+-- etl/V2/main.py. The alias row identity is account_global_legal_name; uuid is
 -- retained as import metadata and must not be treated as the primary key.
 
 create table if not exists public.alias (
