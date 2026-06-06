@@ -362,7 +362,6 @@ Tools used during development but not shipped to production.
 | **@types/node** | 22 | TypeScript definitions for Node.js APIs |
 | **@types/react** | 19 | TypeScript definitions for React |
 | **@types/react-dom** | 19 | TypeScript definitions for React DOM |
-| **baseline-browser-mapping** | 2.9.18 | Browser compatibility baseline checks |
 
 ---
 

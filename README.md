@@ -244,7 +244,7 @@ bamboo-reports-nextjs/
 │
 ├── contexts/                       # React context providers
 │
-├── etl/                            # Python ETL pipeline (data import)
+├── etl/V2/                         # Active Python ETL pipeline (data import)
 │   ├── main.py                     # Import script with change notifications
 │   ├── master-schema.json          # Source-of-truth database schema export
 │   ├── requirements.txt            # Python dependencies
@@ -341,6 +341,9 @@ bamboo-reports-nextjs/
 | `NEXT_PUBLIC_LOGO_DEV_KEY` | No | Logo.dev publishable key for company logos. |
 | `NEXT_PUBLIC_POSTHOG_KEY` | No | PostHog project API key for analytics. |
 | `NEXT_PUBLIC_POSTHOG_HOST` | No | PostHog host URL (defaults to PostHog cloud). |
+| `NEXT_PUBLIC_ENABLE_ANALYTICS` | No | Set to `true` to enable PostHog during local development. |
+| `NEXT_PUBLIC_POSTHOG_ENABLE_RECORDING` | No | Set to `true` to enable session recording and dead-click capture. |
+| `NEXT_PUBLIC_POSTHOG_DEBUG` | No | Set to `true` to enable PostHog debug logging. |
 | `NEXT_PUBLIC_NOTIFICATIONS_ENABLED` | No | Feature flag: `enabled` or `disabled`. |
 | `NEXT_PUBLIC_MAINTENANCE_MODE` | No | Set to `true` to show a maintenance page instead of the dashboard. |
 | `NEXT_PUBLIC_ENVIRONMENT_LABEL` | No | Environment tag displayed in the UI: `DEV`, `PROD`, or empty. |

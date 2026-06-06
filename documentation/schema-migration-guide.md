@@ -1,6 +1,6 @@
 # Schema Migration & Reference Guide (2026-05)
 
-This guide documents the migration from the legacy column naming (uppercase, space-separated) to the new snake_case schema and provides a comprehensive reference for the current database columns (`etl/master-schema.json`). For table hierarchy, primary keys, and linking columns, use `documentation/table-relationships.md` as the source of truth.
+This guide documents the migration from the legacy column naming (uppercase, space-separated) to the new snake_case schema and provides a comprehensive reference for the current database columns (`etl/V2/master-schema.json`). For table hierarchy, primary keys, and linking columns, use `documentation/table-relationships.md` as the source of truth.
 
 > Target Audience: Backend engineers, Data engineers, and Frontend developers wiring up UI components.
 > Source of Truth: Column definitions below are derived from the master schema JSON. Relationship and key semantics are defined in `documentation/table-relationships.md`.
@@ -138,7 +138,7 @@ Columns:
 - When adding a new filter, update both query and in-memory filtering paths.
 
 ### 4.2 Type Definitions (`lib/types.ts`)
-- Keep interfaces aligned with `etl/master-schema.json`.
+- Keep interfaces aligned with `etl/V2/master-schema.json`.
 - Numeric DB fields (`INTEGER`, `BIGINT`, `DOUBLE PRECISION`) should be typed as `number | null` where nullable.
 - `TIMESTAMP` fields are represented as `string | null` in current frontend types.
 

@@ -143,7 +143,7 @@ Prefer config changes over dashboard forks for client-specific packaging.
 
 If you modify the database schema (e.g., rename a column):
 
-1. **Update `etl/master-schema.json`** with the new structure.
+1. **Update `etl/V2/master-schema.json`** with the new structure.
 2. **Update `documentation/schema-migration-guide.md`** to log the change.
 3. **Update `lib/types.ts`** to match the new column names.
 4. **Update server actions** in `app/actions/data.ts` to use the new column names.
@@ -190,7 +190,7 @@ If UI alignment needs tuning:
 ### Type Safety
 - **Strict Mode:** TypeScript strict mode is enabled. Avoid using `any`.
 - **Zod:** Use Zod for validating external inputs (form submissions, saved filter JSON, API parameters).
-- **Shared Types:** All entity types live in `lib/types.ts`. Keep them in sync with `etl/master-schema.json`.
+- **Shared Types:** All entity types live in `lib/types.ts`. Keep them in sync with `etl/V2/master-schema.json`.
 
 ### Performance Best Practices
 - **Neon warehouse reads:** Use the Prisma singleton from `lib/db/prisma.ts` and wrap database calls with `queryWithRetry`.

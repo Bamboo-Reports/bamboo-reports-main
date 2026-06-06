@@ -27,7 +27,7 @@ accounts  (PK: account_global_legal_name)
 
 ## Core Tables
 
-Only `accounts` and `centers` currently have database primary-key constraints in `etl/main.py`.
+Only `accounts` and `centers` currently have database primary-key constraints in `etl/V2/main.py`.
 The remaining child tables are linked through the hub keys below, but their ETL/logical identifiers are
 not database-enforced primary keys and should not be modelled as Prisma `@id` fields.
 
@@ -45,7 +45,7 @@ not database-enforced primary keys and should not be modelled as Prisma `@id` fi
 
 ## ETL Foreign Key Constraints
 
-Defined in `etl/main.py` → `CONSTRAINTS_SQL`. All child tables cascade on parent delete.
+Defined in `etl/V2/main.py` → `CONSTRAINTS_SQL`. All child tables cascade on parent delete.
 
 | Child Table | Parent Table | Linking Column | Behaviour |
 |-------------|--------------|----------------|-----------|
@@ -116,7 +116,7 @@ Only `AccountWarehouse` (`accounts`) and `CenterWarehouse` (`centers`) are model
 
 | File | Purpose |
 |------|---------|
-| `etl/main.py` | Single source of truth for `CONSTRAINTS_SQL`, `TABLE_DEFS`, and `IMPORT_ORDER` |
+| `etl/V2/main.py` | Single source of truth for `CONSTRAINTS_SQL`, `TABLE_DEFS`, and `IMPORT_ORDER` |
 | `prisma/schema.prisma` | Prisma models for `accounts` and `centers` |
 | `app/actions/data.ts` | Server-side data fetching with DB-level joins |
 | `lib/dashboard/filtering.ts` | Client-side in-memory linking and filter propagation |

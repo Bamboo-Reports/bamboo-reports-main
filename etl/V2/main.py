@@ -5,12 +5,12 @@
 Unified Data Manager (Import, Validate, Schema Snapshot)
 
 Usage:
-  python etl/main.py                  # Default: Import -> Snapshot -> Validate
-  python etl/main.py --import         # Import -> Snapshot
-  python etl/main.py --dry-run        # Validate import flow without DB writes
-  python etl/main.py --validate       # Just Validate
-  python etl/main.py --schema         # Just Snapshot
-  python etl/main.py --check-headers  # Diff Google Sheet headers vs schema
+  etl/V2/run.sh                  # Default: Import -> Snapshot -> Validate
+  etl/V2/run.sh --import         # Import -> Snapshot
+  etl/V2/run.sh --dry-run        # Validate import flow without DB writes
+  etl/V2/run.sh --validate       # Just Validate
+  etl/V2/run.sh --schema         # Just Snapshot
+  etl/V2/run.sh --check-headers  # Diff Google Sheet headers vs schema
 """
 
 import argparse
