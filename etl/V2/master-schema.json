@@ -453,14 +453,6 @@
       },
       {
         "Table": "accounts",
-        "Column": "account_coverage",
-        "Type": "TEXT",
-        "Nullable": "YES",
-        "Default": "",
-        "PK": ""
-      },
-      {
-        "Table": "accounts",
         "Column": "account_visibility",
         "Type": "TEXT",
         "Nullable": "YES",
@@ -470,6 +462,22 @@
       {
         "Table": "accounts",
         "Column": "account_visibility_note",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "accounts",
+        "Column": "ingest_type",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "accounts",
+        "Column": "ingest_type_time_stamp",
         "Type": "TEXT",
         "Nullable": "YES",
         "Default": "",
@@ -591,22 +599,6 @@
       {
         "Table": "centers",
         "Column": "center_name",
-        "Type": "TEXT",
-        "Nullable": "YES",
-        "Default": "",
-        "PK": ""
-      },
-      {
-        "Table": "centers",
-        "Column": "center_business_segment",
-        "Type": "TEXT",
-        "Nullable": "YES",
-        "Default": "",
-        "PK": ""
-      },
-      {
-        "Table": "centers",
-        "Column": "center_business_sub_segment",
         "Type": "TEXT",
         "Nullable": "YES",
         "Default": "",
@@ -742,7 +734,7 @@
       },
       {
         "Table": "centers",
-        "Column": "center_region",
+        "Column": "center_boardline",
         "Type": "TEXT",
         "Nullable": "YES",
         "Default": "",
@@ -750,7 +742,31 @@
       },
       {
         "Table": "centers",
-        "Column": "center_boardline",
+        "Column": "center_employees_article",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "centers",
+        "Column": "center_employees_article_source_link",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "centers",
+        "Column": "center_employees_linkedin",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "centers",
+        "Column": "center_employees_range_linkedin_source_link",
         "Type": "TEXT",
         "Nullable": "YES",
         "Default": "",
@@ -774,14 +790,6 @@
       },
       {
         "Table": "centers",
-        "Column": "center_employees_range_source_link",
-        "Type": "TEXT",
-        "Nullable": "YES",
-        "Default": "",
-        "PK": ""
-      },
-      {
-        "Table": "centers",
         "Column": "center_services",
         "Type": "TEXT",
         "Nullable": "YES",
@@ -798,7 +806,31 @@
       },
       {
         "Table": "centers",
+        "Column": "center_employees_comment",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "centers",
         "Column": "center_comments",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "centers",
+        "Column": "ingest_type",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "centers",
+        "Column": "ingest_type_time_stamp",
         "Type": "TEXT",
         "Nullable": "YES",
         "Default": "",

@@ -3,6 +3,7 @@ import { devError } from "@/lib/utils/dev-log"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { isSectionEnabled } from "@/lib/config/dashboard-access"
+import { countsTowardHeadcount } from "@/lib/dashboard/headcount"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import type { DashboardSummaryMetrics } from "@/app/actions/data"
 import type { Account, Alias, Center, Function, Service, Tech, Prospect, LockedProspectTeaser } from "@/lib/types"
@@ -144,8 +145,8 @@ export function useDashboardData({ enabled }: UseDashboardDataOptions) {
         totalUpcomingCentersCountFull: fallbackCentersData.filter((c) => c.center_status === "Upcoming").length,
         totalProspectsCount: fallbackProspectsData.filter(fallbackProspectVisible).length,
         totalProspectsCountFull: fallbackProspectsData.length,
-        totalHeadcount: fallbackCentersData.reduce((sum, c) => sum + (fallbackCenterVisible(c) ? (c.center_employees ?? 0) : 0), 0),
-        totalHeadcountFull: fallbackCentersData.reduce((sum, c) => sum + (c.center_employees ?? 0), 0),
+        totalHeadcount: fallbackCentersData.reduce((sum, c) => sum + (fallbackCenterVisible(c) && countsTowardHeadcount(c.center_type) ? (c.center_employees ?? 0) : 0), 0),
+        totalHeadcountFull: fallbackCentersData.reduce((sum, c) => sum + (countsTowardHeadcount(c.center_type) ? (c.center_employees ?? 0) : 0), 0),
       }
 
       const enabledPrimaryData = {

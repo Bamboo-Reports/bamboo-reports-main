@@ -55,23 +55,17 @@ function normalizeAccount(row: Account & { account_hq_revenue?: bigint | number 
 
 async function fetchAccounts(accountNames: string[] | null | undefined): Promise<Account[]> {
   const prisma = getPrismaOrThrow()
-  const rows = await prisma.accountWarehouse.findMany({
-    ...(accountNames && accountNames.length > 0
-      ? { where: { account_global_legal_name: { in: accountNames } } }
-      : {}),
-    orderBy: { account_global_legal_name: "asc" },
-  })
-  return rows.map((row) => normalizeAccount(row as Account & { account_hq_revenue?: bigint | null }))
+  const rows = (accountNames && accountNames.length > 0
+    ? await prisma.$queryRaw`SELECT * FROM accounts WHERE account_global_legal_name = ANY(${accountNames}) ORDER BY account_global_legal_name`
+    : await prisma.$queryRaw`SELECT * FROM accounts ORDER BY account_global_legal_name`) as Array<Account & { account_hq_revenue?: bigint | number | null }>
+  return rows.map((row) => normalizeAccount(row))
 }
 
 async function fetchCenters(centerKeys: string[] | null | undefined): Promise<Center[]> {
   const prisma = getPrismaOrThrow()
-  return (await prisma.centerWarehouse.findMany({
-    ...(centerKeys && centerKeys.length > 0
-      ? { where: { cn_unique_key: { in: centerKeys } } }
-      : {}),
-    orderBy: { center_name: "asc" },
-  })) as Center[]
+  return (centerKeys && centerKeys.length > 0
+    ? await prisma.$queryRaw`SELECT * FROM centers WHERE cn_unique_key = ANY(${centerKeys}) ORDER BY center_name`
+    : await prisma.$queryRaw`SELECT * FROM centers ORDER BY center_name`) as Center[]
 }
 
 async function fetchServices(centerKeys: string[] | null | undefined): Promise<Service[]> {
