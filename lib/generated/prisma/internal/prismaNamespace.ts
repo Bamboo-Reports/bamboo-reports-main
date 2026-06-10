@@ -636,9 +636,10 @@ export const AccountWarehouseScalarFieldEnum = {
   years_in_india: 'years_in_india',
   account_first_center_year: 'account_first_center_year',
   account_comments: 'account_comments',
-  account_coverage: 'account_coverage',
   account_visibility: 'account_visibility',
-  account_visibility_note: 'account_visibility_note'
+  account_visibility_note: 'account_visibility_note',
+  ingest_type: 'ingest_type',
+  ingest_type_time_stamp: 'ingest_type_time_stamp'
 } as const
 
 export type AccountWarehouseScalarFieldEnum = (typeof AccountWarehouseScalarFieldEnum)[keyof typeof AccountWarehouseScalarFieldEnum]
@@ -659,8 +660,6 @@ export const CenterWarehouseScalarFieldEnum = {
   center_end_year: 'center_end_year',
   center_account_website: 'center_account_website',
   center_name: 'center_name',
-  center_business_segment: 'center_business_segment',
-  center_business_sub_segment: 'center_business_sub_segment',
   center_management_partner: 'center_management_partner',
   center_jv_status: 'center_jv_status',
   center_jv_name: 'center_jv_name',
@@ -677,14 +676,19 @@ export const CenterWarehouseScalarFieldEnum = {
   center_country_iso2: 'center_country_iso2',
   lat: 'lat',
   lng: 'lng',
-  center_region: 'center_region',
   center_boardline: 'center_boardline',
+  center_employees_article: 'center_employees_article',
+  center_employees_article_source_link: 'center_employees_article_source_link',
+  center_employees_linkedin: 'center_employees_linkedin',
+  center_employees_range_linkedin_source_link: 'center_employees_range_linkedin_source_link',
   center_employees: 'center_employees',
   center_employees_range: 'center_employees_range',
-  center_employees_range_source_link: 'center_employees_range_source_link',
   center_services: 'center_services',
   center_first_year: 'center_first_year',
-  center_comments: 'center_comments'
+  center_employees_comment: 'center_employees_comment',
+  center_comments: 'center_comments',
+  ingest_type: 'ingest_type',
+  ingest_type_time_stamp: 'ingest_type_time_stamp'
 } as const
 
 export type CenterWarehouseScalarFieldEnum = (typeof CenterWarehouseScalarFieldEnum)[keyof typeof CenterWarehouseScalarFieldEnum]
