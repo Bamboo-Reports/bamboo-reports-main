@@ -291,8 +291,6 @@ export function CenterDetailsDialog({
                 <MetaRow label="Country" value={center.center_country?.trim().toUpperCase() === "TBA" || centerLocation === "India" ? null : center.center_country} />
                 <MetaRow label="Zip Code" value={center.center_zip_code} />
                 <MetaRow label="Boardline" value={center.center_boardline} />
-                <MetaRow label="Business Segment" value={center.center_business_segment} />
-                <MetaRow label="Sub-Segment" value={center.center_business_sub_segment} />
                 <MetaRow label="Management Partner" value={center.center_management_partner} />
                 <MetaRow label="JV Status" value={center.center_jv_status} />
                 <MetaRow label="JV Name" value={center.center_jv_name} />

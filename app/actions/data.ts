@@ -157,11 +157,8 @@ async function getDashboardCenters(): Promise<Center[]> {
           center_state: true,
           center_country: true,
           center_country_iso2: true,
-          center_region: true,
           center_employees: true,
           center_employees_range: true,
-          center_business_segment: true,
-          center_business_sub_segment: true,
           center_boardline: true,
           center_account_website: true,
           center_timeline: true,
@@ -266,8 +263,8 @@ async function getDashboardSummaryMetrics(): Promise<DashboardSummaryMetrics> {
           COUNT(*) FILTER (WHERE a.account_visibility IS DISTINCT FROM 'exclude')::int AS total_centers_visible,
           COUNT(*) FILTER (WHERE c.center_status = 'Upcoming')::int AS total_upcoming_full,
           COUNT(*) FILTER (WHERE c.center_status = 'Upcoming' AND a.account_visibility IS DISTINCT FROM 'exclude')::int AS total_upcoming_visible,
-          COALESCE(SUM(c.center_employees), 0)::int AS total_headcount_full,
-          COALESCE(SUM(c.center_employees) FILTER (WHERE a.account_visibility IS DISTINCT FROM 'exclude'), 0)::int AS total_headcount_visible
+          COALESCE(SUM(c.center_employees) FILTER (WHERE c.center_type IS NULL OR lower(c.center_type) NOT IN ('manufacturing', 'sales & marketing', 'bpo', 'distribution')), 0)::int AS total_headcount_full,
+          COALESCE(SUM(c.center_employees) FILTER (WHERE a.account_visibility IS DISTINCT FROM 'exclude' AND (c.center_type IS NULL OR lower(c.center_type) NOT IN ('manufacturing', 'sales & marketing', 'bpo', 'distribution'))), 0)::int AS total_headcount_visible
         FROM centers c
         LEFT JOIN accounts a ON a.account_global_legal_name = c.account_global_legal_name
       `),

@@ -44,9 +44,10 @@ export interface Account {
   account_center_employees?: number | null
   account_center_employees_range?: string | null
   account_comments?: string | null
-  account_coverage?: string | null
   account_visibility?: "include" | "exclude" | null
   account_visibility_note?: string | null
+  ingest_type?: string | null
+  ingest_type_time_stamp?: string | null
 }
 
 export interface Center {
@@ -77,19 +78,22 @@ export interface Center {
   center_zip_code?: string | null
   center_country: string | null
   center_country_iso2?: string | null
-  center_region?: string | null
+  center_employees_article?: string | null
+  center_employees_article_source_link?: string | null
+  center_employees_linkedin?: string | null
+  center_employees_range_linkedin_source_link?: string | null
   center_employees?: number | null
   center_employees_range?: string | null
-  center_employees_range_source_link?: string | null
   center_services?: string | null
   center_first_year?: number | null
+  center_employees_comment?: string | null
   center_comments?: string | null
-  center_business_segment?: string | null
-  center_business_sub_segment?: string | null
   center_boardline?: string | null
   center_account_website?: string | null
   lat?: number | null
   lng?: number | null
+  ingest_type?: string | null
+  ingest_type_time_stamp?: string | null
 }
 
 export interface Function {

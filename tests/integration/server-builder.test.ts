@@ -4,16 +4,12 @@ import { buildServerExport } from "@/lib/exports/server-builder"
 import { makeAccount, makeCenter, makeProspect, makeService } from "../fixtures/domain"
 
 const mocks = vi.hoisted(() => ({
-  accountFindMany: vi.fn(),
-  centerFindMany: vi.fn(),
   queryRaw: vi.fn(),
   getProspectsPerAccountLimit: vi.fn(),
 }))
 
 vi.mock("@/lib/db/prisma", () => ({
   getPrismaOrThrow: () => ({
-    accountWarehouse: { findMany: mocks.accountFindMany },
-    centerWarehouse: { findMany: mocks.centerFindMany },
     $queryRaw: mocks.queryRaw,
   }),
 }))
@@ -26,10 +22,10 @@ describe("server export builder", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.getProspectsPerAccountLimit.mockReturnValue(null)
-    mocks.accountFindMany.mockResolvedValue([makeAccount({ account_global_legal_name: "Acme Corp" })])
-    mocks.centerFindMany.mockResolvedValue([makeCenter({ cn_unique_key: "CN-1" })])
     mocks.queryRaw.mockImplementation(async (strings: TemplateStringsArray) => {
       const query = strings.join(" ")
+      if (query.includes("FROM accounts")) return [makeAccount({ account_global_legal_name: "Acme Corp" })]
+      if (query.includes("FROM centers")) return [makeCenter({ cn_unique_key: "CN-1" })]
       if (query.includes("FROM services")) return [makeService({ cn_unique_key: "CN-1" })]
       if (query.includes("FROM prospects")) {
         return [
@@ -66,15 +62,11 @@ describe("server export builder", () => {
       centerKeys: ["CN-1"],
       prospectKeys: ["PS-1"],
     })
-    expect(mocks.accountFindMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: { account_global_legal_name: { in: ["Acme Corp"] } },
-    }))
-    expect(mocks.centerFindMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: { cn_unique_key: { in: ["CN-1"] } },
-    }))
-    expect(mocks.queryRaw).toHaveBeenCalledTimes(2)
+    expect(mocks.queryRaw).toHaveBeenCalledTimes(4)
     expect(mocks.queryRaw.mock.calls.map(([strings]) => String(strings))).toEqual(
       expect.arrayContaining([
+        expect.stringContaining("SELECT * FROM accounts WHERE account_global_legal_name = ANY"),
+        expect.stringContaining("SELECT * FROM centers WHERE cn_unique_key = ANY"),
         expect.stringContaining("cn_unique_key = ANY"),
         expect.stringContaining("ps_unique_key = ANY"),
       ])

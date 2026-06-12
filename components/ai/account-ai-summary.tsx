@@ -67,7 +67,7 @@ export function AccountAISummary({ accountName }: { accountName: string }) {
 
       <div className={`relative z-10 grid min-h-[190px] gap-6 p-5 sm:p-6 lg:items-center lg:px-8 lg:py-7 ${result ? "grid-cols-1" : "lg:grid-cols-[minmax(0,1fr)_auto]"}`}>
         <div className={result ? "w-full" : "max-w-3xl"}>
-          {!result && !loading && (
+          {!result && !loading && !error && (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-700 fill-mode-both">
               <h3 className="max-w-2xl text-xl font-semibold leading-tight tracking-[-0.025em] text-foreground sm:text-[22px]">
                 Instant Executive Intelligence on {accountName}
@@ -100,9 +100,14 @@ export function AccountAISummary({ accountName }: { accountName: string }) {
           )}
 
           {error && (
-            <p className="mt-4 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
-              {error}
-            </p>
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-700 fill-mode-both">
+              <h3 className="max-w-2xl text-xl font-semibold leading-tight tracking-[-0.025em] text-foreground sm:text-[22px]">
+                Our AI is in high demand right now and needs a quick breather.
+              </h3>
+              <p className="mt-2.5 max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
+                Give it a moment, then hit Summarize again. Your executive brief is worth the short wait.
+              </p>
+            </div>
           )}
         </div>
 

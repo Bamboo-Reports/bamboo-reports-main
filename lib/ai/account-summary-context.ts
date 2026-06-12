@@ -98,6 +98,31 @@ export async function buildAccountSummaryContext(accountName: string): Promise<A
   const prisma = getPrismaOrThrow()
   const account = await queryWithRetry(() => prisma.accountWarehouse.findUnique({
     where: { account_global_legal_name: accountName },
+    select: {
+      account_global_legal_name: true,
+      account_about: true,
+      account_hq_key_offerings: true,
+      account_hq_city: true,
+      account_hq_state: true,
+      account_hq_country: true,
+      account_hq_region: true,
+      account_hq_industry: true,
+      account_hq_sub_industry: true,
+      account_primary_category: true,
+      account_primary_nature: true,
+      account_hq_company_type: true,
+      account_nasscom_status: true,
+      account_hq_revenue: true,
+      account_hq_revenue_range: true,
+      account_hq_employee_count: true,
+      account_hq_employee_range: true,
+      account_hq_forbes_2000_rank: true,
+      account_hq_fortune_500_rank: true,
+      account_first_center_year: true,
+      years_in_india: true,
+      account_center_employees: true,
+      account_center_employees_range: true,
+    },
   }))
 
   if (!account) return null
@@ -109,6 +134,16 @@ export async function buildAccountSummaryContext(accountName: string): Promise<A
     ? await queryWithRetry(() => prisma.centerWarehouse.findMany({
         where: { account_global_legal_name: accountName },
         orderBy: { center_name: "asc" },
+        select: {
+          cn_unique_key: true,
+          center_name: true,
+          center_employees: true,
+          center_city: true,
+          center_state: true,
+          center_type: true,
+          center_status: true,
+          center_focus: true,
+        },
       })) as Center[]
     : []
   const centerKeys = centers.map((center) => center.cn_unique_key)

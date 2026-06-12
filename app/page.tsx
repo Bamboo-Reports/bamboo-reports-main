@@ -27,6 +27,7 @@ import { useGlobalSearch } from "@/hooks/use-global-search"
 import { useRecentItems } from "@/hooks/use-recent-items"
 import { useFavorites, type FavoriteItem, type FavoriteInput } from "@/hooks/use-favorites"
 import { getProspectRecordId } from "@/lib/dashboard/prospect-id"
+import { countsTowardHeadcount } from "@/lib/dashboard/headcount"
 import {
   captureEvent,
   ensureAnalyticsSession,
@@ -1144,7 +1145,7 @@ function DashboardContent(): React.JSX.Element | null {
                   totalUpcomingCentersCount={summary.totalUpcomingCentersCountFull}
                   filteredProspectsCount={filteredData.filteredProspects.length}
                   totalProspectsCount={summary.totalProspectsCountFull}
-                  filteredHeadcount={filteredData.filteredCenters.reduce((sum, c) => sum + (c.center_employees ?? 0), 0)}
+                  filteredHeadcount={filteredData.filteredCenters.reduce((sum, c) => sum + (countsTowardHeadcount(c.center_type) ? (c.center_employees ?? 0) : 0), 0)}
                   totalHeadcount={summary.totalHeadcountFull}
                   activeView={activeSection}
                   onSelect={handleSectionSelect}
