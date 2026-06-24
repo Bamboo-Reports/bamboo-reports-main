@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react"
 import { Marker } from "@vis.gl/react-maplibre"
+import { devError } from "@/lib/utils/dev-log"
 
 interface SearchResult {
   label: string
@@ -45,9 +46,11 @@ export function DebugLocationSearch({ mapRef }: DebugLocationSearchProps) {
     try {
       const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&viewbox=68,37,98,6&q=${encodeURIComponent(q)}`
       const res = await fetch(url, { headers: { Accept: "application/json" } })
+      if (!res.ok) throw new Error(`Nominatim ${res.status}`)
       const data: Array<{ display_name: string; lat: string; lon: string }> = await res.json()
       setResults(data.map((d) => ({ label: d.display_name, lat: Number(d.lat), lng: Number(d.lon) })))
-    } catch {
+    } catch (err) {
+      devError("[DebugLocationSearch] geocode failed:", err)
       setResults([])
     } finally {
       setSearching(false)

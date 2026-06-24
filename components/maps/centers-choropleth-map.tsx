@@ -4,7 +4,7 @@ import React, { useMemo, useState, useEffect, useLayoutEffect } from "react"
 import { Map as MapGL, Source, Layer, NavigationControl, FullscreenControl } from "@vis.gl/react-maplibre"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
-import { hideBasemapBoundaries } from "@/lib/maps/basemap"
+import { BASEMAP_STYLE_URL, hideBasemapBoundaries } from "@/lib/maps/basemap"
 import { DebugLocationSearch } from "@/components/maps/debug-location-search"
 import { devError } from "@/lib/utils/dev-log"
 import type { Center } from "@/lib/types"
@@ -51,26 +51,6 @@ const makeKey = (countryIso2: string, stateKey: string) => `${countryIso2}|${sta
 const makeFeatureKey = (countryIso2?: string | null, stateName?: string | null) =>
   makeKey(normalizeIso2(countryIso2), normalizeStateKey(stateName))
 
-interface DisputedAliasRule {
-  featureIso2: string
-  featureStateNames: string[]
-  aggregateIso2: string
-  aggregateState: string
-  displayCountry: string
-  displayState: string
-}
-
-interface AliasMeta {
-  aggregateKey: string
-  displayCountry: string
-  displayState: string
-}
-
-// ponytail: empty. The SOI India boundaries in public/data/admin-1.geojson already
-// include PoK/Gilgit-Baltistan inside Jammu and Kashmir, so no re-coloring alias is
-// needed. Re-add a viewpoint entry here only if a non-India basemap is reintroduced.
-const DISPUTED_ALIAS_RULES_BY_VIEWPOINT: Record<string, DisputedAliasRule[]> = {}
-
 const buildStateAggregates = (centers: Center[]) => {
   const countsByState = new Map<string, number>()
   const accountsByState = new Map<string, Set<string>>()
@@ -100,50 +80,6 @@ const buildStateAggregates = (centers: Center[]) => {
   })
 
   return { countsByState, accountsByState, headcountByState, countryNamesByIso }
-}
-
-const buildRenderAggregates = (
-  stateAggregates: ReturnType<typeof buildStateAggregates>,
-  viewpointIso2: string
-) => {
-  const countsByState = new Map(stateAggregates.countsByState)
-  const accountsByState = new Map<string, Set<string>>()
-  stateAggregates.accountsByState.forEach((accounts, key) => {
-    accountsByState.set(key, new Set(accounts))
-  })
-  const headcountByState = new Map(stateAggregates.headcountByState)
-  const aliasMetaByFeatureKey = new Map<string, AliasMeta>()
-
-  const rules = DISPUTED_ALIAS_RULES_BY_VIEWPOINT[viewpointIso2] ?? []
-  rules.forEach((rule) => {
-    const aggregateKey = makeFeatureKey(rule.aggregateIso2, rule.aggregateState)
-    const aggregateCount = stateAggregates.countsByState.get(aggregateKey) || 0
-    if (aggregateCount <= 0) return
-
-    const aggregateAccounts = stateAggregates.accountsByState.get(aggregateKey)
-    const aggregateHeadcount = stateAggregates.headcountByState.get(aggregateKey) || 0
-
-    rule.featureStateNames.forEach((featureStateName) => {
-      const featureKey = makeFeatureKey(rule.featureIso2, featureStateName)
-      countsByState.set(featureKey, aggregateCount)
-      if (aggregateAccounts) {
-        accountsByState.set(featureKey, new Set(aggregateAccounts))
-      }
-      headcountByState.set(featureKey, aggregateHeadcount)
-      aliasMetaByFeatureKey.set(featureKey, {
-        aggregateKey,
-        displayCountry: rule.displayCountry,
-        displayState: rule.displayState,
-      })
-    })
-  })
-
-  return {
-    countsByState,
-    accountsByState,
-    headcountByState,
-    aliasMetaByFeatureKey,
-  }
 }
 
 const buildColorScale = (values: number[], countExpression: any) => {
@@ -233,7 +169,6 @@ export function CentersChoroplethMap({
   allCenters,
   heightClass = "h-[750px]",
 }: CentersChoroplethMapProps) {
-  const mapViewpointIso2 = normalizeIso2(process.env.NEXT_PUBLIC_MAP_VIEWPOINT_ISO2)
   const [error, setError] = useState<string | null>(null)
   const [isClient, setIsClient] = useState(false)
   const [hoverInfo, setHoverInfo] = useState<{
@@ -327,10 +262,6 @@ export function CentersChoroplethMap({
   }, [isClient])
 
   const stateAggregates = useMemo(() => buildStateAggregates(centers), [centers])
-  const renderAggregates = useMemo(
-    () => buildRenderAggregates(stateAggregates, mapViewpointIso2),
-    [mapViewpointIso2, stateAggregates]
-  )
   const scaleAggregates = useMemo(() => {
     const centersForScale = allCenters && allCenters.length > 0 ? allCenters : centers
     return buildStateAggregates(centersForScale)
@@ -355,23 +286,23 @@ export function CentersChoroplethMap({
 
   const stateKeysWithCounts = useMemo(() => {
     const keys: string[] = []
-    renderAggregates.countsByState.forEach((value, key) => {
+    stateAggregates.countsByState.forEach((value, key) => {
       if (value > 0) keys.push(key)
     })
     return keys
-  }, [renderAggregates])
+  }, [stateAggregates])
 
   const countExpression = useMemo(() => {
     if (stateKeysWithCounts.length === 0) return ["literal", 0] as any
     const expression: any[] = ["match", featureKeyExpression]
-    renderAggregates.countsByState.forEach((value, key) => {
+    stateAggregates.countsByState.forEach((value, key) => {
       if (value > 0) {
         expression.push(key, value)
       }
     })
     expression.push(0)
     return expression
-  }, [featureKeyExpression, renderAggregates, stateKeysWithCounts])
+  }, [featureKeyExpression, stateAggregates, stateKeysWithCounts])
 
   const { expression: fillColorExpression } = useMemo(
     () => buildColorScale(countValues, countExpression),
@@ -385,24 +316,6 @@ export function CentersChoroplethMap({
     return ["all", ["==", ["get", "level"], 1], ["in", featureKeyExpression, ["literal", stateKeysWithCounts]]] as any
   }, [featureKeyExpression, stateKeysWithCounts])
 
-  const mergedRegionFeatureKeys = useMemo(() => {
-    const keys = new Set<string>()
-    renderAggregates.aliasMetaByFeatureKey.forEach((meta, featureKey) => {
-      keys.add(featureKey)
-      keys.add(meta.aggregateKey)
-    })
-    return Array.from(keys)
-  }, [renderAggregates])
-
-  const outlineLayerFilter = useMemo(() => {
-    if (mergedRegionFeatureKeys.length === 0) return layerFilter
-    return [
-      "all",
-      layerFilter,
-      ["!", ["in", featureKeyExpression, ["literal", mergedRegionFeatureKeys]]],
-    ] as any
-  }, [featureKeyExpression, layerFilter, mergedRegionFeatureKeys])
-
   const hoverLayerFilter = useMemo(() => {
     if (!hoveredFeatureKeys || hoveredFeatureKeys.length === 0) {
       return ["==", ["get", "name"], "__never_hovered_state__"] as any
@@ -414,9 +327,7 @@ export function CentersChoroplethMap({
     ] as any
   }, [featureKeyExpression, hoveredFeatureKeys])
 
-  // Carto Positron (light OSM vector tiles, no API key). Boundaries come from the
-  // SOI GeoJSON overlay above, not from the basemap.
-  const mapStyle = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
+  const mapStyle = BASEMAP_STYLE_URL
 
   const handleRecenter = () => {
     const mapInstance = mapRef.current?.getMap?.() ?? mapRef.current
@@ -528,20 +439,12 @@ export function CentersChoroplethMap({
           const stateName = (props.name || "").toString()
           const iso2 = (props.level_0 || "").toString()
           const key = makeFeatureKey(iso2, stateName)
-          const aliasMeta = renderAggregates.aliasMetaByFeatureKey.get(key)
-          const aggregateKey = aliasMeta?.aggregateKey || key
-          const linkedFeatureKeys = Array.from(renderAggregates.aliasMetaByFeatureKey.entries())
-            .filter(([, meta]) => meta.aggregateKey === aggregateKey)
-            .map(([featureKey]) => featureKey)
-          if (linkedFeatureKeys.length === 0 || !linkedFeatureKeys.includes(aggregateKey)) {
-            linkedFeatureKeys.push(aggregateKey)
-          }
-          setHoveredFeatureKeys(linkedFeatureKeys)
-          const count = renderAggregates.countsByState.get(key) || 0
-          const accountsCount = renderAggregates.accountsByState.get(key)?.size || 0
-          const headcount = renderAggregates.headcountByState.get(key) || 0
-          const countryName = aliasMeta?.displayCountry || stateAggregates.countryNamesByIso.get(iso2) || iso2
-          const stateLabel = aliasMeta?.displayState || stateName || "Unknown State"
+          setHoveredFeatureKeys([key])
+          const count = stateAggregates.countsByState.get(key) || 0
+          const accountsCount = stateAggregates.accountsByState.get(key)?.size || 0
+          const headcount = stateAggregates.headcountByState.get(key) || 0
+          const countryName = stateAggregates.countryNamesByIso.get(iso2) || iso2
+          const stateLabel = stateName || "Unknown State"
           setHoverInfo({
             x: e.point.x,
             y: e.point.y,
@@ -604,7 +507,7 @@ export function CentersChoroplethMap({
           <Layer
             id="admin1-outline"
             type="line"
-            filter={outlineLayerFilter}
+            filter={layerFilter}
             paint={{
               "line-color": "#ffffff",
               "line-width": 0.7,

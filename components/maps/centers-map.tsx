@@ -4,7 +4,7 @@ import React, { useMemo, useState, useEffect, useCallback, useLayoutEffect } fro
 import { Map as MapGL, Source, Layer, NavigationControl, FullscreenControl } from "@vis.gl/react-maplibre"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
-import { hideBasemapBoundaries } from "@/lib/maps/basemap"
+import { BASEMAP_STYLE_URL, hideBasemapBoundaries } from "@/lib/maps/basemap"
 import { DebugLocationSearch } from "@/components/maps/debug-location-search"
 import { createLogger } from "@/lib/logger"
 import type { Center } from "@/lib/types"
@@ -354,8 +354,7 @@ export function CentersMap({ centers, heightClass = "h-[750px]", showAccountsCou
     [coreRadiusExpression]
   )
 
-  // Carto Positron (light OSM vector tiles, no API key).
-  const mapStyle = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
+  const mapStyle = BASEMAP_STYLE_URL
 
   // Handler to recenter the map to India
   const handleRecenter = () => {
@@ -485,12 +484,22 @@ export function CentersMap({ centers, heightClass = "h-[750px]", showAccountsCou
           setMousePosition(null)
         }}
         onError={(e) => {
-          // MapLibre fires error events for non-fatal issues (missing tiles/glyphs,
-          // aborted tile requests). Log at warn (no console.error, so the dev
-          // overlay stays quiet) and never blank the map for these.
           const source = (e as { sourceId?: string }).sourceId
           const message = e.error?.message ?? String(e.error ?? "unknown")
-          logger.warn("map_runtime_error", { source, message })
+          // Per-source/tile errors are non-fatal (missing/aborted tiles, glyphs):
+          // log at warn and keep the map up. A real style failure (no sourceId)
+          // surfaces the error screen and analytics, like the choropleth map.
+          if (source) {
+            logger.warn("map_source_error", { source, message })
+            return
+          }
+          logger.error("map_runtime_error", { message })
+          setError(`Map error: ${message}`)
+          captureEvent(ANALYTICS_EVENTS.MAP_ERROR_SHOWN, {
+            map_kind: "city",
+            map_name: "centers_map",
+            error_message: message,
+          })
         }}
       >
         {/* Navigation Controls - Zoom and Rotation */}
