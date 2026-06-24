@@ -4,7 +4,8 @@ import React, { useMemo, useState, useEffect, useCallback, useLayoutEffect } fro
 import { Map as MapGL, Source, Layer, NavigationControl, FullscreenControl } from "@vis.gl/react-maplibre"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
-import { getMaptilerStyleUrl } from "@/lib/config/maptiler"
+import { hideBasemapBoundaries } from "@/lib/maps/basemap"
+import { DebugLocationSearch } from "@/components/maps/debug-location-search"
 import { createLogger } from "@/lib/logger"
 import type { Center } from "@/lib/types"
 import "maplibre-gl/dist/maplibre-gl.css"
@@ -353,10 +354,8 @@ export function CentersMap({ centers, heightClass = "h-[750px]", showAccountsCou
     [coreRadiusExpression]
   )
 
-  const maptilerKey = process.env.NEXT_PUBLIC_MAPTILER_KEY
-  const mapStyle = maptilerKey
-    ? getMaptilerStyleUrl("city", maptilerKey)
-    : ""
+  // Carto Positron (light OSM vector tiles, no API key).
+  const mapStyle = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
 
   // Handler to recenter the map to India
   const handleRecenter = () => {
@@ -392,22 +391,6 @@ export function CentersMap({ centers, heightClass = "h-[750px]", showAccountsCou
       <div className={`flex items-center justify-center ${heightClass} bg-muted rounded-lg`}>
         <div className="text-center">
           <p className="text-sm text-muted-foreground">Loading map...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (!maptilerKey) {
-    logger.warn("maptiler_key_missing")
-    return (
-      <div className={`flex items-center justify-center ${heightClass} bg-muted rounded-lg`}>
-        <div className="text-center">
-          <p className="text-lg font-semibold text-muted-foreground mb-2">
-            MapTiler API Key Missing
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Please set NEXT_PUBLIC_MAPTILER_KEY in your environment variables
-          </p>
         </div>
       </div>
     )
@@ -471,11 +454,14 @@ export function CentersMap({ centers, heightClass = "h-[750px]", showAccountsCou
         mapStyle={mapStyle}
         projection="mercator"
         onLoad={() => {
+          const map = mapRef.current?.getMap?.() ?? mapRef.current
+          // Hide the basemap's de-facto international borders; India boundaries
+          // come from the SOI overlay below.
+          if (map) hideBasemapBoundaries(map)
           // Force a resize calculation after map loads to ensure it fills container
           setTimeout(() => {
-            const mapInstance = mapRef.current?.getMap?.() ?? mapRef.current
-            if (mapInstance?.resize) {
-              mapInstance.resize()
+            if (map?.resize) {
+              map.resize()
             }
             handleRecenter()
             setIsMapReady(true)
@@ -499,13 +485,12 @@ export function CentersMap({ centers, heightClass = "h-[750px]", showAccountsCou
           setMousePosition(null)
         }}
         onError={(e) => {
-          logger.error("map_runtime_error", { error: e.error ?? e })
-          setError(`Map error: ${e.error?.message || "Unknown error"}`)
-          captureEvent(ANALYTICS_EVENTS.MAP_ERROR_SHOWN, {
-            map_kind: "city",
-            map_name: "centers_map",
-            error_message: e.error?.message || "Unknown map error",
-          })
+          // MapLibre fires error events for non-fatal issues (missing tiles/glyphs,
+          // aborted tile requests). Log at warn (no console.error, so the dev
+          // overlay stays quiet) and never blank the map for these.
+          const source = (e as { sourceId?: string }).sourceId
+          const message = e.error?.message ?? String(e.error ?? "unknown")
+          logger.warn("map_runtime_error", { source, message })
         }}
       >
         {/* Navigation Controls - Zoom and Rotation */}
@@ -513,6 +498,22 @@ export function CentersMap({ centers, heightClass = "h-[750px]", showAccountsCou
 
         {/* Fullscreen Control */}
         <FullscreenControl position="top-left" />
+
+        <DebugLocationSearch mapRef={mapRef} />
+
+        {/* Survey of India state boundaries (correct India viewpoint), drawn
+            under the city bubbles since the basemap borders are hidden. */}
+        <Source id="india-admin" type="geojson" data="/data/admin-1.geojson">
+          <Layer
+            id="india-admin-outline"
+            type="line"
+            paint={{
+              "line-color": "#64748b",
+              "line-width": 0.5,
+              "line-opacity": 0.5,
+            }}
+          />
+        </Source>
 
         <Source id="centers" type="geojson" data={visibleGeojsonData ?? geojsonData}>
           {/* Outer halo layer - crisp, flat, and rendered below core for clean overlap */}
@@ -546,7 +547,8 @@ export function CentersMap({ centers, heightClass = "h-[750px]", showAccountsCou
             layout={{
               "text-field": ["get", "label"],
               "text-size": ["get", "labelSize"],
-              "text-font": ["Google Sans Bold", "Arial Unicode MS Bold"],
+              // Carto's glyph server only serves Open Sans (not Google Sans).
+              "text-font": ["Open Sans Bold", "Open Sans Regular"],
               "text-allow-overlap": true,
               "text-ignore-placement": true,
             }}

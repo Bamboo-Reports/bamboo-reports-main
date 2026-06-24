@@ -4,7 +4,8 @@ import React, { useMemo, useState, useEffect, useLayoutEffect } from "react"
 import { Map as MapGL, Source, Layer, NavigationControl, FullscreenControl } from "@vis.gl/react-maplibre"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
-import { getMaptilerCountriesTilesUrl, getMaptilerStyleUrl } from "@/lib/config/maptiler"
+import { hideBasemapBoundaries } from "@/lib/maps/basemap"
+import { DebugLocationSearch } from "@/components/maps/debug-location-search"
 import { devError } from "@/lib/utils/dev-log"
 import type { Center } from "@/lib/types"
 import "maplibre-gl/dist/maplibre-gl.css"
@@ -65,23 +66,10 @@ interface AliasMeta {
   displayState: string
 }
 
-const DISPUTED_ALIAS_RULES_BY_VIEWPOINT: Record<string, DisputedAliasRule[]> = {
-  IN: [
-    {
-      featureIso2: "PK",
-      featureStateNames: [
-        "azad kashmir",
-        "azad jammu and kashmir",
-        "gilgit-baltistan",
-        "gilgit baltistan",
-      ],
-      aggregateIso2: "IN",
-      aggregateState: "jammu and kashmir",
-      displayCountry: "India",
-      displayState: "Jammu and Kashmir",
-    },
-  ],
-}
+// ponytail: empty. The SOI India boundaries in public/data/admin-1.geojson already
+// include PoK/Gilgit-Baltistan inside Jammu and Kashmir, so no re-coloring alias is
+// needed. Re-add a viewpoint entry here only if a non-India basemap is reintroduced.
+const DISPUTED_ALIAS_RULES_BY_VIEWPOINT: Record<string, DisputedAliasRule[]> = {}
 
 const buildStateAggregates = (centers: Center[]) => {
   const countsByState = new Map<string, number>()
@@ -426,13 +414,9 @@ export function CentersChoroplethMap({
     ] as any
   }, [featureKeyExpression, hoveredFeatureKeys])
 
-  const maptilerKey = process.env.NEXT_PUBLIC_MAPTILER_KEY
-  const mapStyle = maptilerKey
-    ? getMaptilerStyleUrl("state", maptilerKey)
-    : ""
-  const countriesTileUrl = maptilerKey
-    ? getMaptilerCountriesTilesUrl(maptilerKey)
-    : ""
+  // Carto Positron (light OSM vector tiles, no API key). Boundaries come from the
+  // SOI GeoJSON overlay above, not from the basemap.
+  const mapStyle = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
 
   const handleRecenter = () => {
     const mapInstance = mapRef.current?.getMap?.() ?? mapRef.current
@@ -471,22 +455,6 @@ export function CentersChoroplethMap({
     )
   }
 
-  if (!maptilerKey) {
-    devError("[CentersChoroplethMap] MapTiler key is missing")
-    return (
-      <div className={`flex items-center justify-center ${heightClass} bg-muted rounded-lg`}>
-        <div className="text-center">
-          <p className="text-lg font-semibold text-muted-foreground mb-2">
-            MapTiler API Key Missing
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Please set NEXT_PUBLIC_MAPTILER_KEY in your environment variables
-          </p>
-        </div>
-      </div>
-    )
-  }
-
   if (stateKeysWithCounts.length === 0) {
     return (
       <div className={`flex items-center justify-center ${heightClass} bg-muted rounded-lg`}>
@@ -513,6 +481,9 @@ export function CentersChoroplethMap({
         mapStyle={mapStyle}
         projection="mercator"
         onLoad={(e) => {
+          // Hide the basemap's de-facto international borders; India boundaries
+          // come from the SOI overlay below.
+          hideBasemapBoundaries(e.target)
           setTimeout(() => {
             e.target.resize()
             handleRecenter()
@@ -586,23 +557,42 @@ export function CentersChoroplethMap({
           setHoveredFeatureKeys(null)
         }}
         onError={(e) => {
-          devError("[CentersChoroplethMap] Map error:", e)
-          setError(`Map error: ${e.error?.message || "Unknown error"}`)
+          const sourceId = (e as { sourceId?: string }).sourceId
+          const message = e.error?.message ?? String(e.error ?? "unknown")
+          // Per-source/tile errors are non-fatal: log and keep the map up. Only a
+          // real style failure (no sourceId) shows the error screen.
+          if (sourceId) {
+            devError("[CentersChoroplethMap] source error:", sourceId, message)
+            return
+          }
+          devError("[CentersChoroplethMap] Map error:", message)
+          setError(`Map error: ${message}`)
           captureEvent(ANALYTICS_EVENTS.MAP_ERROR_SHOWN, {
             map_kind: "state",
             map_name: "centers_choropleth_map",
-            error_message: e.error?.message || "Unknown map error",
+            error_message: message,
           })
         }}
       >
         <NavigationControl position="top-left" showCompass={true} showZoom={true} />
         <FullscreenControl position="top-left" />
 
-        <Source id="admin1" type="vector" url={countriesTileUrl}>
+        <DebugLocationSearch mapRef={mapRef} />
+
+        <Source id="admin1" type="geojson" data="/data/admin-1.geojson">
+          <Layer
+            id="admin1-base-outline"
+            type="line"
+            filter={["==", ["get", "level"], 1] as any}
+            paint={{
+              "line-color": "#64748b",
+              "line-width": 0.5,
+              "line-opacity": 0.5,
+            }}
+          />
           <Layer
             id="admin1-fill"
             type="fill"
-            source-layer="administrative"
             filter={layerFilter}
             paint={{
               "fill-color": fillColorExpression,
@@ -614,7 +604,6 @@ export function CentersChoroplethMap({
           <Layer
             id="admin1-outline"
             type="line"
-            source-layer="administrative"
             filter={outlineLayerFilter}
             paint={{
               "line-color": "#ffffff",
@@ -625,7 +614,6 @@ export function CentersChoroplethMap({
           <Layer
             id="admin1-hover-fill"
             type="fill"
-            source-layer="administrative"
             filter={hoverLayerFilter}
             paint={{
               "fill-color": "#f97316",
