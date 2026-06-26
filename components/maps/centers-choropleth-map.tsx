@@ -4,7 +4,8 @@ import React, { useMemo, useState, useEffect, useLayoutEffect } from "react"
 import { Map as MapGL, Source, Layer, NavigationControl, FullscreenControl } from "@vis.gl/react-maplibre"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
-import { getMaptilerCountriesTilesUrl, getMaptilerStyleUrl } from "@/lib/config/maptiler"
+import { BASEMAP_STYLE_URL, hideBasemapBoundaries } from "@/lib/maps/basemap"
+import { DebugLocationSearch } from "@/components/maps/debug-location-search"
 import { devError } from "@/lib/utils/dev-log"
 import type { Center } from "@/lib/types"
 import "maplibre-gl/dist/maplibre-gl.css"
@@ -50,39 +51,6 @@ const makeKey = (countryIso2: string, stateKey: string) => `${countryIso2}|${sta
 const makeFeatureKey = (countryIso2?: string | null, stateName?: string | null) =>
   makeKey(normalizeIso2(countryIso2), normalizeStateKey(stateName))
 
-interface DisputedAliasRule {
-  featureIso2: string
-  featureStateNames: string[]
-  aggregateIso2: string
-  aggregateState: string
-  displayCountry: string
-  displayState: string
-}
-
-interface AliasMeta {
-  aggregateKey: string
-  displayCountry: string
-  displayState: string
-}
-
-const DISPUTED_ALIAS_RULES_BY_VIEWPOINT: Record<string, DisputedAliasRule[]> = {
-  IN: [
-    {
-      featureIso2: "PK",
-      featureStateNames: [
-        "azad kashmir",
-        "azad jammu and kashmir",
-        "gilgit-baltistan",
-        "gilgit baltistan",
-      ],
-      aggregateIso2: "IN",
-      aggregateState: "jammu and kashmir",
-      displayCountry: "India",
-      displayState: "Jammu and Kashmir",
-    },
-  ],
-}
-
 const buildStateAggregates = (centers: Center[]) => {
   const countsByState = new Map<string, number>()
   const accountsByState = new Map<string, Set<string>>()
@@ -112,50 +80,6 @@ const buildStateAggregates = (centers: Center[]) => {
   })
 
   return { countsByState, accountsByState, headcountByState, countryNamesByIso }
-}
-
-const buildRenderAggregates = (
-  stateAggregates: ReturnType<typeof buildStateAggregates>,
-  viewpointIso2: string
-) => {
-  const countsByState = new Map(stateAggregates.countsByState)
-  const accountsByState = new Map<string, Set<string>>()
-  stateAggregates.accountsByState.forEach((accounts, key) => {
-    accountsByState.set(key, new Set(accounts))
-  })
-  const headcountByState = new Map(stateAggregates.headcountByState)
-  const aliasMetaByFeatureKey = new Map<string, AliasMeta>()
-
-  const rules = DISPUTED_ALIAS_RULES_BY_VIEWPOINT[viewpointIso2] ?? []
-  rules.forEach((rule) => {
-    const aggregateKey = makeFeatureKey(rule.aggregateIso2, rule.aggregateState)
-    const aggregateCount = stateAggregates.countsByState.get(aggregateKey) || 0
-    if (aggregateCount <= 0) return
-
-    const aggregateAccounts = stateAggregates.accountsByState.get(aggregateKey)
-    const aggregateHeadcount = stateAggregates.headcountByState.get(aggregateKey) || 0
-
-    rule.featureStateNames.forEach((featureStateName) => {
-      const featureKey = makeFeatureKey(rule.featureIso2, featureStateName)
-      countsByState.set(featureKey, aggregateCount)
-      if (aggregateAccounts) {
-        accountsByState.set(featureKey, new Set(aggregateAccounts))
-      }
-      headcountByState.set(featureKey, aggregateHeadcount)
-      aliasMetaByFeatureKey.set(featureKey, {
-        aggregateKey,
-        displayCountry: rule.displayCountry,
-        displayState: rule.displayState,
-      })
-    })
-  })
-
-  return {
-    countsByState,
-    accountsByState,
-    headcountByState,
-    aliasMetaByFeatureKey,
-  }
 }
 
 const buildColorScale = (values: number[], countExpression: any) => {
@@ -245,7 +169,6 @@ export function CentersChoroplethMap({
   allCenters,
   heightClass = "h-[750px]",
 }: CentersChoroplethMapProps) {
-  const mapViewpointIso2 = normalizeIso2(process.env.NEXT_PUBLIC_MAP_VIEWPOINT_ISO2)
   const [error, setError] = useState<string | null>(null)
   const [isClient, setIsClient] = useState(false)
   const [hoverInfo, setHoverInfo] = useState<{
@@ -339,10 +262,6 @@ export function CentersChoroplethMap({
   }, [isClient])
 
   const stateAggregates = useMemo(() => buildStateAggregates(centers), [centers])
-  const renderAggregates = useMemo(
-    () => buildRenderAggregates(stateAggregates, mapViewpointIso2),
-    [mapViewpointIso2, stateAggregates]
-  )
   const scaleAggregates = useMemo(() => {
     const centersForScale = allCenters && allCenters.length > 0 ? allCenters : centers
     return buildStateAggregates(centersForScale)
@@ -367,23 +286,23 @@ export function CentersChoroplethMap({
 
   const stateKeysWithCounts = useMemo(() => {
     const keys: string[] = []
-    renderAggregates.countsByState.forEach((value, key) => {
+    stateAggregates.countsByState.forEach((value, key) => {
       if (value > 0) keys.push(key)
     })
     return keys
-  }, [renderAggregates])
+  }, [stateAggregates])
 
   const countExpression = useMemo(() => {
     if (stateKeysWithCounts.length === 0) return ["literal", 0] as any
     const expression: any[] = ["match", featureKeyExpression]
-    renderAggregates.countsByState.forEach((value, key) => {
+    stateAggregates.countsByState.forEach((value, key) => {
       if (value > 0) {
         expression.push(key, value)
       }
     })
     expression.push(0)
     return expression
-  }, [featureKeyExpression, renderAggregates, stateKeysWithCounts])
+  }, [featureKeyExpression, stateAggregates, stateKeysWithCounts])
 
   const { expression: fillColorExpression } = useMemo(
     () => buildColorScale(countValues, countExpression),
@@ -397,24 +316,6 @@ export function CentersChoroplethMap({
     return ["all", ["==", ["get", "level"], 1], ["in", featureKeyExpression, ["literal", stateKeysWithCounts]]] as any
   }, [featureKeyExpression, stateKeysWithCounts])
 
-  const mergedRegionFeatureKeys = useMemo(() => {
-    const keys = new Set<string>()
-    renderAggregates.aliasMetaByFeatureKey.forEach((meta, featureKey) => {
-      keys.add(featureKey)
-      keys.add(meta.aggregateKey)
-    })
-    return Array.from(keys)
-  }, [renderAggregates])
-
-  const outlineLayerFilter = useMemo(() => {
-    if (mergedRegionFeatureKeys.length === 0) return layerFilter
-    return [
-      "all",
-      layerFilter,
-      ["!", ["in", featureKeyExpression, ["literal", mergedRegionFeatureKeys]]],
-    ] as any
-  }, [featureKeyExpression, layerFilter, mergedRegionFeatureKeys])
-
   const hoverLayerFilter = useMemo(() => {
     if (!hoveredFeatureKeys || hoveredFeatureKeys.length === 0) {
       return ["==", ["get", "name"], "__never_hovered_state__"] as any
@@ -426,13 +327,7 @@ export function CentersChoroplethMap({
     ] as any
   }, [featureKeyExpression, hoveredFeatureKeys])
 
-  const maptilerKey = process.env.NEXT_PUBLIC_MAPTILER_KEY
-  const mapStyle = maptilerKey
-    ? getMaptilerStyleUrl("state", maptilerKey)
-    : ""
-  const countriesTileUrl = maptilerKey
-    ? getMaptilerCountriesTilesUrl(maptilerKey)
-    : ""
+  const mapStyle = BASEMAP_STYLE_URL
 
   const handleRecenter = () => {
     const mapInstance = mapRef.current?.getMap?.() ?? mapRef.current
@@ -471,22 +366,6 @@ export function CentersChoroplethMap({
     )
   }
 
-  if (!maptilerKey) {
-    devError("[CentersChoroplethMap] MapTiler key is missing")
-    return (
-      <div className={`flex items-center justify-center ${heightClass} bg-muted rounded-lg`}>
-        <div className="text-center">
-          <p className="text-lg font-semibold text-muted-foreground mb-2">
-            MapTiler API Key Missing
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Please set NEXT_PUBLIC_MAPTILER_KEY in your environment variables
-          </p>
-        </div>
-      </div>
-    )
-  }
-
   if (stateKeysWithCounts.length === 0) {
     return (
       <div className={`flex items-center justify-center ${heightClass} bg-muted rounded-lg`}>
@@ -513,6 +392,9 @@ export function CentersChoroplethMap({
         mapStyle={mapStyle}
         projection="mercator"
         onLoad={(e) => {
+          // Hide the basemap's de-facto international borders; India boundaries
+          // come from the SOI overlay below.
+          hideBasemapBoundaries(e.target)
           setTimeout(() => {
             e.target.resize()
             handleRecenter()
@@ -557,20 +439,12 @@ export function CentersChoroplethMap({
           const stateName = (props.name || "").toString()
           const iso2 = (props.level_0 || "").toString()
           const key = makeFeatureKey(iso2, stateName)
-          const aliasMeta = renderAggregates.aliasMetaByFeatureKey.get(key)
-          const aggregateKey = aliasMeta?.aggregateKey || key
-          const linkedFeatureKeys = Array.from(renderAggregates.aliasMetaByFeatureKey.entries())
-            .filter(([, meta]) => meta.aggregateKey === aggregateKey)
-            .map(([featureKey]) => featureKey)
-          if (linkedFeatureKeys.length === 0 || !linkedFeatureKeys.includes(aggregateKey)) {
-            linkedFeatureKeys.push(aggregateKey)
-          }
-          setHoveredFeatureKeys(linkedFeatureKeys)
-          const count = renderAggregates.countsByState.get(key) || 0
-          const accountsCount = renderAggregates.accountsByState.get(key)?.size || 0
-          const headcount = renderAggregates.headcountByState.get(key) || 0
-          const countryName = aliasMeta?.displayCountry || stateAggregates.countryNamesByIso.get(iso2) || iso2
-          const stateLabel = aliasMeta?.displayState || stateName || "Unknown State"
+          setHoveredFeatureKeys([key])
+          const count = stateAggregates.countsByState.get(key) || 0
+          const accountsCount = stateAggregates.accountsByState.get(key)?.size || 0
+          const headcount = stateAggregates.headcountByState.get(key) || 0
+          const countryName = stateAggregates.countryNamesByIso.get(iso2) || iso2
+          const stateLabel = stateName || "Unknown State"
           setHoverInfo({
             x: e.point.x,
             y: e.point.y,
@@ -586,23 +460,42 @@ export function CentersChoroplethMap({
           setHoveredFeatureKeys(null)
         }}
         onError={(e) => {
-          devError("[CentersChoroplethMap] Map error:", e)
-          setError(`Map error: ${e.error?.message || "Unknown error"}`)
+          const sourceId = (e as { sourceId?: string }).sourceId
+          const message = e.error?.message ?? String(e.error ?? "unknown")
+          // Per-source/tile errors are non-fatal: log and keep the map up. Only a
+          // real style failure (no sourceId) shows the error screen.
+          if (sourceId) {
+            devError("[CentersChoroplethMap] source error:", sourceId, message)
+            return
+          }
+          devError("[CentersChoroplethMap] Map error:", message)
+          setError(`Map error: ${message}`)
           captureEvent(ANALYTICS_EVENTS.MAP_ERROR_SHOWN, {
             map_kind: "state",
             map_name: "centers_choropleth_map",
-            error_message: e.error?.message || "Unknown map error",
+            error_message: message,
           })
         }}
       >
         <NavigationControl position="top-left" showCompass={true} showZoom={true} />
         <FullscreenControl position="top-left" />
 
-        <Source id="admin1" type="vector" url={countriesTileUrl}>
+        <DebugLocationSearch mapRef={mapRef} />
+
+        <Source id="admin1" type="geojson" data="/data/admin-1.geojson">
+          <Layer
+            id="admin1-base-outline"
+            type="line"
+            filter={["==", ["get", "level"], 1] as any}
+            paint={{
+              "line-color": "#64748b",
+              "line-width": 0.5,
+              "line-opacity": 0.5,
+            }}
+          />
           <Layer
             id="admin1-fill"
             type="fill"
-            source-layer="administrative"
             filter={layerFilter}
             paint={{
               "fill-color": fillColorExpression,
@@ -614,8 +507,7 @@ export function CentersChoroplethMap({
           <Layer
             id="admin1-outline"
             type="line"
-            source-layer="administrative"
-            filter={outlineLayerFilter}
+            filter={layerFilter}
             paint={{
               "line-color": "#ffffff",
               "line-width": 0.7,
@@ -625,7 +517,6 @@ export function CentersChoroplethMap({
           <Layer
             id="admin1-hover-fill"
             type="fill"
-            source-layer="administrative"
             filter={hoverLayerFilter}
             paint={{
               "fill-color": "#f97316",
