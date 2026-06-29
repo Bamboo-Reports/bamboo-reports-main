@@ -23,6 +23,7 @@ function SignInForm() {
   const searchParams = useSearchParams()
   const [submitError, setSubmitError] = useState<string | null>(null)
   const signupStatus = searchParams.get("signup")
+  const resetStatus = searchParams.get("reset")
   const {
     control,
     register,
@@ -141,9 +142,17 @@ function SignInForm() {
           {errors.email ? <p className="text-xs text-destructive">{errors.email.message}</p> : null}
         </div>
         <div className="space-y-2">
-          <Label htmlFor="password" className="text-[13px] font-medium text-foreground/90">
-            Password
-          </Label>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="password" className="text-[13px] font-medium text-foreground/90">
+              Password
+            </Label>
+            <Link
+              href="/forgot-password"
+              className="text-xs font-medium text-primary hover:underline"
+            >
+              Forgot password?
+            </Link>
+          </div>
           <Input
             id="password"
             type="password"
@@ -178,6 +187,11 @@ function SignInForm() {
         {signupStatus === "success" ? (
           <Alert className="border-emerald-500/30 bg-emerald-500/10 text-foreground">
             <AlertDescription>Account created. Please sign in to continue.</AlertDescription>
+          </Alert>
+        ) : null}
+        {resetStatus === "success" ? (
+          <Alert className="border-emerald-500/30 bg-emerald-500/10 text-foreground">
+            <AlertDescription>Password updated. Please sign in with your new password.</AlertDescription>
           </Alert>
         ) : null}
         {signupStatus === "pending" ? (

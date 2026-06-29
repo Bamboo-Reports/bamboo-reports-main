@@ -15,7 +15,9 @@ describe("profiles role migration", () => {
 
   it("prevents browser clients from updating profile roles", () => {
     expect(migrationSql).toContain("revoke insert, update on public.profiles from authenticated")
-    expect(migrationSql).toContain("grant update (first_name, last_name, email, phone) on public.profiles to authenticated")
+    expect(migrationSql).toContain("tour_completed_at")
+    expect(migrationSql).toContain("tour_version")
     expect(migrationSql).not.toContain("grant update (role)")
+    expect(migrationSql).not.toContain("grant update (credits_remaining)")
   })
 })

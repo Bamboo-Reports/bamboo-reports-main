@@ -32,14 +32,11 @@ create index if not exists user_exports_user_id_created_at_idx
 alter table public.user_exports enable row level security;
 
 drop policy if exists "users read own exports" on public.user_exports;
-create policy "users read own exports"
-  on public.user_exports for select
-  using (auth.uid() = user_id);
-
 drop policy if exists "users insert own exports" on public.user_exports;
-create policy "users insert own exports"
-  on public.user_exports for insert
-  with check (auth.uid() = user_id);
+
+-- Export metadata is created and read only by authenticated Next.js routes
+-- using the service role. Browser roles do not need direct table access.
+revoke all on table public.user_exports from anon, authenticated;
 
 -- =====================================================================
 -- Storage bucket policies (bucket: user-exports, private)
@@ -48,12 +45,6 @@ create policy "users insert own exports"
 -- The first folder segment must equal the authenticated user's UUID.
 
 drop policy if exists "users read own export objects" on storage.objects;
-create policy "users read own export objects"
-  on storage.objects for select
-  using (
-    bucket_id = 'user-exports'
-    and (storage.foldername(name))[1] = auth.uid()::text
-  );
 
--- Uploads are done server-side with the service-role key, which bypasses
--- RLS, so no insert policy is required for anon/authenticated roles.
+-- Uploads and signed download URLs are created server-side with the
+-- service-role key, which bypasses RLS. No browser policy is required.
