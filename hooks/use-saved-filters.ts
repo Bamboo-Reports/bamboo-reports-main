@@ -99,22 +99,18 @@ export function useSavedFilters() {
           .map((share) => share.saved_filters as unknown as Record<string, unknown> | null)
           .filter((filterData): filterData is Record<string, unknown> => Boolean(filterData))
 
-        const ownerIds = Array.from(
-          new Set(
-            sharedFilterData
-              .map((filterData) => filterData.user_id)
-              .filter((id): id is string => typeof id === "string")
-          )
-        )
-
+        // Resolve owner emails via a security-definer RPC scoped to filters
+        // actually shared with the caller. Direct profile reads are owner-only,
+        // so a cross-user .from("profiles") read here would return nothing.
         const ownerEmailById = new Map<string, string>()
-        if (ownerIds.length > 0) {
-          const { data: ownerProfiles } = await supabase
-            .from("profiles")
-            .select("user_id, email")
-            .in("user_id", ownerIds)
+        if (sharedFilterData.length > 0) {
+          const { data: ownerProfiles } = await supabase.rpc(
+            "lookup_shared_filter_owner_emails"
+          )
 
-          for (const profile of ownerProfiles ?? []) {
+          const rows =
+            (ownerProfiles as Array<{ user_id?: unknown; email?: unknown }> | null) ?? []
+          for (const profile of rows) {
             if (typeof profile.user_id === "string" && typeof profile.email === "string") {
               ownerEmailById.set(profile.user_id, profile.email)
             }

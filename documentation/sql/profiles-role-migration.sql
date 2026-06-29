@@ -44,7 +44,14 @@ with check (auth.uid() = user_id);
 
 revoke insert, update on public.profiles from authenticated;
 grant insert (user_id, first_name, last_name, email, phone) on public.profiles to authenticated;
-grant update (first_name, last_name, email, phone) on public.profiles to authenticated;
+grant update (
+  first_name,
+  last_name,
+  email,
+  phone,
+  tour_completed_at,
+  tour_version
+) on public.profiles to authenticated;
 
 -- Promote your test user to admin from a trusted SQL/admin context (replace placeholder).
 update public.profiles

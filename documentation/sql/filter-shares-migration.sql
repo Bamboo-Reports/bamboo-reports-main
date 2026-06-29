@@ -51,26 +51,42 @@ CREATE POLICY "Users can view filters shared with them"
     )
   );
 
--- 6. Allow authenticated users to look up profiles by email (for sharing)
--- Note: This broadens the existing profiles SELECT policy.
--- If this is too broad, consider using a database function instead.
+-- 6. Keep direct profile reads owner-scoped. Email-based sharing uses the
+-- narrowly scoped function below.
 DROP POLICY IF EXISTS "Authenticated users can look up profiles by email" ON public.profiles;
-CREATE POLICY "Authenticated users can look up profiles by email"
-  ON public.profiles FOR SELECT
-  TO authenticated
-  USING (true);
 
 -- 7. Case-insensitive exact profile lookup for sharing.
 CREATE OR REPLACE FUNCTION public.lookup_profile_by_email(input_email TEXT)
 RETURNS TABLE(user_id UUID, email TEXT)
 LANGUAGE sql
 STABLE
+SECURITY DEFINER
+SET search_path = ''
 AS $$
   SELECT p.user_id, p.email
   FROM public.profiles p
-  WHERE lower(p.email) = lower(trim(input_email))
+  WHERE auth.uid() IS NOT NULL
+    AND lower(p.email) = lower(trim(input_email))
   LIMIT 1
 $$;
 
-REVOKE ALL ON FUNCTION public.lookup_profile_by_email(TEXT) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.lookup_profile_by_email(TEXT) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.lookup_profile_by_email(TEXT) TO authenticated;
+
+-- 8. Resolve owner emails of filters shared with the caller, scoped to the
+-- share relationship so it never exposes unrelated profiles.
+CREATE OR REPLACE FUNCTION public.lookup_shared_filter_owner_emails()
+RETURNS TABLE(user_id UUID, email TEXT)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT DISTINCT p.user_id, p.email
+  FROM public.profiles AS p
+  JOIN public.filter_shares AS fs ON fs.owner_user_id = p.user_id
+  WHERE fs.shared_with_user_id = auth.uid()
+$$;
+
+REVOKE ALL ON FUNCTION public.lookup_shared_filter_owner_emails() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.lookup_shared_filter_owner_emails() TO authenticated;

@@ -86,7 +86,7 @@ with check (auth.uid() = user_id);
 -- but cannot set or update role from the browser.
 revoke insert, update on public.profiles from authenticated;
 grant insert (user_id, first_name, last_name, email, phone) on public.profiles to authenticated;
-grant update (first_name, last_name, email, phone) on public.profiles to authenticated;
+grant update (first_name, last_name, email, phone, tour_completed_at, tour_version) on public.profiles to authenticated;
 ```
 
 ### 2.3 Auto-Update Trigger
@@ -157,7 +157,7 @@ with check (auth.uid() = user_id);
 
 revoke insert, update on public.profiles from authenticated;
 grant insert (user_id, first_name, last_name, email, phone) on public.profiles to authenticated;
-grant update (first_name, last_name, email, phone) on public.profiles to authenticated;
+grant update (first_name, last_name, email, phone, tour_completed_at, tour_version) on public.profiles to authenticated;
 ```
 
 Then assign your test/admin user from the Supabase SQL Editor, service-role code, or another trusted admin path:
