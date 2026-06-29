@@ -7,7 +7,7 @@ import { Loader2 } from "lucide-react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { PasswordInput } from "@/components/ui/password-input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AuthShell } from "@/components/auth/auth-shell"
@@ -112,9 +112,8 @@ export default function ResetPasswordPage() {
             <Label htmlFor="password" className="text-[13px] font-medium text-foreground/90">
               New password
             </Label>
-            <Input
+            <PasswordInput
               id="password"
-              type="password"
               autoComplete="new-password"
               required
               className="h-10 rounded-lg"
@@ -128,9 +127,8 @@ export default function ResetPasswordPage() {
             <Label htmlFor="confirmPassword" className="text-[13px] font-medium text-foreground/90">
               Confirm new password
             </Label>
-            <Input
+            <PasswordInput
               id="confirmPassword"
-              type="password"
               autoComplete="new-password"
               required
               className="h-10 rounded-lg"
