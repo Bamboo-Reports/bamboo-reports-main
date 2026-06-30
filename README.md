@@ -247,7 +247,8 @@ bamboo-reports-nextjs/
 ├── etl/V2/                         # Active Python ETL pipeline (data import)
 │   ├── main.py                     # Import script with change notifications
 │   ├── master-schema.json          # Source-of-truth database schema export
-│   ├── requirements.txt            # Python dependencies
+│   ├── pyproject.toml              # Python project and dependencies (uv)
+│   ├── uv.lock                     # Locked Python dependencies
 │   └── run.sh                      # ETL runner script
 │
 ├── documentation/                  # Technical documentation
