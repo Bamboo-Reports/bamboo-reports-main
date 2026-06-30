@@ -1,0 +1,18 @@
+[project]
+name = "bamboo-reports-etl-v2"
+version = "0.1.0"
+description = "Bamboo Reports Google Sheets to PostgreSQL ETL pipeline"
+requires-python = ">=3.11"
+dependencies = [
+    "google-auth",
+    "gspread",
+    "gspread-dataframe",
+    "pandas",
+    "psycopg2-binary",
+    "python-dotenv",
+    "rich",
+    "sqlalchemy",
+]
+
+[tool.uv]
+package = false
