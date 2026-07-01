@@ -34,7 +34,7 @@ A comprehensive breakdown of every technology used in the Bamboo Reports project
 | **Frontend** | Next.js 16, React 19, TypeScript 5, Tailwind CSS |
 | **Component Library** | shadcn/ui (built on Radix UI primitives) |
 | **Charts** | Highcharts, Recharts |
-| **Maps** | MapLibre GL, MapTiler |
+| **Maps** | MapLibre GL, Carto Positron, local GeoJSON |
 | **Database** | Neon PostgreSQL (data warehouse), Supabase PostgreSQL (auth/user data) |
 | **Authentication** | Supabase Auth |
 | **Analytics** | PostHog, Vercel Analytics, Vercel Speed Insights |
@@ -194,14 +194,14 @@ Technologies for rendering interactive maps and geospatial data.
 | **Used for** | Center location cluster maps, state-level choropleth overlays |
 | **Package** | `maplibre-gl`, `@vis.gl/react-maplibre` (React bindings) |
 
-### MapTiler
+### Carto Positron and local boundaries
 
 | | |
 |---|---|
-| **What it is** | A map tile service providing vector and raster tiles |
-| **Why we use it** | Provides high-quality base map tiles. Supports custom styles for different map modes (state view, city view) and geopolitical boundary configurations |
-| **Configuration** | API key + optional custom style IDs for state and city views |
-| **Environment variables** | `NEXT_PUBLIC_MAPTILER_KEY`, `NEXT_PUBLIC_MAPTILER_STATE_STYLE_ID`, `NEXT_PUBLIC_MAPTILER_CITY_STYLE_ID` |
+| **What it is** | A keyless Carto Positron vector basemap with a local Survey of India GeoJSON boundary overlay |
+| **Why we use it** | Provides a neutral basemap while keeping administrative boundary rendering under application control |
+| **Configuration** | Shared style URL in `lib/maps/basemap.ts`; boundary data in `public/data/admin-1.geojson` |
+| **Environment variables** | None |
 
 ---
 
@@ -397,7 +397,7 @@ Third-party services the application communicates with at runtime.
 |---------|---------|----------|---------------------|
 | **Neon PostgreSQL** | Primary BI data warehouse | Yes | `DATABASE_URL`; `DIRECT_URL` optional for Prisma CLI |
 | **Supabase** | Authentication, profiles, saved filters, favorites, export Storage | Yes | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` for server-side Storage/export operations |
-| **MapTiler** | Map tiles for geospatial views | Yes | `NEXT_PUBLIC_MAPTILER_KEY` |
+| **Carto Positron** | Basemap tiles for geospatial views | Yes | None |
 | **Logo.dev** | Company logo images | No | `NEXT_PUBLIC_LOGO_DEV_KEY` |
 | **PostHog** | Product analytics | No | `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST` |
 | **Yahoo Finance** | Stock prices and financial data | No | None (public API) |
@@ -425,7 +425,7 @@ This separation keeps the BI data warehouse isolated from user mutations and sim
 Highcharts renders the dashboard donut charts and the Technology treemap, where its interactivity and treemap support fit the categorical-breakdown use case. Recharts handles the single revenue-trend area chart in the Account details dialog, through the shadcn/ui `chart.tsx` wrapper. Each library is used where it fits best rather than forcing one solution everywhere.
 
 ### Why MapLibre instead of Google Maps or Mapbox?
-MapLibre is open-source (no per-load pricing), supports WebGL rendering for large point datasets (5000+ centers), and works with any tile provider (MapTiler in our case). This avoids vendor lock-in and reduces operational costs.
+MapLibre is open-source (no per-load pricing), supports WebGL rendering for large point datasets (5000+ centers), and works with any tile provider. The application uses the keyless Carto Positron basemap with a local administrative boundary overlay, avoiding vendor-specific SDKs and credentials.
 
 ### Why client-side filtering instead of server-side?
 After the initial data load, filtering happens client-side in React state. This provides instant UI feedback without network latency. The dataset sizes (typically under 10,000 rows per entity) are well within browser memory limits, making this approach both fast and practical.

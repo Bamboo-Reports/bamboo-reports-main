@@ -75,7 +75,6 @@ export function CentersMap({ centers, heightClass = "h-[750px]", showAccountsCou
     setIsClient(true)
     logger.debug("mounted", {
       centers_count: centers?.length,
-      has_maptiler_key: Boolean(process.env.NEXT_PUBLIC_MAPTILER_KEY),
     })
   }, [centers])
 
