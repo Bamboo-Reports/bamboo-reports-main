@@ -48,7 +48,6 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart"
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
-import { AccountAISummary } from "@/components/ai/account-ai-summary"
 
 function formatCompactNumber(value: number | null): string | null {
   if (value === null) return null
@@ -498,8 +497,6 @@ export function AccountDetailsDialog({
 
             {/* Account Info Tab */}
             <TabsContent value="info" className="space-y-8 mt-4">
-              <AccountAISummary accountName={account.account_global_legal_name} />
-
               {/* Company Snapshot */}
               <section className="rounded-xl border border-border/60 bg-background/40 backdrop-blur-sm p-5 lg:p-6 dark:bg-white/5 dark:border-white/10">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
