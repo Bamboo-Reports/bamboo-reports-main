@@ -475,7 +475,7 @@ export function buildProspectsCountQuery(f: Filters, access: FilterAccess = {}):
   return { text: `${withClause} select count(*)::int as total from prospects where ${where}`, values: p.values }
 }
 
-export type AggregateEntity = "accounts" | "centers" | "prospects"
+export type AggregateEntity = "accounts" | "centers" | "prospects" | "functions"
 
 /**
  * Builds an aggregate/projection query over an entity's FILTERED set, reusing
@@ -513,6 +513,17 @@ export function buildEntityAggregateQuery(
     const withClause = buildWith(["surviving_centers"], f, p, flags, materialized)
     return {
       text: `${withClause} select ${select} from centers where ${memberIn(CENTER_ID_COLUMN, "surviving_centers")}${tail}`,
+      values: p.values,
+    }
+  }
+
+  if (entity === "functions") {
+    // filteredFunctions = functions whose center survives (getFilteredData
+    // re-filters functions by the final centerKeySet).
+    if (!flags.ce) return { text: emptyText, values: [] }
+    const withClause = buildWith(["surviving_centers"], f, p, flags, materialized)
+    return {
+      text: `${withClause} select ${select} from functions where ${memberIn(CENTER_ID_COLUMN, "surviving_centers")}${tail}`,
       values: p.values,
     }
   }
