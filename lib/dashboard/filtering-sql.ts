@@ -474,3 +474,51 @@ export function buildProspectsCountQuery(f: Filters, access: FilterAccess = {}):
   const where = prospectsWhereClause(f, p, flags)
   return { text: `${withClause} select count(*)::int as total from prospects where ${where}`, values: p.values }
 }
+
+export type AggregateEntity = "accounts" | "centers" | "prospects"
+
+/**
+ * Builds an aggregate/projection query over an entity's FILTERED set, reusing
+ * the same cascade CTEs as the paginated queries. Powers the summary, facets
+ * and charts endpoints.
+ *
+ * `select` (and optional `where`/`groupBy`) MUST be code-controlled SQL, never
+ * user input. All user-supplied values enter only through `filters` (as bound
+ * parameters).
+ */
+export function buildEntityAggregateQuery(
+  entity: AggregateEntity,
+  f: Filters,
+  access: FilterAccess = {},
+  select: string,
+  opts: { groupBy?: string; where?: string; materialized?: boolean } = {}
+): SqlQuery {
+  const flags = computeFlags(f, access)
+  const materialized = opts.materialized ?? true
+  const tail = `${opts.where ? ` and (${opts.where})` : ""}${opts.groupBy ? ` group by ${opts.groupBy}` : ""}`
+  const emptyText = `select ${select} from ${entity} where false${opts.groupBy ? ` group by ${opts.groupBy}` : ""}`
+  const p = new Params()
+
+  if (entity === "accounts") {
+    if (!flags.ae) return { text: emptyText, values: [] }
+    const withClause = buildWith(["final_accounts"], f, p, flags, materialized)
+    return {
+      text: `${withClause} select ${select} from accounts where ${memberIn(ACCOUNT_ID_COLUMN, "final_accounts")}${tail}`,
+      values: p.values,
+    }
+  }
+
+  if (entity === "centers") {
+    if (!flags.ce) return { text: emptyText, values: [] }
+    const withClause = buildWith(["surviving_centers"], f, p, flags, materialized)
+    return {
+      text: `${withClause} select ${select} from centers where ${memberIn(CENTER_ID_COLUMN, "surviving_centers")}${tail}`,
+      values: p.values,
+    }
+  }
+
+  if (!flags.pe) return { text: emptyText, values: [] }
+  const withClause = buildWith(prospectsRoots(flags), f, p, flags, materialized)
+  const where = prospectsWhereClause(f, p, flags)
+  return { text: `${withClause} select ${select} from prospects where ${where}${tail}`, values: p.values }
+}
