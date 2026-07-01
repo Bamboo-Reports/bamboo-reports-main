@@ -1,5 +1,6 @@
 import { getDashboardData } from "@/app/actions/data"
 import { resolveAuthenticatedUserId, extractBearerToken } from "@/lib/auth/server"
+import { enforceRateLimit } from "@/lib/rate-limit/server"
 import { createLogger } from "@/lib/logger"
 import { promisify } from "node:util"
 import { gzip as gzipCb } from "node:zlib"
@@ -74,7 +75,9 @@ function revalidateInBackground() {
 // HANDLERS
 // ============================================
 
-async function requireAuth(request: Request): Promise<Response | null> {
+// Resolves the caller to a user id, or returns a 401 Response. The user id is
+// used to key per-user rate limiting.
+async function requireAuth(request: Request): Promise<{ userId: string } | Response> {
   const token = extractBearerToken(request.headers.get("authorization"))
   if (!token) {
     return new Response(JSON.stringify({ error: "Missing authorization token" }), {
@@ -83,8 +86,8 @@ async function requireAuth(request: Request): Promise<Response | null> {
     })
   }
   try {
-    await resolveAuthenticatedUserId(token)
-    return null
+    const userId = await resolveAuthenticatedUserId(token)
+    return { userId }
   } catch {
     return new Response(JSON.stringify({ error: "Invalid or expired token" }), {
       status: 401,
@@ -94,8 +97,11 @@ async function requireAuth(request: Request): Promise<Response | null> {
 }
 
 export async function GET(request: Request) {
-  const authError = await requireAuth(request)
-  if (authError) return authError
+  const auth = await requireAuth(request)
+  if (auth instanceof Response) return auth
+
+  const limited = await enforceRateLimit({ userId: auth.userId, bucket: "dashboard:get" })
+  if (!limited.ok) return limited.response
 
   const start = Date.now()
   const acceptEncoding = request.headers.get("accept-encoding") || ""
@@ -137,8 +143,17 @@ export async function GET(request: Request) {
  * Called by the client before a force-refresh.
  */
 export async function POST(request: Request) {
-  const authError = await requireAuth(request)
-  if (authError) return authError
+  const auth = await requireAuth(request)
+  if (auth instanceof Response) return auth
+
+  // Force-refresh invalidates the cache and triggers a full DB re-query on the
+  // next GET, so keep this budget tighter than the read path.
+  const limited = await enforceRateLimit({
+    userId: auth.userId,
+    bucket: "dashboard:post",
+    maxPerWindow: 10,
+  })
+  if (!limited.ok) return limited.response
 
   cache = { gzipped: null, json: null, timestamp: 0, revalidating: false }
   logger.info("dashboard_cache_invalidated")

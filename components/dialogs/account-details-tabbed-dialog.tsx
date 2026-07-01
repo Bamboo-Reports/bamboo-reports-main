@@ -38,7 +38,7 @@ import { ProspectGridCard } from "@/components/cards/prospect-grid-card"
 import { LockedProspectTeaserCard } from "@/components/prospects/locked-prospect-teaser-section"
 import { Badge } from "@/components/ui/badge"
 import { TechTreemap } from "@/components/charts/tech-treemap"
-import { getAccountFinancialInfo } from "@/app/actions/financial"
+import { requestAccountFinancialInfo } from "@/lib/finance/request-client"
 import { isSectionEnabled } from "@/lib/config/dashboard-access"
 import { PaginationControls } from "@/components/ui/pagination-controls"
 import {
@@ -395,7 +395,7 @@ export function AccountDetailsDialog({
       setFinancialLoading(true)
       setFinancialError(null)
 
-      const response = await getAccountFinancialInfo(ticker)
+      const response = await requestAccountFinancialInfo(ticker)
       if (cancelled) return
 
       if (response.success && response.data) {

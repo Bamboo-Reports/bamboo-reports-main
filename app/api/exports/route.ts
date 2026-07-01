@@ -1,4 +1,5 @@
 import { resolveAuthenticatedUserId, extractBearerToken } from "@/lib/auth/server"
+import { enforceRateLimit } from "@/lib/rate-limit/server"
 import { createLogger } from "@/lib/logger"
 
 export const dynamic = "force-dynamic"
@@ -22,6 +23,9 @@ export async function GET(request: Request) {
   } catch {
     return json({ error: "Invalid or expired token" }, 401)
   }
+
+  const limited = await enforceRateLimit({ userId, bucket: "exports:list" })
+  if (!limited.ok) return limited.response
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY

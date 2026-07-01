@@ -1,5 +1,3 @@
-"use server"
-
 import YahooFinance from "yahoo-finance2"
 import { normalizeTickerForYahoo } from "@/lib/finance/tickers"
 import { createLogger } from "@/lib/logger"
@@ -8,7 +6,7 @@ import type { AccountFinancialInfoResponse } from "@/lib/types"
 const yahooFinance = new YahooFinance({
   suppressNotices: ["yahooSurvey"],
 })
-const logger = createLogger("actions/financial")
+const logger = createLogger("finance/financial-info")
 
 function toNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null
@@ -58,7 +56,15 @@ function buildRevenueSeries(
   return mapped
 }
 
-export async function getAccountFinancialInfo(rawTicker: string): Promise<AccountFinancialInfoResponse> {
+/**
+ * Fetches company financials from Yahoo Finance for a ticker.
+ *
+ * This is a plain server-side helper with NO auth check. It must only be
+ * called from an authenticated, rate-limited context (see
+ * app/api/financials/route.ts). Do not expose it as a bare server action:
+ * each call fans out to four Yahoo Finance requests.
+ */
+export async function fetchAccountFinancialInfo(rawTicker: string): Promise<AccountFinancialInfoResponse> {
   const normalizedTicker = normalizeTickerForYahoo(rawTicker)
   if (!normalizedTicker) {
     return {
