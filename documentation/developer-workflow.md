@@ -11,7 +11,6 @@ This guide is for developers maintaining or extending the Bamboo Reports applica
 - npm (v9+)
 - Access to the Neon DB connection string
 - Access to the Supabase project credentials
-- MapTiler API key
 
 ### Local Environment
 
@@ -32,7 +31,6 @@ This guide is for developers maintaining or extending the Bamboo Reports applica
     - `DATABASE_URL` — Neon PostgreSQL pooled runtime connection string used by Prisma for warehouse data
     - `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL
     - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase public key
-    - `NEXT_PUBLIC_MAPTILER_KEY` — MapTiler API key
 
     Optional variables:
     - `DIRECT_URL` — Direct Neon connection string for Prisma CLI commands
@@ -41,8 +39,6 @@ This guide is for developers maintaining or extending the Bamboo Reports applica
     - `NEXT_PUBLIC_NOTIFICATIONS_ENABLED` — Set to `enabled` to activate notifications
     - `NEXT_PUBLIC_MAINTENANCE_MODE`: set to `true` to show a maintenance page instead of the dashboard
     - `NEXT_PUBLIC_ENVIRONMENT_LABEL` — Set to `DEV` or `PROD` for environment badge
-    - `NEXT_PUBLIC_MAPTILER_STATE_STYLE_ID` / `NEXT_PUBLIC_MAPTILER_CITY_STYLE_ID` — Custom map styles
-    - `NEXT_PUBLIC_MAP_VIEWPOINT_ISO2` — Geopolitical boundary viewpoint (e.g., `IN`)
 
 3. **Run Development Server:**
     ```bash
@@ -239,9 +235,9 @@ If UI alignment needs tuning:
 | **Styles missing** | `globals.css` | Ensure Tailwind directives are present and `tailwind.config.ts` includes content paths for `app/` and `components/`. |
 | **Auth redirect loop** | Supabase config | Verify `NEXT_PUBLIC_SUPABASE_URL` and `ANON_KEY`. Check `useAuthGuard` hook behavior. |
 | **Slow queries** | `app/actions/data.ts` | Ensure SQL queries have appropriate indexes in Neon. Use `EXPLAIN ANALYZE` in Neon console. |
-| **Map not rendering** | MapTiler key | Verify `NEXT_PUBLIC_MAPTILER_KEY` is set and active. Check browser console for tile fetch errors. |
+| **Map not rendering** | Basemap or local boundary request | Check browser requests to `basemaps.cartocdn.com` and confirm `public/data/admin-1.geojson` is available. |
 | **Notifications not appearing** | Feature flag | Set `NEXT_PUBLIC_NOTIFICATIONS_ENABLED=enabled` in `.env.local`. Restart dev server. |
-| **Choropleth seams** | Map style | Disable disputed boundary layers in your MapTiler style. See `documentation/map-disputed-boundaries.md`. |
+| **Unexpected map boundaries** | Basemap boundary layers remain visible | Verify `hideBasemapBoundaries` runs after map load and the local boundary overlay loads. See `documentation/map-disputed-boundaries.md`. |
 | **Export button disabled** | User role | Only `admin` role can export. Update the `role` column in `public.profiles`. |
 | **PostHog events missing** | Environment variables | Verify `NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_POSTHOG_HOST` are set. Check that `providers.tsx` is wrapping the app. |
 | **Company logos not loading** | Logo.dev key | Set `NEXT_PUBLIC_LOGO_DEV_KEY`. If the company isn't in Logo.dev's index, the fallback icon is expected. |
