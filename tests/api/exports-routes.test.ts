@@ -193,6 +193,21 @@ describe("export API routes", () => {
     expect(supabaseMocks.rateLimitGte).not.toHaveBeenCalled()
   })
 
+  it("denies non-admins with 403 before validating the body (no behavior leak)", async () => {
+    supabaseMocks.profileMaybeSingle.mockResolvedValue({ data: { role: "viewer" }, error: null })
+
+    // Empty datasets would normally trip the 400 "at least one dataset" check.
+    // A viewer must still get 403 because authorization runs first.
+    const res = await generateExport(new Request("https://example.com/api/exports/generate", {
+      method: "POST",
+      headers: { authorization: "Bearer token-1" },
+      body: JSON.stringify({ datasets: [] }),
+    }))
+
+    expect(res.status).toBe(403)
+    await expect(res.json()).resolves.toEqual({ error: "Export access denied" })
+  })
+
   it("allows admin users to generate exports after the server-side role check", async () => {
     const res = await generateExport(new Request("https://example.com/api/exports/generate", {
       method: "POST",
