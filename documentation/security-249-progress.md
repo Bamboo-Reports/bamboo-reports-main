@@ -112,14 +112,20 @@ integration tests are gated on `DATABASE_URL` and skip without it.
   "export all filtered" (now filter-based, see Phase 4) covers the
   whole-filtered-set workflow.
 
-### Retire `/api/dashboard` (the point of no return; do AFTER Phase 4)
+### Retire `/api/dashboard` - BUILT on branch `feat/249-retire-dashboard` (commit 1ef29dd), MERGE PENDING USER GO-AHEAD
 
-- [ ] Delete `app/api/dashboard/route.ts` + `hooks/use-dashboard-data.ts`, make
-      server mode unconditional (drop the flag), remove old-path branches in
-      `app/page.tsx`, drop unused fetchers in `app/actions/data.ts` (keep
-      `lib/dashboard/filtering.ts` as the parity-test reference engine).
-- Plan: build on a separate branch and merge only on explicit go-ahead, so the
-  flagged build can soak first.
+- [x] Deletes `app/api/dashboard/route.ts`, `hooks/use-dashboard-data.ts`,
+      `app/actions/data.ts`, and the flag module; server mode unconditional;
+      `app/page.tsx` server-path only. `lib/dashboard/filtering.ts` kept as the
+      parity-test reference engine. 525/525 tests; `/api/dashboard` verified
+      404 live.
+- Merge order: ship PR #253 (dev-work -> main, flagged) first and soak with
+  `NEXT_PUBLIC_DASHBOARD_SERVER_MODE=1` set in the deployment; then merge this
+  branch into dev-work (it will need a rebase over the later dev-work fix
+  commit 1661258) and raise a follow-up PR. After that the env var is obsolete.
+- [x] Side fix on dev-work (1661258): flagged server-mode row-selection exports
+      were broken (empty filtered arrays => zero counts); scope payloads now
+      target selected keys directly.
 
 ### Perf polish (later, optional)
 
