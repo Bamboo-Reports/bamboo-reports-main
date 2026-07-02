@@ -19,7 +19,7 @@ export const DEFAULT_PAGE_SIZE = 51
 // Column projections mirror the dashboard fetchers in app/actions/data.ts so the
 // paginated rows have the same shape the client already renders. account_hq_revenue
 // is a bigint; cast to float8 so it deserializes as a number (as normalizeAccount did).
-const ACCOUNT_COLUMNS = [
+export const ACCOUNT_COLUMNS = [
   "account_nasscom_status", "account_nasscom_member_status", "account_data_coverage", "account_source",
   "account_type", "account_global_legal_name", "account_hq_stock_ticker", "account_hq_company_type",
   "account_about", "account_hq_key_offerings", "account_hq_city", "account_hq_state", "account_hq_country",
@@ -29,7 +29,7 @@ const ACCOUNT_COLUMNS = [
   "account_first_center_year", "years_in_india", "account_hq_website", "account_center_employees",
   "account_center_employees_range", "account_visibility", "account_visibility_note",
 ]
-const CENTER_COLUMNS = [
+export const CENTER_COLUMNS = [
   "account_global_legal_name", "cn_unique_key", "center_status", "center_inc_year", "announced_year",
   "announced_month", "center_end_year", "center_name", "center_management_partner", "center_jv_status",
   "center_jv_name", "center_type", "center_focus", "center_website", "center_linkedin", "center_city",
@@ -37,7 +37,7 @@ const CENTER_COLUMNS = [
   "center_boardline", "center_account_website", "center_timeline", "center_address", "center_zip_code",
   "lat", "lng",
 ]
-const PROSPECT_COLUMNS = [
+export const PROSPECT_COLUMNS = [
   "ps_unique_key", "account_global_legal_name", "prospect_full_name", "prospect_first_name",
   "prospect_last_name", "prospect_title", "prospect_department", "prospect_level", "head_type",
   "prospect_linkedin_url", "prospect_email", "prospect_city", "prospect_state", "prospect_country",
