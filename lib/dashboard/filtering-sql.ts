@@ -147,11 +147,15 @@ function keywordClause(col: string, fvs: FilterValue[], p: Params): string | nul
   return `(${parts.join(" and ")})`
 }
 
-/** Mirrors rangeFilterMatch: a value of 0/NULL falls in the includeNull bucket. */
+/**
+ * Mirrors rangeFilterMatch: a value of 0/NULL falls in the includeNull bucket.
+ * Bounds are cast to float8 so a very large "wide open" max (e.g.
+ * Number.MAX_SAFE_INTEGER) is not inferred as int4 against integer columns.
+ */
 function rangeClause(col: string, range: [number, number], includeNull: boolean, p: Params): string {
   const v = `coalesce(${col}, 0)`
-  const min = p.add(range[0])
-  const max = p.add(range[1])
+  const min = `${p.add(range[0])}::double precision`
+  const max = `${p.add(range[1])}::double precision`
   if (includeNull) {
     return `(${v} = 0 or (${v} >= ${min} and ${v} <= ${max}))`
   }
