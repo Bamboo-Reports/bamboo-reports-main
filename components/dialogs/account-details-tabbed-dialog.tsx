@@ -39,6 +39,7 @@ import { LockedProspectTeaserCard } from "@/components/prospects/locked-prospect
 import { Badge } from "@/components/ui/badge"
 import { TechTreemap } from "@/components/charts/tech-treemap"
 import { requestAccountFinancialInfo } from "@/lib/finance/request-client"
+import { fetchAccountRelated, type AccountRelatedResponse } from "@/lib/dashboard/api-client"
 import { isSectionEnabled } from "@/lib/config/dashboard-access"
 import { PaginationControls } from "@/components/ui/pagination-controls"
 import {
@@ -190,20 +191,49 @@ interface AccountDetailsDialogProps {
   tech: Tech[]
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** Server mode (#249): load the account's related data from /api/accounts/[name]/related instead of the array props. */
+  fetchRelated?: boolean
 }
 
 export function AccountDetailsDialog({
   account,
-  centers,
-  prospects,
-  lockedProspectTeasers,
-  services,
-  tech,
+  centers: centersProp,
+  prospects: prospectsProp,
+  lockedProspectTeasers: lockedProspectTeasersProp,
+  services: servicesProp,
+  tech: techProp,
   open,
   onOpenChange,
+  fetchRelated = false,
 }: AccountDetailsDialogProps) {
   const canViewCenters = isSectionEnabled("centers")
   const canViewProspects = isSectionEnabled("prospects")
+
+  const [related, setRelated] = useState<AccountRelatedResponse | null>(null)
+  const relatedName = fetchRelated && open ? (account?.account_global_legal_name ?? "") : ""
+  useEffect(() => {
+    if (!relatedName) {
+      setRelated(null)
+      return
+    }
+    let cancelled = false
+    fetchAccountRelated(relatedName)
+      .then((res) => {
+        if (!cancelled) setRelated(res)
+      })
+      .catch(() => {
+        if (!cancelled) setRelated(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [relatedName])
+
+  const centers = fetchRelated ? (related?.centers ?? []) : centersProp
+  const prospects = fetchRelated ? (related?.prospects ?? []) : prospectsProp
+  const lockedProspectTeasers = fetchRelated ? (related?.lockedProspectTeasers ?? []) : lockedProspectTeasersProp
+  const services = fetchRelated ? (related?.services ?? []) : servicesProp
+  const tech = fetchRelated ? (related?.tech ?? []) : techProp
   const [activeTab, setActiveTab] = useState("info")
   const [selectedCenter, setSelectedCenter] = useState<Center | null>(null)
   const [isCenterDialogOpen, setIsCenterDialogOpen] = useState(false)

@@ -93,6 +93,7 @@ export function buildAccountAutocomplete(term: string): SqlQuery {
   const { starts, contains } = patterns(term)
   return {
     text: `select account_global_legal_name as name,
+      account_visibility as visibility, account_visibility_note as visibility_note,
       (case when account_global_legal_name ilike $1 then 1 else 0 end) as sw,
       (case when account_global_legal_name ilike $2 then 1 else 0 end) as namematch
       from accounts

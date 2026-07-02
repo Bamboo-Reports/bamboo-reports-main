@@ -8,10 +8,13 @@ import { BASEMAP_STYLE_URL, hideBasemapBoundaries } from "@/lib/maps/basemap"
 import { DebugLocationSearch } from "@/components/maps/debug-location-search"
 import { createLogger } from "@/lib/logger"
 import type { Center } from "@/lib/types"
+import type { CityAggregate } from "@/lib/dashboard/api-client"
 import "maplibre-gl/dist/maplibre-gl.css"
 
 interface CentersMapProps {
   centers: Center[]
+  /** Server mode (#249): pre-aggregated city data replaces the client computation over `centers`. */
+  cities?: CityAggregate[] | null
   heightClass?: string
   showAccountsCount?: boolean
 }
@@ -22,7 +25,7 @@ interface CityCluster {
   lat: number
   lng: number
   count: number
-  accounts: Set<string>
+  accountsCount: number
   headcount: number
 }
 
@@ -56,7 +59,7 @@ const HALO_RADIUS_SCALE = 1.5
 const OVERLAP_PADDING = 0.5
 const logger = createLogger("components/CentersMap")
 
-export function CentersMap({ centers, heightClass = "h-[750px]", showAccountsCount = true }: CentersMapProps) {
+export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAccountsCount = true }: CentersMapProps) {
   const [hoveredCity, setHoveredCity] = useState<string | null>(null)
   const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -105,6 +108,70 @@ export function CentersMap({ centers, heightClass = "h-[750px]", showAccountsCou
     setTooltipPosition({ x, y })
   }, [mousePosition, hoveredCity])
 
+  // Aggregate centers by city and calculate cluster data. In server mode the
+  // aggregation arrives pre-computed via the `cities` prop.
+  const cityData = useMemo<CityCluster[]>(() => {
+    if (cities) {
+      return cities.map((c) => ({
+        city: c.city,
+        country: c.country ?? "",
+        lat: c.lat,
+        lng: c.lng,
+        count: c.count,
+        accountsCount: c.accountsCount,
+        headcount: c.headcount,
+      }))
+    }
+    try {
+      logger.debug("city_data_calculation_started", { centers_count: centers.length })
+      const cityMap = new Map<string, CityCluster & { accounts: Set<string> }>()
+
+      centers.forEach((center) => {
+        const city = center.center_city
+        const country = center.center_country
+        const account = center.account_global_legal_name
+        const employees = center.center_employees ?? 0
+        const lat = center.lat
+        const lng = center.lng
+
+        // Skip if no coordinates or city
+        if (lat === null || lat === undefined || lng === null || lng === undefined || isNaN(lat) || isNaN(lng)) {
+          return
+        }
+        if (!city) return
+
+        const existing = cityMap.get(city)
+        if (existing) {
+          existing.accounts.add(account)
+          existing.count += 1
+          existing.headcount += employees
+          existing.accountsCount = existing.accounts.size
+        } else {
+          const accounts = new Set<string>()
+          accounts.add(account)
+          cityMap.set(city, {
+            city,
+            country: country ?? "",
+            lat,
+            lng,
+            count: 1,
+            accounts,
+            accountsCount: 1,
+            headcount: employees,
+          })
+        }
+      })
+
+      const result = Array.from(cityMap.values()).map(({ accounts: _accounts, ...cluster }) => cluster)
+      logger.debug("city_data_calculated", { cities_count: result.length })
+      return result
+    } catch (err) {
+      logger.error("city_data_calculation_failed", { error: err })
+      setError(err instanceof Error ? err.message : "Error calculating city data")
+      return []
+    }
+  }, [cities, centers])
+
   useEffect(() => {
     if (!hoveredCity) {
       lastTooltipCityRef.current = null
@@ -115,21 +182,19 @@ export function CentersMap({ centers, heightClass = "h-[750px]", showAccountsCou
       return
     }
 
-    const matchingCenters = centers.filter((center) => center.center_city === hoveredCity)
-    const accounts = new Set(matchingCenters.map((center) => center.account_global_legal_name).filter(Boolean))
-    const totalHeadcount = matchingCenters.reduce((sum, center) => sum + (center.center_employees ?? 0), 0)
-    const country = matchingCenters.find((center) => center.center_country)?.center_country ?? null
+    const cityInfo = cityData.find((c) => c.city === hoveredCity)
+    if (!cityInfo) return
     captureEvent(ANALYTICS_EVENTS.MAP_TOOLTIP_VIEWED, {
       map_kind: "city",
       map_name: "centers_map",
       city: hoveredCity,
-      country,
-      center_count: matchingCenters.length,
-      accounts_count: accounts.size,
-      headcount: totalHeadcount,
+      country: cityInfo.country || null,
+      center_count: cityInfo.count,
+      accounts_count: cityInfo.accountsCount,
+      headcount: cityInfo.headcount,
     })
     lastTooltipCityRef.current = hoveredCity
-  }, [hoveredCity, centers])
+  }, [hoveredCity, cityData])
 
   // Fallback to ensure the map shows even if onLoad is delayed
   useEffect(() => {
@@ -157,59 +222,6 @@ export function CentersMap({ centers, heightClass = "h-[750px]", showAccountsCou
 
     return () => observer.disconnect()
   }, [isClient])
-
-  // Aggregate centers by city and calculate cluster data
-  const cityData = useMemo(() => {
-    try {
-      logger.debug("city_data_calculation_started", { centers_count: centers.length })
-      const cityMap = new Map<string, CityCluster>()
-
-      centers.forEach((center) => {
-        const city = center.center_city
-        const country = center.center_country
-        const account = center.account_global_legal_name
-        const employees = center.center_employees ?? 0
-        const lat = center.lat
-        const lng = center.lng
-
-        // Skip if no coordinates or city
-        if (lat === null || lat === undefined || lng === null || lng === undefined || isNaN(lat) || isNaN(lng)) {
-          return
-        }
-        if (!city) return
-
-        if (cityMap.has(city)) {
-          const existing = cityMap.get(city)!
-          existing.accounts.add(account)
-          cityMap.set(city, {
-            ...existing,
-            count: existing.count + 1,
-            headcount: existing.headcount + employees,
-          })
-        } else {
-          const accounts = new Set<string>()
-          accounts.add(account)
-          cityMap.set(city, {
-            city,
-            country: country ?? "",
-            lat,
-            lng,
-            count: 1,
-            accounts,
-            headcount: employees,
-          })
-        }
-      })
-
-      const result = Array.from(cityMap.values())
-      logger.debug("city_data_calculated", { cities_count: result.length })
-      return result
-    } catch (err) {
-      logger.error("city_data_calculation_failed", { error: err })
-      setError(err instanceof Error ? err.message : "Error calculating city data")
-      return []
-    }
-  }, [centers])
 
   // Calculate center of all points for initial view
   const initialViewState = useMemo(() => {
@@ -289,7 +301,7 @@ export function CentersMap({ centers, heightClass = "h-[750px]", showAccountsCou
             city: city.city,
             country: city.country,
             count: city.count,
-            accountsCount: city.accounts.size,
+            accountsCount: city.accountsCount,
             headcount: city.headcount,
             radius,
             ...getLabelConfig(city.count, radius),
@@ -611,7 +623,7 @@ export function CentersMap({ centers, heightClass = "h-[750px]", showAccountsCou
                       <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">Accounts</span>
                         <span className="font-medium tabular-nums text-foreground">
-                          {cityInfo.accounts.size.toLocaleString()}
+                          {cityInfo.accountsCount.toLocaleString()}
                         </span>
                       </div>
                     )}

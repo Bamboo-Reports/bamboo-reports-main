@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge"
 import { DialogBreadcrumb, type DialogBreadcrumbItem } from "@/components/ui/dialog-breadcrumb"
 import { ProspectGridCard } from "@/components/cards/prospect-grid-card"
 import { PaginationControls } from "@/components/ui/pagination-controls"
+import { fetchAccountRelated } from "@/lib/dashboard/api-client"
 
 interface ProspectDetailsDialogProps {
   prospect: Prospect | null
@@ -23,6 +24,8 @@ interface ProspectDetailsDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onAccountOpen?: (accountName: string) => void
+  /** Server mode (#249): load company contacts from the related endpoint instead of the allProspects prop. */
+  fetchRelated?: boolean
 }
 
 function MetaRow({ label, value }: { label: string; value: string | number | null | undefined }) {
@@ -91,10 +94,11 @@ function QuickFilterGroup({
 
 export function ProspectDetailsDialog({
   prospect,
-  allProspects,
+  allProspects: allProspectsProp,
   open,
   onOpenChange,
   onAccountOpen,
+  fetchRelated = false,
 }: ProspectDetailsDialogProps) {
   const copy = useCopyToClipboard()
   const [copied, setCopied] = useState(false)
@@ -115,6 +119,28 @@ export function ProspectDetailsDialog({
   }, [prospect])
 
   const p = current
+
+  const [relatedProspects, setRelatedProspects] = useState<Prospect[] | null>(null)
+  const relatedAccount = fetchRelated && open ? (p?.account_global_legal_name ?? "") : ""
+  useEffect(() => {
+    if (!relatedAccount) {
+      setRelatedProspects(null)
+      return
+    }
+    let cancelled = false
+    fetchAccountRelated(relatedAccount)
+      .then((res) => {
+        if (!cancelled) setRelatedProspects(res.prospects)
+      })
+      .catch(() => {
+        if (!cancelled) setRelatedProspects(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [relatedAccount])
+
+  const allProspects = fetchRelated ? (relatedProspects ?? []) : allProspectsProp
 
   const companyContacts = useMemo(
     () =>

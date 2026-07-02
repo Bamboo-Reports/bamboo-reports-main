@@ -3,6 +3,7 @@ import { enforceRateLimit } from "@/lib/rate-limit/server"
 import { createLogger } from "@/lib/logger"
 import { queryWarehouse } from "@/lib/db/warehouse"
 import { buildAccountSearch, buildCenterSearch, buildProspectSearch, MIN_QUERY_LENGTH } from "@/lib/search/search-sql"
+import { ACCOUNT_PROJECTION, CENTER_COLUMNS, PROSPECT_COLUMNS } from "@/lib/dashboard/entity-columns"
 
 export const dynamic = "force-dynamic"
 
@@ -16,6 +17,23 @@ const joinParts = (parts: Array<string | null | undefined>, sep: string) =>
   parts.filter((p): p is string => Boolean(p)).join(sep)
 
 const total = (rows: Record<string, unknown>[]) => Number(rows[0]?.total ?? 0)
+
+// Full rows for the (at most 10) hits per group, keyed by id, so the client
+// can open detail dialogs straight from a result like the in-browser index did.
+async function hydrate(
+  table: "accounts" | "centers" | "prospects",
+  keyColumn: string,
+  projection: string,
+  ids: Array<string | null>
+): Promise<Map<string, Record<string, unknown>>> {
+  const keys = ids.filter((id): id is string => Boolean(id))
+  if (keys.length === 0) return new Map()
+  const rows = await queryWarehouse<Record<string, unknown>>({
+    text: `select ${projection} from ${table} where ${keyColumn} = any($1::text[])`,
+    values: [keys],
+  })
+  return new Map(rows.map((r) => [String(r[keyColumn]), r]))
+}
 
 export async function GET(request: Request) {
   const token = extractBearerToken(request.headers.get("authorization"))
@@ -48,12 +66,19 @@ export async function GET(request: Request) {
       queryWarehouse(pro.count),
     ])
 
+    const [accountRows, centerRows, prospectRows] = await Promise.all([
+      hydrate("accounts", "account_global_legal_name", ACCOUNT_PROJECTION, aItems.map((r) => r.id)),
+      hydrate("centers", "cn_unique_key", CENTER_COLUMNS.join(", "), cItems.map((r) => r.id)),
+      hydrate("prospects", "ps_unique_key", PROSPECT_COLUMNS.join(", "), pItems.map((r) => r.id)),
+    ])
+
     const accounts = {
       items: aItems.map((r) => ({
         type: "account" as const,
         id: r.id,
         title: r.id,
         subtitle: joinParts([r.industry, r.country], " · "),
+        data: r.id ? accountRows.get(r.id) : undefined,
       })),
       totalMatches: total(aCount),
     }
@@ -63,6 +88,7 @@ export async function GET(request: Request) {
         id: r.id,
         title: r.title,
         subtitle: joinParts([r.city, r.state, r.country], ", "),
+        data: r.id ? centerRows.get(r.id) : undefined,
       })),
       totalMatches: total(cCount),
     }
@@ -72,6 +98,7 @@ export async function GET(request: Request) {
         id: r.id || `${r.account}::${r.fullname}`,
         title: r.fullname || "Unknown",
         subtitle: joinParts([r.title, r.account], " · "),
+        data: r.id ? prospectRows.get(r.id) : undefined,
       })),
       totalMatches: total(pCount),
     }

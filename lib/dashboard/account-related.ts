@@ -1,7 +1,13 @@
 import type { Account, Center, LockedProspectTeaser, Prospect, Service, Tech } from "@/lib/types"
 import { getProspectsPerAccountLimit } from "@/lib/config/dashboard-access"
 import { partitionProspectsByAccess } from "@/lib/dashboard/prospect-access"
-import { ACCOUNT_COLUMNS, CENTER_COLUMNS, PROSPECT_COLUMNS } from "@/lib/dashboard/entity-query"
+import {
+  ACCOUNT_PROJECTION,
+  CENTER_COLUMNS,
+  PROSPECT_COLUMNS,
+  SERVICE_COLUMNS,
+  TECH_COLUMNS,
+} from "@/lib/dashboard/entity-columns"
 import type { FilterAccess } from "@/lib/dashboard/filtering-sql"
 import { queryWarehouse } from "@/lib/db/warehouse"
 
@@ -13,17 +19,6 @@ export type AccountRelatedResult = {
   prospects: Prospect[]
   lockedProspectTeasers: LockedProspectTeaser[]
 }
-
-const ACCOUNT_PROJECTION = [
-  ...ACCOUNT_COLUMNS.filter((c) => c !== "account_hq_revenue"),
-  "account_hq_revenue::float8 as account_hq_revenue",
-].join(", ")
-
-// Same columns as getDashboardServices / getDashboardTech in app/actions/data.ts.
-const SERVICE_COLUMNS =
-  "cn_unique_key, center_name, primary_service, focus_region, service_it, service_erd, service_fna, service_hr, " +
-  "service_procurement, service_sales_marketing, service_customer_support, service_others, software_vendor, software_in_use"
-const TECH_COLUMNS = "account_global_legal_name, cn_unique_key, software_in_use, software_vendor, software_category"
 
 /**
  * Everything the account detail dialog needs for one account: the account row,
@@ -54,13 +49,13 @@ export async function getAccountRelated(name: string, access: FilterAccess): Pro
       : empty,
     centersEnabled
       ? queryWarehouse<Service>({
-          text: `select ${SERVICE_COLUMNS} from services where cn_unique_key in (select cn_unique_key from centers where account_global_legal_name = $1) order by center_name`,
+          text: `select ${SERVICE_COLUMNS.join(", ")} from services where cn_unique_key in (select cn_unique_key from centers where account_global_legal_name = $1) order by center_name`,
           values,
         })
       : empty,
     accountsEnabled || centersEnabled
       ? queryWarehouse<Tech>({
-          text: `select ${TECH_COLUMNS} from tech where account_global_legal_name = $1 order by software_category, software_in_use`,
+          text: `select ${TECH_COLUMNS.join(", ")} from tech where account_global_legal_name = $1 order by software_category, software_in_use`,
           values,
         })
       : empty,

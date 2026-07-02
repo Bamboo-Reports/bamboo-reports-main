@@ -28,7 +28,13 @@ export async function GET(request: Request) {
   if (term.length < MIN_QUERY_LENGTH) return json({ suggestions: [] })
 
   try {
-    const rows = await queryWarehouse<{ name: string; sw: number; namematch: number }>(buildAccountAutocomplete(term))
+    const rows = await queryWarehouse<{
+      name: string
+      visibility: string | null
+      visibility_note: string | null
+      sw: number
+      namematch: number
+    }>(buildAccountAutocomplete(term))
 
     // Resolve "Known as" alias matches for accounts that did not match by name.
     const aliasNeeded = rows.filter((r) => Number(r.namematch) !== 1).map((r) => r.name)
@@ -46,7 +52,8 @@ export async function GET(request: Request) {
     const suggestions = rows.map((r) => {
       const name = String(r.name)
       const matchedAlias = Number(r.namematch) === 1 ? null : firstAliasMatch(aliasByAccount.get(name), term)
-      return matchedAlias ? { value: name, matchedAlias } : { value: name }
+      const visibility = { visibility: r.visibility ?? null, note: r.visibility_note ?? null }
+      return matchedAlias ? { value: name, matchedAlias, visibility } : { value: name, visibility }
     })
 
     return json({ suggestions })

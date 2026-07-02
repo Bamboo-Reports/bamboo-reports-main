@@ -35,6 +35,7 @@ interface FiltersSidebarProps {
   accountNames: string[]
   accountVisibilityByName?: Record<string, AccountVisibilityInfo>
   aliases?: Alias[]
+  serverMode?: boolean
 
   setPendingFilters: React.Dispatch<React.SetStateAction<Filters>>
   resetFilters: () => void
@@ -68,6 +69,7 @@ export function FiltersSidebar({
   accountNames,
   accountVisibilityByName,
   aliases,
+  serverMode,
   setPendingFilters,
   resetFilters,
   handleExportAll,
@@ -297,6 +299,7 @@ export function FiltersSidebar({
                 accountNames={accountNames}
                 accountVisibilityByName={accountVisibilityByName}
                 aliases={aliases}
+                serverMode={serverMode}
                 revenueRange={revenueRange}
                 yearsInIndiaRange={yearsInIndiaRange}
                 handleMinRevenueChange={handleMinRevenueChange}

@@ -25,6 +25,7 @@ interface AccountFilterSectionProps extends FilterSectionBaseProps {
   accountNames: string[]
   accountVisibilityByName?: Record<string, AccountVisibilityInfo>
   aliases?: Alias[]
+  serverMode?: boolean
   revenueRange: { min: number; max: number }
   yearsInIndiaRange: { min: number; max: number }
   handleMinRevenueChange: (value: string) => void
@@ -55,6 +56,7 @@ export function AccountFiltersSection({
   accountNames,
   accountVisibilityByName,
   aliases,
+  serverMode,
   revenueRange,
   yearsInIndiaRange,
   handleMinRevenueChange,
@@ -82,6 +84,7 @@ export function AccountFiltersSection({
               accountNames={accountNames}
               accountVisibilityByName={accountVisibilityByName}
               aliases={aliases}
+              serverSuggest={serverMode}
               selectedAccounts={pendingFilters.accountGlobalLegalNameKeywords}
               onChange={(keywords) => setPendingFilters((prev) => ({ ...prev, accountGlobalLegalNameKeywords: keywords }))}
               placeholder="Type to search account names..."

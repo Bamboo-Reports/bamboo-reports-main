@@ -30,8 +30,8 @@ describe("account autocomplete route", () => {
       // other query is the alias lookup (buildAliasMatches).
       if (query.text.includes("namematch")) {
         return [
-          { name: "GBX Systems", sw: 1, namematch: 1 },
-          { name: "Globex", sw: 0, namematch: 0 },
+          { name: "GBX Systems", visibility: null, visibility_note: null, sw: 1, namematch: 1 },
+          { name: "Globex", visibility: "exclude", visibility_note: "GCC only", sw: 0, namematch: 0 },
         ]
       }
       return [{ account_global_legal_name: "Globex", abbreviated_name: "GBX", brand_name: "Widgets Inc", short_legal_name: "Globex Ltd", currently_known_as: null, flagship_products: "SuperWidget" }]
@@ -55,8 +55,12 @@ describe("account autocomplete route", () => {
     expect(res.status).toBe(200)
     await expect(res.json()).resolves.toEqual({
       suggestions: [
-        { value: "GBX Systems" },
-        { value: "Globex", matchedAlias: { field: "abbreviated_name", value: "GBX" } },
+        { value: "GBX Systems", visibility: { visibility: null, note: null } },
+        {
+          value: "Globex",
+          matchedAlias: { field: "abbreviated_name", value: "GBX" },
+          visibility: { visibility: "exclude", note: "GCC only" },
+        },
       ],
     })
   })
