@@ -839,15 +839,17 @@ function DashboardContent(): React.JSX.Element | null {
     }
 
     // A row selection exports only the selected entity's sheet, never the
-    // related datasets. The dialog is locked to that single dataset.
+    // related datasets. The dialog is locked to that single dataset. In server
+    // mode the filtered arrays are empty, so the payload targets the selected
+    // keys directly and the dialog shows selection-sized counts.
     const emptyData = { accounts: [], centers: [], services: [], prospects: [] }
     const snapshot = { ...(filters as object), selection: exportScope }
 
     if (exportScope.dataset === "centers") {
       const keySet = new Set(exportScope.centerKeys)
-      const scopedCenters = filteredCenters.filter(
-        (c) => c.cn_unique_key && keySet.has(c.cn_unique_key)
-      )
+      const scopedCenters = serverMode
+        ? []
+        : filteredCenters.filter((c) => c.cn_unique_key && keySet.has(c.cn_unique_key))
       return {
         data: { ...emptyData, centers: scopedCenters },
         isFiltered: true,
@@ -858,11 +860,30 @@ function DashboardContent(): React.JSX.Element | null {
         keylessProspectIds: undefined as string[] | undefined,
         allowedDatasets: ["centers"] as ExportDatasetKey[],
         filters: undefined as unknown,
-        rowCounts: undefined as Partial<Record<ExportDatasetKey, number>> | undefined,
+        rowCounts: (serverMode
+          ? { centers: exportScope.centerKeys.length }
+          : undefined) as Partial<Record<ExportDatasetKey, number>> | undefined,
       }
     }
 
     if (exportScope.dataset === "prospects") {
+      if (serverMode) {
+        // Selected record ids are ps_unique_key when the row has one; keyless
+        // rows use the "account::name::discriminator" composite id (see
+        // getProspectRecordId), which the server matches directly.
+        return {
+          data: emptyData,
+          isFiltered: true,
+          filtersSnapshot: snapshot,
+          accountNames: [],
+          centerKeys: [],
+          prospectKeys: exportScope.prospectIds.filter((id) => !id.includes("::")),
+          keylessProspectIds: exportScope.prospectIds.filter((id) => id.includes("::")),
+          allowedDatasets: ["prospects"] as ExportDatasetKey[],
+          filters: undefined as unknown,
+          rowCounts: { prospects: exportScope.prospectIds.length } as Partial<Record<ExportDatasetKey, number>> | undefined,
+        }
+      }
       // Match the exact prospects the user selected (by stable record id), then
       // target them server-side via ps_unique_key. Selected prospects without a
       // key fall back to their account so they are still included.
@@ -905,9 +926,11 @@ function DashboardContent(): React.JSX.Element | null {
     }
 
     const nameSet = new Set(exportScope.accountNames)
-    const scopedAccounts = filteredAccounts.filter(
-      (a) => a.account_global_legal_name && nameSet.has(a.account_global_legal_name)
-    )
+    const scopedAccounts = serverMode
+      ? []
+      : filteredAccounts.filter(
+          (a) => a.account_global_legal_name && nameSet.has(a.account_global_legal_name)
+        )
     return {
       data: { ...emptyData, accounts: scopedAccounts },
       isFiltered: true,
@@ -918,7 +941,9 @@ function DashboardContent(): React.JSX.Element | null {
       keylessProspectIds: undefined as string[] | undefined,
       allowedDatasets: ["accounts"] as ExportDatasetKey[],
       filters: undefined as unknown,
-      rowCounts: undefined as Partial<Record<ExportDatasetKey, number>> | undefined,
+      rowCounts: (serverMode
+        ? { accounts: exportScope.accountNames.length }
+        : undefined) as Partial<Record<ExportDatasetKey, number>> | undefined,
     }
   }, [exportScope, filteredData, filters, activeFiltersCount, serverMode, serverData.summary])
 
