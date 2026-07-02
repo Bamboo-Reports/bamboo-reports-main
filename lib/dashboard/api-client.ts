@@ -66,8 +66,8 @@ const postFilters = <T>(path: string, filters: Filters) =>
   request<T>(path, { method: "POST", body: JSON.stringify({ filters }) })
 
 export type SummaryResponse = {
-  filtered: { accounts: number; centers: number; upcomingCenters: number; prospects: number; headcount: number }
-  full: { accounts: number; centers: number; upcomingCenters: number; prospects: number; headcount: number }
+  filtered: { accounts: number; centers: number; upcomingCenters: number; prospects: number; headcount: number; services: number }
+  full: { accounts: number; centers: number; upcomingCenters: number; prospects: number; headcount: number; services: number }
 }
 
 export type FacetRanges = {

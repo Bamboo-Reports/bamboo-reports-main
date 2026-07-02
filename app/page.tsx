@@ -785,6 +785,28 @@ function DashboardContent(): React.JSX.Element | null {
     const { filteredAccounts, filteredCenters, filteredServices, filteredProspects } = filteredData
 
     if (!exportScope) {
+      // Server mode (#249 Phase 4): the client no longer holds the filtered
+      // arrays; the server builds the export from the filter state, and the
+      // dialog displays counts from the summary endpoint.
+      if (serverMode) {
+        return {
+          data: { accounts: [], centers: [], services: [], prospects: [] },
+          isFiltered: activeFiltersCount > 0,
+          filtersSnapshot: filters,
+          accountNames: null as string[] | null,
+          centerKeys: null as string[] | null,
+          prospectKeys: undefined as string[] | undefined,
+          keylessProspectIds: undefined as string[] | undefined,
+          allowedDatasets: undefined as ExportDatasetKey[] | undefined,
+          filters: filters as unknown,
+          rowCounts: {
+            accounts: serverData.summary?.filtered.accounts ?? 0,
+            centers: serverData.summary?.filtered.centers ?? 0,
+            services: serverData.summary?.filtered.services ?? 0,
+            prospects: serverData.summary?.filtered.prospects ?? 0,
+          } as Partial<Record<ExportDatasetKey, number>> | undefined,
+        }
+      }
       return {
         data: {
           accounts: filteredAccounts,
@@ -811,6 +833,8 @@ function DashboardContent(): React.JSX.Element | null {
         prospectKeys: undefined as string[] | undefined,
         keylessProspectIds: undefined as string[] | undefined,
         allowedDatasets: undefined as ExportDatasetKey[] | undefined,
+        filters: undefined as unknown,
+        rowCounts: undefined as Partial<Record<ExportDatasetKey, number>> | undefined,
       }
     }
 
@@ -833,6 +857,8 @@ function DashboardContent(): React.JSX.Element | null {
         prospectKeys: undefined as string[] | undefined,
         keylessProspectIds: undefined as string[] | undefined,
         allowedDatasets: ["centers"] as ExportDatasetKey[],
+        filters: undefined as unknown,
+        rowCounts: undefined as Partial<Record<ExportDatasetKey, number>> | undefined,
       }
     }
 
@@ -873,6 +899,8 @@ function DashboardContent(): React.JSX.Element | null {
         prospectKeys,
         keylessProspectIds,
         allowedDatasets: ["prospects"] as ExportDatasetKey[],
+        filters: undefined as unknown,
+        rowCounts: undefined as Partial<Record<ExportDatasetKey, number>> | undefined,
       }
     }
 
@@ -889,8 +917,10 @@ function DashboardContent(): React.JSX.Element | null {
       prospectKeys: undefined as string[] | undefined,
       keylessProspectIds: undefined as string[] | undefined,
       allowedDatasets: ["accounts"] as ExportDatasetKey[],
+      filters: undefined as unknown,
+      rowCounts: undefined as Partial<Record<ExportDatasetKey, number>> | undefined,
     }
-  }, [exportScope, filteredData, filters, activeFiltersCount])
+  }, [exportScope, filteredData, filters, activeFiltersCount, serverMode, serverData.summary])
 
   const handleExportCompleted = useCallback(() => {
     exportCountRef.current += 1
@@ -1310,6 +1340,8 @@ function DashboardContent(): React.JSX.Element | null {
             centerKeys={exportPayload.centerKeys}
             prospectKeys={exportPayload.prospectKeys}
             keylessProspectIds={exportPayload.keylessProspectIds}
+            filters={exportPayload.filters}
+            rowCounts={exportPayload.rowCounts}
             allowedDatasets={exportPayload.allowedDatasets}
             compact={Boolean(exportPayload.allowedDatasets)}
             onExportCompleted={handleExportCompleted}

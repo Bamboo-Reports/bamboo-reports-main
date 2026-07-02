@@ -2,7 +2,7 @@ import { extractBearerToken, resolveAuthenticatedUserId } from "@/lib/auth/serve
 import { enforceRateLimit } from "@/lib/rate-limit/server"
 import { createLogger } from "@/lib/logger"
 import { parseFilters, resolveAccess } from "@/lib/dashboard/filters-request"
-import { buildEntityAggregateQuery } from "@/lib/dashboard/filtering-sql"
+import { buildCentersQuery, buildEntityAggregateQuery, type SqlQuery } from "@/lib/dashboard/filtering-sql"
 import { queryWarehouse } from "@/lib/db/warehouse"
 
 export const dynamic = "force-dynamic"
@@ -50,13 +50,23 @@ export async function POST(request: Request) {
   const access = resolveAccess()
 
   try {
-    const [accF, cenF, proF, accAll, cenAll, proAll] = await Promise.all([
+    // Filtered services = services rows of the surviving centers (services
+    // have no filter engine of their own). Used by the export-by-filter dialog.
+    const centersSub = buildCentersQuery(filters, access, { columns: "cn_unique_key", orderBy: null })
+    const servicesFilteredQuery: SqlQuery = {
+      text: `select count(*)::int as total from services where cn_unique_key in (${centersSub.text})`,
+      values: centersSub.values,
+    }
+
+    const [accF, cenF, proF, svcF, accAll, cenAll, proAll, svcAll] = await Promise.all([
       queryWarehouse(buildEntityAggregateQuery("accounts", filters, access, "count(*)::int as total")),
       queryWarehouse(buildEntityAggregateQuery("centers", filters, access, CENTER_METRICS)),
       queryWarehouse(buildEntityAggregateQuery("prospects", filters, access, "count(*)::int as total")),
+      queryWarehouse(servicesFilteredQuery),
       queryWarehouse({ text: "select count(*)::int as total from accounts", values: [] }),
       queryWarehouse({ text: `select ${CENTER_METRICS} from centers`, values: [] }),
       queryWarehouse({ text: "select count(*)::int as total from prospects", values: [] }),
+      queryWarehouse({ text: "select count(*)::int as total from services", values: [] }),
     ])
 
     return json({
@@ -66,6 +76,7 @@ export async function POST(request: Request) {
         upcomingCenters: num(cenF, "upcoming"),
         prospects: num(proF, "total"),
         headcount: num(cenF, "headcount"),
+        services: num(svcF, "total"),
       },
       full: {
         accounts: num(accAll, "total"),
@@ -73,6 +84,7 @@ export async function POST(request: Request) {
         upcomingCenters: num(cenAll, "upcoming"),
         prospects: num(proAll, "total"),
         headcount: num(cenAll, "headcount"),
+        services: num(svcAll, "total"),
       },
     })
   } catch (err) {

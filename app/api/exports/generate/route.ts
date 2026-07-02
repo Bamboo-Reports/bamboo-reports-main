@@ -11,6 +11,7 @@ import {
   buildServerExport,
   type ServerExportDatasetKey,
 } from "@/lib/exports/server-builder"
+import { parseFilters, resolveAccess } from "@/lib/dashboard/filters-request"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -34,6 +35,9 @@ const exportRequestSchema = z.object({
   centerKeys: z.array(z.string()).max(MAX_FILTER_VALUES).nullish(),
   prospectKeys: z.array(z.string()).max(MAX_FILTER_VALUES).nullish(),
   keylessProspectIds: z.array(z.string()).max(MAX_FILTER_VALUES).nullish(),
+  // Export-by-filter (#249 Phase 4): dashboard filter state; validated and
+  // coerced by parseFilters. Takes precedence over the key lists above.
+  filters: z.record(z.string(), z.unknown()).nullish(),
   isFiltered: z.boolean().optional(),
   filtersApplied: z.unknown().optional(),
   clientPublicIp: z.string().nullish(),
@@ -140,13 +144,19 @@ export async function POST(request: Request) {
 
   let buildResult
   try {
-    buildResult = await buildServerExport({
-      datasets,
-      accountNames: body.accountNames ?? null,
-      centerKeys: body.centerKeys ?? null,
-      prospectKeys: body.prospectKeys ?? null,
-      keylessProspectIds: body.keylessProspectIds ?? null,
-    })
+    buildResult = body.filters
+      ? await buildServerExport({
+          datasets,
+          filters: parseFilters(body.filters),
+          access: resolveAccess(),
+        })
+      : await buildServerExport({
+          datasets,
+          accountNames: body.accountNames ?? null,
+          centerKeys: body.centerKeys ?? null,
+          prospectKeys: body.prospectKeys ?? null,
+          keylessProspectIds: body.keylessProspectIds ?? null,
+        })
   } catch (err) {
     logger.error("build_failed", { error: err })
     return json({ error: "Failed to build export" }, 500)

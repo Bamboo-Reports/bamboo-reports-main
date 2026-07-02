@@ -27,14 +27,16 @@ describe("dashboard summary route", () => {
     authMocks.extractBearerToken.mockImplementation((h: string | null) => (h === "Bearer token-1" ? "token-1" : null))
     authMocks.resolveAuthenticatedUserId.mockResolvedValue("user-1")
     rateLimitMocks.enforceRateLimit.mockResolvedValue({ ok: true })
-    // Order: accF, cenF, proF, accAll, cenAll, proAll
+    // Order: accF, cenF, proF, svcF, accAll, cenAll, proAll, svcAll
     warehouseMocks.queryWarehouse
       .mockResolvedValueOnce([{ total: 100 }])
       .mockResolvedValueOnce([{ centers: 250, upcoming: 12, headcount: 5000 }])
       .mockResolvedValueOnce([{ total: 4000 }])
+      .mockResolvedValueOnce([{ total: 240 }])
       .mockResolvedValueOnce([{ total: 2675 }])
       .mockResolvedValueOnce([{ centers: 6305, upcoming: 103, headcount: 900000 }])
       .mockResolvedValueOnce([{ total: 63838 }])
+      .mockResolvedValueOnce([{ total: 6100 }])
   })
 
   it("rejects requests without a bearer token", async () => {
@@ -63,10 +65,10 @@ describe("dashboard summary route", () => {
     const res = await post({ filters: { accountVisibilityMode: "all" } })
     expect(res.status).toBe(200)
     await expect(res.json()).resolves.toEqual({
-      filtered: { accounts: 100, centers: 250, upcomingCenters: 12, prospects: 4000, headcount: 5000 },
-      full: { accounts: 2675, centers: 6305, upcomingCenters: 103, prospects: 63838, headcount: 900000 },
+      filtered: { accounts: 100, centers: 250, upcomingCenters: 12, prospects: 4000, headcount: 5000, services: 240 },
+      full: { accounts: 2675, centers: 6305, upcomingCenters: 103, prospects: 63838, headcount: 900000, services: 6100 },
     })
-    expect(warehouseMocks.queryWarehouse).toHaveBeenCalledTimes(6)
+    expect(warehouseMocks.queryWarehouse).toHaveBeenCalledTimes(8)
   })
 
   it("returns 500 when the warehouse query fails", async () => {

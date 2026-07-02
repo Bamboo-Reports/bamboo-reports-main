@@ -2,7 +2,14 @@ import ExcelJS from "exceljs"
 import { getPrismaOrThrow } from "@/lib/db/prisma"
 import { getProspectsPerAccountLimit } from "@/lib/config/dashboard-access"
 import { partitionProspectsByAccess } from "@/lib/dashboard/prospect-access"
-import type { Account, Center, Prospect, Service } from "@/lib/types"
+import {
+  buildAccountsQuery,
+  buildCentersQuery,
+  buildProspectsQuery,
+  type FilterAccess,
+} from "@/lib/dashboard/filtering-sql"
+import { queryWarehouse } from "@/lib/db/warehouse"
+import type { Account, Center, Filters, Prospect, Service } from "@/lib/types"
 
 export type ServerExportDatasetKey = "accounts" | "centers" | "services" | "prospects"
 
@@ -35,6 +42,14 @@ export type ServerExportSelection = {
    * Used for precise row-selection exports where ps_unique_key is missing.
    */
   keylessProspectIds?: string[] | null
+  /**
+   * Export-by-filter (#249 Phase 4): when provided, every dataset is fetched
+   * through the server-side filter engine (lib/dashboard/filtering-sql) with
+   * these filters, and the key lists above are ignored.
+   */
+  filters?: Filters | null
+  /** Section entitlements for the filter engine (resolveAccess()). */
+  access?: FilterAccess
 }
 
 export type ServerExportResult = {
@@ -43,14 +58,45 @@ export type ServerExportResult = {
   totalRows: number
 }
 
-function normalizeAccount(row: Account & { account_hq_revenue?: bigint | number | null }): Account {
+function normalizeAccount(row: Account & { account_hq_revenue?: bigint | number | string | null }): Account {
+  // Prisma returns bigint columns as BigInt; the Neon HTTP driver returns them
+  // as strings. Both become plain numbers.
+  const revenue = row.account_hq_revenue
   return {
     ...row,
     account_hq_revenue:
-      typeof row.account_hq_revenue === "bigint"
-        ? Number(row.account_hq_revenue)
-        : row.account_hq_revenue ?? null,
+      typeof revenue === "bigint" || typeof revenue === "string" ? Number(revenue) : (revenue ?? null),
   }
+}
+
+// ============================================
+// EXPORT-BY-FILTER FETCHERS (#249 Phase 4)
+// ============================================
+
+async function fetchAccountsByFilters(filters: Filters, access: FilterAccess): Promise<Account[]> {
+  const rows = await queryWarehouse<Account & { account_hq_revenue?: string | number | null }>(
+    buildAccountsQuery(filters, access, { columns: "*", orderBy: "account_global_legal_name asc" })
+  )
+  return rows.map((row) => normalizeAccount(row))
+}
+
+async function fetchCentersByFilters(filters: Filters, access: FilterAccess): Promise<Center[]> {
+  return queryWarehouse<Center>(buildCentersQuery(filters, access, { columns: "*", orderBy: "center_name asc" }))
+}
+
+async function fetchServicesByFilters(filters: Filters, access: FilterAccess): Promise<Service[]> {
+  // Services have no engine of their own: they belong to the surviving centers.
+  const centers = buildCentersQuery(filters, access, { columns: "cn_unique_key", orderBy: null })
+  return queryWarehouse<Service>({
+    text: `select * from services where cn_unique_key in (${centers.text}) order by center_name`,
+    values: centers.values,
+  })
+}
+
+async function fetchProspectsByFilters(filters: Filters, access: FilterAccess): Promise<Prospect[]> {
+  return queryWarehouse<Prospect>(
+    buildProspectsQuery(filters, access, { columns: "*", orderBy: "prospect_last_name, prospect_first_name" })
+  )
 }
 
 async function fetchAccounts(accountNames: string[] | null | undefined): Promise<Account[]> {
@@ -183,15 +229,22 @@ function addWorksheet<T extends Record<string, unknown>>(
 export async function buildServerExport(
   selection: ServerExportSelection
 ): Promise<ServerExportResult> {
-  const { datasets, accountNames, centerKeys, prospectKeys, keylessProspectIds } = selection
+  const { datasets, accountNames, centerKeys, prospectKeys, keylessProspectIds, filters, access } = selection
   const prospectsPerAccountLimit = getProspectsPerAccountLimit()
 
-  const [accounts, centers, services, rawProspects] = await Promise.all([
-    datasets.includes("accounts") ? fetchAccounts(accountNames) : Promise.resolve([] as Account[]),
-    datasets.includes("centers") ? fetchCenters(centerKeys) : Promise.resolve([] as Center[]),
-    datasets.includes("services") ? fetchServices(centerKeys) : Promise.resolve([] as Service[]),
-    datasets.includes("prospects") ? fetchProspects(accountNames, prospectKeys, keylessProspectIds) : Promise.resolve([] as Prospect[]),
-  ])
+  const [accounts, centers, services, rawProspects] = filters
+    ? await Promise.all([
+        datasets.includes("accounts") ? fetchAccountsByFilters(filters, access ?? {}) : Promise.resolve([] as Account[]),
+        datasets.includes("centers") ? fetchCentersByFilters(filters, access ?? {}) : Promise.resolve([] as Center[]),
+        datasets.includes("services") ? fetchServicesByFilters(filters, access ?? {}) : Promise.resolve([] as Service[]),
+        datasets.includes("prospects") ? fetchProspectsByFilters(filters, access ?? {}) : Promise.resolve([] as Prospect[]),
+      ])
+    : await Promise.all([
+        datasets.includes("accounts") ? fetchAccounts(accountNames) : Promise.resolve([] as Account[]),
+        datasets.includes("centers") ? fetchCenters(centerKeys) : Promise.resolve([] as Center[]),
+        datasets.includes("services") ? fetchServices(centerKeys) : Promise.resolve([] as Service[]),
+        datasets.includes("prospects") ? fetchProspects(accountNames, prospectKeys, keylessProspectIds) : Promise.resolve([] as Prospect[]),
+      ])
   const { visibleProspects: prospects } = partitionProspectsByAccess(rawProspects, prospectsPerAccountLimit)
 
   const workbook = new ExcelJS.Workbook()
