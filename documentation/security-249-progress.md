@@ -77,45 +77,72 @@ retrieval stays on the admin-only export path.
   injection). Full column projections match the current fetcher shapes; projection
   columns verified against the live warehouse.
 
-**All tests green: 444/444.** Run with `npx vitest run`. The real-data
+### Phase 3 (client cutover) - DONE behind a flag — commits 1586763, 680103c, 2a803df
+
+The dashboard runs fully server-backed when `NEXT_PUBLIC_DASHBOARD_SERVER_MODE=1`
+(build-time env var; the old `/api/dashboard` path is untouched when unset).
+User-verified on the dev server 2026-07-02; counts match the parity report
+(defaults 2,431 A / 5,888 C / 61,830 P; visibility ALL 2,675 / 6,305 / 63,838).
+
+- [x] `POST /api/centers/map` - filter-aware city + state aggregations (parity
+      proven exact vs the client map computations on live data).
+- [x] `GET /api/accounts/[name]/related` + lookup endpoints
+      `GET /api/centers/[key]`, `GET /api/prospects/[id]` (dialogs, favorites,
+      recent items).
+- [x] `lib/dashboard/api-client.ts` (typed authed fetchers) +
+      `hooks/use-server-dashboard-data.ts` (summary/facets/charts/map + per-entity
+      paginated pages; un-narrowed ranges are sent wide-open, cast
+      `::double precision` in `filtering-sql.ts` so int columns don't overflow).
+- [x] Tabs on server pagination + whitelisted sort; maps on pre-aggregated data;
+      dialogs self-fetch; global search + account autocomplete server-backed
+      (`/api/search` hydrates full rows; autocomplete carries visibility).
+- Deploy note: enabling server mode in any deployment requires setting
+  `NEXT_PUBLIC_DASHBOARD_SERVER_MODE=1` at build time (set in `.env.local` for dev).
+- Known trade-off: filter changes now round-trip to the server (accepted;
+  see perf polish below).
+
+**All tests green: 512/512.** Run with `npx vitest run`. The real-data
 integration tests are gated on `DATABASE_URL` and skip without it.
 
 ## PENDING
 
-### Phase 3 - Client cutover (the remaining hard part; closes the bypass)
+### Server-mode gaps to close before retiring the old path
 
-This rewrites the app's core data layer. It's coupled: `hooks/use-dashboard-data.ts`
-and `hooks/use-dashboard-filters.ts` feed EVERY tab/map/dialog/chart/facet/search,
-so it can't be done tab-by-tab in isolation, and the bypass only closes at the end
-when `/api/dashboard` is deleted.
+- [ ] "Export all filtered" in server mode sends empty key lists (the client no
+      longer holds the filtered arrays) - fixed by Phase 4 below. Row-selection
+      exports still work.
+- [ ] Cross-page "select all" is limited to the visible page in server mode
+      (Phase 4's filter-based export replaces that workflow).
 
-Remaining sub-tasks:
-- [ ] `GET /api/centers/map` - server city/state aggregation (mirror
-      `components/maps/centers-map.tsx` cityData + `centers-choropleth-map.tsx`
-      stateAggregates + scale reference). Build alongside the map cutover.
-- [ ] `GET /api/accounts/[name]/related` - an account's centers/prospects/tech/
-      services for the detail dialog (fetch-by-account).
-- [ ] New server-backed data hook; wire dashboard behind a flag (keep old path
-      until proven).
-- [ ] Migrate tabs (`components/tabs/*`) to server pagination + sort; wire
-      summary/facets/charts endpoints in place of client computation.
-- [ ] Migrate maps to `/api/centers/map`.
-- [ ] Migrate detail dialogs + `handleOpenFavorite` to `/api/accounts/[name]/related`.
-- [ ] Migrate global search + account autocomplete to the server endpoints; delete
-      the in-browser `buildSearchIndex` path.
-- [ ] Retire `GET /api/dashboard`; delete client-side filtering (`getFilteredData`
-      usage, full-load in `use-dashboard-data`, `use-dashboard-filters` engine).
-- Recommended approach: incremental, with the dev server running and each step
-  visually verified (filters, pagination, sort, maps, dialogs, search), keeping the
-  old path intact until the new one is proven.
+### Retire `/api/dashboard` (the point of no return; do AFTER Phase 4)
 
-### Phase 4 - Export by filter
+- [ ] Delete `app/api/dashboard/route.ts` + `hooks/use-dashboard-data.ts`, make
+      server mode unconditional (drop the flag), remove old-path branches in
+      `app/page.tsx`, drop unused fetchers in `app/actions/data.ts` (keep
+      `lib/dashboard/filtering.ts` as the parity-test reference engine).
+- Plan: build on a separate branch and merge only on explicit go-ahead, so the
+  flagged build can soak first.
 
-- [ ] `lib/exports/server-builder.ts`: add a build-by-filters mode (reuse
-      `filtering-sql`).
-- [ ] `POST /api/exports/generate`: accept a `{ filters, datasets }` body variant.
-- [ ] Client "export all filtered" sends filter state instead of enumerating keys
-      (cross-page select-all survives pagination).
+### Perf polish (later, optional)
+
+- Debounce filter changes; fetch charts/map/tab pages lazily per visible view;
+  cache or partially refresh facets (the heaviest endpoint, ~23 aggregate
+  queries); keep previous results rendered while refetching. A server-side cache
+  layer was floated as a future option.
+
+### Phase 4 - Export by filter (next up)
+
+- [ ] `lib/exports/server-builder.ts`: filters mode via the proven SQL builders
+      (`buildAccountsQuery`/`buildCentersQuery`/`buildProspectsQuery` with
+      `columns: "*"`, services via an `in (<centers subquery>)` wrap), executed
+      through `queryWarehouse`.
+- [ ] `POST /api/exports/generate`: accept a `filters` body field (parseFilters);
+      takes precedence over key lists.
+- [ ] Add a filtered/full `services` count to `POST /api/dashboard/summary` for
+      the export dialog display.
+- [ ] Client: `exportPayload` in server mode sends filter state + summary-based
+      row counts; `ExportDialog` gains optional `rowCounts`/`filters` props;
+      `requestServerExport` forwards `filters`.
 
 ### Housekeeping
 
