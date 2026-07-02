@@ -106,13 +106,11 @@ integration tests are gated on `DATABASE_URL` and skip without it.
 
 ## PENDING
 
-### Server-mode gaps to close before retiring the old path
+### Server-mode notes
 
-- [ ] "Export all filtered" in server mode sends empty key lists (the client no
-      longer holds the filtered arrays) - fixed by Phase 4 below. Row-selection
-      exports still work.
-- [ ] Cross-page "select all" is limited to the visible page in server mode
-      (Phase 4's filter-based export replaces that workflow).
+- Cross-page "select all" is limited to the visible page in server mode;
+  "export all filtered" (now filter-based, see Phase 4) covers the
+  whole-filtered-set workflow.
 
 ### Retire `/api/dashboard` (the point of no return; do AFTER Phase 4)
 
@@ -130,19 +128,17 @@ integration tests are gated on `DATABASE_URL` and skip without it.
   queries); keep previous results rendered while refetching. A server-side cache
   layer was floated as a future option.
 
-### Phase 4 - Export by filter (next up)
+### Phase 4 - Export by filter - DONE — commit 84c6b20
 
-- [ ] `lib/exports/server-builder.ts`: filters mode via the proven SQL builders
-      (`buildAccountsQuery`/`buildCentersQuery`/`buildProspectsQuery` with
-      `columns: "*"`, services via an `in (<centers subquery>)` wrap), executed
-      through `queryWarehouse`.
-- [ ] `POST /api/exports/generate`: accept a `filters` body field (parseFilters);
-      takes precedence over key lists.
-- [ ] Add a filtered/full `services` count to `POST /api/dashboard/summary` for
-      the export dialog display.
-- [ ] Client: `exportPayload` in server mode sends filter state + summary-based
-      row counts; `ExportDialog` gains optional `rowCounts`/`filters` props;
-      `requestServerExport` forwards `filters`.
+- [x] `lib/exports/server-builder.ts`: filters mode via the proven SQL builders
+      with `columns: "*"` (services via an `in (<centers subquery>)` wrap),
+      executed through `queryWarehouse`; key lists ignored in this mode.
+- [x] `POST /api/exports/generate`: `filters` body field (parseFilters), takes
+      precedence over key lists. Admin role gate + hourly rate limit unchanged.
+- [x] Filtered/full `services` counts added to `POST /api/dashboard/summary`.
+- [x] Client: server-mode `exportPayload` sends filter state + summary-based row
+      counts; `ExportDialog` `rowCounts`/`filters` props; row-selection exports
+      unchanged. 518/518 tests green incl. gated services-wrap parity.
 
 ### Housekeeping
 
