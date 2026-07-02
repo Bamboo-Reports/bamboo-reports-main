@@ -8,11 +8,16 @@ import { BASEMAP_STYLE_URL, hideBasemapBoundaries } from "@/lib/maps/basemap"
 import { DebugLocationSearch } from "@/components/maps/debug-location-search"
 import { devError } from "@/lib/utils/dev-log"
 import type { Center } from "@/lib/types"
+import type { StateAggregate } from "@/lib/dashboard/api-client"
 import "maplibre-gl/dist/maplibre-gl.css"
 
 interface CentersChoroplethMapProps {
   centers: Center[]
   allCenters?: Center[]
+  /** Server mode (#249): pre-aggregated state data replaces the client computation over `centers`. */
+  states?: StateAggregate[] | null
+  /** Server mode: unfiltered aggregates for the color scale (replaces `allCenters`). */
+  scaleStates?: StateAggregate[] | null
   heightClass?: string
 }
 
@@ -51,7 +56,14 @@ const makeKey = (countryIso2: string, stateKey: string) => `${countryIso2}|${sta
 const makeFeatureKey = (countryIso2?: string | null, stateName?: string | null) =>
   makeKey(normalizeIso2(countryIso2), normalizeStateKey(stateName))
 
-const buildStateAggregates = (centers: Center[]) => {
+type StateAggregates = {
+  countsByState: Map<string, number>
+  accountsCountByState: Map<string, number>
+  headcountByState: Map<string, number>
+  countryNamesByIso: Map<string, string>
+}
+
+const buildStateAggregates = (centers: Center[]): StateAggregates => {
   const countsByState = new Map<string, number>()
   const accountsByState = new Map<string, Set<string>>()
   const headcountByState = new Map<string, number>()
@@ -79,7 +91,30 @@ const buildStateAggregates = (centers: Center[]) => {
     }
   })
 
-  return { countsByState, accountsByState, headcountByState, countryNamesByIso }
+  const accountsCountByState = new Map<string, number>()
+  accountsByState.forEach((accounts, key) => accountsCountByState.set(key, accounts.size))
+
+  return { countsByState, accountsCountByState, headcountByState, countryNamesByIso }
+}
+
+/** Server mode: the same aggregate maps, built from /api/centers/map state rows. */
+const aggregatesFromStateRows = (rows: StateAggregate[]): StateAggregates => {
+  const countsByState = new Map<string, number>()
+  const accountsCountByState = new Map<string, number>()
+  const headcountByState = new Map<string, number>()
+  const countryNamesByIso = new Map<string, string>()
+
+  rows.forEach((row) => {
+    const key = makeKey(normalizeIso2(row.countryIso2), normalizeStateKey(row.stateKey))
+    countsByState.set(key, row.count)
+    accountsCountByState.set(key, row.accountsCount)
+    headcountByState.set(key, row.headcount)
+    if (row.countryName) {
+      countryNamesByIso.set(normalizeIso2(row.countryIso2), row.countryName)
+    }
+  })
+
+  return { countsByState, accountsCountByState, headcountByState, countryNamesByIso }
 }
 
 const buildColorScale = (values: number[], countExpression: any) => {
@@ -167,6 +202,8 @@ const buildColorScale = (values: number[], countExpression: any) => {
 export function CentersChoroplethMap({
   centers,
   allCenters,
+  states,
+  scaleStates,
   heightClass = "h-[750px]",
 }: CentersChoroplethMapProps) {
   const [error, setError] = useState<string | null>(null)
@@ -261,11 +298,16 @@ export function CentersChoroplethMap({
     return () => observer.disconnect()
   }, [isClient])
 
-  const stateAggregates = useMemo(() => buildStateAggregates(centers), [centers])
+  const stateAggregates = useMemo(
+    () => (states ? aggregatesFromStateRows(states) : buildStateAggregates(centers)),
+    [states, centers]
+  )
   const scaleAggregates = useMemo(() => {
+    if (scaleStates && scaleStates.length > 0) return aggregatesFromStateRows(scaleStates)
+    if (states) return aggregatesFromStateRows(states)
     const centersForScale = allCenters && allCenters.length > 0 ? allCenters : centers
     return buildStateAggregates(centersForScale)
-  }, [allCenters, centers])
+  }, [scaleStates, states, allCenters, centers])
 
   const countValues = useMemo(
     () => Array.from(scaleAggregates.countsByState.values()).filter((value) => value > 0),
@@ -441,7 +483,7 @@ export function CentersChoroplethMap({
           const key = makeFeatureKey(iso2, stateName)
           setHoveredFeatureKeys([key])
           const count = stateAggregates.countsByState.get(key) || 0
-          const accountsCount = stateAggregates.accountsByState.get(key)?.size || 0
+          const accountsCount = stateAggregates.accountsCountByState.get(key) || 0
           const headcount = stateAggregates.headcountByState.get(key) || 0
           const countryName = stateAggregates.countryNamesByIso.get(iso2) || iso2
           const stateLabel = stateName || "Unknown State"

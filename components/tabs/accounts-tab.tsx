@@ -36,7 +36,18 @@ import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { canAccessAccountsMapView } from "@/lib/config/dashboard-access"
 import { getPaginatedData } from "@/lib/utils/helpers"
+import type { CityAggregate, StateAggregate } from "@/lib/dashboard/api-client"
 import type { Account, Center, Prospect, Service, Function, Tech, LockedProspectTeaser } from "@/lib/types"
+
+/**
+ * Server mode (#249): rows arrive pre-paginated/sorted from the query
+ * endpoints; the tab reports sort changes upward and renders server totals.
+ */
+export interface TabServerProps {
+  total: number
+  loading?: boolean
+  onSortChange: (key: string, direction: "asc" | "desc" | null) => void
+}
 
 interface AccountsTabProps {
   accounts: Account[]
@@ -63,6 +74,8 @@ interface AccountsTabProps {
   onToggleFavorite?: (item: FavoriteInput) => void
   onFavoriteMany?: (items: FavoriteInput[]) => void
   onUnfavoriteMany?: (items: FavoriteInput[]) => void
+  server?: TabServerProps | null
+  mapData?: { cities: CityAggregate[]; states: StateAggregate[] } | null
 }
 
 // Module-level so the references are stable across renders (passed to memo'd rows).
@@ -96,6 +109,8 @@ export function AccountsTab({
   onToggleFavorite,
   onFavoriteMany,
   onUnfavoriteMany,
+  server,
+  mapData,
 }: AccountsTabProps) {
   const allowMapView = canAccessAccountsMapView()
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null)
@@ -189,6 +204,7 @@ export function AccountsTab({
       sort_key: key,
       sort_direction: nextDirection ?? "none",
     })
+    server?.onSortChange(key, nextDirection)
     setCurrentPage(1)
   }
 
@@ -235,7 +251,8 @@ export function AccountsTab({
 
 
   const sortedAccounts = React.useMemo(() => {
-    if (!sort.direction) return accounts
+    // Server mode: rows arrive already sorted and paginated.
+    if (server || !sort.direction) return accounts
 
     const compare = (a: string | undefined | null, b: string | undefined | null) =>
       (a || "").localeCompare(b || "", undefined, { sensitivity: "base" })
@@ -255,11 +272,11 @@ export function AccountsTab({
 
     const sorted = [...accounts].sort((a, b) => compare(getValue(a), getValue(b)))
     return sort.direction === "asc" ? sorted : sorted.reverse()
-  }, [accounts, sort])
+  }, [accounts, sort, server])
 
   const pageAccounts = React.useMemo(
-    () => getPaginatedData(sortedAccounts, currentPage, itemsPerPage),
-    [sortedAccounts, currentPage, itemsPerPage]
+    () => (server ? sortedAccounts : getPaginatedData(sortedAccounts, currentPage, itemsPerPage)),
+    [server, sortedAccounts, currentPage, itemsPerPage]
   )
   const {
     selected: selectedNames,
@@ -273,7 +290,7 @@ export function AccountsTab({
     handleRowSelectChange,
     handleRowToggleFavorite,
   } = useTableRowSelection({
-    items: accounts,
+    items: server ? pageAccounts : accounts,
     pageItems: pageAccounts,
     getKey: getAccountKey,
     favoritePrefix: "account",
@@ -288,7 +305,7 @@ export function AccountsTab({
     [handleAccountClick]
   )
 
-  if (accounts.length === 0) {
+  if (server ? server.total === 0 && !server.loading : accounts.length === 0) {
     return (
       <TabsContent value="accounts">
         <EmptyState type="no-results" />
@@ -395,9 +412,9 @@ export function AccountsTab({
           <CardContent className="p-0 flex flex-col flex-1 overflow-hidden">
             <MapErrorBoundary>
               {mapMode === "city" ? (
-                <CentersMap centers={centers} heightClass="h-full" />
+                <CentersMap centers={centers} cities={mapData?.cities} heightClass="h-full" />
               ) : (
-                <CentersChoroplethMap centers={centers} heightClass="h-full" />
+                <CentersChoroplethMap centers={centers} states={mapData?.states} heightClass="h-full" />
               )}
             </MapErrorBoundary>
           </CardContent>
@@ -515,7 +532,7 @@ export function AccountsTab({
                       </button>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
-                      {getPaginatedData(sortedAccounts, currentPage, itemsPerPage).map(
+                      {pageAccounts.map(
                         (account) => (
                         <AccountGridCard
                           key={account.account_global_legal_name}
@@ -528,13 +545,13 @@ export function AccountsTab({
                 </div>
               )}
             </div>
-            {accounts.length > 0 && (
+            {(server ? server.total : accounts.length) > 0 && (
               <PaginationControls
                 currentPage={currentPage}
-                totalItems={accounts.length}
+                totalItems={server ? server.total : accounts.length}
                 itemsPerPage={itemsPerPage}
                 onPageChange={setCurrentPage}
-                dataLength={accounts.length}
+                dataLength={server ? server.total : accounts.length}
               />
             )}
           </CardContent>
@@ -569,6 +586,7 @@ export function AccountsTab({
         tech={tech}
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
+        fetchRelated={Boolean(server)}
       />
     </TabsContent>
   )

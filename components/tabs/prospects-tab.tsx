@@ -25,6 +25,9 @@ import { TableColumnMenu } from "@/components/tables/table-column-menu"
 import { useTableColumnPreferences } from "@/hooks/use-table-column-preferences"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
+import { fetchAccountRelated } from "@/lib/dashboard/api-client"
+import { devError } from "@/lib/utils/dev-log"
+import type { TabServerProps } from "@/components/tabs/accounts-tab"
 import type { Account, Center, LockedProspectTeaser, Prospect, Service, Tech } from "@/lib/types"
 
 interface ProspectsTabProps {
@@ -50,6 +53,7 @@ interface ProspectsTabProps {
   onToggleFavorite?: (item: FavoriteInput) => void
   onFavoriteMany?: (items: FavoriteInput[]) => void
   onUnfavoriteMany?: (items: FavoriteInput[]) => void
+  server?: TabServerProps | null
 }
 
 // Module-level so the reference is stable across renders (passed to memo'd rows).
@@ -82,6 +86,7 @@ export function ProspectsTab({
   onToggleFavorite,
   onFavoriteMany,
   onUnfavoriteMany,
+  server,
 }: ProspectsTabProps) {
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -162,10 +167,7 @@ export function ProspectsTab({
     })
   }, [isDialogOpen, onRecordOpened, prospectsView, dataLayout, getProspectDisplayName, getProspectRecordId])
 
-  const handleAccountOpen = (accountName: string) => {
-    const account = accounts.find((item) => item.account_global_legal_name === accountName)
-    if (!account) return
-
+  const openAccount = (account: Account) => {
     setIsDialogOpen(false)
     setSelectedAccount(account)
     setIsAccountDialogOpen(true)
@@ -184,6 +186,22 @@ export function ProspectsTab({
       opened_from: "related_account_link",
       has_website: Boolean(account.account_hq_website),
     })
+  }
+
+  const handleAccountOpen = (accountName: string) => {
+    const account = accounts.find((item) => item.account_global_legal_name === accountName)
+    if (account) {
+      openAccount(account)
+      return
+    }
+    // Server mode: the account is not in the current page rows; fetch it.
+    if (server) {
+      fetchAccountRelated(accountName)
+        .then((res) => {
+          if (res.account) openAccount(res.account)
+        })
+        .catch((err) => devError("related account fetch failed:", err))
+    }
   }
 
   const handleSort = (key: typeof sort.key) => {
@@ -205,6 +223,7 @@ export function ProspectsTab({
       sort_key: key,
       sort_direction: nextDirection ?? "none",
     })
+    server?.onSortChange(key, nextDirection)
     setCurrentPage(1)
   }
 
@@ -238,7 +257,8 @@ export function ProspectsTab({
 
 
   const sortedProspects = React.useMemo(() => {
-    if (!sort.direction) return prospects
+    // Server mode: rows arrive already sorted and paginated.
+    if (server || !sort.direction) return prospects
 
     const compare = (a: string | undefined | null, b: string | undefined | null) =>
       (a || "").localeCompare(b || "", undefined, { sensitivity: "base" })
@@ -261,7 +281,7 @@ export function ProspectsTab({
 
     const sorted = [...prospects].sort((a, b) => compare(getValue(a), getValue(b)))
     return sort.direction === "asc" ? sorted : sorted.reverse()
-  }, [prospects, sort])
+  }, [prospects, sort, server])
 
   const lockedTeaserCountsByAccount = React.useMemo(() => {
     const counts = new Map<string, number>()
@@ -286,12 +306,20 @@ export function ProspectsTab({
     [sortedProspects, lockedProspectTeasers]
   )
 
+  const pageTableItems = React.useMemo(
+    () => (server ? tableItems : getPaginatedData(tableItems, currentPage, itemsPerPage)),
+    [server, tableItems, currentPage, itemsPerPage]
+  )
+  const pageGridItems = React.useMemo(
+    () => (server ? gridItems : getPaginatedData(gridItems, currentPage, itemsPerPage)),
+    [server, gridItems, currentPage, itemsPerPage]
+  )
   const pageProspects = React.useMemo(
     () =>
-      getPaginatedData(tableItems, currentPage, itemsPerPage)
+      pageTableItems
         .filter((item) => item.type === "visible")
         .map((item) => item.prospect),
-    [tableItems, currentPage, itemsPerPage]
+    [pageTableItems]
   )
   const {
     selected: selectedKeys,
@@ -305,7 +333,7 @@ export function ProspectsTab({
     handleRowSelectChange,
     handleRowToggleFavorite,
   } = useTableRowSelection({
-    items: prospects,
+    items: server ? pageProspects : prospects,
     pageItems: pageProspects,
     getKey: getProspectRecordIdUtil,
     favoritePrefix: "prospect",
@@ -325,7 +353,7 @@ export function ProspectsTab({
   }
 
   // Show empty state when no prospects
-  if (prospects.length === 0 && lockedProspectTeasers.length === 0) {
+  if (server ? server.total === 0 && !server.loading : prospects.length === 0 && lockedProspectTeasers.length === 0) {
     return (
       <TabsContent value="prospects">
         <EmptyState type="no-results" />
@@ -460,7 +488,7 @@ export function ProspectsTab({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {getPaginatedData(tableItems, currentPage, itemsPerPage).map((item) =>
+                      {pageTableItems.map((item) =>
                         item.type === "visible" ? (
                           <ProspectRow
                             key={getProspectRecordId(item.prospect)}
@@ -505,7 +533,7 @@ export function ProspectsTab({
                       </button>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
-                      {getPaginatedData(gridItems, currentPage, itemsPerPage).map((item) =>
+                      {pageGridItems.map((item) =>
                         item.type === "visible" ? (
                           <ProspectGridCard
                             key={getProspectRecordId(item.prospect)}
@@ -524,13 +552,13 @@ export function ProspectsTab({
                   </div>
                 )}
               </div>
-                  {(dataLayout === "grid" ? gridItems.length : tableItems.length) > 0 && (
+                  {(server ? server.total : dataLayout === "grid" ? gridItems.length : tableItems.length) > 0 && (
                     <PaginationControls
                       currentPage={currentPage}
-                      totalItems={dataLayout === "grid" ? gridItems.length : tableItems.length}
+                      totalItems={server ? server.total : dataLayout === "grid" ? gridItems.length : tableItems.length}
                       itemsPerPage={itemsPerPage}
                       onPageChange={setCurrentPage}
-                      dataLength={dataLayout === "grid" ? gridItems.length : tableItems.length}
+                      dataLength={server ? server.total : dataLayout === "grid" ? gridItems.length : tableItems.length}
                     />
                   )}
             </CardContent>
@@ -544,6 +572,7 @@ export function ProspectsTab({
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         onAccountOpen={handleAccountOpen}
+        fetchRelated={Boolean(server)}
       />
 
       <AccountDetailsDialog
@@ -555,6 +584,7 @@ export function ProspectsTab({
         tech={tech}
         open={isAccountDialogOpen}
         onOpenChange={setIsAccountDialogOpen}
+        fetchRelated={Boolean(server)}
       />
 
       <SelectionActionBar

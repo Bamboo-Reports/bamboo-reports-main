@@ -55,8 +55,8 @@ Bamboo Reports provides a unified view of business entities (**Accounts**, **Cen
 - **Tabbed Navigation:** Seamless switching between Accounts, Centers, Prospects, and Services contexts.
 - **Deployment-Level Access Control:** Accounts, Centers, and Prospects can be enabled or disabled per deployment via `lib/config/dashboard-access.ts`.
 - **Geospatial Analytics:**
-  - MapTiler (MapLibre) cluster map optimized for 5000+ center points.
-  - State-level choropleth map with disputed boundary handling (configurable per geopolitical viewpoint).
+  - MapLibre cluster map optimized for 5000+ center points over a keyless Carto basemap.
+  - State-level choropleth map using local Survey of India administrative boundaries.
 
 ### Advanced Filtering Engine
 - **Multi-Select Filters:** Country, Region, Industry, Category, Nature, Technology, Functions, and more.
@@ -106,7 +106,7 @@ graph TD
     end
 
     subgraph External APIs
-        Client -->|Map Tiles| MapTiler[MapTiler Maps API]
+        Client -->|Basemap Tiles| Carto[Carto Positron]
         Client -->|Company Logos| LogoDev[Logo.dev API]
     end
 
@@ -149,7 +149,7 @@ For a comprehensive breakdown of every technology used in this project, see the 
 |------------|---------|
 | **Highcharts** | Donut charts for categorical breakdowns and the Technology treemap |
 | **Recharts** | Revenue trend area chart in the Account details dialog |
-| **MapLibre GL + MapTiler** | Cluster maps and state choropleth |
+| **MapLibre GL + Carto** | Cluster maps and state choropleth |
 
 ### Backend and Data
 | Technology | Purpose |
@@ -228,7 +228,7 @@ bamboo-reports-nextjs/
 ├── lib/                            # Utilities & Configuration
 │   ├── analytics/                  # PostHog client, events, tracking
 │   ├── auth/                       # Role-based access control
-│   ├── config/                     # Environment, dashboard access, filters, MapTiler, notifications
+│   ├── config/                     # Environment, dashboard access, filters, notifications
 │   ├── dashboard/                  # Dashboard utility functions
 │   ├── db/                         # Neon PostgreSQL client + retry logic
 │   ├── exports/                    # Export request client + server-side workbook builder
@@ -281,7 +281,6 @@ bamboo-reports-nextjs/
 - **npm** (v9+)
 - **Neon PostgreSQL:** Connection string for the data warehouse.
 - **Supabase Project:** For authentication and user state.
-- **MapTiler API Key:** For the geospatial views.
 
 ### Installation
 
@@ -334,11 +333,6 @@ bamboo-reports-nextjs/
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | **Yes** | Supabase public anon key (safe for client). |
 | `SUPABASE_SERVICE_ROLE_KEY` | **Yes** | Supabase service-role secret. Server-only — used to write/read `user_exports` and upload archived exports to Storage. |
 | `DASHBOARD_CACHE_TTL_MS` | No | Override for the in-memory dashboard cache TTL. Default: `3600000` (1 hour). |
-| `NEXT_PUBLIC_MAPTILER_KEY` | **Yes** | MapTiler public key for rendering map tiles. |
-| `NEXT_PUBLIC_MAPTILER_STATE_STYLE_ID` | No | MapTiler style ID for state choropleth view. |
-| `NEXT_PUBLIC_MAPTILER_CITY_STYLE_ID` | No | MapTiler style ID for city-level view. |
-| `NEXT_PUBLIC_MAPTILER_STYLE_ID` | No | Legacy fallback style ID (used if mode-specific IDs are not set). |
-| `NEXT_PUBLIC_MAP_VIEWPOINT_ISO2` | No | Geopolitical viewpoint for choropleth (e.g., `IN` for India). |
 | `NEXT_PUBLIC_LOGO_DEV_KEY` | No | Logo.dev publishable key for company logos. |
 | `NEXT_PUBLIC_POSTHOG_KEY` | No | PostHog project API key for analytics. |
 | `NEXT_PUBLIC_POSTHOG_HOST` | No | PostHog host URL (defaults to PostHog cloud). |
@@ -469,13 +463,13 @@ Subsequent pushes to the `main` branch trigger automatic deployments.
 
 | Issue | Possible Cause | Solution |
 | :--- | :--- | :--- |
-| **Map not loading** | Invalid MapTiler Key | Check `NEXT_PUBLIC_MAPTILER_KEY`. Ensure the key is active and has map tile access. |
+| **Map not loading** | Basemap or local boundary request failed | Check access to `basemaps.cartocdn.com` and confirm `public/data/admin-1.geojson` is available. |
 | **"Database connection failed"** | Neon scaling / network | The Neon instance might be sleeping. Retry after a few seconds. Verify `DATABASE_URL`. For Prisma CLI issues, also verify `DIRECT_URL`. |
 | **Auth errors (401/403)** | Supabase config | Verify `NEXT_PUBLIC_SUPABASE_URL` and `ANON_KEY`. Check RLS policies in Supabase dashboard. |
 | **Missing logos** | Logo.dev key | Ensure `NEXT_PUBLIC_LOGO_DEV_KEY` is set. If omitted, fallback initials are used. |
 | **Notifications not showing** | Feature flag | Set `NEXT_PUBLIC_NOTIFICATIONS_ENABLED=enabled` in your environment. |
 | **Charts not rendering** | Data issue | Check browser console for errors. Ensure data is being returned from server actions. |
-| **Choropleth seams visible** | MapTiler style | Disable disputed boundary layers in your MapTiler style. See [Map Disputed Boundaries](documentation/map-disputed-boundaries.md). |
+| **Unexpected map boundaries** | Basemap boundary layers are still visible | Verify `hideBasemapBoundaries` runs after map load and the local Survey of India overlay loads. See [Map Boundaries](documentation/map-disputed-boundaries.md). |
 | **Export button disabled** | User role | Only `admin` users can export. Update the role in the `profiles` table. |
 | **Export fails with "Failed to archive export"** | `user-exports` Storage bucket missing | Create a **private** bucket named exactly `user-exports` in the Supabase dashboard. |
 | **Export fails with "Failed to record export: relation 'public.user_exports' does not exist"** | Schema SQL not run | Execute `documentation/user-exports-schema.sql` against your Supabase project. |
@@ -499,7 +493,7 @@ Detailed documentation for specific subsystems lives in the `documentation/` fol
 | [**Saved Filters**](documentation/supabase-saved-filters.md) | Technical spec for the saved filters JSON structure |
 | [**User Exports & Audit Log**](documentation/user-exports.md) | Server-side export generation, Storage archive, and audit table |
 | [**Logo Integration**](documentation/logo-integration.md) | Setup and usage guide for the Logo.dev integration |
-| [**Map Disputed Boundaries**](documentation/map-disputed-boundaries.md) | State choropleth disputed-boundary behavior and alias rules |
+| [**Map Boundaries**](documentation/map-disputed-boundaries.md) | Carto basemap and local Survey of India boundary behavior |
 
 ---
 

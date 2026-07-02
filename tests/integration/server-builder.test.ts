@@ -5,6 +5,7 @@ import { makeAccount, makeCenter, makeProspect, makeService } from "../fixtures/
 
 const mocks = vi.hoisted(() => ({
   queryRaw: vi.fn(),
+  queryWarehouse: vi.fn(),
   getProspectsPerAccountLimit: vi.fn(),
 }))
 
@@ -12,6 +13,10 @@ vi.mock("@/lib/db/prisma", () => ({
   getPrismaOrThrow: () => ({
     $queryRaw: mocks.queryRaw,
   }),
+}))
+
+vi.mock("@/lib/db/warehouse", () => ({
+  queryWarehouse: mocks.queryWarehouse,
 }))
 
 vi.mock("@/lib/config/dashboard-access", () => ({
@@ -127,5 +132,66 @@ describe("server export builder", () => {
     })
     const queryStrings = mocks.queryRaw.mock.calls.map(([strings]) => String(strings))
     expect(queryStrings).toContainEqual(expect.stringContaining("SELECT * FROM prospects WHERE account_global_legal_name = ANY"))
+  })
+
+  describe("export by filters (#249 Phase 4)", () => {
+    beforeEach(() => {
+      mocks.queryWarehouse.mockImplementation(async (q: { text: string }) => {
+        if (q.text.includes("from services")) return [makeService({ cn_unique_key: "CN-1" })]
+        if (q.text.includes("from prospects")) return [makeProspect({ account_global_legal_name: "Acme Corp" })]
+        if (q.text.includes("from centers")) return [makeCenter({ cn_unique_key: "CN-1" })]
+        if (q.text.includes("from accounts")) return [makeAccount({ account_global_legal_name: "Acme Corp" })]
+        return []
+      })
+    })
+
+    const FILTERS = {
+      accountVisibilityMode: "all",
+      centerCityValues: [{ value: "Bengaluru", mode: "include" }],
+    } as unknown as import("@/lib/types").Filters
+
+    it("fetches every dataset through the filter engine and ignores key lists", async () => {
+      const result = await buildServerExport({
+        datasets: ["accounts", "centers", "services", "prospects"],
+        accountNames: ["Should Be Ignored"],
+        filters: { ...(await import("@/lib/dashboard/defaults")).createDefaultFilters(FILTERS) },
+        access: {},
+      })
+
+      expect(mocks.queryRaw).not.toHaveBeenCalled()
+      expect(mocks.queryWarehouse).toHaveBeenCalledTimes(4)
+      const texts = mocks.queryWarehouse.mock.calls.map(([q]) => (q as { text: string }).text)
+      expect(texts).toContainEqual(expect.stringContaining("select * from accounts"))
+      expect(texts).toContainEqual(expect.stringContaining("select * from centers"))
+      // Services come from the surviving centers subquery.
+      expect(texts).toContainEqual(expect.stringContaining("select * from services where cn_unique_key in ("))
+      expect(texts).toContainEqual(expect.stringContaining("select * from prospects"))
+      // The Bengaluru filter parameter flows into every query.
+      for (const [q] of mocks.queryWarehouse.mock.calls) {
+        expect((q as { values: unknown[] }).values.flat()).toContain("Bengaluru")
+      }
+      expect(result.rowCounts).toEqual({ accounts: 1, centers: 1, services: 1, prospects: 1 })
+    })
+
+    it("normalizes string bigint revenue from the HTTP driver", async () => {
+      mocks.queryWarehouse.mockImplementation(async (q: { text: string }) =>
+        q.text.includes("from accounts")
+          ? [{ ...makeAccount({ account_global_legal_name: "Acme Corp" }), account_hq_revenue: "12000000000" }]
+          : []
+      )
+      const result = await buildServerExport({
+        datasets: ["accounts"],
+        filters: (await import("@/lib/dashboard/defaults")).createDefaultFilters(FILTERS),
+        access: {},
+      })
+      expect(result.rowCounts.accounts).toBe(1)
+
+      const workbook = new ExcelJS.Workbook()
+      await workbook.xlsx.load(result.buffer as unknown as Parameters<typeof workbook.xlsx.load>[0])
+      const sheet = workbook.getWorksheet("Accounts")!
+      const headerRow = sheet.getRow(1).values as unknown[]
+      const revenueCol = headerRow.indexOf("account_hq_revenue")
+      expect(sheet.getRow(2).getCell(revenueCol).value).toBe(12000000000)
+    })
   })
 })

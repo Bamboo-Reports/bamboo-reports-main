@@ -1,4 +1,5 @@
 import { extractBearerToken, resolveAuthenticatedUserId } from "@/lib/auth/server"
+import { enforceRateLimit } from "@/lib/rate-limit/server"
 import { createLogger } from "@/lib/logger"
 import { getSupabaseServiceRoleClient, USER_EXPORTS_BUCKET } from "@/lib/supabase/server"
 
@@ -61,6 +62,9 @@ export async function GET(
   const auth = await authenticateFromHeader(request)
   if (auth instanceof Response) return auth
   const userId = auth
+
+  const limited = await enforceRateLimit({ userId, bucket: "exports:download" })
+  if (!limited.ok) return limited.response
 
   let exportRow: ExportRow | null
   try {

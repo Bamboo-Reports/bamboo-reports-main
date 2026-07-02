@@ -38,7 +38,8 @@ import { ProspectGridCard } from "@/components/cards/prospect-grid-card"
 import { LockedProspectTeaserCard } from "@/components/prospects/locked-prospect-teaser-section"
 import { Badge } from "@/components/ui/badge"
 import { TechTreemap } from "@/components/charts/tech-treemap"
-import { getAccountFinancialInfo } from "@/app/actions/financial"
+import { requestAccountFinancialInfo } from "@/lib/finance/request-client"
+import { fetchAccountRelated, type AccountRelatedResponse } from "@/lib/dashboard/api-client"
 import { isSectionEnabled } from "@/lib/config/dashboard-access"
 import { PaginationControls } from "@/components/ui/pagination-controls"
 import {
@@ -48,7 +49,6 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart"
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
-import { AccountAISummary } from "@/components/ai/account-ai-summary"
 
 function formatCompactNumber(value: number | null): string | null {
   if (value === null) return null
@@ -191,20 +191,49 @@ interface AccountDetailsDialogProps {
   tech: Tech[]
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** Server mode (#249): load the account's related data from /api/accounts/[name]/related instead of the array props. */
+  fetchRelated?: boolean
 }
 
 export function AccountDetailsDialog({
   account,
-  centers,
-  prospects,
-  lockedProspectTeasers,
-  services,
-  tech,
+  centers: centersProp,
+  prospects: prospectsProp,
+  lockedProspectTeasers: lockedProspectTeasersProp,
+  services: servicesProp,
+  tech: techProp,
   open,
   onOpenChange,
+  fetchRelated = false,
 }: AccountDetailsDialogProps) {
   const canViewCenters = isSectionEnabled("centers")
   const canViewProspects = isSectionEnabled("prospects")
+
+  const [related, setRelated] = useState<AccountRelatedResponse | null>(null)
+  const relatedName = fetchRelated && open ? (account?.account_global_legal_name ?? "") : ""
+  useEffect(() => {
+    if (!relatedName) {
+      setRelated(null)
+      return
+    }
+    let cancelled = false
+    fetchAccountRelated(relatedName)
+      .then((res) => {
+        if (!cancelled) setRelated(res)
+      })
+      .catch(() => {
+        if (!cancelled) setRelated(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [relatedName])
+
+  const centers = fetchRelated ? (related?.centers ?? []) : centersProp
+  const prospects = fetchRelated ? (related?.prospects ?? []) : prospectsProp
+  const lockedProspectTeasers = fetchRelated ? (related?.lockedProspectTeasers ?? []) : lockedProspectTeasersProp
+  const services = fetchRelated ? (related?.services ?? []) : servicesProp
+  const tech = fetchRelated ? (related?.tech ?? []) : techProp
   const [activeTab, setActiveTab] = useState("info")
   const [selectedCenter, setSelectedCenter] = useState<Center | null>(null)
   const [isCenterDialogOpen, setIsCenterDialogOpen] = useState(false)
@@ -396,7 +425,7 @@ export function AccountDetailsDialog({
       setFinancialLoading(true)
       setFinancialError(null)
 
-      const response = await getAccountFinancialInfo(ticker)
+      const response = await requestAccountFinancialInfo(ticker)
       if (cancelled) return
 
       if (response.success && response.data) {
@@ -498,8 +527,6 @@ export function AccountDetailsDialog({
 
             {/* Account Info Tab */}
             <TabsContent value="info" className="space-y-8 mt-4">
-              <AccountAISummary accountName={account.account_global_legal_name} />
-
               {/* Company Snapshot */}
               <section className="rounded-xl border border-border/60 bg-background/40 backdrop-blur-sm p-5 lg:p-6 dark:bg-white/5 dark:border-white/10">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

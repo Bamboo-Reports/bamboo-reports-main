@@ -51,6 +51,16 @@ interface UseDashboardFiltersParams {
   services: Service[]
   prospects: Prospect[]
   tech: Tech[]
+  /**
+   * Server mode (#249): base slider ranges come from the facets endpoint
+   * instead of the (absent) client data, and the dynamic revenue-range
+   * narrowing is skipped since it needs the full accounts array.
+   */
+  serverRanges?: {
+    revenue: { min: number; max: number }
+    yearsInIndia: { min: number; max: number }
+    centerIncYear: { min: number; max: number }
+  } | null
 }
 
 const isNumberRange = (value: unknown): value is [number, number] =>
@@ -69,11 +79,22 @@ export function useDashboardFilters({
   services,
   prospects,
   tech,
+  serverRanges,
 }: UseDashboardFiltersParams) {
   const accountsEnabled = isSectionEnabled("accounts")
   const centersEnabled = isSectionEnabled("centers")
   const prospectsEnabled = isSectionEnabled("prospects")
-  const baseRanges = useMemo(() => calculateBaseRanges(accounts, centers), [accounts, centers])
+  const baseRanges = useMemo(
+    () =>
+      serverRanges
+        ? {
+            revenueRange: serverRanges.revenue,
+            yearsInIndiaRange: serverRanges.yearsInIndia,
+            centerIncYearRange: serverRanges.centerIncYear,
+          }
+        : calculateBaseRanges(accounts, centers),
+    [serverRanges, accounts, centers]
+  )
 
   const [filters, setFilters] = useState<Filters>(() => createDefaultFilters())
   const [pendingFilters, setPendingFilters] = useState<Filters>(() => createDefaultFilters())
@@ -204,8 +225,8 @@ export function useDashboardFilters({
   )
 
   const dynamicRevenueRange = useMemo(
-    () => getDynamicRevenueRange(accounts, filterStateForRevenue),
-    [accounts, filterStateForRevenue]
+    () => (serverRanges ? serverRanges.revenue : getDynamicRevenueRange(accounts, filterStateForRevenue)),
+    [serverRanges, accounts, filterStateForRevenue]
   )
 
   useEffect(() => {

@@ -28,6 +28,7 @@ import { CompanyLogo } from "@/components/ui/company-logo"
 import { DialogBreadcrumb } from "@/components/ui/dialog-breadcrumb"
 import { TechTreemap } from "@/components/charts/tech-treemap"
 import { formatCenterLocation } from "@/lib/utils/helpers"
+import { fetchCenterDetail } from "@/lib/dashboard/api-client"
 
 interface CenterDetailsDialogProps {
   center: Center | null
@@ -36,6 +37,8 @@ interface CenterDetailsDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onAccountOpen?: (accountName: string) => void
+  /** Server mode (#249): load the center's services/tech from /api/centers/[key] instead of the array props. */
+  fetchDetail?: boolean
 }
 
 
@@ -88,14 +91,37 @@ function SectionHeader({ title, children }: { title: string; children?: React.Re
 
 export function CenterDetailsDialog({
   center,
-  services,
-  tech,
+  services: servicesProp,
+  tech: techProp,
   open,
   onOpenChange,
   onAccountOpen,
+  fetchDetail = false,
 }: CenterDetailsDialogProps) {
+  const [detail, setDetail] = React.useState<{ services: Service[]; tech: Tech[] } | null>(null)
+  const detailKey = fetchDetail && open ? (center?.cn_unique_key ?? "") : ""
+  React.useEffect(() => {
+    if (!detailKey) {
+      setDetail(null)
+      return
+    }
+    let cancelled = false
+    fetchCenterDetail(detailKey)
+      .then((res) => {
+        if (!cancelled) setDetail({ services: res.services, tech: res.tech })
+      })
+      .catch(() => {
+        if (!cancelled) setDetail(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [detailKey])
 
   if (!center) return null
+
+  const services = fetchDetail ? (detail?.services ?? []) : servicesProp
+  const tech = fetchDetail ? (detail?.tech ?? []) : techProp
 
   const centerServices = services.find(
     (service) => service.cn_unique_key === center.cn_unique_key,

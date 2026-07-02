@@ -84,7 +84,6 @@
 ## Other notes for the team
 
 - **Auth posture is otherwise sound:** `/api/dashboard` returns 401 without a token; there is no anonymous data access.  
-- **AI summary** (`/api/accounts/ai-summary`) is reachable by viewers and operates per-account (expects an account in the body). Low bulk-leak risk, but confirm it returns only the intended summary and cannot be coerced into returning raw underlying rows.  
 - **`/api/accounts` GET** returns 404 (no bulk GET handler), so it is not an extraction vector today.  
 - **Client holds a Supabase JWT \+ publishable key**, which is normal, but it means RLS is the sole protection on every exposed table. Treat RLS as a first-class control and add it to your test suite.
 

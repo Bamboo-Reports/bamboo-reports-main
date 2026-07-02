@@ -11,6 +11,7 @@ import {
   buildServerExport,
   type ServerExportDatasetKey,
 } from "@/lib/exports/server-builder"
+import { parseFilters, resolveAccess } from "@/lib/dashboard/filters-request"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -34,6 +35,9 @@ const exportRequestSchema = z.object({
   centerKeys: z.array(z.string()).max(MAX_FILTER_VALUES).nullish(),
   prospectKeys: z.array(z.string()).max(MAX_FILTER_VALUES).nullish(),
   keylessProspectIds: z.array(z.string()).max(MAX_FILTER_VALUES).nullish(),
+  // Export-by-filter (#249 Phase 4): dashboard filter state; validated and
+  // coerced by parseFilters. Takes precedence over the key lists above.
+  filters: z.record(z.string(), z.unknown()).nullish(),
   isFiltered: z.boolean().optional(),
   filtersApplied: z.unknown().optional(),
   clientPublicIp: z.string().nullish(),
@@ -93,6 +97,23 @@ export async function POST(request: Request) {
     return json({ error: "Invalid or expired token" }, 401)
   }
 
+  // Authorize before touching the request body so unauthorized callers get a
+  // consistent 403 regardless of body contents (no endpoint behavior leak).
+  const supabase = getSupabaseServiceRoleClient()
+
+  let role: UserRole
+  try {
+    role = await resolveUserRole(supabase, userId)
+  } catch (err) {
+    logger.error("role_check_failed", { error: err, user_id: userId })
+    return json({ error: "Failed to verify export permissions" }, 500)
+  }
+
+  if (!canExportData(role)) {
+    logger.warn("generate_denied", { user_id: userId, role })
+    return json({ error: "Export access denied" }, 403)
+  }
+
   let rawBody: unknown
   try {
     rawBody = await request.json()
@@ -117,34 +138,25 @@ export async function POST(request: Request) {
     return json({ error: blockedDataset ? getDatasetUnavailableMessage(blockedDataset) : "Dataset unavailable" }, 403)
   }
 
-  const supabase = getSupabaseServiceRoleClient()
-
-  let role: UserRole
-  try {
-    role = await resolveUserRole(supabase, userId)
-  } catch (err) {
-    logger.error("role_check_failed", { error: err, user_id: userId })
-    return json({ error: "Failed to verify export permissions" }, 500)
-  }
-
-  if (!canExportData(role)) {
-    logger.warn("generate_denied", { user_id: userId, role })
-    return json({ error: "Export access denied" }, 403)
-  }
-
   if (await isRateLimited(supabase, userId)) {
     return json({ error: "Export rate limit reached. Please wait before generating more exports." }, 429)
   }
 
   let buildResult
   try {
-    buildResult = await buildServerExport({
-      datasets,
-      accountNames: body.accountNames ?? null,
-      centerKeys: body.centerKeys ?? null,
-      prospectKeys: body.prospectKeys ?? null,
-      keylessProspectIds: body.keylessProspectIds ?? null,
-    })
+    buildResult = body.filters
+      ? await buildServerExport({
+          datasets,
+          filters: parseFilters(body.filters),
+          access: resolveAccess(),
+        })
+      : await buildServerExport({
+          datasets,
+          accountNames: body.accountNames ?? null,
+          centerKeys: body.centerKeys ?? null,
+          prospectKeys: body.prospectKeys ?? null,
+          keylessProspectIds: body.keylessProspectIds ?? null,
+        })
   } catch (err) {
     logger.error("build_failed", { error: err })
     return json({ error: "Failed to build export" }, 500)

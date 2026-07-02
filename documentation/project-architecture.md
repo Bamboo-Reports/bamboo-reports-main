@@ -99,7 +99,7 @@ Key components:
 |-----------|---------------|
 | `analytics/` | PostHog client initialization, event definitions, tracking helpers |
 | `auth/` | Role-based access control (`UserRole`, `canExportData()`) |
-| `config/` | Environment label, dashboard access, premium filter reveal, MapTiler configuration, notification settings |
+| `config/` | Environment label, dashboard access, premium filter reveal, notification settings |
 | `dashboard/` | Dashboard-specific data transformation utilities |
 | `db/` | Prisma Client singleton for Neon PostgreSQL warehouse access with retry logic |
 | `exports/` | Export request client and server-side ExcelJS workbook builder |
@@ -199,10 +199,10 @@ Alias rows power alias-aware account search: the global search (`components/sear
 
 ## 5. External Integrations
 
-### 5.1 MapTiler + MapLibre
+### 5.1 MapLibre + Carto
 -   **Cluster Map** (`components/maps/centers-map.tsx`): Client-side rendering with MapLibre GL. Supports clustering for 5000+ center points.
--   **Choropleth Map** (`components/maps/centers-choropleth-map.tsx`): State-level fills driven by center aggregation data. Supports disputed boundary alias rules configurable via `NEXT_PUBLIC_MAP_VIEWPOINT_ISO2`.
--   **Map Styles:** Configurable per mode (state/city) via environment variables.
+-   **Choropleth Map** (`components/maps/centers-choropleth-map.tsx`): State-level fills driven by center aggregation data and local Survey of India GeoJSON.
+-   **Basemap:** Both views use the keyless Carto Positron style; de-facto boundary layers are hidden in favor of the local administrative overlay.
 
 ### 5.2 Logo.dev
 -   Used in `components/ui/company-logo.tsx`.

@@ -26,6 +26,9 @@ import { TableColumnMenu } from "@/components/tables/table-column-menu"
 import { useTableColumnPreferences } from "@/hooks/use-table-column-preferences"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
+import { fetchAccountRelated, type CityAggregate, type StateAggregate } from "@/lib/dashboard/api-client"
+import { devError } from "@/lib/utils/dev-log"
+import type { TabServerProps } from "@/components/tabs/accounts-tab"
 import type { Account, Center, Function, LockedProspectTeaser, Prospect, Service, Tech } from "@/lib/types"
 
 interface CentersTabProps {
@@ -54,6 +57,8 @@ interface CentersTabProps {
   onToggleFavorite?: (item: FavoriteInput) => void
   onFavoriteMany?: (items: FavoriteInput[]) => void
   onUnfavoriteMany?: (items: FavoriteInput[]) => void
+  server?: TabServerProps | null
+  mapData?: { cities: CityAggregate[]; states: StateAggregate[]; scaleStates?: StateAggregate[] | null } | null
 }
 
 // Module-level so the references are stable across renders (passed to memo'd rows).
@@ -88,6 +93,8 @@ export function CentersTab({
   onToggleFavorite,
   onFavoriteMany,
   onUnfavoriteMany,
+  server,
+  mapData,
 }: CentersTabProps) {
   const [selectedCenter, setSelectedCenter] = useState<Center | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -157,10 +164,7 @@ export function CentersTab({
     })
   }, [isDialogOpen, onRecordOpened, centersView, dataLayout])
 
-  const handleAccountOpen = (accountName: string) => {
-    const account = accounts.find((item) => item.account_global_legal_name === accountName)
-    if (!account) return
-
+  const openAccount = (account: Account) => {
     setIsDialogOpen(false)
     setSelectedAccount(account)
     setIsAccountDialogOpen(true)
@@ -179,6 +183,22 @@ export function CentersTab({
       opened_from: "related_account_link",
       has_website: Boolean(account.account_hq_website),
     })
+  }
+
+  const handleAccountOpen = (accountName: string) => {
+    const account = accounts.find((item) => item.account_global_legal_name === accountName)
+    if (account) {
+      openAccount(account)
+      return
+    }
+    // Server mode: the account is not in the current page rows; fetch it.
+    if (server) {
+      fetchAccountRelated(accountName)
+        .then((res) => {
+          if (res.account) openAccount(res.account)
+        })
+        .catch((err) => devError("related account fetch failed:", err))
+    }
   }
 
   const handleSort = (key: typeof sort.key) => {
@@ -200,6 +220,7 @@ export function CentersTab({
       sort_key: key,
       sort_direction: nextDirection ?? "none",
     })
+    server?.onSortChange(key, nextDirection)
     setCurrentPage(1)
   }
 
@@ -246,7 +267,8 @@ export function CentersTab({
 
 
   const sortedCenters = React.useMemo(() => {
-    if (!sort.direction) return centers
+    // Server mode: rows arrive already sorted and paginated.
+    if (server || !sort.direction) return centers
 
     const compare = (a: string | undefined | null, b: string | undefined | null) =>
       (a || "").localeCompare(b || "", undefined, { sensitivity: "base" })
@@ -268,11 +290,11 @@ export function CentersTab({
 
     const sorted = [...centers].sort((a, b) => compare(getValue(a), getValue(b)))
     return sort.direction === "asc" ? sorted : sorted.reverse()
-  }, [centers, sort])
+  }, [centers, sort, server])
 
   const pageCenters = React.useMemo(
-    () => getPaginatedData(sortedCenters, currentPage, itemsPerPage),
-    [sortedCenters, currentPage, itemsPerPage]
+    () => (server ? sortedCenters : getPaginatedData(sortedCenters, currentPage, itemsPerPage)),
+    [server, sortedCenters, currentPage, itemsPerPage]
   )
   const {
     selected: selectedKeys,
@@ -286,7 +308,7 @@ export function CentersTab({
     handleRowSelectChange,
     handleRowToggleFavorite,
   } = useTableRowSelection({
-    items: centers,
+    items: server ? pageCenters : centers,
     pageItems: pageCenters,
     getKey: getCenterKey,
     favoritePrefix: "center",
@@ -302,7 +324,7 @@ export function CentersTab({
   )
 
   // Show empty state when no centers
-  if (centers.length === 0) {
+  if (server ? server.total === 0 && !server.loading : centers.length === 0) {
     return (
       <TabsContent value="centers">
         <EmptyState type="no-results" />
@@ -407,9 +429,15 @@ export function CentersTab({
            <CardContent className="p-0 flex flex-col flex-1 overflow-hidden">
              <MapErrorBoundary>
                {mapMode === "city" ? (
-                 <CentersMap centers={centers} heightClass="h-full" />
+                 <CentersMap centers={centers} cities={mapData?.cities} heightClass="h-full" />
                ) : (
-                 <CentersChoroplethMap centers={centers} allCenters={allCenters} heightClass="h-full" />
+                 <CentersChoroplethMap
+                   centers={centers}
+                   allCenters={allCenters}
+                   states={mapData?.states}
+                   scaleStates={mapData?.scaleStates}
+                   heightClass="h-full"
+                 />
                )}
              </MapErrorBoundary>
            </CardContent>
@@ -527,7 +555,7 @@ export function CentersTab({
                       </button>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
-                      {getPaginatedData(sortedCenters, currentPage, itemsPerPage).map(
+                      {pageCenters.map(
                         (center) => (
                           <CenterGridCard
                             key={center.cn_unique_key}
@@ -540,13 +568,13 @@ export function CentersTab({
                   </div>
                 )}
               </div>
-                  {centers.length > 0 && (
+                  {(server ? server.total : centers.length) > 0 && (
                     <PaginationControls
                       currentPage={currentPage}
-                      totalItems={centers.length}
+                      totalItems={server ? server.total : centers.length}
                       itemsPerPage={itemsPerPage}
                       onPageChange={setCurrentPage}
-                      dataLength={centers.length}
+                      dataLength={server ? server.total : centers.length}
                     />
                   )}
             </CardContent>
@@ -561,6 +589,7 @@ export function CentersTab({
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         onAccountOpen={handleAccountOpen}
+        fetchDetail={Boolean(server)}
       />
 
       <AccountDetailsDialog
@@ -572,6 +601,7 @@ export function CentersTab({
         tech={tech}
         open={isAccountDialogOpen}
         onOpenChange={setIsAccountDialogOpen}
+        fetchRelated={Boolean(server)}
       />
 
       <SelectionActionBar

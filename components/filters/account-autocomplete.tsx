@@ -16,6 +16,8 @@ import {
 } from "@/lib/analytics/tracking"
 import type { Alias, FilterValue } from "@/lib/types"
 import { buildAliasMap, findAliasMatch, type AliasMatch } from "@/lib/search/alias-utils"
+import { fetchAccountAutocomplete } from "@/lib/dashboard/api-client"
+import { devError } from "@/lib/utils/dev-log"
 
 interface AccountAutocompleteProps {
   accountNames: string[]
@@ -25,6 +27,8 @@ interface AccountAutocompleteProps {
   trackingKey?: string
   aliases?: Alias[]
   accountVisibilityByName?: Record<string, AccountVisibilityInfo>
+  /** Server mode (#249): fetch suggestions from /api/accounts/autocomplete instead of filtering accountNames. */
+  serverSuggest?: boolean
 }
 
 interface AccountSuggestion {
@@ -46,6 +50,7 @@ export function AccountAutocomplete({
   trackingKey,
   aliases,
   accountVisibilityByName,
+  serverSuggest = false,
 }: AccountAutocompleteProps) {
   const [inputValue, setInputValue] = useState("")
   const [debouncedValue, setDebouncedValue] = useState("")
@@ -73,9 +78,40 @@ export function AccountAutocomplete({
 
   const aliasMap = useMemo(() => buildAliasMap(aliases ?? []), [aliases])
 
+  // Server mode: suggestions come from the autocomplete endpoint.
+  const [serverSuggestions, setServerSuggestions] = useState<AccountSuggestion[]>([])
+  const serverRequestRef = useRef(0)
+  useEffect(() => {
+    if (!serverSuggest) return
+    const term = debouncedValue.toLowerCase().trim()
+    const requestId = ++serverRequestRef.current
+    if (term.length < 2) {
+      setServerSuggestions([])
+      return
+    }
+    fetchAccountAutocomplete(term)
+      .then((res) => {
+        if (serverRequestRef.current !== requestId) return
+        setServerSuggestions(
+          res.suggestions.map((s) => ({
+            name: s.value,
+            matchedAlias: (s.matchedAlias as AliasMatch | null | undefined) ?? null,
+            visibility: s.visibility
+              ? { visibility: (s.visibility.visibility as "include" | "exclude" | null) ?? null, note: s.visibility.note }
+              : null,
+          }))
+        )
+      })
+      .catch((err) => {
+        if (serverRequestRef.current !== requestId) return
+        devError("account autocomplete failed:", err)
+        setServerSuggestions([])
+      })
+  }, [serverSuggest, debouncedValue])
+
   // Filter suggestions based on input with smart matching
-  const suggestions = useMemo<AccountSuggestion[]>(() => {
-    if (!debouncedValue.trim()) return []
+  const clientSuggestions = useMemo<AccountSuggestion[]>(() => {
+    if (serverSuggest || !debouncedValue.trim()) return []
 
     const searchTerm = debouncedValue.toLowerCase().trim()
     const alreadySelected = new Set(selectedAccounts.map(s => s.value.toLowerCase()))
@@ -102,7 +138,13 @@ export function AccountAutocomplete({
     }
 
     return [...startsWithMatches, ...containsMatches, ...aliasMatches].slice(0, 50)
-  }, [debouncedValue, uniqueAccountNames, selectedAccounts, aliasMap, accountVisibilityByName])
+  }, [serverSuggest, debouncedValue, uniqueAccountNames, selectedAccounts, aliasMap, accountVisibilityByName])
+
+  const suggestions = useMemo<AccountSuggestion[]>(() => {
+    if (!serverSuggest) return clientSuggestions
+    const alreadySelected = new Set(selectedAccounts.map((s) => s.value.toLowerCase()))
+    return serverSuggestions.filter((s) => !alreadySelected.has(s.name.toLowerCase()))
+  }, [serverSuggest, clientSuggestions, serverSuggestions, selectedAccounts])
   const isSuggestionsOpen = isOpen && suggestions.length > 0
   const listboxId = `${comboboxId}-listbox`
   const activeOptionId =
