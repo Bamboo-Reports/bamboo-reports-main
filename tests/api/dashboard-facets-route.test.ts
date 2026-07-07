@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const authMocks = vi.hoisted(() => ({
   extractBearerToken: vi.fn((h: string | null) => (h === "Bearer token-1" ? "token-1" : null)),
@@ -59,5 +59,48 @@ describe("dashboard facets route", () => {
     warehouseMocks.queryWarehouse.mockRejectedValue(new Error("db down"))
     const res = await post({ filters: {} })
     expect(res.status).toBe(500)
+  })
+
+  describe("response caching (#249 perf)", () => {
+    beforeEach(async () => {
+      process.env.DASHBOARD_CACHE_TTL_MS = "600000"
+      const { clearCache } = await import("@/lib/cache/memory")
+      clearCache()
+    })
+    afterEach(() => {
+      process.env.DASHBOARD_CACHE_TTL_MS = "0"
+    })
+
+    it("serves the second identical request from cache (no warehouse queries)", async () => {
+      const first = await post({ filters: {} })
+      expect(first.status).toBe(200)
+      const callsAfterFirst = warehouseMocks.queryWarehouse.mock.calls.length
+      expect(callsAfterFirst).toBeGreaterThan(0)
+
+      const second = await post({ filters: {} })
+      expect(second.status).toBe(200)
+      expect(warehouseMocks.queryWarehouse.mock.calls.length).toBe(callsAfterFirst)
+      expect(await second.json()).toEqual(await first.json())
+    })
+
+    it("different filters use different cache entries", async () => {
+      await post({ filters: {} })
+      const callsAfterFirst = warehouseMocks.queryWarehouse.mock.calls.length
+      await post({ filters: { accountVisibilityMode: "all" } })
+      expect(warehouseMocks.queryWarehouse.mock.calls.length).toBeGreaterThan(callsAfterFirst)
+    })
+
+    it("x-no-cache bypasses the cache read and recomputes", async () => {
+      await post({ filters: {} })
+      const callsAfterFirst = warehouseMocks.queryWarehouse.mock.calls.length
+
+      const res = await facets(new Request("https://example.com/api/dashboard/facets", {
+        method: "POST",
+        headers: { authorization: "Bearer token-1", "content-type": "application/json", "x-no-cache": "1" },
+        body: JSON.stringify({ filters: {} }),
+      }))
+      expect(res.status).toBe(200)
+      expect(warehouseMocks.queryWarehouse.mock.calls.length).toBeGreaterThan(callsAfterFirst)
+    })
   })
 })

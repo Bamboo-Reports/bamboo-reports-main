@@ -4,6 +4,7 @@ import { createLogger } from "@/lib/logger"
 import { parseFilters, resolveAccess } from "@/lib/dashboard/filters-request"
 import { buildEntityAggregateQuery, type AggregateEntity, type FilterAccess } from "@/lib/dashboard/filtering-sql"
 import { queryWarehouse } from "@/lib/db/warehouse"
+import { dashboardCacheTtlMs, getOrCompute } from "@/lib/cache/memory"
 import type { AvailableOptions, FilterOption, FilterValue, Filters } from "@/lib/types"
 
 export const dynamic = "force-dynamic"
@@ -89,14 +90,22 @@ export async function POST(request: Request) {
   const access = resolveAccess()
 
   try {
-    const [facetEntries, revenue, yearsInIndia, centerIncYear] = await Promise.all([
-      Promise.all(FACETS.map(async (spec) => [spec.key, await facetOptions(filters, access, spec)] as const)),
-      minMax("accounts", "account_hq_revenue"),
-      minMax("accounts", "years_in_india"),
-      minMax("centers", "center_inc_year"),
-    ])
-    const options = Object.fromEntries(facetEntries) as unknown as AvailableOptions
-    return json({ options, ranges: { revenue, yearsInIndia, centerIncYear } })
+    const body = await getOrCompute(
+      `facets:${JSON.stringify(filters)}`,
+      dashboardCacheTtlMs(),
+      async () => {
+        const [facetEntries, revenue, yearsInIndia, centerIncYear] = await Promise.all([
+          Promise.all(FACETS.map(async (spec) => [spec.key, await facetOptions(filters, access, spec)] as const)),
+          minMax("accounts", "account_hq_revenue"),
+          minMax("accounts", "years_in_india"),
+          minMax("centers", "center_inc_year"),
+        ])
+        const options = Object.fromEntries(facetEntries) as unknown as AvailableOptions
+        return { options, ranges: { revenue, yearsInIndia, centerIncYear } }
+      },
+      { bypassRead: request.headers.get("x-no-cache") === "1" }
+    )
+    return json(body)
   } catch (err) {
     logger.error("facets_failed", { error: err })
     return json({ error: "Failed to compute facets" }, 500)

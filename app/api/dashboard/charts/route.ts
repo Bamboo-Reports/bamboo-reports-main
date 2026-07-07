@@ -4,6 +4,7 @@ import { createLogger } from "@/lib/logger"
 import { parseFilters, resolveAccess } from "@/lib/dashboard/filters-request"
 import { buildEntityAggregateQuery, type AggregateEntity, type FilterAccess } from "@/lib/dashboard/filtering-sql"
 import { queryWarehouse } from "@/lib/db/warehouse"
+import { dashboardCacheTtlMs, getOrCompute } from "@/lib/cache/memory"
 import type { ChartData, Filters } from "@/lib/types"
 
 export const dynamic = "force-dynamic"
@@ -60,43 +61,51 @@ export async function POST(request: Request) {
   const g = (entity: AggregateEntity, column: string) => grouped(entity, filters, access, column)
 
   try {
-    const [
-      accCountry, accCategory, accRevenue, accEmployees,
-      cenType, cenEmployees, cenCity, cenFunction,
-      proDept, proLevel, proCity,
-    ] = await Promise.all([
-      g("accounts", "account_hq_country"),
-      g("accounts", "account_primary_category"),
-      g("accounts", "account_hq_revenue_range"),
-      g("accounts", "account_center_employees_range"),
-      g("centers", "center_type"),
-      g("centers", "center_employees_range"),
-      g("centers", "center_city"),
-      g("functions", "function_name"),
-      g("prospects", "prospect_department"),
-      g("prospects", "prospect_level"),
-      g("prospects", "prospect_city"),
-    ])
+    const body = await getOrCompute(
+      `charts:${JSON.stringify(filters)}`,
+      dashboardCacheTtlMs(),
+      async () => {
+        const [
+          accCountry, accCategory, accRevenue, accEmployees,
+          cenType, cenEmployees, cenCity, cenFunction,
+          proDept, proLevel, proCity,
+        ] = await Promise.all([
+          g("accounts", "account_hq_country"),
+          g("accounts", "account_primary_category"),
+          g("accounts", "account_hq_revenue_range"),
+          g("accounts", "account_center_employees_range"),
+          g("centers", "center_type"),
+          g("centers", "center_employees_range"),
+          g("centers", "center_city"),
+          g("functions", "function_name"),
+          g("prospects", "prospect_department"),
+          g("prospects", "prospect_level"),
+          g("prospects", "prospect_city"),
+        ])
 
-    return json({
-      account: {
-        regionData: top10(accCountry),
-        primaryNatureData: top10(accCategory),
-        revenueRangeData: top10(accRevenue),
-        employeesRangeData: top10(accEmployees),
+        return {
+          account: {
+            regionData: top10(accCountry),
+            primaryNatureData: top10(accCategory),
+            revenueRangeData: top10(accRevenue),
+            employeesRangeData: top10(accEmployees),
+          },
+          center: {
+            centerTypeData: top10(cenType),
+            employeesRangeData: top10(cenEmployees),
+            cityData: cityBucket(cenCity),
+            functionData: top10(cenFunction),
+          },
+          prospect: {
+            departmentData: top10(proDept),
+            levelData: top10(proLevel),
+            cityData: top10(proCity),
+          },
+        }
       },
-      center: {
-        centerTypeData: top10(cenType),
-        employeesRangeData: top10(cenEmployees),
-        cityData: cityBucket(cenCity),
-        functionData: top10(cenFunction),
-      },
-      prospect: {
-        departmentData: top10(proDept),
-        levelData: top10(proLevel),
-        cityData: top10(proCity),
-      },
-    })
+      { bypassRead: request.headers.get("x-no-cache") === "1" }
+    )
+    return json(body)
   } catch (err) {
     logger.error("charts_failed", { error: err })
     return json({ error: "Failed to compute charts" }, 500)

@@ -4,6 +4,7 @@ import { createLogger } from "@/lib/logger"
 import { parseFilters, resolveAccess } from "@/lib/dashboard/filters-request"
 import { buildCentersQuery, buildEntityAggregateQuery, type SqlQuery } from "@/lib/dashboard/filtering-sql"
 import { queryWarehouse } from "@/lib/db/warehouse"
+import { dashboardCacheTtlMs, getOrCompute } from "@/lib/cache/memory"
 
 export const dynamic = "force-dynamic"
 
@@ -50,43 +51,51 @@ export async function POST(request: Request) {
   const access = resolveAccess()
 
   try {
-    // Filtered services = services rows of the surviving centers (services
-    // have no filter engine of their own). Used by the export-by-filter dialog.
-    const centersSub = buildCentersQuery(filters, access, { columns: "cn_unique_key", orderBy: null })
-    const servicesFilteredQuery: SqlQuery = {
-      text: `select count(*)::int as total from services where cn_unique_key in (${centersSub.text})`,
-      values: centersSub.values,
-    }
+    const body = await getOrCompute(
+      `summary:${JSON.stringify(filters)}`,
+      dashboardCacheTtlMs(),
+      async () => {
+        // Filtered services = services rows of the surviving centers (services
+        // have no filter engine of their own). Used by the export-by-filter dialog.
+        const centersSub = buildCentersQuery(filters, access, { columns: "cn_unique_key", orderBy: null })
+        const servicesFilteredQuery: SqlQuery = {
+          text: `select count(*)::int as total from services where cn_unique_key in (${centersSub.text})`,
+          values: centersSub.values,
+        }
 
-    const [accF, cenF, proF, svcF, accAll, cenAll, proAll, svcAll] = await Promise.all([
-      queryWarehouse(buildEntityAggregateQuery("accounts", filters, access, "count(*)::int as total")),
-      queryWarehouse(buildEntityAggregateQuery("centers", filters, access, CENTER_METRICS)),
-      queryWarehouse(buildEntityAggregateQuery("prospects", filters, access, "count(*)::int as total")),
-      queryWarehouse(servicesFilteredQuery),
-      queryWarehouse({ text: "select count(*)::int as total from accounts", values: [] }),
-      queryWarehouse({ text: `select ${CENTER_METRICS} from centers`, values: [] }),
-      queryWarehouse({ text: "select count(*)::int as total from prospects", values: [] }),
-      queryWarehouse({ text: "select count(*)::int as total from services", values: [] }),
-    ])
+        const [accF, cenF, proF, svcF, accAll, cenAll, proAll, svcAll] = await Promise.all([
+          queryWarehouse(buildEntityAggregateQuery("accounts", filters, access, "count(*)::int as total")),
+          queryWarehouse(buildEntityAggregateQuery("centers", filters, access, CENTER_METRICS)),
+          queryWarehouse(buildEntityAggregateQuery("prospects", filters, access, "count(*)::int as total")),
+          queryWarehouse(servicesFilteredQuery),
+          queryWarehouse({ text: "select count(*)::int as total from accounts", values: [] }),
+          queryWarehouse({ text: `select ${CENTER_METRICS} from centers`, values: [] }),
+          queryWarehouse({ text: "select count(*)::int as total from prospects", values: [] }),
+          queryWarehouse({ text: "select count(*)::int as total from services", values: [] }),
+        ])
 
-    return json({
-      filtered: {
-        accounts: num(accF, "total"),
-        centers: num(cenF, "centers"),
-        upcomingCenters: num(cenF, "upcoming"),
-        prospects: num(proF, "total"),
-        headcount: num(cenF, "headcount"),
-        services: num(svcF, "total"),
+        return {
+          filtered: {
+            accounts: num(accF, "total"),
+            centers: num(cenF, "centers"),
+            upcomingCenters: num(cenF, "upcoming"),
+            prospects: num(proF, "total"),
+            headcount: num(cenF, "headcount"),
+            services: num(svcF, "total"),
+          },
+          full: {
+            accounts: num(accAll, "total"),
+            centers: num(cenAll, "centers"),
+            upcomingCenters: num(cenAll, "upcoming"),
+            prospects: num(proAll, "total"),
+            headcount: num(cenAll, "headcount"),
+            services: num(svcAll, "total"),
+          },
+        }
       },
-      full: {
-        accounts: num(accAll, "total"),
-        centers: num(cenAll, "centers"),
-        upcomingCenters: num(cenAll, "upcoming"),
-        prospects: num(proAll, "total"),
-        headcount: num(cenAll, "headcount"),
-        services: num(svcAll, "total"),
-      },
-    })
+      { bypassRead: request.headers.get("x-no-cache") === "1" }
+    )
+    return json(body)
   } catch (err) {
     logger.error("summary_failed", { error: err })
     return json({ error: "Failed to compute summary" }, 500)

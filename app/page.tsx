@@ -152,11 +152,27 @@ function DashboardContent(): React.JSX.Element | null {
   const [centersPage, setCentersPage] = useState(1)
   const [prospectsPage, setProspectsPage] = useState(1)
   const itemsPerPage = 51
+  const [accountsView, setAccountsView] = useState<"chart" | "data" | "map">(accountsMapEnabled ? "map" : "chart")
+  const [centersView, setCentersView] = useState<"chart" | "data" | "map">("map")
+  const [prospectsView, setProspectsView] = useState<"chart" | "data">("chart")
+  const [activeSection, setActiveSection] = useState<"accounts" | "centers" | "prospects">(defaultSection)
 
   // Server mode: per-entity sort state (the tabs report sort changes here).
   const [accountsSort, setAccountsSort] = useState<EntitySort | null>(null)
   const [centersSort, setCentersSort] = useState<EntitySort | null>(null)
   const [prospectsSort, setProspectsSort] = useState<EntitySort | null>(null)
+
+  // What is visible right now, so charts/map/rows fetch lazily (#249 perf).
+  const activeView =
+    activeSection === "accounts" ? accountsView : activeSection === "centers" ? centersView : prospectsView
+  const dashboardViews = useMemo(
+    () => ({
+      needCharts: activeView === "chart",
+      needMap: activeView === "map",
+      activeEntity: activeSection,
+    }),
+    [activeView, activeSection]
+  )
 
   const serverData = useServerDashboardData({
     enabled: serverMode && authReady && !!userId,
@@ -164,6 +180,7 @@ function DashboardContent(): React.JSX.Element | null {
     pages: { accounts: accountsPage, centers: centersPage, prospects: prospectsPage },
     sorts: { accounts: accountsSort, centers: centersSort, prospects: prospectsSort },
     pageSize: itemsPerPage,
+    views: dashboardViews,
   })
 
   useEffect(() => {
@@ -242,10 +259,6 @@ function DashboardContent(): React.JSX.Element | null {
   const viewAccountChartData = serverMode ? (serverData.charts?.account ?? accountChartData) : accountChartData
   const viewCenterChartData = serverMode ? (serverData.charts?.center ?? centerChartData) : centerChartData
   const viewProspectChartData = serverMode ? (serverData.charts?.prospect ?? prospectChartData) : prospectChartData
-  const [accountsView, setAccountsView] = useState<"chart" | "data" | "map">(accountsMapEnabled ? "map" : "chart")
-  const [centersView, setCentersView] = useState<"chart" | "data" | "map">("map")
-  const [prospectsView, setProspectsView] = useState<"chart" | "data">("chart")
-  const [activeSection, setActiveSection] = useState<"accounts" | "centers" | "prospects">(defaultSection)
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
   const [exportScope, setExportScope] = useState<
     | { dataset: "accounts"; accountNames: string[] }

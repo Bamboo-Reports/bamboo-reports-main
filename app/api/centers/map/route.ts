@@ -4,6 +4,7 @@ import { createLogger } from "@/lib/logger"
 import { parseFilters, resolveAccess } from "@/lib/dashboard/filters-request"
 import { buildCityMapQuery, buildStateMapQuery, type CityMapRow, type StateMapRow } from "@/lib/dashboard/centers-map"
 import { queryWarehouse } from "@/lib/db/warehouse"
+import { dashboardCacheTtlMs, getOrCompute } from "@/lib/cache/memory"
 
 export const dynamic = "force-dynamic"
 
@@ -40,29 +41,37 @@ export async function POST(request: Request) {
   const access = resolveAccess()
 
   try {
-    const [cityRows, stateRows] = await Promise.all([
-      queryWarehouse<CityMapRow>(buildCityMapQuery(filters, access)),
-      queryWarehouse<StateMapRow>(buildStateMapQuery(filters, access)),
-    ])
-    return json({
-      cities: cityRows.map((r) => ({
-        city: r.city,
-        country: r.country ?? "",
-        lat: Number(r.lat),
-        lng: Number(r.lng),
-        count: Number(r.count),
-        accountsCount: Number(r.accounts_count),
-        headcount: Number(r.headcount),
-      })),
-      states: stateRows.map((r) => ({
-        countryIso2: r.country_iso2,
-        stateKey: r.state_key,
-        countryName: r.country_name ?? r.country_iso2,
-        count: Number(r.count),
-        accountsCount: Number(r.accounts_count),
-        headcount: Number(r.headcount),
-      })),
-    })
+    const body = await getOrCompute(
+      `centers-map:${JSON.stringify(filters)}`,
+      dashboardCacheTtlMs(),
+      async () => {
+        const [cityRows, stateRows] = await Promise.all([
+          queryWarehouse<CityMapRow>(buildCityMapQuery(filters, access)),
+          queryWarehouse<StateMapRow>(buildStateMapQuery(filters, access)),
+        ])
+        return {
+          cities: cityRows.map((r) => ({
+            city: r.city,
+            country: r.country ?? "",
+            lat: Number(r.lat),
+            lng: Number(r.lng),
+            count: Number(r.count),
+            accountsCount: Number(r.accounts_count),
+            headcount: Number(r.headcount),
+          })),
+          states: stateRows.map((r) => ({
+            countryIso2: r.country_iso2,
+            stateKey: r.state_key,
+            countryName: r.country_name ?? r.country_iso2,
+            count: Number(r.count),
+            accountsCount: Number(r.accounts_count),
+            headcount: Number(r.headcount),
+          })),
+        }
+      },
+      { bypassRead: request.headers.get("x-no-cache") === "1" }
+    )
+    return json(body)
   } catch (err) {
     logger.error("centers_map_failed", { error: err })
     return json({ error: "Failed to compute map aggregates" }, 500)

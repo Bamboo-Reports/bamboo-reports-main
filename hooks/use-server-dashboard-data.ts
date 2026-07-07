@@ -39,10 +39,55 @@ export function normalizeFiltersForServer(filters: Filters, ranges: FacetRanges 
   })
 }
 
+// ============================================
+// Client-side response cache (#249 perf)
+// ============================================
+// Filter states are revisited constantly (apply -> look -> remove), and every
+// response depends only on the canonical wire filters, so previously seen
+// states restore instantly with zero network calls. Session lifetime,
+// LRU-bounded; reload() clears it for a forced refresh.
+
+const MAX_CLIENT_CACHE_ENTRIES = 40
+
+function lruSet<V>(cache: Map<string, V>, key: string, value: V): void {
+  if (cache.has(key)) cache.delete(key)
+  cache.set(key, value)
+  while (cache.size > MAX_CLIENT_CACHE_ENTRIES) {
+    const oldest = cache.keys().next().value
+    if (oldest === undefined) break
+    cache.delete(oldest)
+  }
+}
+
+const summaryCache = new Map<string, SummaryResponse>()
+const facetsCache = new Map<string, FacetsResponse>()
+const chartsCache = new Map<string, ChartsResponse>()
+const mapCache = new Map<string, CentersMapResponse>()
+const pageCache = new Map<string, EntityPage<Record<string, unknown>>>()
+
+export function clearClientDashboardCache(): void {
+  summaryCache.clear()
+  facetsCache.clear()
+  chartsCache.clear()
+  mapCache.clear()
+  pageCache.clear()
+}
+
+const DEBOUNCE_MS = 350
+
 export type EntityPages = {
   accounts: EntityPage<Account> | null
   centers: EntityPage<Center> | null
   prospects: EntityPage<Prospect> | null
+}
+
+export type DashboardViews = {
+  /** A chart view is currently visible (charts fetch lazily). */
+  needCharts: boolean
+  /** A map view is currently visible (map aggregates fetch lazily). */
+  needMap: boolean
+  /** The active section; only its rows page is fetched. */
+  activeEntity: "accounts" | "centers" | "prospects"
 }
 
 interface UseServerDashboardDataParams {
@@ -51,15 +96,17 @@ interface UseServerDashboardDataParams {
   pages: { accounts: number; centers: number; prospects: number }
   sorts: { accounts: EntitySort | null; centers: EntitySort | null; prospects: EntitySort | null }
   pageSize: number
+  views: DashboardViews
 }
 
 /**
  * Server-backed dashboard data (#249): everything the dashboard renders,
- * sourced from the aggregated/paginated endpoints instead of the full
- * /api/dashboard payload. Filter changes refetch; per-entity page/sort changes
- * refetch only that entity's page.
+ * sourced from the aggregated/paginated endpoints. Filter changes are
+ * debounced and each response is cached per canonical filter state, so
+ * revisited states (e.g. removing a filter) restore instantly. Charts, map
+ * aggregates, and inactive tabs' pages fetch lazily when their view is shown.
  */
-export function useServerDashboardData({ enabled, filters, pages, sorts, pageSize }: UseServerDashboardDataParams) {
+export function useServerDashboardData({ enabled, filters, pages, sorts, pageSize, views }: UseServerDashboardDataParams) {
   const [summary, setSummary] = useState<SummaryResponse | null>(null)
   const [facets, setFacets] = useState<FacetsResponse | null>(null)
   const [charts, setCharts] = useState<ChartsResponse | null>(null)
@@ -69,6 +116,9 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
   const [error, setError] = useState<string | null>(null)
   const [isFetching, setIsFetching] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
+  // The canonical (wire) filters JSON driving all fetches; updates are
+  // debounced unless the target state is already cached.
+  const [effectiveKey, setEffectiveKey] = useState("")
 
   // Base ranges are read through a ref inside effects so a facets update does
   // not itself retrigger the fetch effects (the normalized filters only change
@@ -78,50 +128,124 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
     rangesRef.current = facets?.ranges ?? null
   }, [facets])
 
-  const aggregateRequestRef = useRef(0)
-  const entityRequestRef = useRef({ accounts: 0, centers: 0, prospects: 0 })
-
-  const filtersKey = useMemo(() => JSON.stringify(sanitizeFilters(filters)), [filters])
   const filtersRef = useRef(filters)
   filtersRef.current = filters
+  const filtersKey = useMemo(() => JSON.stringify(sanitizeFilters(filters)), [filters])
 
-  const reload = useCallback(() => setRefreshKey((k) => k + 1), [])
+  // reload() clears the caches and briefly bypasses the server-side response
+  // cache so "refresh" actually recomputes from the warehouse.
+  const bypassUntilRef = useRef(0)
+  const noCache = () => Date.now() < bypassUntilRef.current
+  const reload = useCallback(() => {
+    clearClientDashboardCache()
+    bypassUntilRef.current = Date.now() + 5000
+    setRefreshKey((k) => k + 1)
+  }, [])
 
-  // Summary, facets, charts, and map aggregates for the current filters.
+  const coreRequestRef = useRef(0)
+  const chartsRequestRef = useRef(0)
+  const mapRequestRef = useRef(0)
+  const entityRequestRef = useRef({ accounts: 0, centers: 0, prospects: 0 })
+
+  // Debounced application of filter changes. Cached states apply immediately
+  // (removing a filter snaps back); unseen states coalesce rapid clicks.
   useEffect(() => {
     if (!enabled) return
-    const requestId = ++aggregateRequestRef.current
-    const wireFilters = normalizeFiltersForServer(filtersRef.current, rangesRef.current)
+    const key = JSON.stringify(normalizeFiltersForServer(filtersRef.current, rangesRef.current))
+    if (key === effectiveKey) return
+    if (!effectiveKey || (summaryCache.has(key) && facetsCache.has(key))) {
+      setEffectiveKey(key)
+      return
+    }
+    const timer = setTimeout(() => setEffectiveKey(key), DEBOUNCE_MS)
+    return () => clearTimeout(timer)
+  }, [enabled, filtersKey, effectiveKey])
+
+  // Summary + facets: always needed (cards + sidebar are always visible).
+  useEffect(() => {
+    if (!enabled || !effectiveKey) return
+    const cachedSummary = summaryCache.get(effectiveKey)
+    const cachedFacets = facetsCache.get(effectiveKey)
+    if (cachedSummary && cachedFacets) {
+      setSummary(cachedSummary)
+      setFacets(cachedFacets)
+      setError(null)
+      return
+    }
+    const requestId = ++coreRequestRef.current
+    const wireFilters = JSON.parse(effectiveKey) as Filters
     setIsFetching(true)
     Promise.all([
-      fetchDashboardSummary(wireFilters),
-      fetchDashboardFacets(wireFilters),
-      fetchDashboardCharts(wireFilters),
-      fetchCentersMap(wireFilters),
+      fetchDashboardSummary(wireFilters, { noCache: noCache() }),
+      fetchDashboardFacets(wireFilters, { noCache: noCache() }),
     ])
-      .then(([summaryRes, facetsRes, chartsRes, mapRes]) => {
-        if (aggregateRequestRef.current !== requestId) return
+      .then(([summaryRes, facetsRes]) => {
+        if (coreRequestRef.current !== requestId) return
+        lruSet(summaryCache, effectiveKey, summaryRes)
+        lruSet(facetsCache, effectiveKey, facetsRes)
         setSummary(summaryRes)
         setFacets(facetsRes)
-        setCharts(chartsRes)
-        setMap(mapRes)
         setError(null)
       })
       .catch((err) => {
-        if (aggregateRequestRef.current !== requestId) return
-        devError("server dashboard aggregate fetch failed:", err)
+        if (coreRequestRef.current !== requestId) return
+        devError("dashboard summary/facets fetch failed:", err)
         setError(err instanceof Error ? err.message : "Failed to load dashboard data")
       })
       .finally(() => {
-        if (aggregateRequestRef.current === requestId) setIsFetching(false)
+        if (coreRequestRef.current === requestId) setIsFetching(false)
       })
-  }, [enabled, filtersKey, refreshKey])
+  }, [enabled, effectiveKey, refreshKey])
 
-  // Unfiltered state aggregates for the choropleth color scale (once).
+  // Charts: only when a chart view is visible.
   useEffect(() => {
-    if (!enabled || scaleStates !== null) return
+    if (!enabled || !effectiveKey || !views.needCharts) return
+    const cached = chartsCache.get(effectiveKey)
+    if (cached) {
+      setCharts(cached)
+      return
+    }
+    const requestId = ++chartsRequestRef.current
+    fetchDashboardCharts(JSON.parse(effectiveKey) as Filters, { noCache: noCache() })
+      .then((res) => {
+        if (chartsRequestRef.current !== requestId) return
+        lruSet(chartsCache, effectiveKey, res)
+        setCharts(res)
+      })
+      .catch((err) => devError("dashboard charts fetch failed:", err))
+  }, [enabled, effectiveKey, views.needCharts, refreshKey])
+
+  // Map aggregates: only when a map view is visible.
+  useEffect(() => {
+    if (!enabled || !effectiveKey || !views.needMap) return
+    const cached = mapCache.get(effectiveKey)
+    if (cached) {
+      setMap(cached)
+      return
+    }
+    const requestId = ++mapRequestRef.current
+    fetchCentersMap(JSON.parse(effectiveKey) as Filters, { noCache: noCache() })
+      .then((res) => {
+        if (mapRequestRef.current !== requestId) return
+        lruSet(mapCache, effectiveKey, res)
+        setMap(res)
+      })
+      .catch((err) => devError("centers map fetch failed:", err))
+  }, [enabled, effectiveKey, views.needMap, refreshKey])
+
+  // Unfiltered state aggregates for the choropleth color scale (once, and only
+  // once a map has been shown).
+  useEffect(() => {
+    if (!enabled || !views.needMap || scaleStates !== null) return
     let cancelled = false
-    fetchCentersMap(createDefaultFilters({ accountVisibilityMode: "all", accountHqRevenueRange: WIDE_RANGE, accountYearsInIndiaRange: WIDE_RANGE, centerIncYearRange: WIDE_RANGE }))
+    fetchCentersMap(
+      createDefaultFilters({
+        accountVisibilityMode: "all",
+        accountHqRevenueRange: WIDE_RANGE,
+        accountYearsInIndiaRange: WIDE_RANGE,
+        centerIncYearRange: WIDE_RANGE,
+      })
+    )
       .then((res) => {
         if (!cancelled) setScaleStates(res.states)
       })
@@ -129,18 +253,27 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
     return () => {
       cancelled = true
     }
-  }, [enabled, scaleStates])
+  }, [enabled, views.needMap, scaleStates])
 
-  // Per-entity paginated rows.
+  // Per-entity paginated rows: only the active section fetches; the others
+  // fetch on first activation (and then hit the cache).
   const useEntityEffect = (entity: "accounts" | "centers" | "prospects", page: number, sort: EntitySort | null) => {
     const sortKey = sort ? `${sort.column}:${sort.direction}` : ""
+    const active = views.activeEntity === entity
     useEffect(() => {
-      if (!enabled) return
+      if (!enabled || !effectiveKey || !active) return
+      const cacheKey = `${entity}:${effectiveKey}:${page}:${sortKey}`
+      const cached = pageCache.get(cacheKey)
+      if (cached) {
+        setEntityPages((prev) => ({ ...prev, [entity]: cached }))
+        return
+      }
       const requestId = ++entityRequestRef.current[entity]
-      const wireFilters = normalizeFiltersForServer(filtersRef.current, rangesRef.current)
-      fetchEntityPage(entity, wireFilters, page, pageSize, sort)
+      const wireFilters = JSON.parse(effectiveKey) as Filters
+      fetchEntityPage(entity, wireFilters, page, pageSize, sort, { noCache: noCache() })
         .then((res) => {
           if (entityRequestRef.current[entity] !== requestId) return
+          lruSet(pageCache, cacheKey, res as EntityPage<Record<string, unknown>>)
           setEntityPages((prev) => ({ ...prev, [entity]: res }))
         })
         .catch((err) => {
@@ -149,7 +282,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
           setError(err instanceof Error ? err.message : `Failed to load ${entity}`)
         })
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [enabled, filtersKey, page, sortKey, refreshKey])
+    }, [enabled, effectiveKey, active, page, sortKey, refreshKey])
   }
   /* eslint-disable react-hooks/rules-of-hooks -- fixed call order: the three entities are static */
   useEntityEffect("accounts", pages.accounts, sorts.accounts)

@@ -11,5 +11,10 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
+    env: {
+      // Dashboard response caching off by default in tests so repeated route
+      // calls stay observable; cache-specific tests opt back in explicitly.
+      DASHBOARD_CACHE_TTL_MS: "0",
+    },
   },
 })

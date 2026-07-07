@@ -36,13 +36,19 @@ async function getAccessToken(): Promise<string> {
   return token
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+export type FetchOpts = {
+  /** Ask the server to skip its response cache (it still repopulates it). */
+  noCache?: boolean
+}
+
+async function request<T>(path: string, init: RequestInit = {}, opts: FetchOpts = {}): Promise<T> {
   const token = await getAccessToken()
   const res = await fetch(path, {
     ...init,
     headers: {
       Authorization: `Bearer ${token}`,
       ...(init.body ? { "Content-Type": "application/json" } : {}),
+      ...(opts.noCache ? { "x-no-cache": "1" } : {}),
       ...init.headers,
     },
     cache: "no-store",
@@ -62,8 +68,8 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return (await res.json()) as T
 }
 
-const postFilters = <T>(path: string, filters: Filters) =>
-  request<T>(path, { method: "POST", body: JSON.stringify({ filters }) })
+const postFilters = <T>(path: string, filters: Filters, opts: FetchOpts = {}) =>
+  request<T>(path, { method: "POST", body: JSON.stringify({ filters }) }, opts)
 
 export type SummaryResponse = {
   filtered: { accounts: number; centers: number; upcomingCenters: number; prospects: number; headcount: number; services: number }
@@ -141,25 +147,34 @@ export type AutocompleteSuggestion = {
   visibility?: { visibility: string | null; note: string | null } | null
 }
 
-export const fetchDashboardSummary = (filters: Filters) => postFilters<SummaryResponse>("/api/dashboard/summary", filters)
+export const fetchDashboardSummary = (filters: Filters, opts: FetchOpts = {}) =>
+  postFilters<SummaryResponse>("/api/dashboard/summary", filters, opts)
 
-export const fetchDashboardFacets = (filters: Filters) => postFilters<FacetsResponse>("/api/dashboard/facets", filters)
+export const fetchDashboardFacets = (filters: Filters, opts: FetchOpts = {}) =>
+  postFilters<FacetsResponse>("/api/dashboard/facets", filters, opts)
 
-export const fetchDashboardCharts = (filters: Filters) => postFilters<ChartsResponse>("/api/dashboard/charts", filters)
+export const fetchDashboardCharts = (filters: Filters, opts: FetchOpts = {}) =>
+  postFilters<ChartsResponse>("/api/dashboard/charts", filters, opts)
 
-export const fetchCentersMap = (filters: Filters) => postFilters<CentersMapResponse>("/api/centers/map", filters)
+export const fetchCentersMap = (filters: Filters, opts: FetchOpts = {}) =>
+  postFilters<CentersMapResponse>("/api/centers/map", filters, opts)
 
 export function fetchEntityPage<T>(
   entity: "accounts" | "centers" | "prospects",
   filters: Filters,
   page: number,
   pageSize: number,
-  sort?: EntitySort | null
+  sort?: EntitySort | null,
+  opts: FetchOpts = {}
 ): Promise<EntityPage<T>> {
-  return request<EntityPage<T>>(`/api/${entity}/query`, {
-    method: "POST",
-    body: JSON.stringify({ filters, page, pageSize, sort: sort ?? undefined }),
-  })
+  return request<EntityPage<T>>(
+    `/api/${entity}/query`,
+    {
+      method: "POST",
+      body: JSON.stringify({ filters, page, pageSize, sort: sort ?? undefined }),
+    },
+    opts
+  )
 }
 
 export const fetchAccountRelated = (name: string) =>
