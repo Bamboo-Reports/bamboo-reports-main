@@ -127,12 +127,28 @@ integration tests are gated on `DATABASE_URL` and skip without it.
       were broken (empty filtered arrays => zero counts); scope payloads now
       target selected keys directly.
 
-### Perf polish (later, optional)
+### Perf: caching + debounce + lazy fetching - DONE — commit 4bde192
 
-- Debounce filter changes; fetch charts/map/tab pages lazily per visible view;
-  cache or partially refresh facets (the heaviest endpoint, ~23 aggregate
-  queries); keep previous results rendered while refetching. A server-side cache
-  layer was floated as a future option.
+Fixes the reported slowness (10s+ snap-back when removing a filter):
+
+- Client cache per canonical filter state in `use-server-dashboard-data`
+  (bounded LRU, session lifetime): revisited states restore instantly.
+- 350ms debounce on filter changes (cached states skip it).
+- Charts/map aggregates/tab pages fetch only when their view is visible.
+- Server: `lib/cache/memory.ts` in-process TTL cache (single-flight, LRU 200)
+  wrapping facets/summary/charts/centers-map/entity-query. Keyed by canonical
+  filters (responses are user-independent). `DASHBOARD_CACHE_TTL_MS` env,
+  default 10 min, 0 disables; the refresh button clears client cache and sends
+  `x-no-cache`. Vitest sets TTL 0 globally so route tests stay observable.
+- Data freshness note: after an ETL run, cached responses can lag up to the
+  TTL; the dashboard refresh button forces recompute.
+- Swap-in point for Redis later if the deployment ever goes multi-instance:
+  only `getOrCompute` internals change.
+- NOTE: `feat/249-retire-dashboard` must be rebased over this before its merge.
+
+### Perf polish still deferred (optional)
+
+- Facets SQL consolidation (GROUPING SETS); only if cache misses still hurt.
 
 ### Phase 4 - Export by filter - DONE — commit 84c6b20
 
