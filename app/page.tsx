@@ -19,6 +19,7 @@ import { LoadingState } from "@/components/states/loading-state"
 import { AccountsTab, CentersTab } from "@/components/tabs"
 import { ProspectsTab } from "@/components/tabs/prospects-tab"
 import { SummaryCards } from "@/components/dashboard/summary-cards"
+import { TopProgressBar } from "@/components/ui/top-progress-bar"
 import { Tabs } from "@/components/ui/tabs"
 import { useAuthGuard } from "@/hooks/use-auth-guard"
 import { useDashboardData } from "@/hooks/use-dashboard-data"
@@ -1264,6 +1265,15 @@ function DashboardContent(): React.JSX.Element | null {
 
   return (
     <div className="h-screen bg-[radial-gradient(circle_at_top_right,_hsl(var(--primary)/0.14),_transparent_36%),radial-gradient(circle_at_0%_45%,_hsl(var(--chart-3)/0.10),_transparent_34%),hsl(var(--background))] flex flex-col overflow-hidden">
+      <TopProgressBar
+        active={
+          serverMode &&
+          (serverData.pending.core ||
+            serverData.pending[activeSection] ||
+            (dashboardViews.needCharts && serverData.pending.charts) ||
+            (dashboardViews.needMap && serverData.pending.map))
+        }
+      />
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-foreground focus:shadow"
