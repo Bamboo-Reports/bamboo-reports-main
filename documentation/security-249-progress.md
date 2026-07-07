@@ -148,6 +148,26 @@ Fixes the reported slowness (10s+ snap-back when removing a filter):
   only `getOrCompute` internals change.
 - NOTE: `feat/249-retire-dashboard` must be rebased over this before its merge.
 
+### Loading UX - DONE — commits f89e5fa, 0cdb8b4, 3b6a563
+
+- Shimmer skeletons (components/ui/skeleton.tsx) for empty-while-loading
+  surfaces (tab tables/grids, charts, dialog sections); stale content dims
+  instead of blanking; maps show an "Updating map" pill; a top progress bar
+  (components/ui/top-progress-bar.tsx) tracks fetches for what is on screen.
+  Driven by per-piece `pending` flags in use-server-dashboard-data; cached
+  states never flash loading cues.
+
+### NEXT UP: Upstash Redis for the server cache (prod is on Vercel)
+
+- Production runs on Vercel (serverless): each instance has private memory, so
+  the in-process response cache fragments across instances. Plan agreed with
+  the user: extend `lib/cache/memory.ts` getOrCompute with an Upstash REST
+  path (plain fetch, no new deps) that activates only when
+  `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` are set, keeping the
+  in-process Map as an L1 in front; unchanged behavior when unset. User will
+  provision Upstash and add the two env vars in Vercel. Also consider
+  `export const maxDuration` on the heavy read routes for Vercel limits.
+
 ### Perf polish still deferred (optional)
 
 - Facets SQL consolidation (GROUPING SETS); only if cache misses still hurt.
