@@ -17,6 +17,7 @@ import { DialogBreadcrumb, type DialogBreadcrumbItem } from "@/components/ui/dia
 import { ProspectGridCard } from "@/components/cards/prospect-grid-card"
 import { PaginationControls } from "@/components/ui/pagination-controls"
 import { fetchAccountRelated } from "@/lib/dashboard/api-client"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface ProspectDetailsDialogProps {
   prospect: Prospect | null
@@ -140,6 +141,7 @@ export function ProspectDetailsDialog({
     }
   }, [relatedAccount])
 
+  const relatedLoading = fetchRelated && open && !!p && relatedProspects === null
   const allProspects = fetchRelated ? (relatedProspects ?? []) : allProspectsProp
 
   const companyContacts = useMemo(
@@ -381,7 +383,17 @@ export function ProspectDetailsDialog({
             </div>
           </section>
 
-          {companyContacts.length > 0 ? (
+          {relatedLoading && (
+            <section className="space-y-4">
+              <SectionHeader title={`More Contacts From ${p.account_global_legal_name}`} />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <Skeleton className="h-32 rounded-lg" />
+                <Skeleton className="h-32 rounded-lg" />
+                <Skeleton className="h-32 rounded-lg" />
+              </div>
+            </section>
+          )}
+          {!relatedLoading && companyContacts.length > 0 ? (
             <section className="space-y-4">
               <SectionHeader title={`More Contacts From ${p.account_global_legal_name}`} />
               <div className="space-y-2">

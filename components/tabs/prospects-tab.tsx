@@ -27,7 +27,8 @@ import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { fetchAccountRelated } from "@/lib/dashboard/api-client"
 import { devError } from "@/lib/utils/dev-log"
-import type { TabServerProps } from "@/components/tabs/accounts-tab"
+import { GridSkeletonCards, TableSkeletonRows, type TabServerProps } from "@/components/tabs/accounts-tab"
+import { cn } from "@/lib/utils"
 import type { Account, Center, LockedProspectTeaser, Prospect, Service, Tech } from "@/lib/types"
 
 interface ProspectsTabProps {
@@ -54,6 +55,7 @@ interface ProspectsTabProps {
   onFavoriteMany?: (items: FavoriteInput[]) => void
   onUnfavoriteMany?: (items: FavoriteInput[]) => void
   server?: TabServerProps | null
+  chartsLoading?: boolean
 }
 
 // Module-level so the reference is stable across renders (passed to memo'd rows).
@@ -87,6 +89,7 @@ export function ProspectsTab({
   onFavoriteMany,
   onUnfavoriteMany,
   server,
+  chartsLoading = false,
 }: ProspectsTabProps) {
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -400,12 +403,14 @@ export function ProspectsTab({
               data={prospectChartData.departmentData}
               countLabel="Total Prospects"
               showBigPercentage
+              loading={chartsLoading}
             />
             <PieChartCard
               title="Level"
               data={prospectChartData.levelData}
               countLabel="Total Prospects"
               showBigPercentage
+              loading={chartsLoading}
             />
           </div>
         </div>
@@ -487,7 +492,10 @@ export function ProspectsTab({
                         )}
                       </TableRow>
                     </TableHeader>
-                    <TableBody>
+                    <TableBody className={cn("transition-opacity", server?.loading && pageTableItems.length > 0 && "opacity-60")}>
+                      {server?.loading && pageTableItems.length === 0 && (
+                        <TableSkeletonRows columns={1 + (["avatar", "name", "location", "title", "department"] as const).filter(isColumnVisible).length} />
+                      )}
                       {pageTableItems.map((item) =>
                         item.type === "visible" ? (
                           <ProspectRow
@@ -532,7 +540,8 @@ export function ProspectsTab({
                         )}
                       </button>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
+                    <div className={cn("grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6 transition-opacity", server?.loading && pageGridItems.length > 0 && "opacity-60")}>
+                      {server?.loading && pageGridItems.length === 0 && <GridSkeletonCards />}
                       {pageGridItems.map((item) =>
                         item.type === "visible" ? (
                           <ProspectGridCard

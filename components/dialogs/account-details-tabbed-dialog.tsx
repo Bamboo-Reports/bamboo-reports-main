@@ -37,6 +37,7 @@ import { CenterGridCard } from "@/components/cards/center-grid-card"
 import { ProspectGridCard } from "@/components/cards/prospect-grid-card"
 import { LockedProspectTeaserCard } from "@/components/prospects/locked-prospect-teaser-section"
 import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
 import { TechTreemap } from "@/components/charts/tech-treemap"
 import { requestAccountFinancialInfo } from "@/lib/finance/request-client"
 import { fetchAccountRelated, type AccountRelatedResponse } from "@/lib/dashboard/api-client"
@@ -229,6 +230,7 @@ export function AccountDetailsDialog({
     }
   }, [relatedName])
 
+  const relatedLoading = fetchRelated && open && !!account && related === null
   const centers = fetchRelated ? (related?.centers ?? []) : centersProp
   const prospects = fetchRelated ? (related?.prospects ?? []) : prospectsProp
   const lockedProspectTeasers = fetchRelated ? (related?.lockedProspectTeasers ?? []) : lockedProspectTeasersProp
@@ -500,11 +502,21 @@ export function AccountDetailsDialog({
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
-            <TabsList className={`grid w-full ${accountCenters.length > 0 && (accountProspects.length > 0 || accountLockedProspectTeasers.length > 0) ? "grid-cols-3" : accountCenters.length > 0 || accountProspects.length > 0 || accountLockedProspectTeasers.length > 0 ? "grid-cols-2" : "grid-cols-1"}`}>
+            <TabsList className={`grid w-full ${relatedLoading ? `grid-cols-${1 + (canViewCenters ? 1 : 0) + (canViewProspects ? 1 : 0)}` : accountCenters.length > 0 && (accountProspects.length > 0 || accountLockedProspectTeasers.length > 0) ? "grid-cols-3" : accountCenters.length > 0 || accountProspects.length > 0 || accountLockedProspectTeasers.length > 0 ? "grid-cols-2" : "grid-cols-1"}`}>
               <TabsTrigger value="info" className="flex items-center gap-2">
                 <Building2 className="h-4 w-4" />
                 Account Info
               </TabsTrigger>
+              {relatedLoading && canViewCenters && (
+                <div className="flex items-center justify-center px-3">
+                  <Skeleton className="h-5 w-24" />
+                </div>
+              )}
+              {relatedLoading && canViewProspects && (
+                <div className="flex items-center justify-center px-3">
+                  <Skeleton className="h-5 w-24" />
+                </div>
+              )}
               {accountCenters.length > 0 && (
               <TabsTrigger value="centers" className="flex items-center gap-2">
                 <Building className="h-4 w-4" />
@@ -684,7 +696,13 @@ export function AccountDetailsDialog({
               )}
 
               {/* Technology Stack */}
-              {accountTech.length > 0 && (
+              {relatedLoading && (
+                <section className="space-y-4">
+                  <SectionHeader title="Technology Stack" />
+                  <Skeleton className="h-[360px] w-full rounded-lg" />
+                </section>
+              )}
+              {!relatedLoading && accountTech.length > 0 && (
                 <section className="space-y-4">
                   <SectionHeader title="Technology Stack" />
                   <div className="rounded-lg border border-border/60 bg-background/40 backdrop-blur-sm shadow-sm overflow-hidden h-[360px] lg:h-[420px] dark:bg-white/5 dark:border-white/10">

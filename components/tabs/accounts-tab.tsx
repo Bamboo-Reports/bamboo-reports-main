@@ -3,8 +3,10 @@
 import React, { useEffect, useRef, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TabsContent } from "@/components/ui/tabs"
-import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Skeleton } from "@/components/ui/skeleton"
+import { cn } from "@/lib/utils"
 import {
   ArrowDownAZ,
   ArrowUpAZ,
@@ -76,6 +78,45 @@ interface AccountsTabProps {
   onUnfavoriteMany?: (items: FavoriteInput[]) => void
   server?: TabServerProps | null
   mapData?: { cities: CityAggregate[]; states: StateAggregate[] } | null
+  chartsLoading?: boolean
+  mapLoading?: boolean
+}
+
+/** Placeholder rows while a page loads and there is nothing to show yet. */
+export function TableSkeletonRows({ rows = 8, columns }: { rows?: number; columns: number }) {
+  return (
+    <>
+      {Array.from({ length: rows }, (_, i) => (
+        <TableRow key={`skeleton-${i}`}>
+          {Array.from({ length: columns }, (_, j) => (
+            <TableCell key={j}>
+              <Skeleton className={j === 0 ? "h-4 w-4" : "h-4 w-3/4"} />
+            </TableCell>
+          ))}
+        </TableRow>
+      ))}
+    </>
+  )
+}
+
+/** Placeholder cards for the grid layout. */
+export function GridSkeletonCards({ cards = 6 }: { cards?: number }) {
+  return (
+    <>
+      {Array.from({ length: cards }, (_, i) => (
+        <Skeleton key={`skeleton-card-${i}`} className="h-36 rounded-lg" />
+      ))}
+    </>
+  )
+}
+
+/** A small floating pill shown over maps while fresh aggregates load. */
+export function MapUpdatingPill() {
+  return (
+    <div className="pointer-events-none absolute left-1/2 top-4 z-20 -translate-x-1/2 rounded-full border border-border/70 bg-background/90 px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur animate-pulse">
+      Updating map
+    </div>
+  )
 }
 
 // Module-level so the references are stable across renders (passed to memo'd rows).
@@ -111,6 +152,8 @@ export function AccountsTab({
   onUnfavoriteMany,
   server,
   mapData,
+  chartsLoading = false,
+  mapLoading = false,
 }: AccountsTabProps) {
   const allowMapView = canAccessAccountsMapView()
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null)
@@ -361,24 +404,28 @@ export function AccountsTab({
               data={accountChartData.regionData}
               countLabel="Total Accounts"
               showBigPercentage
+              loading={chartsLoading}
             />
             <PieChartCard
               title="Industry"
               data={accountChartData.primaryNatureData}
               countLabel="Total Accounts"
               showBigPercentage
+              loading={chartsLoading}
             />
             <PieChartCard
               title="Revenue Range"
               data={accountChartData.revenueRangeData}
               countLabel="Total Accounts"
               showBigPercentage
+              loading={chartsLoading}
             />
             <PieChartCard
               title="GCC Aggregate Headcount (India)"
               data={accountChartData.employeesRangeData}
               countLabel="Total Accounts"
               showBigPercentage
+              loading={chartsLoading}
             />
           </div>
         </div>
@@ -409,7 +456,8 @@ export function AccountsTab({
               />
             </div>
           </CardHeader>
-          <CardContent className="p-0 flex flex-col flex-1 overflow-hidden">
+          <CardContent className="relative p-0 flex flex-col flex-1 overflow-hidden">
+            {mapLoading && <MapUpdatingPill />}
             <MapErrorBoundary>
               {mapMode === "city" ? (
                 <CentersMap centers={centers} cities={mapData?.cities} heightClass="h-full" />
@@ -494,7 +542,10 @@ export function AccountsTab({
                       )}
                     </TableRow>
                   </TableHeader>
-                  <TableBody>
+                  <TableBody className={cn("transition-opacity", server?.loading && pageAccounts.length > 0 && "opacity-60")}>
+                    {server?.loading && pageAccounts.length === 0 && (
+                      <TableSkeletonRows columns={1 + (["name", "industry", "revenue", "employees"] as const).filter(isColumnVisible).length} />
+                    )}
                     {pageAccounts.map(
                       (account) => (
                         <AccountRow
@@ -531,7 +582,8 @@ export function AccountsTab({
                         )}
                       </button>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
+                    <div className={cn("grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6 transition-opacity", server?.loading && pageAccounts.length > 0 && "opacity-60")}>
+                      {server?.loading && pageAccounts.length === 0 && <GridSkeletonCards />}
                       {pageAccounts.map(
                         (account) => (
                         <AccountGridCard

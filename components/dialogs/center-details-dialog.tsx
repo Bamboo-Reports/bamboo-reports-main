@@ -29,6 +29,7 @@ import { DialogBreadcrumb } from "@/components/ui/dialog-breadcrumb"
 import { TechTreemap } from "@/components/charts/tech-treemap"
 import { formatCenterLocation } from "@/lib/utils/helpers"
 import { fetchCenterDetail } from "@/lib/dashboard/api-client"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface CenterDetailsDialogProps {
   center: Center | null
@@ -120,6 +121,7 @@ export function CenterDetailsDialog({
 
   if (!center) return null
 
+  const detailLoading = fetchDetail && open && detail === null
   const services = fetchDetail ? (detail?.services ?? []) : servicesProp
   const tech = fetchDetail ? (detail?.tech ?? []) : techProp
 
@@ -354,7 +356,17 @@ export function CenterDetailsDialog({
           </section>
 
           {/* Services Offered */}
-          {centerServices && serviceCategories.length > 0 ? (
+          {detailLoading && (
+            <section className="space-y-4">
+              <SectionHeader title="Services Offered" />
+              <div className="space-y-2">
+                <Skeleton className="h-10 w-full rounded-lg" />
+                <Skeleton className="h-10 w-full rounded-lg" />
+                <Skeleton className="h-10 w-2/3 rounded-lg" />
+              </div>
+            </section>
+          )}
+          {!detailLoading && centerServices && serviceCategories.length > 0 ? (
             <section className="space-y-4">
               <SectionHeader title="Services Offered" />
               <div className="divide-y divide-border/30 rounded-lg border border-border/50 dark:border-white/10 overflow-hidden">
@@ -381,7 +393,13 @@ export function CenterDetailsDialog({
           ) : null}
 
           {/* Technology Stack */}
-          {centerTech.length > 0 ? (
+          {detailLoading && (
+            <section className="space-y-4">
+              <SectionHeader title="Technology Stack" />
+              <Skeleton className="h-[360px] w-full rounded-lg" />
+            </section>
+          )}
+          {!detailLoading && centerTech.length > 0 ? (
             <section className="space-y-4">
               <SectionHeader title="Technology Stack" />
               <div className="rounded-lg border border-border/60 bg-background/40 backdrop-blur-sm shadow-sm overflow-hidden h-[360px] lg:h-[420px] dark:bg-white/5 dark:border-white/10">

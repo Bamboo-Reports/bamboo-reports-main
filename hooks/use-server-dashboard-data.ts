@@ -120,6 +120,14 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
   // The canonical (wire) filters JSON driving all fetches; updates are
   // debounced unless the target state is already cached.
   const [effectiveKey, setEffectiveKey] = useState("")
+  // The key each piece of state was last applied for, so the UI can tell
+  // "showing the previous state while a newer one loads" (pending flags).
+  const [appliedKeys, setAppliedKeys] = useState<{
+    core: string
+    charts: string
+    map: string
+    pages: { accounts: string; centers: string; prospects: string }
+  }>({ core: "", charts: "", map: "", pages: { accounts: "", centers: "", prospects: "" } })
 
   // Base ranges are read through a ref inside effects so a facets update does
   // not itself retrigger the fetch effects (the normalized filters only change
@@ -170,6 +178,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
     if (cachedSummary && cachedFacets) {
       setSummary(cachedSummary)
       setFacets(cachedFacets)
+      setAppliedKeys((prev) => ({ ...prev, core: effectiveKey }))
       setError(null)
       return
     }
@@ -186,6 +195,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
         lruSet(facetsCache, effectiveKey, facetsRes)
         setSummary(summaryRes)
         setFacets(facetsRes)
+        setAppliedKeys((prev) => ({ ...prev, core: effectiveKey }))
         setError(null)
       })
       .catch((err) => {
@@ -204,6 +214,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
     const cached = chartsCache.get(effectiveKey)
     if (cached) {
       setCharts(cached)
+      setAppliedKeys((prev) => ({ ...prev, charts: effectiveKey }))
       return
     }
     const requestId = ++chartsRequestRef.current
@@ -212,6 +223,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
         if (chartsRequestRef.current !== requestId) return
         lruSet(chartsCache, effectiveKey, res)
         setCharts(res)
+        setAppliedKeys((prev) => ({ ...prev, charts: effectiveKey }))
       })
       .catch((err) => devError("dashboard charts fetch failed:", err))
   }, [enabled, effectiveKey, views.needCharts, refreshKey])
@@ -222,6 +234,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
     const cached = mapCache.get(effectiveKey)
     if (cached) {
       setMap(cached)
+      setAppliedKeys((prev) => ({ ...prev, map: effectiveKey }))
       return
     }
     const requestId = ++mapRequestRef.current
@@ -230,6 +243,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
         if (mapRequestRef.current !== requestId) return
         lruSet(mapCache, effectiveKey, res)
         setMap(res)
+        setAppliedKeys((prev) => ({ ...prev, map: effectiveKey }))
       })
       .catch((err) => devError("centers map fetch failed:", err))
   }, [enabled, effectiveKey, views.needMap, refreshKey])
@@ -309,6 +323,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
       const cached = pageCache.get(cacheKey)
       if (cached) {
         setEntityPages((prev) => ({ ...prev, [entity]: cached }))
+        setAppliedKeys((prev) => ({ ...prev, pages: { ...prev.pages, [entity]: cacheKey } }))
         return
       }
       const requestId = ++entityRequestRef.current[entity]
@@ -318,6 +333,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
           if (entityRequestRef.current[entity] !== requestId) return
           lruSet(pageCache, cacheKey, res as EntityPage<Record<string, unknown>>)
           setEntityPages((prev) => ({ ...prev, [entity]: res }))
+          setAppliedKeys((prev) => ({ ...prev, pages: { ...prev.pages, [entity]: cacheKey } }))
         })
         .catch((err) => {
           if (entityRequestRef.current[entity] !== requestId) return
@@ -335,6 +351,24 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
 
   const initialLoading = enabled && summary === null && error === null
 
+  // "Showing a previous state while the current one loads" per piece. Cache
+  // hits apply synchronously, so revisited states never flash a pending cue.
+  const pending = useMemo(() => {
+    const pageKeyFor = (entity: "accounts" | "centers" | "prospects") => {
+      const sort = sorts[entity]
+      return `${entity}:${effectiveKey}:${pages[entity]}:${sort ? `${sort.column}:${sort.direction}` : ""}`
+    }
+    const stale = (applied: string, target: string) => enabled && !!effectiveKey && applied !== target
+    return {
+      core: stale(appliedKeys.core, effectiveKey),
+      charts: stale(appliedKeys.charts, effectiveKey),
+      map: stale(appliedKeys.map, effectiveKey),
+      accounts: stale(appliedKeys.pages.accounts, pageKeyFor("accounts")),
+      centers: stale(appliedKeys.pages.centers, pageKeyFor("centers")),
+      prospects: stale(appliedKeys.pages.prospects, pageKeyFor("prospects")),
+    }
+  }, [enabled, effectiveKey, appliedKeys, pages, sorts])
+
   return {
     summary,
     facets,
@@ -345,6 +379,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
     error,
     isFetching,
     initialLoading,
+    pending,
     reload,
   }
 }

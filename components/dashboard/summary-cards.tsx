@@ -113,6 +113,8 @@ interface SummaryCardsProps {
   totalHeadcount: number
   activeView: "accounts" | "centers" | "prospects"
   onSelect: (view: "accounts" | "centers" | "prospects") => void
+  /** A newer filter state is loading; the shown numbers are the previous state's. */
+  updating?: boolean
 }
 
 function getCardStatusLabel(procured: boolean): string {
@@ -132,6 +134,7 @@ export const SummaryCards = React.memo(function SummaryCards({
   totalHeadcount,
   activeView,
   onSelect,
+  updating = false,
 }: SummaryCardsProps): React.JSX.Element {
   const accountsEnabled = isSectionEnabled("accounts")
   const centersEnabled = isSectionEnabled("centers")
@@ -287,7 +290,7 @@ export const SummaryCards = React.memo(function SummaryCards({
               </CardTitle>
             </CardHeader>
             <CardContent className="relative flex flex-wrap items-end justify-between gap-2 px-4 pt-0 pb-3.5">
-              <div className="min-w-0">
+              <div className={cn('min-w-0 transition-opacity', updating && 'opacity-50 animate-pulse')}>
                 <AnimatedNumber
                   value={card.value}
                   compact={compact}

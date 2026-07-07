@@ -200,33 +200,33 @@ function DashboardContent(): React.JSX.Element | null {
       serverMode
         ? {
             total: serverData.entityPages.accounts?.total ?? 0,
-            loading: serverData.entityPages.accounts === null,
+            loading: serverData.entityPages.accounts === null || serverData.pending.accounts,
             onSortChange: makeSortHandler("accounts", setAccountsSort),
           }
         : null,
-    [serverMode, serverData.entityPages.accounts, makeSortHandler]
+    [serverMode, serverData.entityPages.accounts, serverData.pending.accounts, makeSortHandler]
   )
   const centersServerProps = useMemo(
     () =>
       serverMode
         ? {
             total: serverData.entityPages.centers?.total ?? 0,
-            loading: serverData.entityPages.centers === null,
+            loading: serverData.entityPages.centers === null || serverData.pending.centers,
             onSortChange: makeSortHandler("centers", setCentersSort),
           }
         : null,
-    [serverMode, serverData.entityPages.centers, makeSortHandler]
+    [serverMode, serverData.entityPages.centers, serverData.pending.centers, makeSortHandler]
   )
   const prospectsServerProps = useMemo(
     () =>
       serverMode
         ? {
             total: serverData.entityPages.prospects?.total ?? 0,
-            loading: serverData.entityPages.prospects === null,
+            loading: serverData.entityPages.prospects === null || serverData.pending.prospects,
             onSortChange: makeSortHandler("prospects", setProspectsSort),
           }
         : null,
-    [serverMode, serverData.entityPages.prospects, makeSortHandler]
+    [serverMode, serverData.entityPages.prospects, serverData.pending.prospects, makeSortHandler]
   )
   const serverMapData = useMemo(
     () =>
@@ -1440,6 +1440,7 @@ function DashboardContent(): React.JSX.Element | null {
                   totalHeadcount={serverMode ? (serverData.summary?.full.headcount ?? 0) : summary.totalHeadcountFull}
                   activeView={activeSection}
                   onSelect={handleSectionSelect}
+                  updating={serverMode && serverData.pending.core}
                 />
 
                 <Tabs value={activeSection} className="space-y-4" data-tour="tab-navigation">
@@ -1454,6 +1455,8 @@ function DashboardContent(): React.JSX.Element | null {
                       functions={functions}
                       server={accountsServerProps}
                       mapData={serverMapData}
+                      chartsLoading={serverMode && serverData.pending.charts}
+                      mapLoading={serverMode && serverData.pending.map}
                       accountChartData={viewAccountChartData}
                       accountsView={accountsView}
                       setAccountsView={setAccountsView}
@@ -1481,6 +1484,8 @@ function DashboardContent(): React.JSX.Element | null {
                       tech={tech}
                       server={centersServerProps}
                       mapData={serverMapData}
+                      chartsLoading={serverMode && serverData.pending.charts}
+                      mapLoading={serverMode && serverData.pending.map}
                       centerChartData={viewCenterChartData}
                       centersView={centersView}
                       setCentersView={setCentersView}
@@ -1506,6 +1511,7 @@ function DashboardContent(): React.JSX.Element | null {
                       services={filteredData.filteredServices}
                       tech={tech}
                       server={prospectsServerProps}
+                      chartsLoading={serverMode && serverData.pending.charts}
                       prospectChartData={viewProspectChartData}
                       prospectsView={prospectsView}
                       setProspectsView={setProspectsView}

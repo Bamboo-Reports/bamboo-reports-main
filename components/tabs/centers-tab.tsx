@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TabsContent } from "@/components/ui/tabs"
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Checkbox } from "@/components/ui/checkbox"
+import { cn } from "@/lib/utils"
 import { ArrowDownAZ, ArrowUpAZ, ArrowUpDown, PieChartIcon, Table as TableIcon, MapIcon, LayoutGrid, Layers, MapPin } from "lucide-react"
 import { CenterRow } from "@/components/tables"
 import { SelectionActionBar } from "@/components/tables/selection-action-bar"
@@ -28,7 +29,7 @@ import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { fetchAccountRelated, type CityAggregate, type StateAggregate } from "@/lib/dashboard/api-client"
 import { devError } from "@/lib/utils/dev-log"
-import type { TabServerProps } from "@/components/tabs/accounts-tab"
+import { GridSkeletonCards, MapUpdatingPill, TableSkeletonRows, type TabServerProps } from "@/components/tabs/accounts-tab"
 import type { Account, Center, Function, LockedProspectTeaser, Prospect, Service, Tech } from "@/lib/types"
 
 interface CentersTabProps {
@@ -59,6 +60,8 @@ interface CentersTabProps {
   onUnfavoriteMany?: (items: FavoriteInput[]) => void
   server?: TabServerProps | null
   mapData?: { cities: CityAggregate[]; states: StateAggregate[]; scaleStates?: StateAggregate[] | null } | null
+  chartsLoading?: boolean
+  mapLoading?: boolean
 }
 
 // Module-level so the references are stable across renders (passed to memo'd rows).
@@ -95,6 +98,8 @@ export function CentersTab({
   onUnfavoriteMany,
   server,
   mapData,
+  chartsLoading = false,
+  mapLoading = false,
 }: CentersTabProps) {
   const [selectedCenter, setSelectedCenter] = useState<Center | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -378,24 +383,28 @@ export function CentersTab({
               data={centerChartData.centerTypeData}
               countLabel="Total Centers"
               showBigPercentage
+              loading={chartsLoading}
             />
             <PieChartCard
               title="Center Headcount"
               data={centerChartData.employeesRangeData}
               countLabel="Total Centers"
               showBigPercentage
+              loading={chartsLoading}
             />
             <PieChartCard
               title="City"
               data={centerChartData.cityData}
               countLabel="Total Centers"
               showBigPercentage
+              loading={chartsLoading}
             />
             <PieChartCard
               title="Function"
               data={centerChartData.functionData}
               countLabel="Total Centers"
               showBigPercentage
+              loading={chartsLoading}
             />
           </div>
         </div>
@@ -426,7 +435,8 @@ export function CentersTab({
                />
              </div>
            </CardHeader>
-           <CardContent className="p-0 flex flex-col flex-1 overflow-hidden">
+           <CardContent className="relative p-0 flex flex-col flex-1 overflow-hidden">
+             {mapLoading && <MapUpdatingPill />}
              <MapErrorBoundary>
                {mapMode === "city" ? (
                  <CentersMap centers={centers} cities={mapData?.cities} heightClass="h-full" />
@@ -517,7 +527,10 @@ export function CentersTab({
                         )}
                       </TableRow>
                     </TableHeader>
-                    <TableBody>
+                    <TableBody className={cn("transition-opacity", server?.loading && pageCenters.length > 0 && "opacity-60")}>
+                      {server?.loading && pageCenters.length === 0 && (
+                        <TableSkeletonRows columns={1 + (["name", "location", "type", "employees"] as const).filter(isColumnVisible).length} />
+                      )}
                       {pageCenters.map(
                         (center) => (
                           <CenterRow
@@ -554,7 +567,8 @@ export function CentersTab({
                         )}
                       </button>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
+                    <div className={cn("grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6 transition-opacity", server?.loading && pageCenters.length > 0 && "opacity-60")}>
+                      {server?.loading && pageCenters.length === 0 && <GridSkeletonCards />}
                       {pageCenters.map(
                         (center) => (
                           <CenterGridCard
