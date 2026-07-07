@@ -103,8 +103,9 @@ interface UseServerDashboardDataParams {
  * Server-backed dashboard data (#249): everything the dashboard renders,
  * sourced from the aggregated/paginated endpoints. Filter changes are
  * debounced and each response is cached per canonical filter state, so
- * revisited states (e.g. removing a filter) restore instantly. Charts, map
- * aggregates, and inactive tabs' pages fetch lazily when their view is shown.
+ * revisited states (e.g. removing a filter) restore instantly. The visible
+ * view fetches first; charts, map aggregates, and the inactive tabs' pages
+ * prefetch in the background shortly after, so view switches hit the cache.
  */
 export function useServerDashboardData({ enabled, filters, pages, sorts, pageSize, views }: UseServerDashboardDataParams) {
   const [summary, setSummary] = useState<SummaryResponse | null>(null)
@@ -232,6 +233,48 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
       })
       .catch((err) => devError("centers map fetch failed:", err))
   }, [enabled, effectiveKey, views.needMap, refreshKey])
+
+  // Background prefetch: ~400ms after a new filter state settles (visible
+  // requests go out first), quietly warm the client cache with whatever the
+  // lazy effects are not already fetching: charts, map aggregates, and the
+  // inactive tabs' pages. View/tab switches then hit the cache and feel
+  // instant. Fire-and-forget cache writes only; the lazy effects own state.
+  const viewsRef = useRef(views)
+  viewsRef.current = views
+  const pagesRef = useRef(pages)
+  pagesRef.current = pages
+  const sortsRef = useRef(sorts)
+  sortsRef.current = sorts
+  useEffect(() => {
+    if (!enabled || !effectiveKey) return
+    const timer = setTimeout(() => {
+      const wireFilters = JSON.parse(effectiveKey) as Filters
+      const bypass = { noCache: noCache() }
+
+      if (!viewsRef.current.needCharts && !chartsCache.has(effectiveKey)) {
+        fetchDashboardCharts(wireFilters, bypass)
+          .then((res) => lruSet(chartsCache, effectiveKey, res))
+          .catch((err) => devError("charts prefetch failed:", err))
+      }
+      if (!viewsRef.current.needMap && !mapCache.has(effectiveKey)) {
+        fetchCentersMap(wireFilters, bypass)
+          .then((res) => lruSet(mapCache, effectiveKey, res))
+          .catch((err) => devError("map prefetch failed:", err))
+      }
+      for (const entity of ["accounts", "centers", "prospects"] as const) {
+        if (viewsRef.current.activeEntity === entity) continue
+        const sort = sortsRef.current[entity]
+        const sortKey = sort ? `${sort.column}:${sort.direction}` : ""
+        const cacheKey = `${entity}:${effectiveKey}:${pagesRef.current[entity]}:${sortKey}`
+        if (pageCache.has(cacheKey)) continue
+        fetchEntityPage(entity, wireFilters, pagesRef.current[entity], pageSize, sort, bypass)
+          .then((res) => lruSet(pageCache, cacheKey, res as EntityPage<Record<string, unknown>>))
+          .catch((err) => devError(`${entity} page prefetch failed:`, err))
+      }
+    }, 400)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, effectiveKey, refreshKey])
 
   // Unfiltered state aggregates for the choropleth color scale (once, and only
   // once a map has been shown).

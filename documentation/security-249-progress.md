@@ -134,7 +134,9 @@ Fixes the reported slowness (10s+ snap-back when removing a filter):
 - Client cache per canonical filter state in `use-server-dashboard-data`
   (bounded LRU, session lifetime): revisited states restore instantly.
 - 350ms debounce on filter changes (cached states skip it).
-- Charts/map aggregates/tab pages fetch only when their view is visible.
+- The visible view fetches first; charts, map aggregates, and the other tabs'
+  pages prefetch in the background ~400ms later, so view/tab switches hit the
+  client cache and feel instant.
 - Server: `lib/cache/memory.ts` in-process TTL cache (single-flight, LRU 200)
   wrapping facets/summary/charts/centers-map/entity-query. Keyed by canonical
   filters (responses are user-independent). `DASHBOARD_CACHE_TTL_MS` env,
