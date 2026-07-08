@@ -157,16 +157,27 @@ Fixes the reported slowness (10s+ snap-back when removing a filter):
   Driven by per-piece `pending` flags in use-server-dashboard-data; cached
   states never flash loading cues.
 
-### NEXT UP: Upstash Redis for the server cache (prod is on Vercel)
+### Upstash Redis for the server cache - DONE (prod is on Vercel)
 
 - Production runs on Vercel (serverless): each instance has private memory, so
-  the in-process response cache fragments across instances. Plan agreed with
-  the user: extend `lib/cache/memory.ts` getOrCompute with an Upstash REST
-  path (plain fetch, no new deps) that activates only when
-  `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` are set, keeping the
-  in-process Map as an L1 in front; unchanged behavior when unset. User will
-  provision Upstash and add the two env vars in Vercel. Also consider
-  `export const maxDuration` on the heavy read routes for Vercel limits.
+  the in-process response cache fragments across instances. `getOrCompute` in
+  `lib/cache/memory.ts` now has a shared L2: the Upstash Redis REST API via
+  plain fetch (no new dependencies), active only when
+  `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` (or the Vercel
+  Marketplace names `KV_REST_API_URL`/`KV_REST_API_TOKEN`) are set; behavior
+  is unchanged when unset. The in-process Map stays as L1. Keys are prefixed
+  `dash:`; values carry their absolute expiry (plus Redis `PX`) so TTLs never
+  stretch across instances; 1.5s fetch timeout and fail-open on any Redis
+  error; `bypassRead` (refresh / `x-no-cache`) skips both reads and rewrites
+  both layers. `export const maxDuration = 60` added to the heavy read routes
+  and the export generator.
+- Verified end-to-end against the user's Upstash db (easy-cobra-105935): keys
+  populate from live traffic; after a dev-server restart (empty L1) the
+  summary served in ~0.26s vs ~1.9s compute, byte-identical to an
+  `x-no-cache` recompute. Unit-tested with a stubbed fetch
+  (`tests/unit/redis-cache.test.ts`).
+- DEPLOY: user adds the two env vars in Vercel (Production) and redeploys.
+  Local dev creds live in `.env.local` (gitignored).
 
 ### Perf polish still deferred (optional)
 

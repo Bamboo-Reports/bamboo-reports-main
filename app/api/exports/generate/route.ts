@@ -14,6 +14,7 @@ import {
 import { parseFilters, resolveAccess } from "@/lib/dashboard/filters-request"
 
 export const dynamic = "force-dynamic"
+// Full-dataset workbook builds are slow; allow up to 60s on Vercel.
 export const maxDuration = 60
 
 const logger = createLogger("api/exports/generate")
