@@ -275,7 +275,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
             <DropdownMenuSeparator />
             {myFilters.length === 0 ? (
               <div className="px-4 py-3 text-sm text-center text-muted-foreground italic">
-                No saved filters yet
+                No saved filters
               </div>
             ) : (
               myFilters.slice(0, 5).map((filter) => (
