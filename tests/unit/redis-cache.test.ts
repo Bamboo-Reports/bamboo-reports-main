@@ -116,6 +116,30 @@ describe("Upstash Redis cache layer", () => {
     expect(fn).toHaveBeenCalledTimes(1)
   })
 
+  it("caps L1 residency under a long TTL so it re-checks Redis (purge visibility)", async () => {
+    vi.useFakeTimers()
+    try {
+      const ONE_HOUR = 3_600_000
+      fetchMock
+        .mockResolvedValueOnce(redisResponse(null)) // GET miss
+        .mockResolvedValueOnce(redisResponse("OK")) // SET
+        .mockResolvedValueOnce(redisResponse(entryPayload("from-redis", ONE_HOUR))) // re-check GET
+      const fn = vi.fn(async () => "computed")
+      expect(await getOrCompute("k", ONE_HOUR, fn)).toBe("computed")
+      // Within the residency window: L1 serves it, no extra fetch.
+      expect(await getOrCompute("k", ONE_HOUR, fn)).toBe("computed")
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+      // Past the 5-minute L1 cap (but far within the TTL): Redis is consulted
+      // again, so a purged or refreshed shared value takes over.
+      vi.advanceTimersByTime(6 * 60_000)
+      expect(await getOrCompute("k", ONE_HOUR, fn)).toBe("from-redis")
+      expect(fetchMock).toHaveBeenCalledTimes(3)
+      expect(fn).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it("shares one Redis lookup between concurrent callers", async () => {
     let resolveGet!: (v: Response) => void
     fetchMock.mockImplementationOnce(() => new Promise<Response>((r) => (resolveGet = r)))

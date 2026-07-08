@@ -15,6 +15,11 @@ type Entry = { value: unknown; expires: number }
 const store = new Map<string, Entry>()
 const inflight = new Map<string, Promise<unknown>>()
 const MAX_ENTRIES = 200
+// With Redis behind it, L1 entries are re-validated against Redis at most
+// this often, so an external purge (e.g. the ETL after an import) reaches
+// warm instances within minutes even under a long TTL. Without Redis, the
+// memory cache is the only layer and honors the full TTL.
+const L1_MAX_RESIDENCY_MS = 5 * 60_000
 
 /** TTL for dashboard response caching. Env-tunable; 0 disables caching. */
 export function dashboardCacheTtlMs(): number {
@@ -88,9 +93,10 @@ export function clearCache(): void {
   inflight.clear()
 }
 
-function storeInMemory(key: string, entry: Entry): void {
+function storeInMemory(key: string, entry: Entry, capResidency: boolean): void {
+  const expires = capResidency ? Math.min(entry.expires, Date.now() + L1_MAX_RESIDENCY_MS) : entry.expires
   store.delete(key)
-  store.set(key, entry)
+  store.set(key, { ...entry, expires })
   while (store.size > MAX_ENTRIES) {
     const oldest = store.keys().next().value
     if (oldest === undefined) break
@@ -133,13 +139,13 @@ export async function getOrCompute<T>(
     if (useRedis && !opts.bypassRead) {
       const shared = await redisGet(key)
       if (shared) {
-        storeInMemory(key, shared)
+        storeInMemory(key, shared, true)
         return shared.value as T
       }
     }
     const value = await fn()
     const entry: Entry = { value, expires: Date.now() + ttlMs }
-    storeInMemory(key, entry)
+    storeInMemory(key, entry, useRedis)
     // Awaited (not fire-and-forget): serverless instances can freeze right
     // after the response, which would drop a dangling write.
     if (useRedis) await redisSet(key, entry, ttlMs)
