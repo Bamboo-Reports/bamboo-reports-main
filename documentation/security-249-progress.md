@@ -178,6 +178,15 @@ Fixes the reported slowness (10s+ snap-back when removing a filter):
   (`tests/unit/redis-cache.test.ts`).
 - DEPLOY: user adds the two env vars in Vercel (Production) and redeploys.
   Local dev creds live in `.env.local` (gitignored).
+- Benchmark over the seeded 60-scenario filter matrix:
+  `documentation/redis-cache-benchmark.md` (facets p95 5077ms -> 699ms).
+- ETL freshness: `etl/V2/main_cache_purge.py` (copy of main.py, which is kept
+  untouched) purges the `dash:*` keys after a successful import when the
+  Upstash env vars are set in the ETL `.env` (verified live, 175 keys).
+  `lib/cache/memory.ts` caps L1 residency at 5 min when Redis is configured
+  so the purge reaches warm instances quickly. This enables a long
+  `DASHBOARD_CACHE_TTL_MS` (e.g. 86400000 = 24h) in Vercel with fresh data
+  minutes after an import.
 
 ### Perf polish still deferred (optional)
 
