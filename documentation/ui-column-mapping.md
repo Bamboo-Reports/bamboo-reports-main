@@ -216,7 +216,7 @@ This is a tabbed dialog with three tabs: **Account Info**, **Centers**, and **Pr
 | UI Label | Database Column | Table |
 |----------|----------------|-------|
 | Account Type | `account_hq_company_type` | `accounts` |
-| HQ Stock Ticker | `account_hq_stock_ticker` | `accounts` |
+| HQ Stock Ticker | `account_hq_stock_ticker` | `ticker` (merged onto accounts server-side) |
 | About | `account_about` | `accounts` |
 | Key Offerings | `account_hq_key_offerings` | `accounts` |
 
@@ -251,7 +251,7 @@ This is a tabbed dialog with three tabs: **Account Info**, **Centers**, and **Pr
 
 | UI Label | Data Source | Notes |
 |----------|------------|-------|
-| Stock Ticker | `financialData.inputTicker` | From `account_hq_stock_ticker` |
+| Stock Ticker | `financialData.inputTicker` | From `account_hq_stock_ticker` (ticker table, merged server-side) |
 | Exchange | `financialData.exchange` | Yahoo Finance API |
 | Market Cap | `financialData.marketCap` | Yahoo Finance API |
 | Net Profit | `financialData.netProfit` | Yahoo Finance API |
@@ -271,6 +271,8 @@ This is a tabbed dialog with three tabs: **Account Info**, **Centers**, and **Pr
 |----------|----------------|-------|
 | First Center Established | `account_first_center_year` | `accounts` |
 | Years in India | `years_in_india` | `accounts` |
+| Primary City | `account_primary_city` | `accounts` |
+| Hub Structure | `account_hub_structure` | `accounts` |
 
 **Links Section:**
 
@@ -345,6 +347,7 @@ When prospect packaging is active, additional locked teaser contacts may appear 
 | UI Label | Database Column | Table |
 |----------|----------------|-------|
 | Address | `center_address` | `centers` |
+| Micro Location | `center_micro_location` | `centers` |
 | City | `center_city` | `centers` |
 | State | `center_state` | `centers` |
 | Country | `center_country` | `centers` |
@@ -647,7 +650,9 @@ A flat listing of every database column referenced in the UI, sorted by table.
 | `account_hq_region` | Filter, Account dialog, Charts |
 | `account_hq_revenue` | Filter (range), Account dialog (Business Metrics), Export |
 | `account_hq_revenue_range` | Accounts table, Account dialog, Charts, Export |
-| `account_hq_stock_ticker` | Account dialog (Company Overview, Financials) |
+| `account_hq_stock_ticker` | Account dialog (Company Overview, Financials); lives in the `ticker` table, merged onto accounts server-side |
+| `account_primary_city` | Account dialog (India Operations) |
+| `account_hub_structure` | Account dialog (India Operations) |
 | `account_hq_sub_industry` | Account dialog, Export |
 | `account_hq_website` | Accounts table (logo), Account dialog (Links), Export |
 | `account_nasscom_status` | Filter, Accounts table (badge), Account dialog, Charts |
@@ -667,6 +672,7 @@ A flat listing of every database column referenced in the UI, sorted by table.
 | `announced_year` | Center dialog |
 | `center_account_website` | Centers table (logo) |
 | `center_address` | Center dialog (Location) |
+| `center_micro_location` | Center dialog (Location), shown only when present |
 | `center_boardline` | Center dialog |
 | `center_business_segment` | Center dialog (Business Info) |
 | `center_business_sub_segment` | Center dialog (Business Info) |
@@ -746,6 +752,9 @@ A flat listing of every database column referenced in the UI, sorted by table.
 | `prospect_linkedin_url` | Prospect dialog, Export |
 | `prospect_state` | Prospect dialog |
 | `prospect_title` | Filter (keyword), Prospects table, Prospect dialog, Export |
+| `last_review_date` | Internal only (no UI), Export |
+| `email_verification_date` | Internal only (no UI), Export |
+| `contact_status` | Internal only (no UI), Export |
 | `uuid` | Recently-updated tracking |
 
 ### Audit tables
