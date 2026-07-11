@@ -1,6 +1,7 @@
-import type { Account, Alias, Center, Function, Service, Tech, Prospect, LockedProspectTeaser } from "@/lib/types"
+import type { Account, Alias, Center, Function, Service, Tech, Prospect, Ticker, LockedProspectTeaser } from "@/lib/types"
 import { getProspectsPerAccountLimit, isSectionEnabled } from "@/lib/config/dashboard-access"
 import { partitionProspectsByAccess } from "@/lib/dashboard/prospect-access"
+import { mergeTickersIntoAccounts } from "@/lib/dashboard/ticker-merge"
 import { getPrismaOrThrow, queryWithRetry } from "@/lib/db/prisma"
 import { createLogger } from "@/lib/logger"
 
@@ -77,6 +78,21 @@ async function getAliases(): Promise<Alias[]> {
   }
 }
 
+type TickerLookupRow = Pick<Ticker, "account_global_legal_name" | "account_hq_stock_ticker">
+
+async function getTickers(): Promise<TickerLookupRow[]> {
+  try {
+    const prisma = getPrismaOrThrow()
+    return (await measureRows(
+      "tickers",
+      () => prisma.$queryRaw`SELECT account_global_legal_name, account_hq_stock_ticker FROM ticker`
+    )) as TickerLookupRow[]
+  } catch (error) {
+    logger.error("fetch_tickers_failed", { error })
+    return []
+  }
+}
+
 // ============================================
 // DASHBOARD-OPTIMIZED QUERIES (specific columns only)
 // ============================================
@@ -94,7 +110,6 @@ async function getDashboardAccounts(): Promise<Account[]> {
           account_source: true,
           account_type: true,
           account_global_legal_name: true,
-          account_hq_stock_ticker: true,
           account_hq_company_type: true,
           account_about: true,
           account_hq_key_offerings: true,
@@ -114,6 +129,8 @@ async function getDashboardAccounts(): Promise<Account[]> {
           account_hq_forbes_2000_rank: true,
           account_hq_fortune_500_rank: true,
           account_first_center_year: true,
+          account_primary_city: true,
+          account_hub_structure: true,
           years_in_india: true,
           account_hq_website: true,
           account_center_employees: true,
@@ -163,6 +180,7 @@ async function getDashboardCenters(): Promise<Center[]> {
           center_account_website: true,
           center_timeline: true,
           center_address: true,
+          center_micro_location: true,
           center_zip_code: true,
           lat: true,
           lng: true,
@@ -230,7 +248,8 @@ async function getDashboardProspects(): Promise<Prospect[]> {
         prospect_full_name, prospect_first_name, prospect_last_name,
         prospect_title, prospect_department, prospect_level, head_type, prospect_linkedin_url,
         prospect_email, prospect_city, prospect_state,
-        prospect_country, prospect_in_company_year, prospect_current_year, center_name
+        prospect_country, prospect_in_company_year, prospect_current_year, center_name,
+        last_review_date, email_verification_date, contact_status
         FROM prospects`
     )) as Prospect[]
   } catch (error) {
@@ -370,7 +389,7 @@ export async function getDashboardData(): Promise<AllDataResult> {
     const prospectsEnabled = isSectionEnabled("prospects")
     const prospectsPerAccountLimit = getProspectsPerAccountLimit()
 
-    const [accounts, centers, functions, services, tech, rawProspects, aliases, summary] = await Promise.all([
+    const [rawAccounts, centers, functions, services, tech, rawProspects, aliases, tickers, summary] = await Promise.all([
       accountsEnabled ? getDashboardAccounts() : Promise.resolve([]),
       centersEnabled ? getDashboardCenters() : Promise.resolve([]),
       centersEnabled ? getDashboardFunctions() : Promise.resolve([]),
@@ -378,8 +397,11 @@ export async function getDashboardData(): Promise<AllDataResult> {
       accountsEnabled || centersEnabled ? getDashboardTech() : Promise.resolve([]),
       prospectsEnabled ? getDashboardProspects() : Promise.resolve([]),
       accountsEnabled ? getAliases() : Promise.resolve([]),
+      accountsEnabled ? getTickers() : Promise.resolve([]),
       getDashboardSummaryMetrics(),
     ])
+
+    const accounts = mergeTickersIntoAccounts(rawAccounts, tickers)
 
     const { visibleProspects, lockedProspectTeasers } = partitionProspectsByAccess(rawProspects, prospectsPerAccountLimit)
 

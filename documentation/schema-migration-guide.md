@@ -9,14 +9,14 @@ This guide documents the migration from the legacy column naming (uppercase, spa
 
 ## 1. Quick Summary
 
-- Core Tables: `accounts`, `centers`, `services`, `functions`, `tech`, `prospects`, `alias`.
+- Core Tables: `accounts`, `ticker`, `centers`, `services`, `functions`, `tech`, `prospects`, `alias`.
 - Audit Tables: `audit.import_runs`, `audit.field_change_events`, `audit.notification_reads`.
 - Naming Convention: strict `snake_case`.
 - Primary keys and table relationships: see `documentation/table-relationships.md`.
 - Linkage:
   - `centers` links to `accounts` via `account_global_legal_name`.
   - `services`, `functions`, and `tech` link to `centers` via `cn_unique_key`.
-  - `tech`, `prospects`, and `alias` also link to `accounts` via `account_global_legal_name`.
+  - `tech`, `prospects`, `alias`, and `ticker` also link to `accounts` via `account_global_legal_name`.
 
 ---
 
@@ -26,13 +26,13 @@ This guide documents the migration from the legacy column naming (uppercase, spa
 Description: Top-level company entity with HQ details, global metrics, and aggregate India presence fields.
 
 Notable columns:
-- Keys and metadata: `account_global_legal_name` (PK), `uuid`, `account_last_update_date`, `account_hq_stock_ticker`
+- Keys and metadata: `account_global_legal_name` (PK), `uuid`, `account_last_update_date`
 - Classification: `account_nasscom_status`, `account_nasscom_member_status`, `account_data_coverage`, `account_source`, `account_type`
 - HQ profile: `account_hq_address`, `account_hq_city`, `account_hq_state`, `account_hq_zip_code`, `account_hq_country`, `account_hq_region`, `account_hq_boardline`, `account_hq_website`, `account_hq_linkedin_link`
 - Industry and positioning: `account_hq_sub_industry`, `account_hq_industry`, `account_primary_category`, `account_primary_nature`
 - Financials: `account_hq_revenue`, `account_hq_revenue_range`, `account_hq_fy_end`, `account_hq_revenue_year`, `account_hq_revenue_source_type`, `account_hq_revenue_source_link`
 - Workforce: `account_hq_employee_count`, `account_hq_employee_range`, `account_hq_employee_source_type`, `account_hq_employee_source_link`, `account_center_employees`, `account_center_employees_range`
-- India timeline: `account_first_center_year`, `years_in_india`
+- India timeline and presence: `account_first_center_year`, `years_in_india`, `account_primary_city`, `account_hub_structure`
 - Notes and coverage: `account_comments`, `account_coverage`
 - Visibility: `account_visibility` (`include` / `exclude`, default `include`), `account_visibility_note` (human-readable exclusion reason)
 
@@ -44,7 +44,7 @@ Notable columns:
 - Linkage: `account_global_legal_name`
 - Timeline: `center_inc_year`, `announced_year`, `announced_month`, `center_end_year`, `center_first_year`, `center_timeline`
 - Identity and profile: `center_name`, `center_status`, `center_type`, `center_focus`, `center_management_partner`, `center_jv_status`, `center_jv_name`
-- Location: `center_address`, `center_city`, `center_state`, `center_zip_code`, `center_country`, `center_country_iso2`, `center_region`, `lat`, `lng`
+- Location: `center_address`, `center_micro_location`, `center_city`, `center_state`, `center_zip_code`, `center_country`, `center_country_iso2`, `center_region`, `lat`, `lng`
 - Contact and source fields: `center_boardline`, `center_account_website`, `center_website`, `center_linkedin`, `center_source_link`, `center_inc_year_notes`, `center_inc_year_updated_link`
 - Capacity and notes: `center_employees`, `center_employees_range`, `center_employees_range_source_link`, `center_services`, `center_comments`
 - Segment fields: `center_business_segment`, `center_business_sub_segment`
@@ -88,6 +88,7 @@ Description: Contact/lead rows linked to accounts.
 Columns:
 - `uuid`
 - `last_update_date`
+- `last_review_date`, `email_verification_date`, `contact_status` (internal review metadata, not shown in the UI)
 - `ps_unique_key` (prospect row identity, see `documentation/table-relationships.md`)
 - `account_global_legal_name`
 - `center_name`
@@ -108,6 +109,15 @@ Columns:
 - `abbreviated_name`
 - `flagship_products`
 - `currently_known_as`
+- `notes`
+
+### 2.8 Table: `ticker`
+Description: Stock ticker per account, sourced from the "ticker" sheet (one row per account). The server merges `account_hq_stock_ticker` onto each account object for the dashboard, so UI code keeps reading it from the account. Linked to `accounts` by a foreign key on `account_global_legal_name` with `ON UPDATE CASCADE` / `ON DELETE CASCADE`.
+
+Columns:
+- `uuid`
+- `account_global_legal_name` (PK and FK to `accounts`)
+- `account_hq_stock_ticker`
 - `notes`
 
 > Relationship reference: `documentation/table-relationships.md`.

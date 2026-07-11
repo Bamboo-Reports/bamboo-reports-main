@@ -8,6 +8,7 @@
 
 ```
 accounts  (PK: account_global_legal_name)
+  ├──[account_global_legal_name]──► ticker  (PK: account_global_legal_name)
   ├──[account_global_legal_name]──► alias
   ├──[account_global_legal_name]──► centers  (PK: cn_unique_key)
   │                                    ├──[cn_unique_key]──► services
@@ -20,20 +21,21 @@ accounts  (PK: account_global_legal_name)
 
 | Key | Lives in | Referenced by |
 |-----|----------|---------------|
-| `account_global_legal_name` | `accounts` (PK) | `alias`, `centers`, `prospects` |
+| `account_global_legal_name` | `accounts` (PK) | `ticker`, `alias`, `centers`, `prospects` |
 | `cn_unique_key` | `centers` (PK) | `services`, `functions`, `tech` |
 
 ---
 
 ## Core Tables
 
-Only `accounts` and `centers` currently have database primary-key constraints in `etl/V2/main.py`.
+Only `accounts`, `ticker`, and `centers` currently have database primary-key constraints in `etl/V2/main.py`.
 The remaining child tables are linked through the hub keys below, but their ETL/logical identifiers are
 not database-enforced primary keys and should not be modelled as Prisma `@id` fields.
 
 | Table | Description | Database primary key | ETL/logical identity or link |
 |-------|-------------|----------------------|------------------------------|
 | `accounts` | Top-level company entities with HQ details, financials, workforce | `account_global_legal_name` | `account_global_legal_name` |
+| `ticker` | Stock ticker per account (one row per account) | `account_global_legal_name` | `account_global_legal_name` |
 | `alias` | Alternate account names (brand, abbreviation, flagship products) | *(none)* | `account_global_legal_name` |
 | `centers` | Delivery centers / office locations with geospatial data | `cn_unique_key` | `cn_unique_key` |
 | `services` | Service-line rows linked to centers | *(none)* | `cn_unique_key` |
@@ -49,6 +51,7 @@ Defined in `etl/V2/main.py` → `CONSTRAINTS_SQL`. All child tables cascade on p
 
 | Child Table | Parent Table | Linking Column | Behaviour |
 |-------------|--------------|----------------|-----------|
+| `ticker` | `accounts` | `account_global_legal_name` | `ON UPDATE CASCADE ON DELETE CASCADE` |
 | `alias` | `accounts` | `account_global_legal_name` | `ON UPDATE CASCADE ON DELETE CASCADE` |
 | `centers` | `accounts` | `account_global_legal_name` | `ON DELETE CASCADE` |
 | `services` | `centers` | `cn_unique_key` | `ON DELETE CASCADE` |
@@ -65,7 +68,7 @@ Defined in `etl/V2/main.py` → `CONSTRAINTS_SQL`. All child tables cascade on p
 Tables are imported in dependency order so parent records always exist before child records are written:
 
 ```
-accounts → alias → centers → services → functions → tech → prospects
+accounts → ticker → alias → centers → services → functions → tech → prospects
 ```
 
 ---
@@ -97,7 +100,7 @@ Data is fetched flat (no DB-level joins for the main dashboard payload) and link
 
 ### Prisma Schema (`prisma/schema.prisma`)
 
-Only `AccountWarehouse` (`accounts`) and `CenterWarehouse` (`centers`) are modelled as Prisma models. The remaining tables (`services`, `functions`, `tech`, `prospects`, `alias`) are queried via raw SQL (`$queryRaw`). Prisma does not define `@relation` fields between them — joins and linking happen in query logic and client-side filters instead, which is appropriate for a read-only BI warehouse.
+Only `AccountWarehouse` (`accounts`) and `CenterWarehouse` (`centers`) are modelled as Prisma models. The remaining tables (`services`, `functions`, `tech`, `prospects`, `alias`, `ticker`) are queried via raw SQL (`$queryRaw`). Prisma does not define `@relation` fields between them — joins and linking happen in query logic and client-side filters instead, which is appropriate for a read-only BI warehouse.
 
 ---
 

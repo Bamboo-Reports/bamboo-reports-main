@@ -9,6 +9,7 @@ export interface Account {
   account_source?: string | null
   account_type?: string | null
   account_global_legal_name: string
+  // Sourced from the ticker table, merged onto accounts server-side
   account_hq_stock_ticker?: string | null
   account_hq_company_type?: string | null
   account_about?: string | null
@@ -39,6 +40,8 @@ export interface Account {
   account_hq_forbes_2000_rank?: number | null
   account_hq_fortune_500_rank?: number | null
   account_first_center_year?: number | null
+  account_primary_city?: string | null
+  account_hub_structure?: string | null
   years_in_india?: number | null
   account_hq_website?: string | null
   account_center_employees?: number | null
@@ -46,8 +49,6 @@ export interface Account {
   account_comments?: string | null
   account_visibility?: "include" | "exclude" | null
   account_visibility_note?: string | null
-  ingest_type?: string | null
-  ingest_type_time_stamp?: string | null
 }
 
 export interface Center {
@@ -73,6 +74,7 @@ export interface Center {
   center_website?: string | null
   center_linkedin?: string | null
   center_address?: string | null
+  center_micro_location?: string | null
   center_city: string | null
   center_state: string | null
   center_zip_code?: string | null
@@ -92,8 +94,6 @@ export interface Center {
   center_account_website?: string | null
   lat?: number | null
   lng?: number | null
-  ingest_type?: string | null
-  ingest_type_time_stamp?: string | null
 }
 
 export interface Function {
@@ -137,6 +137,9 @@ export interface Tech {
 export interface Prospect {
   uuid?: string | null
   last_update_date?: string | null
+  last_review_date?: string | null
+  email_verification_date?: string | null
+  contact_status?: string | null
   ps_unique_key?: string | null
   account_global_legal_name: string
   center_name: string | null
@@ -166,6 +169,13 @@ export interface Alias {
   flagship_products: string | null
   currently_known_as: string | null
   notes: string | null
+}
+
+export interface Ticker {
+  uuid?: string | null
+  account_global_legal_name: string
+  account_hq_stock_ticker: string | null
+  notes?: string | null
 }
 
 export interface LockedProspectTeaser {

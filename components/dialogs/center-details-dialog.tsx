@@ -315,6 +315,7 @@ export function CenterDetailsDialog({
                 <MetaRow label="Status" value={statusShortLabel(center.center_status ?? "")} />
                 <MetaRow label="Center Type" value={center.center_type} />
                 <MetaRow label="Center Focus" value={center.center_focus} />
+                <MetaRow label="Micro Location" value={center.center_micro_location} />
                 <MetaRow label="Location" value={centerLocation} />
                 <MetaRow label="Country" value={center.center_country?.trim().toUpperCase() === "TBA" || centerLocation === "India" ? null : center.center_country} />
                 <MetaRow label="Zip Code" value={center.center_zip_code} />
