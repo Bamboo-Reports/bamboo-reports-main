@@ -631,7 +631,7 @@ export function AccountDetailsDialog({
               </section>
 
               {/* India Presence */}
-              {canViewCenters && (account.account_first_center_year || account.years_in_india || account.account_center_employees || account.account_center_employees_range || account.account_nasscom_status || accountCenters.length > 0) && (
+              {canViewCenters && (account.account_first_center_year || account.years_in_india || account.account_center_employees || account.account_center_employees_range || account.account_nasscom_status || account.account_primary_city || account.account_hub_structure || accountCenters.length > 0) && (
                 <section className="space-y-4">
                   <SectionHeader title="India Presence" />
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -639,6 +639,8 @@ export function AccountDetailsDialog({
                     <KPITile icon={Calendar} label="Years in India" value={account.years_in_india} />
                     <KPITile icon={Users} label="Center Employees" value={account.account_center_employees} />
                     <KPITile icon={Users} label="GCC Aggregate Headcount (India)" value={account.account_center_employees_range} />
+                    <KPITile icon={MapPin} label="Primary City" value={account.account_primary_city} />
+                    <KPITile icon={Building2} label="Hub Structure" value={account.account_hub_structure} />
                   </div>
                   {accountCenters.length > 0 && (
                     <div className="rounded-lg border border-border/60 bg-background/40 backdrop-blur-sm shadow-sm overflow-hidden h-[360px] lg:h-[420px] dark:bg-white/5 dark:border-white/10">

@@ -2,12 +2,16 @@ const TABLE_LABELS: Record<string, string> = {
   accounts: "Accounts",
   centers: "Centers",
   prospects: "Prospects",
+  alias: "Aliases",
+  ticker: "Tickers",
 }
 
 const TABLE_LABELS_SINGULAR: Record<string, string> = {
   accounts: "Account",
   centers: "Center",
   prospects: "Prospect",
+  alias: "Alias",
+  ticker: "Ticker",
 }
 
 const RELATIVE_TIME_FORMATTER = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" })
