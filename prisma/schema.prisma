@@ -16,7 +16,6 @@ model AccountWarehouse {
   account_source                    String?
   account_type                      String?
   account_global_legal_name         String  @id
-  account_hq_stock_ticker           String?
   account_about                     String?
   account_hq_address                String?
   account_hq_city                   String?
@@ -50,11 +49,11 @@ model AccountWarehouse {
   account_center_employees_range    String?
   years_in_india                    Int?
   account_first_center_year         Int?
+  account_primary_city              String?
+  account_hub_structure             String?
   account_comments                  String?
   account_visibility                String?
   account_visibility_note           String?
-  ingest_type                       String?
-  ingest_type_time_stamp            String?
 
   @@map("accounts")
 }
@@ -83,6 +82,7 @@ model CenterWarehouse {
   center_website                     String?
   center_linkedin                    String?
   center_address                     String?
+  center_micro_location              String?
   center_city                        String?
   center_state                       String?
   center_zip_code                    String?
@@ -101,8 +101,6 @@ model CenterWarehouse {
   center_first_year                  Int?
   center_employees_comment           String?
   center_comments                    String?
-  ingest_type                        String?
-  ingest_type_time_stamp             String?
 
   @@map("centers")
 }

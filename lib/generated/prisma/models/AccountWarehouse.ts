@@ -57,7 +57,6 @@ export type AccountWarehouseMinAggregateOutputType = {
   account_source: string | null
   account_type: string | null
   account_global_legal_name: string | null
-  account_hq_stock_ticker: string | null
   account_about: string | null
   account_hq_address: string | null
   account_hq_city: string | null
@@ -91,11 +90,11 @@ export type AccountWarehouseMinAggregateOutputType = {
   account_center_employees_range: string | null
   years_in_india: number | null
   account_first_center_year: number | null
+  account_primary_city: string | null
+  account_hub_structure: string | null
   account_comments: string | null
   account_visibility: string | null
   account_visibility_note: string | null
-  ingest_type: string | null
-  ingest_type_time_stamp: string | null
 }
 
 export type AccountWarehouseMaxAggregateOutputType = {
@@ -107,7 +106,6 @@ export type AccountWarehouseMaxAggregateOutputType = {
   account_source: string | null
   account_type: string | null
   account_global_legal_name: string | null
-  account_hq_stock_ticker: string | null
   account_about: string | null
   account_hq_address: string | null
   account_hq_city: string | null
@@ -141,11 +139,11 @@ export type AccountWarehouseMaxAggregateOutputType = {
   account_center_employees_range: string | null
   years_in_india: number | null
   account_first_center_year: number | null
+  account_primary_city: string | null
+  account_hub_structure: string | null
   account_comments: string | null
   account_visibility: string | null
   account_visibility_note: string | null
-  ingest_type: string | null
-  ingest_type_time_stamp: string | null
 }
 
 export type AccountWarehouseCountAggregateOutputType = {
@@ -157,7 +155,6 @@ export type AccountWarehouseCountAggregateOutputType = {
   account_source: number
   account_type: number
   account_global_legal_name: number
-  account_hq_stock_ticker: number
   account_about: number
   account_hq_address: number
   account_hq_city: number
@@ -191,11 +188,11 @@ export type AccountWarehouseCountAggregateOutputType = {
   account_center_employees_range: number
   years_in_india: number
   account_first_center_year: number
+  account_primary_city: number
+  account_hub_structure: number
   account_comments: number
   account_visibility: number
   account_visibility_note: number
-  ingest_type: number
-  ingest_type_time_stamp: number
   _all: number
 }
 
@@ -231,7 +228,6 @@ export type AccountWarehouseMinAggregateInputType = {
   account_source?: true
   account_type?: true
   account_global_legal_name?: true
-  account_hq_stock_ticker?: true
   account_about?: true
   account_hq_address?: true
   account_hq_city?: true
@@ -265,11 +261,11 @@ export type AccountWarehouseMinAggregateInputType = {
   account_center_employees_range?: true
   years_in_india?: true
   account_first_center_year?: true
+  account_primary_city?: true
+  account_hub_structure?: true
   account_comments?: true
   account_visibility?: true
   account_visibility_note?: true
-  ingest_type?: true
-  ingest_type_time_stamp?: true
 }
 
 export type AccountWarehouseMaxAggregateInputType = {
@@ -281,7 +277,6 @@ export type AccountWarehouseMaxAggregateInputType = {
   account_source?: true
   account_type?: true
   account_global_legal_name?: true
-  account_hq_stock_ticker?: true
   account_about?: true
   account_hq_address?: true
   account_hq_city?: true
@@ -315,11 +310,11 @@ export type AccountWarehouseMaxAggregateInputType = {
   account_center_employees_range?: true
   years_in_india?: true
   account_first_center_year?: true
+  account_primary_city?: true
+  account_hub_structure?: true
   account_comments?: true
   account_visibility?: true
   account_visibility_note?: true
-  ingest_type?: true
-  ingest_type_time_stamp?: true
 }
 
 export type AccountWarehouseCountAggregateInputType = {
@@ -331,7 +326,6 @@ export type AccountWarehouseCountAggregateInputType = {
   account_source?: true
   account_type?: true
   account_global_legal_name?: true
-  account_hq_stock_ticker?: true
   account_about?: true
   account_hq_address?: true
   account_hq_city?: true
@@ -365,11 +359,11 @@ export type AccountWarehouseCountAggregateInputType = {
   account_center_employees_range?: true
   years_in_india?: true
   account_first_center_year?: true
+  account_primary_city?: true
+  account_hub_structure?: true
   account_comments?: true
   account_visibility?: true
   account_visibility_note?: true
-  ingest_type?: true
-  ingest_type_time_stamp?: true
   _all?: true
 }
 
@@ -468,7 +462,6 @@ export type AccountWarehouseGroupByOutputType = {
   account_source: string | null
   account_type: string | null
   account_global_legal_name: string
-  account_hq_stock_ticker: string | null
   account_about: string | null
   account_hq_address: string | null
   account_hq_city: string | null
@@ -502,11 +495,11 @@ export type AccountWarehouseGroupByOutputType = {
   account_center_employees_range: string | null
   years_in_india: number | null
   account_first_center_year: number | null
+  account_primary_city: string | null
+  account_hub_structure: string | null
   account_comments: string | null
   account_visibility: string | null
   account_visibility_note: string | null
-  ingest_type: string | null
-  ingest_type_time_stamp: string | null
   _count: AccountWarehouseCountAggregateOutputType | null
   _avg: AccountWarehouseAvgAggregateOutputType | null
   _sum: AccountWarehouseSumAggregateOutputType | null
@@ -541,7 +534,6 @@ export type AccountWarehouseWhereInput = {
   account_source?: Prisma.StringNullableFilter<"AccountWarehouse"> | string | null
   account_type?: Prisma.StringNullableFilter<"AccountWarehouse"> | string | null
   account_global_legal_name?: Prisma.StringFilter<"AccountWarehouse"> | string
-  account_hq_stock_ticker?: Prisma.StringNullableFilter<"AccountWarehouse"> | string | null
   account_about?: Prisma.StringNullableFilter<"AccountWarehouse"> | string | null
   account_hq_address?: Prisma.StringNullableFilter<"AccountWarehouse"> | string | null
   account_hq_city?: Prisma.StringNullableFilter<"AccountWarehouse"> | string | null
@@ -575,11 +567,11 @@ export type AccountWarehouseWhereInput = {
   account_center_employees_range?: Prisma.StringNullableFilter<"AccountWarehouse"> | string | null
   years_in_india?: Prisma.IntNullableFilter<"AccountWarehouse"> | number | null
   account_first_center_year?: Prisma.IntNullableFilter<"AccountWarehouse"> | number | null
+  account_primary_city?: Prisma.StringNullableFilter<"AccountWarehouse"> | string | null
+  account_hub_structure?: Prisma.StringNullableFilter<"AccountWarehouse"> | string | null
   account_comments?: Prisma.StringNullableFilter<"AccountWarehouse"> | string | null
   account_visibility?: Prisma.StringNullableFilter<"AccountWarehouse"> | string | null
   account_visibility_note?: Prisma.StringNullableFilter<"AccountWarehouse"> | string | null
-  ingest_type?: Prisma.StringNullableFilter<"AccountWarehouse"> | string | null
-  ingest_type_time_stamp?: Prisma.StringNullableFilter<"AccountWarehouse"> | string | null
 }
 
 export type AccountWarehouseOrderByWithRelationInput = {
@@ -591,7 +583,6 @@ export type AccountWarehouseOrderByWithRelationInput = {
   account_source?: Prisma.SortOrderInput | Prisma.SortOrder
   account_type?: Prisma.SortOrderInput | Prisma.SortOrder
   account_global_legal_name?: Prisma.SortOrder
-  account_hq_stock_ticker?: Prisma.SortOrderInput | Prisma.SortOrder
   account_about?: Prisma.SortOrderInput | Prisma.SortOrder
   account_hq_address?: Prisma.SortOrderInput | Prisma.SortOrder
   account_hq_city?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -625,11 +616,11 @@ export type AccountWarehouseOrderByWithRelationInput = {
   account_center_employees_range?: Prisma.SortOrderInput | Prisma.SortOrder
   years_in_india?: Prisma.SortOrderInput | Prisma.SortOrder
   account_first_center_year?: Prisma.SortOrderInput | Prisma.SortOrder
+  account_primary_city?: Prisma.SortOrderInput | Prisma.SortOrder
+  account_hub_structure?: Prisma.SortOrderInput | Prisma.SortOrder
   account_comments?: Prisma.SortOrderInput | Prisma.SortOrder
   account_visibility?: Prisma.SortOrderInput | Prisma.SortOrder
   account_visibility_note?: Prisma.SortOrderInput | Prisma.SortOrder
-  ingest_type?: Prisma.SortOrderInput | Prisma.SortOrder
-  ingest_type_time_stamp?: Prisma.SortOrderInput | Prisma.SortOrder
 }
 
 export type AccountWarehouseWhereUniqueInput = Prisma.AtLeast<{
@@ -644,7 +635,6 @@ export type AccountWarehouseWhereUniqueInput = Prisma.AtLeast<{
   account_data_coverage?: Prisma.StringNullableFilter<"AccountWarehouse"> | string | null
   account_source?: Prisma.StringNullableFilter<"AccountWarehouse"> | string | null
   account_type?: Prisma.StringNullableFilter<"AccountWarehouse"> | string | null
-  account_hq_stock_ticker?: Prisma.StringNullableFilter<"AccountWarehouse"> | string | null
   account_about?: Prisma.StringNullableFilter<"AccountWarehouse"> | string | null
   account_hq_address?: Prisma.StringNullableFilter<"AccountWarehouse"> | string | null
   account_hq_city?: Prisma.StringNullableFilter<"AccountWarehouse"> | string | null
@@ -678,11 +668,11 @@ export type AccountWarehouseWhereUniqueInput = Prisma.AtLeast<{
   account_center_employees_range?: Prisma.StringNullableFilter<"AccountWarehouse"> | string | null
   years_in_india?: Prisma.IntNullableFilter<"AccountWarehouse"> | number | null
   account_first_center_year?: Prisma.IntNullableFilter<"AccountWarehouse"> | number | null
+  account_primary_city?: Prisma.StringNullableFilter<"AccountWarehouse"> | string | null
+  account_hub_structure?: Prisma.StringNullableFilter<"AccountWarehouse"> | string | null
   account_comments?: Prisma.StringNullableFilter<"AccountWarehouse"> | string | null
   account_visibility?: Prisma.StringNullableFilter<"AccountWarehouse"> | string | null
   account_visibility_note?: Prisma.StringNullableFilter<"AccountWarehouse"> | string | null
-  ingest_type?: Prisma.StringNullableFilter<"AccountWarehouse"> | string | null
-  ingest_type_time_stamp?: Prisma.StringNullableFilter<"AccountWarehouse"> | string | null
 }, "account_global_legal_name">
 
 export type AccountWarehouseOrderByWithAggregationInput = {
@@ -694,7 +684,6 @@ export type AccountWarehouseOrderByWithAggregationInput = {
   account_source?: Prisma.SortOrderInput | Prisma.SortOrder
   account_type?: Prisma.SortOrderInput | Prisma.SortOrder
   account_global_legal_name?: Prisma.SortOrder
-  account_hq_stock_ticker?: Prisma.SortOrderInput | Prisma.SortOrder
   account_about?: Prisma.SortOrderInput | Prisma.SortOrder
   account_hq_address?: Prisma.SortOrderInput | Prisma.SortOrder
   account_hq_city?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -728,11 +717,11 @@ export type AccountWarehouseOrderByWithAggregationInput = {
   account_center_employees_range?: Prisma.SortOrderInput | Prisma.SortOrder
   years_in_india?: Prisma.SortOrderInput | Prisma.SortOrder
   account_first_center_year?: Prisma.SortOrderInput | Prisma.SortOrder
+  account_primary_city?: Prisma.SortOrderInput | Prisma.SortOrder
+  account_hub_structure?: Prisma.SortOrderInput | Prisma.SortOrder
   account_comments?: Prisma.SortOrderInput | Prisma.SortOrder
   account_visibility?: Prisma.SortOrderInput | Prisma.SortOrder
   account_visibility_note?: Prisma.SortOrderInput | Prisma.SortOrder
-  ingest_type?: Prisma.SortOrderInput | Prisma.SortOrder
-  ingest_type_time_stamp?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.AccountWarehouseCountOrderByAggregateInput
   _avg?: Prisma.AccountWarehouseAvgOrderByAggregateInput
   _max?: Prisma.AccountWarehouseMaxOrderByAggregateInput
@@ -752,7 +741,6 @@ export type AccountWarehouseScalarWhereWithAggregatesInput = {
   account_source?: Prisma.StringNullableWithAggregatesFilter<"AccountWarehouse"> | string | null
   account_type?: Prisma.StringNullableWithAggregatesFilter<"AccountWarehouse"> | string | null
   account_global_legal_name?: Prisma.StringWithAggregatesFilter<"AccountWarehouse"> | string
-  account_hq_stock_ticker?: Prisma.StringNullableWithAggregatesFilter<"AccountWarehouse"> | string | null
   account_about?: Prisma.StringNullableWithAggregatesFilter<"AccountWarehouse"> | string | null
   account_hq_address?: Prisma.StringNullableWithAggregatesFilter<"AccountWarehouse"> | string | null
   account_hq_city?: Prisma.StringNullableWithAggregatesFilter<"AccountWarehouse"> | string | null
@@ -786,11 +774,11 @@ export type AccountWarehouseScalarWhereWithAggregatesInput = {
   account_center_employees_range?: Prisma.StringNullableWithAggregatesFilter<"AccountWarehouse"> | string | null
   years_in_india?: Prisma.IntNullableWithAggregatesFilter<"AccountWarehouse"> | number | null
   account_first_center_year?: Prisma.IntNullableWithAggregatesFilter<"AccountWarehouse"> | number | null
+  account_primary_city?: Prisma.StringNullableWithAggregatesFilter<"AccountWarehouse"> | string | null
+  account_hub_structure?: Prisma.StringNullableWithAggregatesFilter<"AccountWarehouse"> | string | null
   account_comments?: Prisma.StringNullableWithAggregatesFilter<"AccountWarehouse"> | string | null
   account_visibility?: Prisma.StringNullableWithAggregatesFilter<"AccountWarehouse"> | string | null
   account_visibility_note?: Prisma.StringNullableWithAggregatesFilter<"AccountWarehouse"> | string | null
-  ingest_type?: Prisma.StringNullableWithAggregatesFilter<"AccountWarehouse"> | string | null
-  ingest_type_time_stamp?: Prisma.StringNullableWithAggregatesFilter<"AccountWarehouse"> | string | null
 }
 
 export type AccountWarehouseCreateInput = {
@@ -802,7 +790,6 @@ export type AccountWarehouseCreateInput = {
   account_source?: string | null
   account_type?: string | null
   account_global_legal_name: string
-  account_hq_stock_ticker?: string | null
   account_about?: string | null
   account_hq_address?: string | null
   account_hq_city?: string | null
@@ -836,11 +823,11 @@ export type AccountWarehouseCreateInput = {
   account_center_employees_range?: string | null
   years_in_india?: number | null
   account_first_center_year?: number | null
+  account_primary_city?: string | null
+  account_hub_structure?: string | null
   account_comments?: string | null
   account_visibility?: string | null
   account_visibility_note?: string | null
-  ingest_type?: string | null
-  ingest_type_time_stamp?: string | null
 }
 
 export type AccountWarehouseUncheckedCreateInput = {
@@ -852,7 +839,6 @@ export type AccountWarehouseUncheckedCreateInput = {
   account_source?: string | null
   account_type?: string | null
   account_global_legal_name: string
-  account_hq_stock_ticker?: string | null
   account_about?: string | null
   account_hq_address?: string | null
   account_hq_city?: string | null
@@ -886,11 +872,11 @@ export type AccountWarehouseUncheckedCreateInput = {
   account_center_employees_range?: string | null
   years_in_india?: number | null
   account_first_center_year?: number | null
+  account_primary_city?: string | null
+  account_hub_structure?: string | null
   account_comments?: string | null
   account_visibility?: string | null
   account_visibility_note?: string | null
-  ingest_type?: string | null
-  ingest_type_time_stamp?: string | null
 }
 
 export type AccountWarehouseUpdateInput = {
@@ -902,7 +888,6 @@ export type AccountWarehouseUpdateInput = {
   account_source?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   account_type?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   account_global_legal_name?: Prisma.StringFieldUpdateOperationsInput | string
-  account_hq_stock_ticker?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   account_about?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   account_hq_address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   account_hq_city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -936,11 +921,11 @@ export type AccountWarehouseUpdateInput = {
   account_center_employees_range?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   years_in_india?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   account_first_center_year?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  account_primary_city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  account_hub_structure?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   account_comments?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   account_visibility?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   account_visibility_note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  ingest_type?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  ingest_type_time_stamp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type AccountWarehouseUncheckedUpdateInput = {
@@ -952,7 +937,6 @@ export type AccountWarehouseUncheckedUpdateInput = {
   account_source?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   account_type?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   account_global_legal_name?: Prisma.StringFieldUpdateOperationsInput | string
-  account_hq_stock_ticker?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   account_about?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   account_hq_address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   account_hq_city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -986,11 +970,11 @@ export type AccountWarehouseUncheckedUpdateInput = {
   account_center_employees_range?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   years_in_india?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   account_first_center_year?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  account_primary_city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  account_hub_structure?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   account_comments?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   account_visibility?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   account_visibility_note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  ingest_type?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  ingest_type_time_stamp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type AccountWarehouseCreateManyInput = {
@@ -1002,7 +986,6 @@ export type AccountWarehouseCreateManyInput = {
   account_source?: string | null
   account_type?: string | null
   account_global_legal_name: string
-  account_hq_stock_ticker?: string | null
   account_about?: string | null
   account_hq_address?: string | null
   account_hq_city?: string | null
@@ -1036,11 +1019,11 @@ export type AccountWarehouseCreateManyInput = {
   account_center_employees_range?: string | null
   years_in_india?: number | null
   account_first_center_year?: number | null
+  account_primary_city?: string | null
+  account_hub_structure?: string | null
   account_comments?: string | null
   account_visibility?: string | null
   account_visibility_note?: string | null
-  ingest_type?: string | null
-  ingest_type_time_stamp?: string | null
 }
 
 export type AccountWarehouseUpdateManyMutationInput = {
@@ -1052,7 +1035,6 @@ export type AccountWarehouseUpdateManyMutationInput = {
   account_source?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   account_type?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   account_global_legal_name?: Prisma.StringFieldUpdateOperationsInput | string
-  account_hq_stock_ticker?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   account_about?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   account_hq_address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   account_hq_city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1086,11 +1068,11 @@ export type AccountWarehouseUpdateManyMutationInput = {
   account_center_employees_range?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   years_in_india?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   account_first_center_year?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  account_primary_city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  account_hub_structure?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   account_comments?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   account_visibility?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   account_visibility_note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  ingest_type?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  ingest_type_time_stamp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type AccountWarehouseUncheckedUpdateManyInput = {
@@ -1102,7 +1084,6 @@ export type AccountWarehouseUncheckedUpdateManyInput = {
   account_source?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   account_type?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   account_global_legal_name?: Prisma.StringFieldUpdateOperationsInput | string
-  account_hq_stock_ticker?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   account_about?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   account_hq_address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   account_hq_city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1136,11 +1117,11 @@ export type AccountWarehouseUncheckedUpdateManyInput = {
   account_center_employees_range?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   years_in_india?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   account_first_center_year?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  account_primary_city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  account_hub_structure?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   account_comments?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   account_visibility?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   account_visibility_note?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  ingest_type?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  ingest_type_time_stamp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type AccountWarehouseCountOrderByAggregateInput = {
@@ -1152,7 +1133,6 @@ export type AccountWarehouseCountOrderByAggregateInput = {
   account_source?: Prisma.SortOrder
   account_type?: Prisma.SortOrder
   account_global_legal_name?: Prisma.SortOrder
-  account_hq_stock_ticker?: Prisma.SortOrder
   account_about?: Prisma.SortOrder
   account_hq_address?: Prisma.SortOrder
   account_hq_city?: Prisma.SortOrder
@@ -1186,11 +1166,11 @@ export type AccountWarehouseCountOrderByAggregateInput = {
   account_center_employees_range?: Prisma.SortOrder
   years_in_india?: Prisma.SortOrder
   account_first_center_year?: Prisma.SortOrder
+  account_primary_city?: Prisma.SortOrder
+  account_hub_structure?: Prisma.SortOrder
   account_comments?: Prisma.SortOrder
   account_visibility?: Prisma.SortOrder
   account_visibility_note?: Prisma.SortOrder
-  ingest_type?: Prisma.SortOrder
-  ingest_type_time_stamp?: Prisma.SortOrder
 }
 
 export type AccountWarehouseAvgOrderByAggregateInput = {
@@ -1213,7 +1193,6 @@ export type AccountWarehouseMaxOrderByAggregateInput = {
   account_source?: Prisma.SortOrder
   account_type?: Prisma.SortOrder
   account_global_legal_name?: Prisma.SortOrder
-  account_hq_stock_ticker?: Prisma.SortOrder
   account_about?: Prisma.SortOrder
   account_hq_address?: Prisma.SortOrder
   account_hq_city?: Prisma.SortOrder
@@ -1247,11 +1226,11 @@ export type AccountWarehouseMaxOrderByAggregateInput = {
   account_center_employees_range?: Prisma.SortOrder
   years_in_india?: Prisma.SortOrder
   account_first_center_year?: Prisma.SortOrder
+  account_primary_city?: Prisma.SortOrder
+  account_hub_structure?: Prisma.SortOrder
   account_comments?: Prisma.SortOrder
   account_visibility?: Prisma.SortOrder
   account_visibility_note?: Prisma.SortOrder
-  ingest_type?: Prisma.SortOrder
-  ingest_type_time_stamp?: Prisma.SortOrder
 }
 
 export type AccountWarehouseMinOrderByAggregateInput = {
@@ -1263,7 +1242,6 @@ export type AccountWarehouseMinOrderByAggregateInput = {
   account_source?: Prisma.SortOrder
   account_type?: Prisma.SortOrder
   account_global_legal_name?: Prisma.SortOrder
-  account_hq_stock_ticker?: Prisma.SortOrder
   account_about?: Prisma.SortOrder
   account_hq_address?: Prisma.SortOrder
   account_hq_city?: Prisma.SortOrder
@@ -1297,11 +1275,11 @@ export type AccountWarehouseMinOrderByAggregateInput = {
   account_center_employees_range?: Prisma.SortOrder
   years_in_india?: Prisma.SortOrder
   account_first_center_year?: Prisma.SortOrder
+  account_primary_city?: Prisma.SortOrder
+  account_hub_structure?: Prisma.SortOrder
   account_comments?: Prisma.SortOrder
   account_visibility?: Prisma.SortOrder
   account_visibility_note?: Prisma.SortOrder
-  ingest_type?: Prisma.SortOrder
-  ingest_type_time_stamp?: Prisma.SortOrder
 }
 
 export type AccountWarehouseSumOrderByAggregateInput = {
@@ -1350,7 +1328,6 @@ export type AccountWarehouseSelect<ExtArgs extends runtime.Types.Extensions.Inte
   account_source?: boolean
   account_type?: boolean
   account_global_legal_name?: boolean
-  account_hq_stock_ticker?: boolean
   account_about?: boolean
   account_hq_address?: boolean
   account_hq_city?: boolean
@@ -1384,11 +1361,11 @@ export type AccountWarehouseSelect<ExtArgs extends runtime.Types.Extensions.Inte
   account_center_employees_range?: boolean
   years_in_india?: boolean
   account_first_center_year?: boolean
+  account_primary_city?: boolean
+  account_hub_structure?: boolean
   account_comments?: boolean
   account_visibility?: boolean
   account_visibility_note?: boolean
-  ingest_type?: boolean
-  ingest_type_time_stamp?: boolean
 }, ExtArgs["result"]["accountWarehouse"]>
 
 export type AccountWarehouseSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1400,7 +1377,6 @@ export type AccountWarehouseSelectCreateManyAndReturn<ExtArgs extends runtime.Ty
   account_source?: boolean
   account_type?: boolean
   account_global_legal_name?: boolean
-  account_hq_stock_ticker?: boolean
   account_about?: boolean
   account_hq_address?: boolean
   account_hq_city?: boolean
@@ -1434,11 +1410,11 @@ export type AccountWarehouseSelectCreateManyAndReturn<ExtArgs extends runtime.Ty
   account_center_employees_range?: boolean
   years_in_india?: boolean
   account_first_center_year?: boolean
+  account_primary_city?: boolean
+  account_hub_structure?: boolean
   account_comments?: boolean
   account_visibility?: boolean
   account_visibility_note?: boolean
-  ingest_type?: boolean
-  ingest_type_time_stamp?: boolean
 }, ExtArgs["result"]["accountWarehouse"]>
 
 export type AccountWarehouseSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1450,7 +1426,6 @@ export type AccountWarehouseSelectUpdateManyAndReturn<ExtArgs extends runtime.Ty
   account_source?: boolean
   account_type?: boolean
   account_global_legal_name?: boolean
-  account_hq_stock_ticker?: boolean
   account_about?: boolean
   account_hq_address?: boolean
   account_hq_city?: boolean
@@ -1484,11 +1459,11 @@ export type AccountWarehouseSelectUpdateManyAndReturn<ExtArgs extends runtime.Ty
   account_center_employees_range?: boolean
   years_in_india?: boolean
   account_first_center_year?: boolean
+  account_primary_city?: boolean
+  account_hub_structure?: boolean
   account_comments?: boolean
   account_visibility?: boolean
   account_visibility_note?: boolean
-  ingest_type?: boolean
-  ingest_type_time_stamp?: boolean
 }, ExtArgs["result"]["accountWarehouse"]>
 
 export type AccountWarehouseSelectScalar = {
@@ -1500,7 +1475,6 @@ export type AccountWarehouseSelectScalar = {
   account_source?: boolean
   account_type?: boolean
   account_global_legal_name?: boolean
-  account_hq_stock_ticker?: boolean
   account_about?: boolean
   account_hq_address?: boolean
   account_hq_city?: boolean
@@ -1534,14 +1508,14 @@ export type AccountWarehouseSelectScalar = {
   account_center_employees_range?: boolean
   years_in_india?: boolean
   account_first_center_year?: boolean
+  account_primary_city?: boolean
+  account_hub_structure?: boolean
   account_comments?: boolean
   account_visibility?: boolean
   account_visibility_note?: boolean
-  ingest_type?: boolean
-  ingest_type_time_stamp?: boolean
 }
 
-export type AccountWarehouseOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"uuid" | "account_last_update_date" | "account_nasscom_status" | "account_nasscom_member_status" | "account_data_coverage" | "account_source" | "account_type" | "account_global_legal_name" | "account_hq_stock_ticker" | "account_about" | "account_hq_address" | "account_hq_city" | "account_hq_state" | "account_hq_zip_code" | "account_hq_country" | "account_hq_region" | "account_hq_boardline" | "account_hq_website" | "account_hq_linkedin_link" | "account_hq_key_offerings" | "account_key_offerings_source_link" | "account_hq_sub_industry" | "account_hq_industry" | "account_primary_category" | "account_primary_nature" | "account_hq_forbes_2000_rank" | "account_hq_fortune_500_rank" | "account_hq_company_type" | "account_hq_revenue" | "account_hq_revenue_range" | "account_hq_fy_end" | "account_hq_revenue_year" | "account_hq_revenue_source_type" | "account_hq_revenue_source_link" | "account_hq_employee_count" | "account_hq_employee_range" | "account_hq_employee_source_type" | "account_hq_employee_source_link" | "account_center_employees" | "account_center_employees_range" | "years_in_india" | "account_first_center_year" | "account_comments" | "account_visibility" | "account_visibility_note" | "ingest_type" | "ingest_type_time_stamp", ExtArgs["result"]["accountWarehouse"]>
+export type AccountWarehouseOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"uuid" | "account_last_update_date" | "account_nasscom_status" | "account_nasscom_member_status" | "account_data_coverage" | "account_source" | "account_type" | "account_global_legal_name" | "account_about" | "account_hq_address" | "account_hq_city" | "account_hq_state" | "account_hq_zip_code" | "account_hq_country" | "account_hq_region" | "account_hq_boardline" | "account_hq_website" | "account_hq_linkedin_link" | "account_hq_key_offerings" | "account_key_offerings_source_link" | "account_hq_sub_industry" | "account_hq_industry" | "account_primary_category" | "account_primary_nature" | "account_hq_forbes_2000_rank" | "account_hq_fortune_500_rank" | "account_hq_company_type" | "account_hq_revenue" | "account_hq_revenue_range" | "account_hq_fy_end" | "account_hq_revenue_year" | "account_hq_revenue_source_type" | "account_hq_revenue_source_link" | "account_hq_employee_count" | "account_hq_employee_range" | "account_hq_employee_source_type" | "account_hq_employee_source_link" | "account_center_employees" | "account_center_employees_range" | "years_in_india" | "account_first_center_year" | "account_primary_city" | "account_hub_structure" | "account_comments" | "account_visibility" | "account_visibility_note", ExtArgs["result"]["accountWarehouse"]>
 
 export type $AccountWarehousePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "AccountWarehouse"
@@ -1555,7 +1529,6 @@ export type $AccountWarehousePayload<ExtArgs extends runtime.Types.Extensions.In
     account_source: string | null
     account_type: string | null
     account_global_legal_name: string
-    account_hq_stock_ticker: string | null
     account_about: string | null
     account_hq_address: string | null
     account_hq_city: string | null
@@ -1589,11 +1562,11 @@ export type $AccountWarehousePayload<ExtArgs extends runtime.Types.Extensions.In
     account_center_employees_range: string | null
     years_in_india: number | null
     account_first_center_year: number | null
+    account_primary_city: string | null
+    account_hub_structure: string | null
     account_comments: string | null
     account_visibility: string | null
     account_visibility_note: string | null
-    ingest_type: string | null
-    ingest_type_time_stamp: string | null
   }, ExtArgs["result"]["accountWarehouse"]>
   composites: {}
 }
@@ -2025,7 +1998,6 @@ export interface AccountWarehouseFieldRefs {
   readonly account_source: Prisma.FieldRef<"AccountWarehouse", 'String'>
   readonly account_type: Prisma.FieldRef<"AccountWarehouse", 'String'>
   readonly account_global_legal_name: Prisma.FieldRef<"AccountWarehouse", 'String'>
-  readonly account_hq_stock_ticker: Prisma.FieldRef<"AccountWarehouse", 'String'>
   readonly account_about: Prisma.FieldRef<"AccountWarehouse", 'String'>
   readonly account_hq_address: Prisma.FieldRef<"AccountWarehouse", 'String'>
   readonly account_hq_city: Prisma.FieldRef<"AccountWarehouse", 'String'>
@@ -2059,11 +2031,11 @@ export interface AccountWarehouseFieldRefs {
   readonly account_center_employees_range: Prisma.FieldRef<"AccountWarehouse", 'String'>
   readonly years_in_india: Prisma.FieldRef<"AccountWarehouse", 'Int'>
   readonly account_first_center_year: Prisma.FieldRef<"AccountWarehouse", 'Int'>
+  readonly account_primary_city: Prisma.FieldRef<"AccountWarehouse", 'String'>
+  readonly account_hub_structure: Prisma.FieldRef<"AccountWarehouse", 'String'>
   readonly account_comments: Prisma.FieldRef<"AccountWarehouse", 'String'>
   readonly account_visibility: Prisma.FieldRef<"AccountWarehouse", 'String'>
   readonly account_visibility_note: Prisma.FieldRef<"AccountWarehouse", 'String'>
-  readonly ingest_type: Prisma.FieldRef<"AccountWarehouse", 'String'>
-  readonly ingest_type_time_stamp: Prisma.FieldRef<"AccountWarehouse", 'String'>
 }
     
 
