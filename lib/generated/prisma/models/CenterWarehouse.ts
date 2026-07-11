@@ -70,6 +70,7 @@ export type CenterWarehouseMinAggregateOutputType = {
   center_website: string | null
   center_linkedin: string | null
   center_address: string | null
+  center_micro_location: string | null
   center_city: string | null
   center_state: string | null
   center_zip_code: string | null
@@ -88,8 +89,6 @@ export type CenterWarehouseMinAggregateOutputType = {
   center_first_year: number | null
   center_employees_comment: string | null
   center_comments: string | null
-  ingest_type: string | null
-  ingest_type_time_stamp: string | null
 }
 
 export type CenterWarehouseMaxAggregateOutputType = {
@@ -116,6 +115,7 @@ export type CenterWarehouseMaxAggregateOutputType = {
   center_website: string | null
   center_linkedin: string | null
   center_address: string | null
+  center_micro_location: string | null
   center_city: string | null
   center_state: string | null
   center_zip_code: string | null
@@ -134,8 +134,6 @@ export type CenterWarehouseMaxAggregateOutputType = {
   center_first_year: number | null
   center_employees_comment: string | null
   center_comments: string | null
-  ingest_type: string | null
-  ingest_type_time_stamp: string | null
 }
 
 export type CenterWarehouseCountAggregateOutputType = {
@@ -162,6 +160,7 @@ export type CenterWarehouseCountAggregateOutputType = {
   center_website: number
   center_linkedin: number
   center_address: number
+  center_micro_location: number
   center_city: number
   center_state: number
   center_zip_code: number
@@ -180,8 +179,6 @@ export type CenterWarehouseCountAggregateOutputType = {
   center_first_year: number
   center_employees_comment: number
   center_comments: number
-  ingest_type: number
-  ingest_type_time_stamp: number
   _all: number
 }
 
@@ -230,6 +227,7 @@ export type CenterWarehouseMinAggregateInputType = {
   center_website?: true
   center_linkedin?: true
   center_address?: true
+  center_micro_location?: true
   center_city?: true
   center_state?: true
   center_zip_code?: true
@@ -248,8 +246,6 @@ export type CenterWarehouseMinAggregateInputType = {
   center_first_year?: true
   center_employees_comment?: true
   center_comments?: true
-  ingest_type?: true
-  ingest_type_time_stamp?: true
 }
 
 export type CenterWarehouseMaxAggregateInputType = {
@@ -276,6 +272,7 @@ export type CenterWarehouseMaxAggregateInputType = {
   center_website?: true
   center_linkedin?: true
   center_address?: true
+  center_micro_location?: true
   center_city?: true
   center_state?: true
   center_zip_code?: true
@@ -294,8 +291,6 @@ export type CenterWarehouseMaxAggregateInputType = {
   center_first_year?: true
   center_employees_comment?: true
   center_comments?: true
-  ingest_type?: true
-  ingest_type_time_stamp?: true
 }
 
 export type CenterWarehouseCountAggregateInputType = {
@@ -322,6 +317,7 @@ export type CenterWarehouseCountAggregateInputType = {
   center_website?: true
   center_linkedin?: true
   center_address?: true
+  center_micro_location?: true
   center_city?: true
   center_state?: true
   center_zip_code?: true
@@ -340,8 +336,6 @@ export type CenterWarehouseCountAggregateInputType = {
   center_first_year?: true
   center_employees_comment?: true
   center_comments?: true
-  ingest_type?: true
-  ingest_type_time_stamp?: true
   _all?: true
 }
 
@@ -455,6 +449,7 @@ export type CenterWarehouseGroupByOutputType = {
   center_website: string | null
   center_linkedin: string | null
   center_address: string | null
+  center_micro_location: string | null
   center_city: string | null
   center_state: string | null
   center_zip_code: string | null
@@ -473,8 +468,6 @@ export type CenterWarehouseGroupByOutputType = {
   center_first_year: number | null
   center_employees_comment: string | null
   center_comments: string | null
-  ingest_type: string | null
-  ingest_type_time_stamp: string | null
   _count: CenterWarehouseCountAggregateOutputType | null
   _avg: CenterWarehouseAvgAggregateOutputType | null
   _sum: CenterWarehouseSumAggregateOutputType | null
@@ -524,6 +517,7 @@ export type CenterWarehouseWhereInput = {
   center_website?: Prisma.StringNullableFilter<"CenterWarehouse"> | string | null
   center_linkedin?: Prisma.StringNullableFilter<"CenterWarehouse"> | string | null
   center_address?: Prisma.StringNullableFilter<"CenterWarehouse"> | string | null
+  center_micro_location?: Prisma.StringNullableFilter<"CenterWarehouse"> | string | null
   center_city?: Prisma.StringNullableFilter<"CenterWarehouse"> | string | null
   center_state?: Prisma.StringNullableFilter<"CenterWarehouse"> | string | null
   center_zip_code?: Prisma.StringNullableFilter<"CenterWarehouse"> | string | null
@@ -542,8 +536,6 @@ export type CenterWarehouseWhereInput = {
   center_first_year?: Prisma.IntNullableFilter<"CenterWarehouse"> | number | null
   center_employees_comment?: Prisma.StringNullableFilter<"CenterWarehouse"> | string | null
   center_comments?: Prisma.StringNullableFilter<"CenterWarehouse"> | string | null
-  ingest_type?: Prisma.StringNullableFilter<"CenterWarehouse"> | string | null
-  ingest_type_time_stamp?: Prisma.StringNullableFilter<"CenterWarehouse"> | string | null
 }
 
 export type CenterWarehouseOrderByWithRelationInput = {
@@ -570,6 +562,7 @@ export type CenterWarehouseOrderByWithRelationInput = {
   center_website?: Prisma.SortOrderInput | Prisma.SortOrder
   center_linkedin?: Prisma.SortOrderInput | Prisma.SortOrder
   center_address?: Prisma.SortOrderInput | Prisma.SortOrder
+  center_micro_location?: Prisma.SortOrderInput | Prisma.SortOrder
   center_city?: Prisma.SortOrderInput | Prisma.SortOrder
   center_state?: Prisma.SortOrderInput | Prisma.SortOrder
   center_zip_code?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -588,8 +581,6 @@ export type CenterWarehouseOrderByWithRelationInput = {
   center_first_year?: Prisma.SortOrderInput | Prisma.SortOrder
   center_employees_comment?: Prisma.SortOrderInput | Prisma.SortOrder
   center_comments?: Prisma.SortOrderInput | Prisma.SortOrder
-  ingest_type?: Prisma.SortOrderInput | Prisma.SortOrder
-  ingest_type_time_stamp?: Prisma.SortOrderInput | Prisma.SortOrder
 }
 
 export type CenterWarehouseWhereUniqueInput = Prisma.AtLeast<{
@@ -619,6 +610,7 @@ export type CenterWarehouseWhereUniqueInput = Prisma.AtLeast<{
   center_website?: Prisma.StringNullableFilter<"CenterWarehouse"> | string | null
   center_linkedin?: Prisma.StringNullableFilter<"CenterWarehouse"> | string | null
   center_address?: Prisma.StringNullableFilter<"CenterWarehouse"> | string | null
+  center_micro_location?: Prisma.StringNullableFilter<"CenterWarehouse"> | string | null
   center_city?: Prisma.StringNullableFilter<"CenterWarehouse"> | string | null
   center_state?: Prisma.StringNullableFilter<"CenterWarehouse"> | string | null
   center_zip_code?: Prisma.StringNullableFilter<"CenterWarehouse"> | string | null
@@ -637,8 +629,6 @@ export type CenterWarehouseWhereUniqueInput = Prisma.AtLeast<{
   center_first_year?: Prisma.IntNullableFilter<"CenterWarehouse"> | number | null
   center_employees_comment?: Prisma.StringNullableFilter<"CenterWarehouse"> | string | null
   center_comments?: Prisma.StringNullableFilter<"CenterWarehouse"> | string | null
-  ingest_type?: Prisma.StringNullableFilter<"CenterWarehouse"> | string | null
-  ingest_type_time_stamp?: Prisma.StringNullableFilter<"CenterWarehouse"> | string | null
 }, "cn_unique_key">
 
 export type CenterWarehouseOrderByWithAggregationInput = {
@@ -665,6 +655,7 @@ export type CenterWarehouseOrderByWithAggregationInput = {
   center_website?: Prisma.SortOrderInput | Prisma.SortOrder
   center_linkedin?: Prisma.SortOrderInput | Prisma.SortOrder
   center_address?: Prisma.SortOrderInput | Prisma.SortOrder
+  center_micro_location?: Prisma.SortOrderInput | Prisma.SortOrder
   center_city?: Prisma.SortOrderInput | Prisma.SortOrder
   center_state?: Prisma.SortOrderInput | Prisma.SortOrder
   center_zip_code?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -683,8 +674,6 @@ export type CenterWarehouseOrderByWithAggregationInput = {
   center_first_year?: Prisma.SortOrderInput | Prisma.SortOrder
   center_employees_comment?: Prisma.SortOrderInput | Prisma.SortOrder
   center_comments?: Prisma.SortOrderInput | Prisma.SortOrder
-  ingest_type?: Prisma.SortOrderInput | Prisma.SortOrder
-  ingest_type_time_stamp?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.CenterWarehouseCountOrderByAggregateInput
   _avg?: Prisma.CenterWarehouseAvgOrderByAggregateInput
   _max?: Prisma.CenterWarehouseMaxOrderByAggregateInput
@@ -719,6 +708,7 @@ export type CenterWarehouseScalarWhereWithAggregatesInput = {
   center_website?: Prisma.StringNullableWithAggregatesFilter<"CenterWarehouse"> | string | null
   center_linkedin?: Prisma.StringNullableWithAggregatesFilter<"CenterWarehouse"> | string | null
   center_address?: Prisma.StringNullableWithAggregatesFilter<"CenterWarehouse"> | string | null
+  center_micro_location?: Prisma.StringNullableWithAggregatesFilter<"CenterWarehouse"> | string | null
   center_city?: Prisma.StringNullableWithAggregatesFilter<"CenterWarehouse"> | string | null
   center_state?: Prisma.StringNullableWithAggregatesFilter<"CenterWarehouse"> | string | null
   center_zip_code?: Prisma.StringNullableWithAggregatesFilter<"CenterWarehouse"> | string | null
@@ -737,8 +727,6 @@ export type CenterWarehouseScalarWhereWithAggregatesInput = {
   center_first_year?: Prisma.IntNullableWithAggregatesFilter<"CenterWarehouse"> | number | null
   center_employees_comment?: Prisma.StringNullableWithAggregatesFilter<"CenterWarehouse"> | string | null
   center_comments?: Prisma.StringNullableWithAggregatesFilter<"CenterWarehouse"> | string | null
-  ingest_type?: Prisma.StringNullableWithAggregatesFilter<"CenterWarehouse"> | string | null
-  ingest_type_time_stamp?: Prisma.StringNullableWithAggregatesFilter<"CenterWarehouse"> | string | null
 }
 
 export type CenterWarehouseCreateInput = {
@@ -765,6 +753,7 @@ export type CenterWarehouseCreateInput = {
   center_website?: string | null
   center_linkedin?: string | null
   center_address?: string | null
+  center_micro_location?: string | null
   center_city?: string | null
   center_state?: string | null
   center_zip_code?: string | null
@@ -783,8 +772,6 @@ export type CenterWarehouseCreateInput = {
   center_first_year?: number | null
   center_employees_comment?: string | null
   center_comments?: string | null
-  ingest_type?: string | null
-  ingest_type_time_stamp?: string | null
 }
 
 export type CenterWarehouseUncheckedCreateInput = {
@@ -811,6 +798,7 @@ export type CenterWarehouseUncheckedCreateInput = {
   center_website?: string | null
   center_linkedin?: string | null
   center_address?: string | null
+  center_micro_location?: string | null
   center_city?: string | null
   center_state?: string | null
   center_zip_code?: string | null
@@ -829,8 +817,6 @@ export type CenterWarehouseUncheckedCreateInput = {
   center_first_year?: number | null
   center_employees_comment?: string | null
   center_comments?: string | null
-  ingest_type?: string | null
-  ingest_type_time_stamp?: string | null
 }
 
 export type CenterWarehouseUpdateInput = {
@@ -857,6 +843,7 @@ export type CenterWarehouseUpdateInput = {
   center_website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   center_linkedin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   center_address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  center_micro_location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   center_city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   center_state?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   center_zip_code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -875,8 +862,6 @@ export type CenterWarehouseUpdateInput = {
   center_first_year?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   center_employees_comment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   center_comments?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  ingest_type?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  ingest_type_time_stamp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type CenterWarehouseUncheckedUpdateInput = {
@@ -903,6 +888,7 @@ export type CenterWarehouseUncheckedUpdateInput = {
   center_website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   center_linkedin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   center_address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  center_micro_location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   center_city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   center_state?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   center_zip_code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -921,8 +907,6 @@ export type CenterWarehouseUncheckedUpdateInput = {
   center_first_year?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   center_employees_comment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   center_comments?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  ingest_type?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  ingest_type_time_stamp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type CenterWarehouseCreateManyInput = {
@@ -949,6 +933,7 @@ export type CenterWarehouseCreateManyInput = {
   center_website?: string | null
   center_linkedin?: string | null
   center_address?: string | null
+  center_micro_location?: string | null
   center_city?: string | null
   center_state?: string | null
   center_zip_code?: string | null
@@ -967,8 +952,6 @@ export type CenterWarehouseCreateManyInput = {
   center_first_year?: number | null
   center_employees_comment?: string | null
   center_comments?: string | null
-  ingest_type?: string | null
-  ingest_type_time_stamp?: string | null
 }
 
 export type CenterWarehouseUpdateManyMutationInput = {
@@ -995,6 +978,7 @@ export type CenterWarehouseUpdateManyMutationInput = {
   center_website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   center_linkedin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   center_address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  center_micro_location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   center_city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   center_state?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   center_zip_code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1013,8 +997,6 @@ export type CenterWarehouseUpdateManyMutationInput = {
   center_first_year?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   center_employees_comment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   center_comments?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  ingest_type?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  ingest_type_time_stamp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type CenterWarehouseUncheckedUpdateManyInput = {
@@ -1041,6 +1023,7 @@ export type CenterWarehouseUncheckedUpdateManyInput = {
   center_website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   center_linkedin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   center_address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  center_micro_location?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   center_city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   center_state?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   center_zip_code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1059,8 +1042,6 @@ export type CenterWarehouseUncheckedUpdateManyInput = {
   center_first_year?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   center_employees_comment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   center_comments?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  ingest_type?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  ingest_type_time_stamp?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type CenterWarehouseCountOrderByAggregateInput = {
@@ -1087,6 +1068,7 @@ export type CenterWarehouseCountOrderByAggregateInput = {
   center_website?: Prisma.SortOrder
   center_linkedin?: Prisma.SortOrder
   center_address?: Prisma.SortOrder
+  center_micro_location?: Prisma.SortOrder
   center_city?: Prisma.SortOrder
   center_state?: Prisma.SortOrder
   center_zip_code?: Prisma.SortOrder
@@ -1105,8 +1087,6 @@ export type CenterWarehouseCountOrderByAggregateInput = {
   center_first_year?: Prisma.SortOrder
   center_employees_comment?: Prisma.SortOrder
   center_comments?: Prisma.SortOrder
-  ingest_type?: Prisma.SortOrder
-  ingest_type_time_stamp?: Prisma.SortOrder
 }
 
 export type CenterWarehouseAvgOrderByAggregateInput = {
@@ -1143,6 +1123,7 @@ export type CenterWarehouseMaxOrderByAggregateInput = {
   center_website?: Prisma.SortOrder
   center_linkedin?: Prisma.SortOrder
   center_address?: Prisma.SortOrder
+  center_micro_location?: Prisma.SortOrder
   center_city?: Prisma.SortOrder
   center_state?: Prisma.SortOrder
   center_zip_code?: Prisma.SortOrder
@@ -1161,8 +1142,6 @@ export type CenterWarehouseMaxOrderByAggregateInput = {
   center_first_year?: Prisma.SortOrder
   center_employees_comment?: Prisma.SortOrder
   center_comments?: Prisma.SortOrder
-  ingest_type?: Prisma.SortOrder
-  ingest_type_time_stamp?: Prisma.SortOrder
 }
 
 export type CenterWarehouseMinOrderByAggregateInput = {
@@ -1189,6 +1168,7 @@ export type CenterWarehouseMinOrderByAggregateInput = {
   center_website?: Prisma.SortOrder
   center_linkedin?: Prisma.SortOrder
   center_address?: Prisma.SortOrder
+  center_micro_location?: Prisma.SortOrder
   center_city?: Prisma.SortOrder
   center_state?: Prisma.SortOrder
   center_zip_code?: Prisma.SortOrder
@@ -1207,8 +1187,6 @@ export type CenterWarehouseMinOrderByAggregateInput = {
   center_first_year?: Prisma.SortOrder
   center_employees_comment?: Prisma.SortOrder
   center_comments?: Prisma.SortOrder
-  ingest_type?: Prisma.SortOrder
-  ingest_type_time_stamp?: Prisma.SortOrder
 }
 
 export type CenterWarehouseSumOrderByAggregateInput = {
@@ -1255,6 +1233,7 @@ export type CenterWarehouseSelect<ExtArgs extends runtime.Types.Extensions.Inter
   center_website?: boolean
   center_linkedin?: boolean
   center_address?: boolean
+  center_micro_location?: boolean
   center_city?: boolean
   center_state?: boolean
   center_zip_code?: boolean
@@ -1273,8 +1252,6 @@ export type CenterWarehouseSelect<ExtArgs extends runtime.Types.Extensions.Inter
   center_first_year?: boolean
   center_employees_comment?: boolean
   center_comments?: boolean
-  ingest_type?: boolean
-  ingest_type_time_stamp?: boolean
 }, ExtArgs["result"]["centerWarehouse"]>
 
 export type CenterWarehouseSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1301,6 +1278,7 @@ export type CenterWarehouseSelectCreateManyAndReturn<ExtArgs extends runtime.Typ
   center_website?: boolean
   center_linkedin?: boolean
   center_address?: boolean
+  center_micro_location?: boolean
   center_city?: boolean
   center_state?: boolean
   center_zip_code?: boolean
@@ -1319,8 +1297,6 @@ export type CenterWarehouseSelectCreateManyAndReturn<ExtArgs extends runtime.Typ
   center_first_year?: boolean
   center_employees_comment?: boolean
   center_comments?: boolean
-  ingest_type?: boolean
-  ingest_type_time_stamp?: boolean
 }, ExtArgs["result"]["centerWarehouse"]>
 
 export type CenterWarehouseSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1347,6 +1323,7 @@ export type CenterWarehouseSelectUpdateManyAndReturn<ExtArgs extends runtime.Typ
   center_website?: boolean
   center_linkedin?: boolean
   center_address?: boolean
+  center_micro_location?: boolean
   center_city?: boolean
   center_state?: boolean
   center_zip_code?: boolean
@@ -1365,8 +1342,6 @@ export type CenterWarehouseSelectUpdateManyAndReturn<ExtArgs extends runtime.Typ
   center_first_year?: boolean
   center_employees_comment?: boolean
   center_comments?: boolean
-  ingest_type?: boolean
-  ingest_type_time_stamp?: boolean
 }, ExtArgs["result"]["centerWarehouse"]>
 
 export type CenterWarehouseSelectScalar = {
@@ -1393,6 +1368,7 @@ export type CenterWarehouseSelectScalar = {
   center_website?: boolean
   center_linkedin?: boolean
   center_address?: boolean
+  center_micro_location?: boolean
   center_city?: boolean
   center_state?: boolean
   center_zip_code?: boolean
@@ -1411,11 +1387,9 @@ export type CenterWarehouseSelectScalar = {
   center_first_year?: boolean
   center_employees_comment?: boolean
   center_comments?: boolean
-  ingest_type?: boolean
-  ingest_type_time_stamp?: boolean
 }
 
-export type CenterWarehouseOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"uuid" | "last_update_date" | "cn_unique_key" | "account_global_legal_name" | "center_status" | "center_inc_year" | "announced_year" | "announced_month" | "center_inc_year_notes" | "center_inc_year_updated_link" | "center_timeline" | "center_end_year" | "center_account_website" | "center_name" | "center_management_partner" | "center_jv_status" | "center_jv_name" | "center_type" | "center_focus" | "center_source_link" | "center_website" | "center_linkedin" | "center_address" | "center_city" | "center_state" | "center_zip_code" | "center_country" | "center_country_iso2" | "lat" | "lng" | "center_boardline" | "center_employees_article" | "center_employees_article_source_link" | "center_employees_linkedin" | "center_employees_range_linkedin_source_link" | "center_employees" | "center_employees_range" | "center_services" | "center_first_year" | "center_employees_comment" | "center_comments" | "ingest_type" | "ingest_type_time_stamp", ExtArgs["result"]["centerWarehouse"]>
+export type CenterWarehouseOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"uuid" | "last_update_date" | "cn_unique_key" | "account_global_legal_name" | "center_status" | "center_inc_year" | "announced_year" | "announced_month" | "center_inc_year_notes" | "center_inc_year_updated_link" | "center_timeline" | "center_end_year" | "center_account_website" | "center_name" | "center_management_partner" | "center_jv_status" | "center_jv_name" | "center_type" | "center_focus" | "center_source_link" | "center_website" | "center_linkedin" | "center_address" | "center_micro_location" | "center_city" | "center_state" | "center_zip_code" | "center_country" | "center_country_iso2" | "lat" | "lng" | "center_boardline" | "center_employees_article" | "center_employees_article_source_link" | "center_employees_linkedin" | "center_employees_range_linkedin_source_link" | "center_employees" | "center_employees_range" | "center_services" | "center_first_year" | "center_employees_comment" | "center_comments", ExtArgs["result"]["centerWarehouse"]>
 
 export type $CenterWarehousePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "CenterWarehouse"
@@ -1444,6 +1418,7 @@ export type $CenterWarehousePayload<ExtArgs extends runtime.Types.Extensions.Int
     center_website: string | null
     center_linkedin: string | null
     center_address: string | null
+    center_micro_location: string | null
     center_city: string | null
     center_state: string | null
     center_zip_code: string | null
@@ -1462,8 +1437,6 @@ export type $CenterWarehousePayload<ExtArgs extends runtime.Types.Extensions.Int
     center_first_year: number | null
     center_employees_comment: string | null
     center_comments: string | null
-    ingest_type: string | null
-    ingest_type_time_stamp: string | null
   }, ExtArgs["result"]["centerWarehouse"]>
   composites: {}
 }
@@ -1910,6 +1883,7 @@ export interface CenterWarehouseFieldRefs {
   readonly center_website: Prisma.FieldRef<"CenterWarehouse", 'String'>
   readonly center_linkedin: Prisma.FieldRef<"CenterWarehouse", 'String'>
   readonly center_address: Prisma.FieldRef<"CenterWarehouse", 'String'>
+  readonly center_micro_location: Prisma.FieldRef<"CenterWarehouse", 'String'>
   readonly center_city: Prisma.FieldRef<"CenterWarehouse", 'String'>
   readonly center_state: Prisma.FieldRef<"CenterWarehouse", 'String'>
   readonly center_zip_code: Prisma.FieldRef<"CenterWarehouse", 'String'>
@@ -1928,8 +1902,6 @@ export interface CenterWarehouseFieldRefs {
   readonly center_first_year: Prisma.FieldRef<"CenterWarehouse", 'Int'>
   readonly center_employees_comment: Prisma.FieldRef<"CenterWarehouse", 'String'>
   readonly center_comments: Prisma.FieldRef<"CenterWarehouse", 'String'>
-  readonly ingest_type: Prisma.FieldRef<"CenterWarehouse", 'String'>
-  readonly ingest_type_time_stamp: Prisma.FieldRef<"CenterWarehouse", 'String'>
 }
     
 

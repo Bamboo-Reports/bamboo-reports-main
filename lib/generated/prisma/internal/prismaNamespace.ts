@@ -601,7 +601,6 @@ export const AccountWarehouseScalarFieldEnum = {
   account_source: 'account_source',
   account_type: 'account_type',
   account_global_legal_name: 'account_global_legal_name',
-  account_hq_stock_ticker: 'account_hq_stock_ticker',
   account_about: 'account_about',
   account_hq_address: 'account_hq_address',
   account_hq_city: 'account_hq_city',
@@ -635,11 +634,11 @@ export const AccountWarehouseScalarFieldEnum = {
   account_center_employees_range: 'account_center_employees_range',
   years_in_india: 'years_in_india',
   account_first_center_year: 'account_first_center_year',
+  account_primary_city: 'account_primary_city',
+  account_hub_structure: 'account_hub_structure',
   account_comments: 'account_comments',
   account_visibility: 'account_visibility',
-  account_visibility_note: 'account_visibility_note',
-  ingest_type: 'ingest_type',
-  ingest_type_time_stamp: 'ingest_type_time_stamp'
+  account_visibility_note: 'account_visibility_note'
 } as const
 
 export type AccountWarehouseScalarFieldEnum = (typeof AccountWarehouseScalarFieldEnum)[keyof typeof AccountWarehouseScalarFieldEnum]
@@ -669,6 +668,7 @@ export const CenterWarehouseScalarFieldEnum = {
   center_website: 'center_website',
   center_linkedin: 'center_linkedin',
   center_address: 'center_address',
+  center_micro_location: 'center_micro_location',
   center_city: 'center_city',
   center_state: 'center_state',
   center_zip_code: 'center_zip_code',
@@ -686,9 +686,7 @@ export const CenterWarehouseScalarFieldEnum = {
   center_services: 'center_services',
   center_first_year: 'center_first_year',
   center_employees_comment: 'center_employees_comment',
-  center_comments: 'center_comments',
-  ingest_type: 'ingest_type',
-  ingest_type_time_stamp: 'ingest_type_time_stamp'
+  center_comments: 'center_comments'
 } as const
 
 export type CenterWarehouseScalarFieldEnum = (typeof CenterWarehouseScalarFieldEnum)[keyof typeof CenterWarehouseScalarFieldEnum]
