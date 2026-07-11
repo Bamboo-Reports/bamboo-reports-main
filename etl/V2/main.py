@@ -133,6 +133,17 @@ TABLE_DEFS: Dict[str, Dict[str, Any]] = {
             "CREATE INDEX IF NOT EXISTS alias_brand_name_idx ON public.alias (brand_name);",
         ],
     },
+    "ticker": {
+        "worksheet": "ticker",
+        "primary_id": ["account_global_legal_name"],
+        "secondary_id": ["account_global_legal_name"],
+        "label_cols": ["account_global_legal_name", "account_hq_stock_ticker"],
+        "track_changes": True,
+        "track_lifecycle": True,
+        "indexes": [
+            "CREATE INDEX IF NOT EXISTS ticker_account_name_idx ON public.ticker (account_global_legal_name);",
+        ],
+    },
     "centers": {
         "worksheet": "centers",
         "primary_id": ["cn_unique_key"],
@@ -207,11 +218,13 @@ TABLE_DEFS: Dict[str, Dict[str, Any]] = {
     },
 }
 
-IMPORT_ORDER = ["accounts", "alias", "centers", "services", "functions", "tech", "prospects"]
+IMPORT_ORDER = ["accounts", "ticker", "alias", "centers", "services", "functions", "tech", "prospects"]
 
 CONSTRAINTS_SQL = [
     "ALTER TABLE accounts ADD PRIMARY KEY (account_global_legal_name);",
     "ALTER TABLE alias ADD CONSTRAINT fk_alias_acc FOREIGN KEY (account_global_legal_name) REFERENCES accounts (account_global_legal_name) ON UPDATE CASCADE ON DELETE CASCADE;",
+    "ALTER TABLE ticker ADD PRIMARY KEY (account_global_legal_name);",
+    "ALTER TABLE ticker ADD CONSTRAINT fk_tkr_acc FOREIGN KEY (account_global_legal_name) REFERENCES accounts (account_global_legal_name) ON UPDATE CASCADE ON DELETE CASCADE;",
     "ALTER TABLE centers ADD PRIMARY KEY (cn_unique_key);",
     "ALTER TABLE centers ADD CONSTRAINT fk_cnt_acc FOREIGN KEY (account_global_legal_name) REFERENCES accounts (account_global_legal_name) ON DELETE CASCADE;",
     "ALTER TABLE services ADD CONSTRAINT fk_srv_cnt FOREIGN KEY (cn_unique_key) REFERENCES centers (cn_unique_key) ON DELETE CASCADE;",

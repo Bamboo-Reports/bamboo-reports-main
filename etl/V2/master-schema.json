@@ -173,14 +173,6 @@
       },
       {
         "Table": "accounts",
-        "Column": "account_hq_stock_ticker",
-        "Type": "TEXT",
-        "Nullable": "YES",
-        "Default": "",
-        "PK": ""
-      },
-      {
-        "Table": "accounts",
         "Column": "account_about",
         "Type": "TEXT",
         "Nullable": "YES",
@@ -445,6 +437,22 @@
       },
       {
         "Table": "accounts",
+        "Column": "account_primary_city",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "accounts",
+        "Column": "account_hub_structure",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "accounts",
         "Column": "account_comments",
         "Type": "TEXT",
         "Nullable": "YES",
@@ -462,22 +470,6 @@
       {
         "Table": "accounts",
         "Column": "account_visibility_note",
-        "Type": "TEXT",
-        "Nullable": "YES",
-        "Default": "",
-        "PK": ""
-      },
-      {
-        "Table": "accounts",
-        "Column": "ingest_type",
-        "Type": "TEXT",
-        "Nullable": "YES",
-        "Default": "",
-        "PK": ""
-      },
-      {
-        "Table": "accounts",
-        "Column": "ingest_type_time_stamp",
         "Type": "TEXT",
         "Nullable": "YES",
         "Default": "",
@@ -678,6 +670,14 @@
       },
       {
         "Table": "centers",
+        "Column": "center_micro_location",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "centers",
         "Column": "center_city",
         "Type": "TEXT",
         "Nullable": "YES",
@@ -815,22 +815,6 @@
       {
         "Table": "centers",
         "Column": "center_comments",
-        "Type": "TEXT",
-        "Nullable": "YES",
-        "Default": "",
-        "PK": ""
-      },
-      {
-        "Table": "centers",
-        "Column": "ingest_type",
-        "Type": "TEXT",
-        "Nullable": "YES",
-        "Default": "",
-        "PK": ""
-      },
-      {
-        "Table": "centers",
-        "Column": "ingest_type_time_stamp",
         "Type": "TEXT",
         "Nullable": "YES",
         "Default": "",
@@ -1025,6 +1009,30 @@
       {
         "Table": "prospects",
         "Column": "last_update_date",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "prospects",
+        "Column": "last_review_date",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "prospects",
+        "Column": "email_verification_date",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "prospects",
+        "Column": "contact_status",
         "Type": "TEXT",
         "Nullable": "YES",
         "Default": "",
@@ -1234,6 +1242,47 @@
     ],
     "statistics": {
       "Table": "tech",
+      "Rows": 0,
+      "Size (MB)": 0
+    }
+  },
+  "ticker": {
+    "columns": [
+      {
+        "Table": "ticker",
+        "Column": "uuid",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "ticker",
+        "Column": "account_global_legal_name",
+        "Type": "TEXT",
+        "Nullable": "NO",
+        "Default": "",
+        "PK": "YES"
+      },
+      {
+        "Table": "ticker",
+        "Column": "account_hq_stock_ticker",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "ticker",
+        "Column": "notes",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      }
+    ],
+    "statistics": {
+      "Table": "ticker",
       "Rows": 0,
       "Size (MB)": 0
     }
