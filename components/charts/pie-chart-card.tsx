@@ -7,10 +7,11 @@ import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { PIE_CHART_COLORS } from "@/lib/utils/chart-helpers"
 import { ChartWaveSkeleton } from "@/components/ui/chart-wave-skeleton"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   ContextMenu,
-  ContextMenuCheckboxItem,
   ContextMenuContent,
+  ContextMenuItem,
   ContextMenuLabel,
   ContextMenuSeparator,
   ContextMenuTrigger,
@@ -268,30 +269,44 @@ export const PieChartCard = memo(({
               <ContextMenuContent className="w-56">
                 <ContextMenuLabel>Data labels</ContextMenuLabel>
                 <ContextMenuSeparator />
-                <ContextMenuCheckboxItem
-                  checked={labelDisplay.showCategoryLabels}
-                  onCheckedChange={(checked) => {
+                <ContextMenuItem
+                  role="menuitemcheckbox"
+                  aria-checked={labelDisplay.showCategoryLabels}
+                  onSelect={(event) => {
+                    event.preventDefault()
                     onLabelDisplayChange({
                       ...labelDisplay,
-                      showCategoryLabels: checked === true,
+                      showCategoryLabels: !labelDisplay.showCategoryLabels,
                     })
                   }}
-                  onSelect={(event) => event.preventDefault()}
                 >
+                  <Checkbox
+                    checked={labelDisplay.showCategoryLabels}
+                    tabIndex={-1}
+                    aria-hidden
+                    className="pointer-events-none"
+                  />
                   Category labels
-                </ContextMenuCheckboxItem>
-                <ContextMenuCheckboxItem
-                  checked={labelDisplay.showPercentages}
-                  onCheckedChange={(checked) => {
+                </ContextMenuItem>
+                <ContextMenuItem
+                  role="menuitemcheckbox"
+                  aria-checked={labelDisplay.showPercentages}
+                  onSelect={(event) => {
+                    event.preventDefault()
                     onLabelDisplayChange({
                       ...labelDisplay,
-                      showPercentages: checked === true,
+                      showPercentages: !labelDisplay.showPercentages,
                     })
                   }}
-                  onSelect={(event) => event.preventDefault()}
                 >
+                  <Checkbox
+                    checked={labelDisplay.showPercentages}
+                    tabIndex={-1}
+                    aria-hidden
+                    className="pointer-events-none"
+                  />
                   Percentages
-                </ContextMenuCheckboxItem>
+                </ContextMenuItem>
                 <ContextMenuSeparator />
                 <p className="px-2 py-1 text-xs text-muted-foreground">
                   Applies to all pie charts
