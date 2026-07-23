@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button"
 import { devError } from "@/lib/utils/dev-log"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
-import { Building2, Briefcase, Users, Sparkles, CheckCircle2, Download } from "lucide-react"
+import { Building, Briefcase, Users, Sparkles, CheckCircle2, Download } from "lucide-react"
 import type { ExportDatasetKey } from "@/lib/utils/export-helpers"
 import {
   requestServerExport,
@@ -70,36 +70,36 @@ const DATASET_META: Array<{
   key: ExportDatasetKey
   label: string
   description: string
-  icon: typeof Building2
+  icon: typeof Building
   accent: string
 }> = [
   {
     key: "accounts",
     label: "Accounts",
     description: "Legal names, HQ details, revenue ranges",
-    icon: Building2,
-    accent: "text-[hsl(var(--chart-1))]",
+    icon: Building,
+    accent: "text-primary",
   },
   {
     key: "centers",
-    label: "Centers",
+    label: "Centres",
     description: "Locations, type, employees, status",
     icon: Briefcase,
-    accent: "text-[hsl(var(--chart-2))]",
+    accent: "text-primary",
   },
   {
     key: "services",
     label: "Services",
     description: "Service lines, focus, software stack",
     icon: Sparkles,
-    accent: "text-[hsl(var(--chart-4))]",
+    accent: "text-primary",
   },
   {
     key: "prospects",
     label: "Prospects",
     description: "Decision makers, titles, departments",
     icon: Users,
-    accent: "text-[hsl(var(--chart-3))]",
+    accent: "text-primary",
   },
 ]
 

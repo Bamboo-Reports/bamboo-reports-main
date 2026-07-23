@@ -413,7 +413,7 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
         <div className="text-center">
           <p className="text-lg font-semibold text-muted-foreground mb-2">No Location Data</p>
           <p className="text-sm text-muted-foreground">
-            Centers do not have latitude and longitude information
+            Centres do not have latitude and longitude information
           </p>
         </div>
       </div>

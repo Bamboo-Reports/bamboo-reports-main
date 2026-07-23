@@ -42,7 +42,7 @@ export function FavoritesDialog({ open, onOpenChange, favorites, onOpenFavorite,
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
                   <Star className="h-4 w-4" />
                 </div>
-                Favorites
+                Favourites
               </DialogTitle>
               <DialogDescription className="mt-1">
                 Records you have starred. Click any item to reopen it, or remove it from the list.
@@ -113,7 +113,7 @@ export function FavoritesDialog({ open, onOpenChange, favorites, onOpenFavorite,
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
-                        aria-label={`Remove ${item.title} from favorites`}
+                        aria-label={`Remove ${item.title} from favourites`}
                         onClick={() => onRemove(item)}
                       >
                         <X className="h-4 w-4" />

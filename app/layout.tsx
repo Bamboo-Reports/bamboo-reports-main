@@ -19,7 +19,7 @@ const dmSans = DM_Sans({
 
 export const metadata: Metadata = {
   title: 'Bamboo Reports - A Research NXT Product',
-  description: 'Intelligence-driven insights for accounts, centers, and services',
+  description: 'Intelligence-driven insights for accounts, centres, and services',
   generator: 'Next.js',
   icons: {
     icon: '/logo.svg',

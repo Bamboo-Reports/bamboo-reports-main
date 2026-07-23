@@ -191,7 +191,7 @@ export function AccountFiltersSection({
                 setPendingFilters((prev) => ({ ...prev, accountCenterEmployeesRangeValues: selected }))
                 setActiveFilter("accountCenterEmployeesRangeValues")
               }}
-              placeholder="Select center employees..."
+              placeholder="Select centre employees..."
               isApplying={isApplying && activeFilter === "accountCenterEmployeesRangeValues"}
             />
           </div>
@@ -523,7 +523,7 @@ export function CenterFiltersSection({
           )}
           {isFilterEnabled("centerTypeValues") && (
           <div className="space-y-2">
-            <Label className="text-xs font-medium">Center Type</Label>
+            <Label className="text-xs font-medium">Centre Type</Label>
             <EnhancedMultiSelect
               options={availableOptions.centerTypeValues}
               selected={pendingFilters.centerTypeValues}
@@ -660,7 +660,7 @@ export function CenterFiltersSection({
 
           {isFilterEnabled("centerEmployeesRangeValues") && (
           <div className="space-y-2">
-            <Label className="text-xs font-medium">Center Headcount</Label>
+            <Label className="text-xs font-medium">Centre Headcount</Label>
             <EnhancedMultiSelect
               options={availableOptions.centerEmployeesRangeValues}
               selected={pendingFilters.centerEmployeesRangeValues}
@@ -726,7 +726,7 @@ export function CenterFiltersSection({
 
           {canShowMoreCenterFilters && showMoreCenterFilters && isFilterEnabled("centerFocusValues") && (
           <div className="space-y-2">
-            <Label className="text-xs font-medium">Center Focus</Label>
+            <Label className="text-xs font-medium">Centre Focus</Label>
             <EnhancedMultiSelect
               options={availableOptions.centerFocusValues}
               selected={pendingFilters.centerFocusValues}

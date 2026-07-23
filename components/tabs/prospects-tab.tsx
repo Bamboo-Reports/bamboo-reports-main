@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useEffect, useRef, useState } from "react"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TabsContent } from "@/components/ui/tabs"
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -368,7 +369,7 @@ export function ProspectsTab({
     <TabsContent value="prospects">
       {/* Header with View Toggle */}
       <div className="flex items-center gap-2 mb-4">
-        <PieChartIcon className="h-5 w-5 text-[hsl(var(--chart-1))]" />
+        <PieChartIcon className="h-5 w-5 text-primary" />
         <h2 className="text-lg font-semibold text-foreground">Prospect Analytics</h2>
         <ViewSwitcher
           data-tour="view-switcher"
@@ -377,16 +378,16 @@ export function ProspectsTab({
           options={[
             {
               value: "chart",
-              label: <span className="text-[hsl(var(--chart-1))]">Charts</span>,
+              label: "Charts",
               icon: (
-                <PieChartIcon className="h-4 w-4 text-[hsl(var(--chart-1))]" />
+                <PieChartIcon className="h-4 w-4" />
               ),
             },
             {
               value: "data",
-              label: <span className="text-[hsl(var(--chart-2))]">Data</span>,
+              label: "Data",
               icon: (
-                <TableIcon className="h-4 w-4 text-[hsl(var(--chart-2))]" />
+                <TableIcon className="h-4 w-4" />
               ),
             },
           ]}
@@ -437,16 +438,16 @@ export function ProspectsTab({
                    options={[
                      {
                        value: "table",
-                       label: <span className="text-[hsl(var(--chart-2))]">Table</span>,
+                       label: "Table",
                        icon: (
-                         <TableIcon className="h-4 w-4 text-[hsl(var(--chart-2))]" />
+                         <TableIcon className="h-4 w-4" />
                        ),
                      },
                      {
                        value: "grid",
-                       label: <span className="text-[hsl(var(--chart-3))]">Grid</span>,
+                       label: "Grid",
                        icon: (
-                         <LayoutGrid className="h-4 w-4 text-[hsl(var(--chart-3))]" />
+                         <LayoutGrid className="h-4 w-4" />
                        ),
                      },
                    ]}
@@ -492,11 +493,10 @@ export function ProspectsTab({
                         )}
                       </TableRow>
                     </TableHeader>
-                    <TableBody className={cn("transition-opacity", server?.loading && pageTableItems.length > 0 && "opacity-60")}>
-                      {server?.loading && pageTableItems.length === 0 && (
+                    <TableBody>
+                      {server?.loading ? (
                         <TableSkeletonRows columns={1 + (["avatar", "name", "location", "title", "department"] as const).filter(isColumnVisible).length} />
-                      )}
-                      {pageTableItems.map((item) =>
+                      ) : pageTableItems.map((item) =>
                         item.type === "visible" ? (
                           <ProspectRow
                             key={getProspectRecordId(item.prospect)}
@@ -525,24 +525,26 @@ export function ProspectsTab({
                   <div className="flex flex-col">
                     <div className="flex items-center gap-2 px-6 py-3 border-b bg-muted/20">
                       <span className="text-xs font-medium text-muted-foreground">Sort</span>
-                      <button
+                      <Button
                         type="button"
+                        variant="outline"
+                        size="sm"
                         onClick={() => handleSort("name")}
-                        className="inline-flex items-center justify-center rounded-md border border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground hover:border-accent-foreground/20 shadow-sm transition-colors h-7 w-7"
+                        className="h-8 w-8 px-0"
                         aria-label="Sort by prospect name"
+                        aria-pressed={sort.key === "name" && sort.direction !== null}
                       >
                         {sort.key !== "name" || sort.direction === null ? (
                           <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
                         ) : sort.direction === "asc" ? (
-                          <ArrowUpAZ className="h-3.5 w-3.5 text-muted-foreground" />
+                          <ArrowUpAZ className="h-3.5 w-3.5 text-primary" />
                         ) : (
-                          <ArrowDownAZ className="h-3.5 w-3.5 text-muted-foreground" />
+                          <ArrowDownAZ className="h-3.5 w-3.5 text-primary" />
                         )}
-                      </button>
+                      </Button>
                     </div>
-                    <div className={cn("grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6 transition-opacity", server?.loading && pageGridItems.length > 0 && "opacity-60")}>
-                      {server?.loading && pageGridItems.length === 0 && <GridSkeletonCards />}
-                      {pageGridItems.map((item) =>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
+                      {server?.loading ? <GridSkeletonCards /> : pageGridItems.map((item) =>
                         item.type === "visible" ? (
                           <ProspectGridCard
                             key={getProspectRecordId(item.prospect)}

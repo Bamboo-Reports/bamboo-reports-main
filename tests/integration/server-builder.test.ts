@@ -50,7 +50,7 @@ describe("server export builder", () => {
 
     const workbook = new ExcelJS.Workbook()
     await workbook.xlsx.load(result.buffer as unknown as Parameters<typeof workbook.xlsx.load>[0])
-    expect(workbook.worksheets.map((sheet) => sheet.name)).toEqual(["Accounts", "Centers"])
+    expect(workbook.worksheets.map((sheet) => sheet.name)).toEqual(["Accounts", "Centres"])
   })
 
   it("applies the prospect access limit before writing row counts", async () => {

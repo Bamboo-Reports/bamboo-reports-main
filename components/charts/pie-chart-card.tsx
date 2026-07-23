@@ -6,8 +6,7 @@ import { PieChartIcon } from "lucide-react"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { PIE_CHART_COLORS } from "@/lib/utils/chart-helpers"
-import { Skeleton } from "@/components/ui/skeleton"
-import { cn } from "@/lib/utils"
+import { ChartWaveSkeleton } from "@/components/ui/chart-wave-skeleton"
 import type { ChartData } from "@/lib/types"
 import type { Options, Point } from "highcharts"
 
@@ -206,8 +205,12 @@ export const PieChartCard = memo(({ title, data, dataKey = "value", countLabel =
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {safeData.length > 0 ? (
-          <div className={cn("h-[400px] w-full transition-opacity", loading && "opacity-50 animate-pulse")}>
+        {loading ? (
+          <div className="h-[400px] w-full">
+            <ChartWaveSkeleton />
+          </div>
+        ) : safeData.length > 0 ? (
+          <div className="h-[400px] w-full">
             {chartLib ? (
               <chartLib.HighchartsReact
                 highcharts={chartLib.Highcharts}
@@ -215,14 +218,8 @@ export const PieChartCard = memo(({ title, data, dataKey = "value", countLabel =
                 containerProps={{ style: { height: "100%", width: "100%" } }}
               />
             ) : (
-              <div className="h-full w-full flex items-center justify-center text-muted-foreground text-sm">
-                Loading chart...
-              </div>
+              <ChartWaveSkeleton />
             )}
-          </div>
-        ) : loading ? (
-          <div className="h-[400px] w-full flex items-center justify-center">
-            <Skeleton className="h-64 w-64 rounded-full" />
           </div>
         ) : (
           <div className="h-[300px] flex items-center justify-center text-muted-foreground">

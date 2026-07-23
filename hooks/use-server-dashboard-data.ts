@@ -245,7 +245,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
         setMap(res)
         setAppliedKeys((prev) => ({ ...prev, map: effectiveKey }))
       })
-      .catch((err) => devError("centers map fetch failed:", err))
+      .catch((err) => devError("centres map fetch failed:", err))
   }, [enabled, effectiveKey, views.needMap, refreshKey])
 
   // Background prefetch: ~400ms after a new filter state settles (visible

@@ -12,7 +12,7 @@ interface SelectionActionBarProps {
   count: number
   onClear: () => void
   onExport: () => void
-  /** When provided, shows a bulk "favorite selected" action. */
+  /** When provided, shows a bulk "favourite selected" action. */
   onFavorite?: () => void
   /** When true, the favorite button turns blue (the selection is already favorited). */
   favoriteActive?: boolean
@@ -73,7 +73,7 @@ export function SelectionActionBar({ show, count, onClear, onExport, onFavorite,
             onClick={onFavorite}
           >
             <Star className={cn("h-3.5 w-3.5", favoriteActive && "fill-blue-500 text-blue-500")} />
-            {favoriteActive ? "Favorited" : "Favorite"}
+            {favoriteActive ? "Favourited" : "Favourite"}
           </Button>
         )}
         <Button size="sm" className="h-8 gap-2 rounded-full px-4 text-xs" onClick={onExport}>

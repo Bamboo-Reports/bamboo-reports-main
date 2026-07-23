@@ -15,7 +15,7 @@ export type ServerExportDatasetKey = "accounts" | "centers" | "services" | "pros
 
 const DATASET_LABELS: Record<ServerExportDatasetKey, string> = {
   accounts: "Accounts",
-  centers: "Centers",
+  centers: "Centres",
   services: "Services",
   prospects: "Prospects",
 }

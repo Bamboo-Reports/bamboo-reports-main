@@ -576,7 +576,7 @@ export function CentersChoroplethMap({
               "'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
           }}
         >
-          <div className="text-sm font-semibold text-muted-foreground dark:text-white mb-2 text-center">Total Centers</div>
+          <div className="text-sm font-semibold text-muted-foreground dark:text-white mb-2 text-center">Total Centres</div>
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground dark:text-white">
             <span className="tabular-nums">{countRange.min.toLocaleString()}</span>
             <div

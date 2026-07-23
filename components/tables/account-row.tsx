@@ -134,7 +134,7 @@ export const AccountRow = memo(({ account, onOpen, visibleColumns, selectable, i
         {onToggleFavorite && (
           <ContextMenuItem onClick={() => onToggleFavorite(account)}>
             {isFavorite ? <StarOff className="h-4 w-4" /> : <Star className="h-4 w-4" />}
-            {isFavorite ? "Remove from Favorites" : "Add to Favorites"}
+            {isFavorite ? "Remove from Favourites" : "Add to Favourites"}
           </ContextMenuItem>
         )}
         {account.account_hq_website && (

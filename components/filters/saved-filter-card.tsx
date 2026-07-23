@@ -137,14 +137,14 @@ export const SavedFilterCard = memo(({
                   {renderFilterValues(filter.filters.accountPrimaryNatureValues, "Nature")}
                   {renderFilterValues(filter.filters.accountNasscomStatusValues, "NASSCOM")}
                   {renderFilterValues(filter.filters.accountHqEmployeeRangeValues, "Emp Range")}
-                  {renderFilterValues(filter.filters.accountCenterEmployeesRangeValues, "Center Emp")}
-                  {renderFilterValues(filter.filters.centerTypeValues, "Center Type")}
-                  {renderFilterValues(filter.filters.centerFocusValues, "Center Focus")}
+                  {renderFilterValues(filter.filters.accountCenterEmployeesRangeValues, "Centre Emp")}
+                  {renderFilterValues(filter.filters.centerTypeValues, "Centre Type")}
+                  {renderFilterValues(filter.filters.centerFocusValues, "Centre Focus")}
                   {renderFilterValues(filter.filters.centerCityValues, "City")}
                   {renderFilterValues(filter.filters.centerStateValues, "State")}
-                  {renderFilterValues(filter.filters.centerCountryValues, "Center Country")}
-                  {renderFilterValues(filter.filters.centerEmployeesRangeValues, "Center Employees")}
-                  {renderFilterValues(filter.filters.centerStatusValues, "Center Status")}
+                  {renderFilterValues(filter.filters.centerCountryValues, "Centre Country")}
+                  {renderFilterValues(filter.filters.centerEmployeesRangeValues, "Centre Employees")}
+                  {renderFilterValues(filter.filters.centerStatusValues, "Centre Status")}
                   {renderFilterValues(filter.filters.functionNameValues, "Function")}
                   {renderFilterValues(filter.filters.techSoftwareInUseKeywords, "Software In Use")}
                   {renderFilterValues(filter.filters.prospectDepartmentValues, "Department")}

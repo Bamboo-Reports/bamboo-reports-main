@@ -173,6 +173,14 @@ const config: Config = {
   					transform: 'translateX(100%)'
   				}
   			},
+  			'chart-wave': {
+  				'0%': {
+  					transform: 'translateX(0)'
+  				},
+  				'100%': {
+  					transform: 'translateX(-50%)'
+  				}
+  			},
   			'pulse-subtle': {
   				'0%, 100%': {
   					opacity: '1'
@@ -201,6 +209,7 @@ const config: Config = {
   			'badge-in': 'badge-in 0.12s cubic-bezier(0.34, 1.56, 0.64, 1)',
   			'badge-out': 'badge-out 0.1s cubic-bezier(0.4, 0, 1, 1)',
   			'shimmer': 'shimmer 2s infinite',
+  			'chart-wave': 'chart-wave 6s linear infinite',
   			'pulse-subtle': 'pulse-subtle 2s ease-in-out infinite',
   			'bounce-subtle': 'bounce-subtle 0.6s ease-in-out infinite'
   		}

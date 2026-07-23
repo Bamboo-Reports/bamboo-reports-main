@@ -106,7 +106,7 @@ describe("dashboard access config", () => {
 
   describe("messages and assertions", () => {
     it("provides unavailability messages", () => {
-      expect(getSectionUnavailableMessage("centers")).toBe("Centers is Not Procured.")
+      expect(getSectionUnavailableMessage("centers")).toBe("Centres is Not Procured.")
       expect(getDatasetUnavailableMessage("services")).toBe("Services export is Not Procured.")
     })
 
@@ -115,7 +115,7 @@ describe("dashboard access config", () => {
       expect(() => assertSectionEnabled("centers")).not.toThrow()
 
       DASHBOARD_ACCESS_CONFIG.sections.centers = "disabled"
-      expect(() => assertSectionEnabled("centers")).toThrow("Centers is Not Procured.")
+      expect(() => assertSectionEnabled("centers")).toThrow("Centres is Not Procured.")
     })
 
     it("asserts dataset is enabled", () => {

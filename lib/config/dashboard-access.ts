@@ -31,13 +31,13 @@ export const DASHBOARD_ACCESS_CONFIG: DashboardAccessConfig = {
 
 const SECTION_LABELS: Record<DashboardSection, string> = {
   accounts: "Accounts",
-  centers: "Centers",
+  centers: "Centres",
   prospects: "Prospects",
 }
 
 const DATASET_LABELS: Record<DashboardDataset, string> = {
   accounts: "Accounts",
-  centers: "Centers",
+  centers: "Centres",
   services: "Services",
   prospects: "Prospects",
 }

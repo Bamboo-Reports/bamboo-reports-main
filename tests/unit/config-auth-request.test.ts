@@ -33,7 +33,7 @@ describe("config, auth, request, and ticker helpers", () => {
     expect(getProspectsPerAccountLimit()).toBeNull()
     expect(() => assertSectionEnabled("accounts")).not.toThrow()
     expect(() => assertDatasetEnabled("accounts")).not.toThrow()
-    expect(getSectionUnavailableMessage("centers")).toBe("Centers is Not Procured.")
+    expect(getSectionUnavailableMessage("centers")).toBe("Centres is Not Procured.")
     expect(getDatasetUnavailableMessage("services")).toBe("Services export is Not Procured.")
   })
 

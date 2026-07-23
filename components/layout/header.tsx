@@ -338,7 +338,7 @@ export const Header = React.memo(function Header({ onRefresh, onStartTour, onOpe
                       onSelect={() => onOpenFavorites()}
                     >
                       <Star className="h-4 w-4" />
-                      Favorites
+                      Favourites
                     </DropdownMenuItem>
                   )}
                   {onOpenExports && (

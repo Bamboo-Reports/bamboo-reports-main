@@ -176,7 +176,7 @@ export function useDashboardData({ enabled }: UseDashboardDataOptions) {
       setSummary(summaryData)
 
       setConnectionStatus(
-        `Successfully loaded: ${accountsData.length} accounts, ${centersData.length} centers, ${functionsData.length} functions, ${servicesData.length} services, ${techData.length} tech, ${prospectsData.length} prospects`
+        `Successfully loaded: ${accountsData.length} accounts, ${centersData.length} centres, ${functionsData.length} functions, ${servicesData.length} services, ${techData.length} tech, ${prospectsData.length} prospects`
       )
       captureEvent(ANALYTICS_EVENTS.DATA_LOAD_SUCCEEDED, {
         accounts_count: accountsData.length,

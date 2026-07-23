@@ -127,7 +127,7 @@ export const ProspectRow = memo(({ prospect, onOpen, visibleColumns, selectable,
         {onToggleFavorite && (
           <ContextMenuItem onClick={() => onToggleFavorite(prospect)}>
             {isFavorite ? <StarOff className="h-4 w-4" /> : <Star className="h-4 w-4" />}
-            {isFavorite ? "Remove from Favorites" : "Add to Favorites"}
+            {isFavorite ? "Remove from Favourites" : "Add to Favourites"}
           </ContextMenuItem>
         )}
         {prospect.prospect_email && (

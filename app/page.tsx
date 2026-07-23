@@ -1056,7 +1056,7 @@ function DashboardContent(): React.JSX.Element | null {
               setSearchSelectedCenter(res.center)
               setSearchCenterDialogOpen(true)
             })
-            .catch(() => toast.info("This center is not available right now."))
+            .catch(() => toast.info("This centre is not available right now."))
         }
       } else if (item.type === "prospect") {
         if (!prospectsEnabled) {
@@ -1100,10 +1100,10 @@ function DashboardContent(): React.JSX.Element | null {
       // null means a toggle for this item is already in flight; ignore it.
       if (!result) return
       if (!result.ok) {
-        toast.error("Could not update favorites. Please try again.")
+        toast.error("Could not update favourites. Please try again.")
         return
       }
-      toast.success(result.added ? "Added to favorites" : "Removed from favorites")
+      toast.success(result.added ? "Added to favourites" : "Removed from favourites")
     },
     [toggleFavorite]
   )
@@ -1113,10 +1113,10 @@ function DashboardContent(): React.JSX.Element | null {
       if (items.length === 0) return
       const ok = await addFavorites(items)
       if (!ok) {
-        toast.error("Could not add to favorites. Please try again.")
+        toast.error("Could not add to favourites. Please try again.")
         return
       }
-      toast.success(`Added ${items.length} ${items.length === 1 ? "item" : "items"} to favorites`)
+      toast.success(`Added ${items.length} ${items.length === 1 ? "item" : "items"} to favourites`)
     },
     [addFavorites]
   )
@@ -1124,7 +1124,7 @@ function DashboardContent(): React.JSX.Element | null {
   const handleRemoveFavorite = useCallback(
     async (item: FavoriteItem) => {
       const ok = await removeFavorite(item.entity_type, item.entity_id)
-      toast[ok ? "success" : "error"](ok ? "Removed from favorites" : "Could not remove favorite. Please try again.")
+      toast[ok ? "success" : "error"](ok ? "Removed from favourites" : "Could not remove favourite. Please try again.")
     },
     [removeFavorite]
   )
@@ -1134,17 +1134,17 @@ function DashboardContent(): React.JSX.Element | null {
       if (items.length === 0) return
       const ok = await removeFavorites(items)
       if (!ok) {
-        toast.error("Could not remove from favorites. Please try again.")
+        toast.error("Could not remove from favourites. Please try again.")
         return
       }
-      toast.success(`Removed ${items.length} ${items.length === 1 ? "item" : "items"} from favorites`)
+      toast.success(`Removed ${items.length} ${items.length === 1 ? "item" : "items"} from favourites`)
     },
     [removeFavorites]
   )
 
   const handleClearFavorites = useCallback(async () => {
     const ok = await clearFavorites()
-    toast[ok ? "success" : "error"](ok ? "Cleared all favorites" : "Could not clear favorites. Please try again.")
+    toast[ok ? "success" : "error"](ok ? "Cleared all favourites" : "Could not clear favourites. Please try again.")
   }, [clearFavorites])
 
   const handleOpenFavorite = useCallback(
@@ -1172,13 +1172,13 @@ function DashboardContent(): React.JSX.Element | null {
           setSearchCenterDialogOpen(true)
           return
         }
-        if (!serverMode) return toast.info("This center is not available in the current dataset.")
+        if (!serverMode) return toast.info("This centre is not available in the current dataset.")
         fetchCenterDetail(item.entity_id)
           .then((res) => {
             setSearchSelectedCenter(res.center)
             setSearchCenterDialogOpen(true)
           })
-          .catch(() => toast.info("This center is not available in the current dataset."))
+          .catch(() => toast.info("This centre is not available in the current dataset."))
       } else {
         const prospect = prospects.find((p) => getProspectRecordId(p) === item.entity_id)
         if (prospect) {

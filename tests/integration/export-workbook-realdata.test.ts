@@ -87,7 +87,7 @@ gated("export-by-filter workbook parity against the real Neon warehouse", () => 
       return Math.max(0, sheet.actualRowCount - (sheet.actualRowCount > 0 ? 1 : 0))
     }
     expect(sheetRows("Accounts"), `Accounts sheet for ${label}`).toBe(expected.accounts)
-    expect(sheetRows("Centers"), `Centers sheet for ${label}`).toBe(expected.centers)
+    expect(sheetRows("Centres"), `Centres sheet for ${label}`).toBe(expected.centers)
     expect(sheetRows("Services"), `Services sheet for ${label}`).toBe(expected.services)
     expect(sheetRows("Prospects"), `Prospects sheet for ${label}`).toBe(expected.prospects)
 

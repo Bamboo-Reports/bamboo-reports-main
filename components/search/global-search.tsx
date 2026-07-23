@@ -46,13 +46,13 @@ interface GlobalSearchProps {
 
 const typeIcons: Record<SearchResultType, React.ReactNode> = {
   account: <Building className="h-4 w-4 shrink-0 text-primary" />,
-  center: <Briefcase className="h-4 w-4 shrink-0 text-[hsl(var(--chart-2))]" />,
-  prospect: <Users className="h-4 w-4 shrink-0 text-[hsl(var(--chart-3))]" />,
+  center: <Briefcase className="h-4 w-4 shrink-0 text-primary" />,
+  prospect: <Users className="h-4 w-4 shrink-0 text-primary" />,
 }
 
 const typeLabels: Record<SearchResultType, string> = {
   account: "Account",
-  center: "Center",
+  center: "Centre",
   prospect: "Prospect",
 }
 
@@ -237,7 +237,7 @@ export function GlobalSearch({
             )}
 
             {results.centers.items.length > 0 && (
-              <CommandGroup heading={`Centers (${results.centers.totalMatches})`}>
+              <CommandGroup heading={`Centres (${results.centers.totalMatches})`}>
                 {results.centers.items.map((result) => (
                   <CommandItem
                     key={`center::${result.id}`}
@@ -348,8 +348,8 @@ export function GlobalSearch({
                   onSelect={handleSelect}
                   className="py-2 px-3"
                 >
-                  <Briefcase className="h-4 w-4 shrink-0 text-[hsl(var(--chart-2)/0.7)]" />
-                  <span className="text-sm">Go to Centers</span>
+                  <Briefcase className="h-4 w-4 shrink-0 text-primary/70" />
+                  <span className="text-sm">Go to Centres</span>
                   <CommandShortcut>Tab</CommandShortcut>
                 </CommandItem>
               )}
@@ -359,7 +359,7 @@ export function GlobalSearch({
                   onSelect={handleSelect}
                   className="py-2 px-3"
                 >
-                  <Users className="h-4 w-4 shrink-0 text-[hsl(var(--chart-3)/0.7)]" />
+                  <Users className="h-4 w-4 shrink-0 text-primary/70" />
                   <span className="text-sm">Go to Prospects</span>
                   <CommandShortcut>Tab</CommandShortcut>
                 </CommandItem>

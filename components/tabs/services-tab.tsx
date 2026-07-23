@@ -43,7 +43,7 @@ export function ServicesTab({
               <TableHeader>
                 <TableRow>
                   <TableHead>CN Unique Key</TableHead>
-                  <TableHead>Center Name</TableHead>
+                  <TableHead>Centre Name</TableHead>
                   <TableHead>Primary Service</TableHead>
                   <TableHead>Focus Region</TableHead>
                   <TableHead>IT</TableHead>

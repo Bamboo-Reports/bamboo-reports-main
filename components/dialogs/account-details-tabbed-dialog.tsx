@@ -24,7 +24,7 @@ import {
   Calendar,
   Package,
   Building,
-  UserCircle,
+  Briefcase,
   Globe,
   Linkedin,
 } from "lucide-react"
@@ -504,7 +504,7 @@ export function AccountDetailsDialog({
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
             <TabsList className={`grid w-full ${relatedLoading ? `grid-cols-${1 + (canViewCenters ? 1 : 0) + (canViewProspects ? 1 : 0)}` : accountCenters.length > 0 && (accountProspects.length > 0 || accountLockedProspectTeasers.length > 0) ? "grid-cols-3" : accountCenters.length > 0 || accountProspects.length > 0 || accountLockedProspectTeasers.length > 0 ? "grid-cols-2" : "grid-cols-1"}`}>
               <TabsTrigger value="info" className="flex items-center gap-2">
-                <Building2 className="h-4 w-4" />
+                <Building className="h-4 w-4" />
                 Account Info
               </TabsTrigger>
               {relatedLoading && canViewCenters && (
@@ -519,8 +519,8 @@ export function AccountDetailsDialog({
               )}
               {accountCenters.length > 0 && (
               <TabsTrigger value="centers" className="flex items-center gap-2">
-                <Building className="h-4 w-4" />
-                Centers
+                <Briefcase className="h-4 w-4" />
+                Centres
                 <Badge variant="secondary" className="ml-1">
                   {accountCenters.length}
                 </Badge>
@@ -528,7 +528,7 @@ export function AccountDetailsDialog({
               )}
               {(accountProspects.length > 0 || accountLockedProspectTeasers.length > 0) && (
               <TabsTrigger value="prospects" className="flex items-center gap-2">
-                <UserCircle className="h-4 w-4" />
+                <Users className="h-4 w-4" />
                 Prospects
                 <Badge variant="secondary" className="ml-1">
                   {accountProspects.length}
@@ -674,9 +674,9 @@ export function AccountDetailsDialog({
                 <section className="space-y-4">
                   <SectionHeader title="India Presence" />
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <KPITile icon={Calendar} label="First Center" value={account.account_first_center_year} />
+                    <KPITile icon={Calendar} label="First Centre" value={account.account_first_center_year} />
                     <KPITile icon={Calendar} label="Years in India" value={account.years_in_india} />
-                    <KPITile icon={Users} label="Center Employees" value={account.account_center_employees} />
+                    <KPITile icon={Users} label="Centre Employees" value={account.account_center_employees} />
                     <KPITile icon={Users} label="GCC Aggregate Headcount (India)" value={account.account_center_employees_range} />
                     <KPITile icon={MapPin} label="Primary City" value={account.account_primary_city} />
                     <KPITile icon={Building2} label="Hub Structure" value={account.account_hub_structure} />
@@ -686,7 +686,7 @@ export function AccountDetailsDialog({
                       <div className="flex h-full flex-col">
                         <div className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-muted-foreground border-b border-border/40">
                           <MapPin className="h-4 w-4" />
-                          Centers Map
+                          Centres Map
                         </div>
                         <div className="flex-1 min-h-0">
                           <CentersMap centers={accountCenters} heightClass="h-full" showAccountsCount={false} />
@@ -719,7 +719,7 @@ export function AccountDetailsDialog({
             <TabsContent value="centers" className="mt-4 space-y-4">
                 <div className="space-y-2">
                   <QuickFilterGroup
-                    label="Center Type"
+                    label="Centre Type"
                     options={centerTypeOptions}
                     selected={centerTypeFilter}
                     onToggle={(v) => toggleInSet(setCenterTypeFilter, v)}

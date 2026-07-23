@@ -3,6 +3,7 @@
 import React, { memo } from "react"
 import { Layers } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { ChartWaveSkeleton } from "@/components/ui/chart-wave-skeleton"
 import { PIE_CHART_COLORS } from "@/lib/utils/chart-helpers"
 import type { Tech } from "@/lib/types"
 import type { Options, Point } from "highcharts"
@@ -299,9 +300,7 @@ export const TechTreemap = memo(({
             containerProps={{ style: { height: "100%", width: "100%" } }}
           />
         ) : (
-          <div className="h-full w-full flex items-center justify-center text-muted-foreground text-sm">
-            Loading chart...
-          </div>
+          <ChartWaveSkeleton />
         )}
       </div>
     </div>

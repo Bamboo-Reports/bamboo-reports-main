@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useEffect, useRef, useState } from "react"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TabsContent } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -82,7 +83,7 @@ interface AccountsTabProps {
   mapLoading?: boolean
 }
 
-/** Placeholder rows while a page loads and there is nothing to show yet. */
+/** Placeholder rows while a page loads. Mirrors real row structure (logo plus two text lines in the name column) so row heights match and the table does not jump when data lands. */
 export function TableSkeletonRows({ rows = 8, columns }: { rows?: number; columns: number }) {
   return (
     <>
@@ -90,7 +91,19 @@ export function TableSkeletonRows({ rows = 8, columns }: { rows?: number; column
         <TableRow key={`skeleton-${i}`}>
           {Array.from({ length: columns }, (_, j) => (
             <TableCell key={j}>
-              <Skeleton className={j === 0 ? "h-4 w-4" : "h-4 w-3/4"} />
+              {j === 0 ? (
+                <Skeleton className="h-4 w-4" />
+              ) : j === 1 ? (
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-8 w-8 shrink-0 rounded-md" />
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    <Skeleton className="h-3.5 w-3/4" />
+                    <Skeleton className="h-3 w-1/2" />
+                  </div>
+                </div>
+              ) : (
+                <Skeleton className="h-4 w-3/4" />
+              )}
             </TableCell>
           ))}
         </TableRow>
@@ -99,12 +112,33 @@ export function TableSkeletonRows({ rows = 8, columns }: { rows?: number; column
   )
 }
 
-/** Placeholder cards for the grid layout. */
+/** Placeholder cards for the grid layout. Mirrors real card structure (header with logo, stat lines, action button) so card heights match and the grid does not jump when data lands. */
 export function GridSkeletonCards({ cards = 6 }: { cards?: number }) {
   return (
     <>
       {Array.from({ length: cards }, (_, i) => (
-        <Skeleton key={`skeleton-card-${i}`} className="h-36 rounded-lg" />
+        <div key={`skeleton-card-${i}`} className="rounded-lg border bg-card p-4 flex flex-col gap-4">
+          <div className="flex items-start gap-3">
+            <Skeleton className="h-10 w-10 shrink-0 rounded-md" />
+            <div className="min-w-0 flex-1 space-y-2 py-0.5">
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-3.5 w-1/2" />
+            </div>
+          </div>
+          <div className="mt-auto flex flex-col gap-4">
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between gap-3">
+                <Skeleton className="h-3.5 w-16" />
+                <Skeleton className="h-3.5 w-24" />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <Skeleton className="h-3.5 w-16" />
+                <Skeleton className="h-3.5 w-24" />
+              </div>
+            </div>
+            <Skeleton className="h-8 w-full rounded-md" />
+          </div>
+        </div>
       ))}
     </>
   )
@@ -360,7 +394,7 @@ export function AccountsTab({
     <TabsContent value="accounts">
       {/* Header with View Toggle */}
       <div className="flex items-center gap-2 mb-4">
-        <PieChartIcon className="h-5 w-5 text-[hsl(var(--chart-1))]" />
+        <PieChartIcon className="h-5 w-5 text-primary" />
         <h2 className="text-lg font-semibold text-foreground">Account Analytics</h2>
         <ViewSwitcher
           data-tour="view-switcher"
@@ -369,25 +403,25 @@ export function AccountsTab({
           options={[
             {
               value: "chart",
-              label: <span className="text-[hsl(var(--chart-1))]">Charts</span>,
+              label: "Charts",
               icon: (
-                <PieChartIcon className="h-4 w-4 text-[hsl(var(--chart-1))]" />
+                <PieChartIcon className="h-4 w-4" />
               ),
             },
             ...(allowMapView
               ? [{
                   value: "map",
-                  label: <span className="text-[hsl(var(--chart-4))]">Map</span>,
+                  label: "Map",
                   icon: (
-                    <MapIcon className="h-4 w-4 text-[hsl(var(--chart-4))]" />
+                    <MapIcon className="h-4 w-4" />
                   ),
                 }]
               : []),
             {
               value: "data",
-              label: <span className="text-[hsl(var(--chart-2))]">Data</span>,
+              label: "Data",
               icon: (
-                <TableIcon className="h-4 w-4 text-[hsl(var(--chart-2))]" />
+                <TableIcon className="h-4 w-4" />
               ),
             },
           ]}
@@ -443,13 +477,13 @@ export function AccountsTab({
                 options={[
                   {
                     value: "city",
-                    label: <span className="text-[hsl(var(--chart-4))]">City</span>,
-                    icon: <MapPin className="h-4 w-4 text-[hsl(var(--chart-4))]" />,
+                    label: "City",
+                    icon: <MapPin className="h-4 w-4" />,
                   },
                   {
                     value: "state",
-                    label: <span className="text-[hsl(var(--chart-3))]">State</span>,
-                    icon: <Layers className="h-4 w-4 text-[hsl(var(--chart-3))]" />,
+                    label: "State",
+                    icon: <Layers className="h-4 w-4" />,
                   },
                 ]}
                 className="ml-auto"
@@ -490,16 +524,16 @@ export function AccountsTab({
                   options={[
                     {
                       value: "table",
-                      label: <span className="text-[hsl(var(--chart-2))]">Table</span>,
+                      label: "Table",
                       icon: (
-                        <TableIcon className="h-4 w-4 text-[hsl(var(--chart-2))]" />
+                        <TableIcon className="h-4 w-4" />
                       ),
                     },
                     {
                       value: "grid",
-                      label: <span className="text-[hsl(var(--chart-3))]">Grid</span>,
+                      label: "Grid",
                       icon: (
-                        <LayoutGrid className="h-4 w-4 text-[hsl(var(--chart-3))]" />
+                        <LayoutGrid className="h-4 w-4" />
                       ),
                     },
                   ]}
@@ -542,11 +576,10 @@ export function AccountsTab({
                       )}
                     </TableRow>
                   </TableHeader>
-                  <TableBody className={cn("transition-opacity", server?.loading && pageAccounts.length > 0 && "opacity-60")}>
-                    {server?.loading && pageAccounts.length === 0 && (
+                  <TableBody>
+                    {server?.loading ? (
                       <TableSkeletonRows columns={1 + (["name", "industry", "revenue", "employees"] as const).filter(isColumnVisible).length} />
-                    )}
-                    {pageAccounts.map(
+                    ) : pageAccounts.map(
                       (account) => (
                         <AccountRow
                           key={account.account_global_legal_name}
@@ -567,24 +600,26 @@ export function AccountsTab({
                   <div className="flex flex-col">
                     <div className="flex items-center gap-2 px-6 py-3 border-b bg-muted/20">
                       <span className="text-xs font-medium text-muted-foreground">Sort</span>
-                      <button
+                      <Button
                         type="button"
+                        variant="outline"
+                        size="sm"
                         onClick={() => handleSort("name")}
-                        className="inline-flex items-center justify-center rounded-md border border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground hover:border-accent-foreground/20 shadow-sm transition-colors h-7 w-7"
+                        className="h-8 w-8 px-0"
                         aria-label="Sort by account name"
+                        aria-pressed={sort.key === "name" && sort.direction !== null}
                       >
                         {sort.key !== "name" || sort.direction === null ? (
                           <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
                         ) : sort.direction === "asc" ? (
-                          <ArrowUpAZ className="h-3.5 w-3.5 text-muted-foreground" />
+                          <ArrowUpAZ className="h-3.5 w-3.5 text-primary" />
                         ) : (
-                          <ArrowDownAZ className="h-3.5 w-3.5 text-muted-foreground" />
+                          <ArrowDownAZ className="h-3.5 w-3.5 text-primary" />
                         )}
-                      </button>
+                      </Button>
                     </div>
-                    <div className={cn("grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6 transition-opacity", server?.loading && pageAccounts.length > 0 && "opacity-60")}>
-                      {server?.loading && pageAccounts.length === 0 && <GridSkeletonCards />}
-                      {pageAccounts.map(
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
+                      {server?.loading ? <GridSkeletonCards /> : pageAccounts.map(
                         (account) => (
                         <AccountGridCard
                           key={account.account_global_legal_name}

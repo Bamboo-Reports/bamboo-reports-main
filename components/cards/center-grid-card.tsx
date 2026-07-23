@@ -26,7 +26,7 @@ const getStatusDotColor = (status: string | null | undefined) => {
 }
 
 export const CenterGridCard = memo(({ center, onClick }: CenterGridCardProps) => {
-  const centerName = center.center_name || "Center"
+  const centerName = center.center_name || "Centre"
   const accountName = center.account_global_legal_name || "Account"
   const location = formatCenterLocation(center.center_city, center.center_state)
   const statusColor = getStatusDotColor(center.center_status)
@@ -67,7 +67,7 @@ export const CenterGridCard = memo(({ center, onClick }: CenterGridCardProps) =>
             </div>
             <div className="space-y-2 text-sm">
               <div className="flex items-center justify-between gap-3 min-w-0">
-                <span className="text-muted-foreground">Center Type</span>
+                <span className="text-muted-foreground">Centre Type</span>
                 <span
                   className="font-medium text-foreground text-right truncate max-w-[160px]"
                   title={center.center_type || "-"}

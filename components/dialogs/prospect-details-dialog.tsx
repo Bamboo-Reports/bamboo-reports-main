@@ -376,7 +376,7 @@ export function ProspectDetailsDialog({
                 <MetaRow label="Level" value={p.prospect_level} />
                 <MetaRow label="In Company Since" value={p.prospect_in_company_year} />
                 <MetaRow label="Current Role Since" value={p.prospect_current_year} />
-                <MetaRow label="Center" value={p.center_name} />
+                <MetaRow label="Centre" value={p.center_name} />
                 <MetaRow label="Location" value={location} />
                 <MetaRow label="Country" value={p.prospect_country?.trim().toUpperCase() === "TBA" || location === "India" ? null : p.prospect_country} />
               </div>
