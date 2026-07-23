@@ -51,6 +51,8 @@ interface CentersTabProps {
     cityData: Array<{ name: string; value: number; fill?: string }>
     functionData: Array<{ name: string; value: number; fill?: string }>
   }
+  chartLabelDisplay: PieChartLabelDisplay
+  onChartLabelDisplayChange: (display: PieChartLabelDisplay) => void
   centersView: "chart" | "data" | "map"
   setCentersView: (view: "chart" | "data" | "map") => void
   currentPage: number
@@ -89,6 +91,8 @@ export function CentersTab({
   services,
   tech,
   centerChartData,
+  chartLabelDisplay,
+  onChartLabelDisplayChange,
   centersView,
   setCentersView,
   currentPage,
@@ -118,10 +122,6 @@ export function CentersTab({
   })
   const [dataLayout, setDataLayout] = useState<"table" | "grid">("table")
   const [mapMode, setMapMode] = useState<"city" | "state">("state")
-  const [chartLabelDisplay, setChartLabelDisplay] = useState<PieChartLabelDisplay>({
-    showCategoryLabels: true,
-    showPercentages: true,
-  })
   const {
     columns,
     visibleColumnSet,
@@ -392,7 +392,7 @@ export function CentersTab({
               countLabel="Total Centres"
               showBigPercentage
               labelDisplay={chartLabelDisplay}
-              onLabelDisplayChange={setChartLabelDisplay}
+              onLabelDisplayChange={onChartLabelDisplayChange}
               loading={chartsLoading}
             />
             <PieChartCard
@@ -401,7 +401,7 @@ export function CentersTab({
               countLabel="Total Centres"
               showBigPercentage
               labelDisplay={chartLabelDisplay}
-              onLabelDisplayChange={setChartLabelDisplay}
+              onLabelDisplayChange={onChartLabelDisplayChange}
               loading={chartsLoading}
             />
             <PieChartCard
@@ -410,7 +410,7 @@ export function CentersTab({
               countLabel="Total Centres"
               showBigPercentage
               labelDisplay={chartLabelDisplay}
-              onLabelDisplayChange={setChartLabelDisplay}
+              onLabelDisplayChange={onChartLabelDisplayChange}
               loading={chartsLoading}
             />
             <PieChartCard
@@ -419,7 +419,7 @@ export function CentersTab({
               countLabel="Total Centres"
               showBigPercentage
               labelDisplay={chartLabelDisplay}
-              onLabelDisplayChange={setChartLabelDisplay}
+              onLabelDisplayChange={onChartLabelDisplayChange}
               loading={chartsLoading}
             />
           </div>

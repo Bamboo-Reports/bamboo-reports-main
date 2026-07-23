@@ -14,6 +14,7 @@ import { GlobalSearch } from "@/components/search/global-search"
 import { AccountDetailsDialog } from "@/components/dialogs/account-details-tabbed-dialog"
 import { CenterDetailsDialog } from "@/components/dialogs/center-details-dialog"
 import { ProspectDetailsDialog } from "@/components/dialogs/prospect-details-dialog"
+import type { PieChartLabelDisplay } from "@/components/charts/pie-chart-card"
 import { ErrorState } from "@/components/states/error-state"
 import { LoadingState } from "@/components/states/loading-state"
 import { AccountsTab, CentersTab } from "@/components/tabs"
@@ -156,6 +157,10 @@ function DashboardContent(): React.JSX.Element | null {
   const [accountsView, setAccountsView] = useState<"chart" | "data" | "map">(accountsMapEnabled ? "map" : "chart")
   const [centersView, setCentersView] = useState<"chart" | "data" | "map">("map")
   const [prospectsView, setProspectsView] = useState<"chart" | "data">("chart")
+  const [chartLabelDisplay, setChartLabelDisplay] = useState<PieChartLabelDisplay>({
+    showCategoryLabels: true,
+    showPercentages: true,
+  })
   const [activeSection, setActiveSection] = useState<"accounts" | "centers" | "prospects">(defaultSection)
 
   // Server mode: per-entity sort state (the tabs report sort changes here).
@@ -1468,6 +1473,8 @@ function DashboardContent(): React.JSX.Element | null {
                       chartsLoading={serverMode && serverData.pending.charts}
                       mapLoading={serverMode && serverData.pending.map}
                       accountChartData={viewAccountChartData}
+                      chartLabelDisplay={chartLabelDisplay}
+                      onChartLabelDisplayChange={setChartLabelDisplay}
                       accountsView={accountsView}
                       setAccountsView={setAccountsView}
                       currentPage={accountsPage}
@@ -1497,6 +1504,8 @@ function DashboardContent(): React.JSX.Element | null {
                       chartsLoading={serverMode && serverData.pending.charts}
                       mapLoading={serverMode && serverData.pending.map}
                       centerChartData={viewCenterChartData}
+                      chartLabelDisplay={chartLabelDisplay}
+                      onChartLabelDisplayChange={setChartLabelDisplay}
                       centersView={centersView}
                       setCentersView={setCentersView}
                       currentPage={centersPage}
@@ -1523,6 +1532,8 @@ function DashboardContent(): React.JSX.Element | null {
                       server={prospectsServerProps}
                       chartsLoading={serverMode && serverData.pending.charts}
                       prospectChartData={viewProspectChartData}
+                      chartLabelDisplay={chartLabelDisplay}
+                      onChartLabelDisplayChange={setChartLabelDisplay}
                       prospectsView={prospectsView}
                       setProspectsView={setProspectsView}
                       currentPage={prospectsPage}

@@ -294,7 +294,7 @@ export const PieChartCard = memo(({
                 </ContextMenuCheckboxItem>
                 <ContextMenuSeparator />
                 <p className="px-2 py-1 text-xs text-muted-foreground">
-                  Applies to all charts in this tab
+                  Applies to all pie charts
                 </p>
               </ContextMenuContent>
             </ContextMenu>

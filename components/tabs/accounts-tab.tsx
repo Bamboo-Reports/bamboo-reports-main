@@ -69,6 +69,8 @@ interface AccountsTabProps {
     revenueRangeData: Array<{ name: string; value: number; fill?: string }>
     employeesRangeData: Array<{ name: string; value: number; fill?: string }>
   }
+  chartLabelDisplay: PieChartLabelDisplay
+  onChartLabelDisplayChange: (display: PieChartLabelDisplay) => void
   accountsView: "chart" | "data" | "map"
   setAccountsView: (view: "chart" | "data" | "map") => void
   currentPage: number
@@ -176,6 +178,8 @@ export function AccountsTab({
   services,
   tech,
   accountChartData,
+  chartLabelDisplay,
+  onChartLabelDisplayChange,
   accountsView,
   setAccountsView,
   currentPage,
@@ -204,10 +208,6 @@ export function AccountsTab({
   })
   const [dataLayout, setDataLayout] = useState<"table" | "grid">("table")
   const [mapMode, setMapMode] = useState<"city" | "state">("state")
-  const [chartLabelDisplay, setChartLabelDisplay] = useState<PieChartLabelDisplay>({
-    showCategoryLabels: true,
-    showPercentages: true,
-  })
   const {
     columns,
     visibleColumnSet,
@@ -446,7 +446,7 @@ export function AccountsTab({
               countLabel="Total Accounts"
               showBigPercentage
               labelDisplay={chartLabelDisplay}
-              onLabelDisplayChange={setChartLabelDisplay}
+              onLabelDisplayChange={onChartLabelDisplayChange}
               loading={chartsLoading}
             />
             <PieChartCard
@@ -455,7 +455,7 @@ export function AccountsTab({
               countLabel="Total Accounts"
               showBigPercentage
               labelDisplay={chartLabelDisplay}
-              onLabelDisplayChange={setChartLabelDisplay}
+              onLabelDisplayChange={onChartLabelDisplayChange}
               loading={chartsLoading}
             />
             <PieChartCard
@@ -464,7 +464,7 @@ export function AccountsTab({
               countLabel="Total Accounts"
               showBigPercentage
               labelDisplay={chartLabelDisplay}
-              onLabelDisplayChange={setChartLabelDisplay}
+              onLabelDisplayChange={onChartLabelDisplayChange}
               loading={chartsLoading}
             />
             <PieChartCard
@@ -473,7 +473,7 @@ export function AccountsTab({
               countLabel="Total Accounts"
               showBigPercentage
               labelDisplay={chartLabelDisplay}
-              onLabelDisplayChange={setChartLabelDisplay}
+              onLabelDisplayChange={onChartLabelDisplayChange}
               loading={chartsLoading}
             />
           </div>

@@ -47,6 +47,8 @@ interface ProspectsTabProps {
     departmentData: Array<{ name: string; value: number; fill?: string }>
     levelData: Array<{ name: string; value: number; fill?: string }>
   }
+  chartLabelDisplay: PieChartLabelDisplay
+  onChartLabelDisplayChange: (display: PieChartLabelDisplay) => void
   prospectsView: "chart" | "data"
   setProspectsView: (view: "chart" | "data") => void
   currentPage: number
@@ -81,6 +83,8 @@ export function ProspectsTab({
   services,
   tech,
   prospectChartData,
+  chartLabelDisplay,
+  onChartLabelDisplayChange,
   prospectsView,
   setProspectsView,
   currentPage,
@@ -107,10 +111,6 @@ export function ProspectsTab({
     direction: null,
   })
   const [dataLayout, setDataLayout] = useState<"table" | "grid">("table")
-  const [chartLabelDisplay, setChartLabelDisplay] = useState<PieChartLabelDisplay>({
-    showCategoryLabels: true,
-    showPercentages: true,
-  })
   const {
     columns,
     visibleColumnSet,
@@ -412,7 +412,7 @@ export function ProspectsTab({
               countLabel="Total Prospects"
               showBigPercentage
               labelDisplay={chartLabelDisplay}
-              onLabelDisplayChange={setChartLabelDisplay}
+              onLabelDisplayChange={onChartLabelDisplayChange}
               loading={chartsLoading}
             />
             <PieChartCard
@@ -421,7 +421,7 @@ export function ProspectsTab({
               countLabel="Total Prospects"
               showBigPercentage
               labelDisplay={chartLabelDisplay}
-              onLabelDisplayChange={setChartLabelDisplay}
+              onLabelDisplayChange={onChartLabelDisplayChange}
               loading={chartsLoading}
             />
           </div>
