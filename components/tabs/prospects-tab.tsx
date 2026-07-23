@@ -13,7 +13,10 @@ import { useTableRowSelection } from "@/hooks/use-table-row-selection"
 import { getProspectDisplayName as getProspectDisplayNameUtil, getProspectRecordId as getProspectRecordIdUtil } from "@/lib/dashboard/prospect-id"
 import type { FavoriteInput } from "@/hooks/use-favorites"
 import { ProspectGridCard } from "@/components/cards/prospect-grid-card"
-import { PieChartCard } from "@/components/charts/pie-chart-card"
+import {
+  PieChartCard,
+  type PieChartLabelDisplay,
+} from "@/components/charts/pie-chart-card"
 import { EmptyState } from "@/components/states/empty-state"
 import { ProspectDetailsDialog } from "@/components/dialogs/prospect-details-dialog"
 import { AccountDetailsDialog } from "@/components/dialogs/account-details-tabbed-dialog"
@@ -104,6 +107,10 @@ export function ProspectsTab({
     direction: null,
   })
   const [dataLayout, setDataLayout] = useState<"table" | "grid">("table")
+  const [chartLabelDisplay, setChartLabelDisplay] = useState<PieChartLabelDisplay>({
+    showCategoryLabels: true,
+    showPercentages: true,
+  })
   const {
     columns,
     visibleColumnSet,
@@ -404,6 +411,8 @@ export function ProspectsTab({
               data={prospectChartData.departmentData}
               countLabel="Total Prospects"
               showBigPercentage
+              labelDisplay={chartLabelDisplay}
+              onLabelDisplayChange={setChartLabelDisplay}
               loading={chartsLoading}
             />
             <PieChartCard
@@ -411,6 +420,8 @@ export function ProspectsTab({
               data={prospectChartData.levelData}
               countLabel="Total Prospects"
               showBigPercentage
+              labelDisplay={chartLabelDisplay}
+              onLabelDisplayChange={setChartLabelDisplay}
               loading={chartsLoading}
             />
           </div>

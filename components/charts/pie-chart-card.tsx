@@ -7,8 +7,38 @@ import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { PIE_CHART_COLORS } from "@/lib/utils/chart-helpers"
 import { ChartWaveSkeleton } from "@/components/ui/chart-wave-skeleton"
+import {
+  ContextMenu,
+  ContextMenuCheckboxItem,
+  ContextMenuContent,
+  ContextMenuLabel,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu"
 import type { ChartData } from "@/lib/types"
 import type { Options, Point } from "highcharts"
+
+export interface PieChartLabelDisplay {
+  showCategoryLabels: boolean
+  showPercentages: boolean
+}
+
+export function formatPieChartDataLabel(
+  category: string,
+  percent: number,
+  display: PieChartLabelDisplay
+) {
+  if (display.showCategoryLabels && display.showPercentages) {
+    return `${category}: ${percent}%`
+  }
+  if (display.showCategoryLabels) {
+    return category
+  }
+  if (display.showPercentages) {
+    return `${percent}%`
+  }
+  return ""
+}
 
 interface PieChartCardProps {
   title: string
@@ -16,11 +46,22 @@ interface PieChartCardProps {
   dataKey?: string
   countLabel?: string
   showBigPercentage?: boolean
+  labelDisplay: PieChartLabelDisplay
+  onLabelDisplayChange: (display: PieChartLabelDisplay) => void
   /** A newer filter state is loading; shown data (if any) is the previous state's. */
   loading?: boolean
 }
 
-export const PieChartCard = memo(({ title, data, dataKey = "value", countLabel = "Count", showBigPercentage = false, loading = false }: PieChartCardProps) => {
+export const PieChartCard = memo(({
+  title,
+  data,
+  dataKey = "value",
+  countLabel = "Count",
+  showBigPercentage = false,
+  labelDisplay,
+  onLabelDisplayChange,
+  loading = false,
+}: PieChartCardProps) => {
   const OTHERS_THRESHOLD_PERCENT = 5
   // Safety check: ensure data is an array
   const safeData = React.useMemo(() => data || [], [data])
@@ -149,7 +190,7 @@ export const PieChartCard = memo(({ title, data, dataKey = "value", countLabel =
           innerSize: "65%",
           size: "68%",
           dataLabels: {
-            enabled: true,
+            enabled: labelDisplay.showCategoryLabels || labelDisplay.showPercentages,
             distance: 12,
             allowOverlap: false,
             connectorWidth: 1,
@@ -166,7 +207,7 @@ export const PieChartCard = memo(({ title, data, dataKey = "value", countLabel =
               const value = typeof point.y === "number" ? point.y : 0
               if (value <= 0 || total <= 0) return ""
               const percent = Math.round((value / total) * 100)
-              return `${point.name}: ${percent}%`
+              return formatPieChartDataLabel(point.name, percent, labelDisplay)
             },
           },
           showInLegend: false,
@@ -194,7 +235,7 @@ export const PieChartCard = memo(({ title, data, dataKey = "value", countLabel =
         },
       ],
     }
-  }, [seriesData, total, countLabel, showBigPercentage, title])
+  }, [seriesData, total, countLabel, showBigPercentage, title, labelDisplay])
 
   return (
     <Card className="border shadow-sm">
@@ -210,17 +251,58 @@ export const PieChartCard = memo(({ title, data, dataKey = "value", countLabel =
             <ChartWaveSkeleton />
           </div>
         ) : safeData.length > 0 ? (
-          <div className="h-[400px] w-full">
-            {chartLib ? (
-              <chartLib.HighchartsReact
-                highcharts={chartLib.Highcharts}
-                options={options}
-                containerProps={{ style: { height: "100%", width: "100%" } }}
-              />
-            ) : (
+          chartLib ? (
+            <ContextMenu>
+              <ContextMenuTrigger asChild>
+                <div
+                  className="h-[400px] w-full"
+                  aria-label={`${title} chart. Right-click for data label options.`}
+                >
+                  <chartLib.HighchartsReact
+                    highcharts={chartLib.Highcharts}
+                    options={options}
+                    containerProps={{ style: { height: "100%", width: "100%" } }}
+                  />
+                </div>
+              </ContextMenuTrigger>
+              <ContextMenuContent className="w-56">
+                <ContextMenuLabel>Data labels</ContextMenuLabel>
+                <ContextMenuSeparator />
+                <ContextMenuCheckboxItem
+                  checked={labelDisplay.showCategoryLabels}
+                  onCheckedChange={(checked) => {
+                    onLabelDisplayChange({
+                      ...labelDisplay,
+                      showCategoryLabels: checked === true,
+                    })
+                  }}
+                  onSelect={(event) => event.preventDefault()}
+                >
+                  Category labels
+                </ContextMenuCheckboxItem>
+                <ContextMenuCheckboxItem
+                  checked={labelDisplay.showPercentages}
+                  onCheckedChange={(checked) => {
+                    onLabelDisplayChange({
+                      ...labelDisplay,
+                      showPercentages: checked === true,
+                    })
+                  }}
+                  onSelect={(event) => event.preventDefault()}
+                >
+                  Percentages
+                </ContextMenuCheckboxItem>
+                <ContextMenuSeparator />
+                <p className="px-2 py-1 text-xs text-muted-foreground">
+                  Applies to all charts in this tab
+                </p>
+              </ContextMenuContent>
+            </ContextMenu>
+          ) : (
+            <div className="h-[400px] w-full">
               <ChartWaveSkeleton />
-            )}
-          </div>
+            </div>
+          )
         ) : (
           <div className="h-[300px] flex items-center justify-center text-muted-foreground">
             <p className="text-sm">No data available</p>

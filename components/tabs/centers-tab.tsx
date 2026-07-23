@@ -13,7 +13,10 @@ import { SelectionActionBar } from "@/components/tables/selection-action-bar"
 import { useTableRowSelection } from "@/hooks/use-table-row-selection"
 import type { FavoriteInput } from "@/hooks/use-favorites"
 import { CenterGridCard } from "@/components/cards/center-grid-card"
-import { PieChartCard } from "@/components/charts/pie-chart-card"
+import {
+  PieChartCard,
+  type PieChartLabelDisplay,
+} from "@/components/charts/pie-chart-card"
 import { EmptyState } from "@/components/states/empty-state"
 import { CenterDetailsDialog } from "@/components/dialogs/center-details-dialog"
 import { AccountDetailsDialog } from "@/components/dialogs/account-details-tabbed-dialog"
@@ -115,6 +118,10 @@ export function CentersTab({
   })
   const [dataLayout, setDataLayout] = useState<"table" | "grid">("table")
   const [mapMode, setMapMode] = useState<"city" | "state">("state")
+  const [chartLabelDisplay, setChartLabelDisplay] = useState<PieChartLabelDisplay>({
+    showCategoryLabels: true,
+    showPercentages: true,
+  })
   const {
     columns,
     visibleColumnSet,
@@ -384,6 +391,8 @@ export function CentersTab({
               data={centerChartData.centerTypeData}
               countLabel="Total Centres"
               showBigPercentage
+              labelDisplay={chartLabelDisplay}
+              onLabelDisplayChange={setChartLabelDisplay}
               loading={chartsLoading}
             />
             <PieChartCard
@@ -391,6 +400,8 @@ export function CentersTab({
               data={centerChartData.employeesRangeData}
               countLabel="Total Centres"
               showBigPercentage
+              labelDisplay={chartLabelDisplay}
+              onLabelDisplayChange={setChartLabelDisplay}
               loading={chartsLoading}
             />
             <PieChartCard
@@ -398,6 +409,8 @@ export function CentersTab({
               data={centerChartData.cityData}
               countLabel="Total Centres"
               showBigPercentage
+              labelDisplay={chartLabelDisplay}
+              onLabelDisplayChange={setChartLabelDisplay}
               loading={chartsLoading}
             />
             <PieChartCard
@@ -405,6 +418,8 @@ export function CentersTab({
               data={centerChartData.functionData}
               countLabel="Total Centres"
               showBigPercentage
+              labelDisplay={chartLabelDisplay}
+              onLabelDisplayChange={setChartLabelDisplay}
               loading={chartsLoading}
             />
           </div>
