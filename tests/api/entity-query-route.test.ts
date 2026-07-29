@@ -67,10 +67,11 @@ describe("entity query routes", () => {
       return []
     })
     await post(accountsQuery, "https://x/api/accounts/query", { filters: {}, sort: { column: "account_hq_country", direction: "desc" } })
-    expect(lastRowsSql).toContain("order by account_hq_country desc nulls last")
+    expect(lastRowsSql).toContain('lower(account_hq_country) collate "C" desc')
 
     await post(accountsQuery, "https://x/api/accounts/query", { filters: {}, sort: { column: "drop table; --", direction: "asc" } })
-    expect(lastRowsSql).toContain("order by account_global_legal_name asc")
+    expect(lastRowsSql).not.toContain("drop table")
+    expect(lastRowsSql).toContain('lower(account_global_legal_name) collate "C" asc')
   })
 
   it("centers and prospects routes work too", async () => {

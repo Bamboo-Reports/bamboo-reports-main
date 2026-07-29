@@ -22,7 +22,7 @@ export const DEFAULT_PAGE_SIZE = 51
 type EntityConfig = {
   projection: string
   sortable: Set<string>
-  defaultOrder: string
+  defaultColumn: string
   /** Columns appended to every ORDER BY to make it total. See resolveOrder. */
   tiebreak: string[]
   rows: (f: Filters, a: FilterAccess, o: { columns: string; orderBy: string; limit: number; offset: number }) => SqlQuery
@@ -33,7 +33,7 @@ const CONFIG: Record<QueryEntity, EntityConfig> = {
   accounts: {
     projection: ACCOUNT_PROJECTION,
     sortable: new Set([...ACCOUNT_COLUMNS, "account_hq_revenue"]),
-    defaultOrder: "account_global_legal_name asc",
+    defaultColumn: "account_global_legal_name",
     tiebreak: ["account_global_legal_name"],
     rows: buildAccountsQuery,
     count: buildAccountsCountQuery,
@@ -41,7 +41,7 @@ const CONFIG: Record<QueryEntity, EntityConfig> = {
   centers: {
     projection: CENTER_COLUMNS.join(", "),
     sortable: new Set(CENTER_COLUMNS),
-    defaultOrder: "center_name asc",
+    defaultColumn: "center_name",
     tiebreak: ["cn_unique_key"],
     rows: buildCentersQuery,
     count: buildCentersCountQuery,
@@ -49,7 +49,7 @@ const CONFIG: Record<QueryEntity, EntityConfig> = {
   prospects: {
     projection: PROSPECT_COLUMNS.join(", "),
     sortable: new Set(PROSPECT_COLUMNS),
-    defaultOrder: "ps_unique_key asc",
+    defaultColumn: "ps_unique_key",
     // Prospects have no primary key: ps_unique_key is nullable and non-unique
     // (hence the keyless-prospect handling in lib/exports/server-builder.ts), so
     // the tiebreak falls back to the ETL's row identity (the prospects
@@ -69,6 +69,39 @@ const CONFIG: Record<QueryEntity, EntityConfig> = {
 
 export type SortSpec = { column?: unknown; direction?: unknown }
 
+// Columns stored as numbers in the warehouse (etl/V2/master-schema.json). They
+// keep native numeric ordering; every other sortable column is text.
+const NUMERIC_SORT_COLUMNS = new Set([
+  "account_hq_revenue",
+  "account_hq_employee_count",
+  "account_center_employees",
+  "years_in_india",
+  "account_first_center_year",
+  "account_hq_forbes_2000_rank",
+  "account_hq_fortune_500_rank",
+  "center_inc_year",
+  "announced_year",
+  "center_end_year",
+  "center_employees",
+  "lat",
+  "lng",
+])
+
+/**
+ * Text columns sort in three classes: symbols first, then digits, then
+ * letters (case-insensitive), with nulls always last regardless of direction.
+ * The default collation interleaves punctuation and case, which reads as
+ * random in the table. The trailing raw column keeps the ordering total when
+ * the sort column is unique but case-folds to a tie.
+ */
+function textOrder(column: string, direction: "asc" | "desc"): string {
+  return (
+    `case when ${column} is null then 1 else 0 end asc, ` +
+    `case when ${column} ~ '^[0-9]' then 1 when ${column} ~ '^[a-zA-Z]' then 2 else 0 end ${direction}, ` +
+    `lower(${column}) collate "C" ${direction}, ${column} ${direction}`
+  )
+}
+
 /**
  * Resolves the ORDER BY for a page request, always ending in a tiebreak that
  * makes the ordering total.
@@ -81,16 +114,19 @@ export type SortSpec = { column?: unknown; direction?: unknown }
  */
 export function resolveOrder(entity: QueryEntity, sort: SortSpec | undefined): string {
   const cfg = CONFIG[entity]
-  const base =
-    !sort || typeof sort.column !== "string" || !cfg.sortable.has(sort.column)
-      ? cfg.defaultOrder
-      : // NULLS LAST keeps empty values at the end regardless of direction.
-        `${sort.column} ${sort.direction === "desc" ? "desc" : "asc"} nulls last`
+  const chosen =
+    sort && typeof sort.column === "string" && cfg.sortable.has(sort.column) ? sort.column : null
+  const column = chosen ?? cfg.defaultColumn
+  const direction: "asc" | "desc" = chosen !== null && sort?.direction === "desc" ? "desc" : "asc"
 
-  const baseColumn = base.split(" ")[0]
-  const extra = cfg.tiebreak.filter((column) => column !== baseColumn)
+  const base = NUMERIC_SORT_COLUMNS.has(column)
+    ? // NULLS LAST keeps empty values at the end regardless of direction.
+      `${column} ${direction} nulls last`
+    : textOrder(column, direction)
+
+  const extra = cfg.tiebreak.filter((tiebreakColumn) => tiebreakColumn !== column)
   if (extra.length === 0) return base
-  return `${base}, ${extra.map((column) => `${column} asc`).join(", ")}`
+  return `${base}, ${extra.map((tiebreakColumn) => `${tiebreakColumn} asc`).join(", ")}`
 }
 
 export function clampPage(page: unknown): number {
