@@ -296,6 +296,7 @@ function DashboardContent(): React.JSX.Element | null {
     query: searchQuery,
     setQuery: setSearchQuery,
     results: searchResults,
+    isSearching,
     isOpen: isSearchOpen,
     setIsOpen: setIsSearchOpen,
     handleOpen: handleSearchOpen,
@@ -1308,6 +1309,7 @@ function DashboardContent(): React.JSX.Element | null {
         query={searchQuery}
         onQueryChange={setSearchQuery}
         results={searchResults}
+        isSearching={isSearching}
         recentItems={recentItems}
         recentSearches={recentSearches}
         onSelectResult={handleSearchResultSelect}

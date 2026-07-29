@@ -5,6 +5,7 @@ import {
   Briefcase,
   Building,
   Clock,
+  Loader2,
   RefreshCw,
   Search,
   SunMoon,
@@ -36,6 +37,8 @@ interface GlobalSearchProps {
     prospects: GroupedResults
     total: number
   }
+  /** True while a lookup for the current query is still in flight. */
+  isSearching?: boolean
   recentItems: RecentItem[]
   recentSearches: string[]
   onSelectResult: (result: SearchResult) => void
@@ -106,6 +109,7 @@ export function GlobalSearch({
   query,
   onQueryChange,
   results,
+  isSearching = false,
   recentItems,
   recentSearches,
   onSelectResult,
@@ -193,19 +197,32 @@ export function GlobalSearch({
       <CommandList className="max-h-[460px]">
         <CommandEmpty>
           {hasQuery ? (
-            <div className="flex flex-col items-center gap-2 py-8">
-              <div className="rounded-full bg-muted/50 p-3">
-                <Search className="h-6 w-6 text-muted-foreground/50" />
-              </div>
-              <div className="space-y-1 text-center">
-                <p className="text-sm font-medium text-muted-foreground">
-                  No results for &quot;{query}&quot;
-                </p>
-                <p className="text-xs text-muted-foreground/60">
-                  Try a different search term or check the spelling
+            isSearching ? (
+              <div className="flex flex-col items-center gap-2 py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground/60" />
+                <p className="text-sm text-muted-foreground">
+                  Searching for &quot;{query}&quot;…
                 </p>
               </div>
-            </div>
+            ) : query.trim().length < 2 ? (
+              <p className="text-sm text-muted-foreground">
+                Keep typing, at least 2 characters…
+              </p>
+            ) : (
+              <div className="flex flex-col items-center gap-2 py-8">
+                <div className="rounded-full bg-muted/50 p-3">
+                  <Search className="h-6 w-6 text-muted-foreground/50" />
+                </div>
+                <div className="space-y-1 text-center">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    No results for &quot;{query}&quot;
+                  </p>
+                  <p className="text-xs text-muted-foreground/60">
+                    Try a different search term or check the spelling
+                  </p>
+                </div>
+              </div>
+            )
           ) : (
             <p className="text-sm text-muted-foreground">
               Start typing to search…

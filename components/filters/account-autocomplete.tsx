@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback, useId } from 
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { X, Plus, Minus } from "lucide-react"
+import { X, Plus, Minus, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
@@ -80,18 +80,27 @@ export function AccountAutocomplete({
 
   // Server mode: suggestions come from the autocomplete endpoint.
   const [serverSuggestions, setServerSuggestions] = useState<AccountSuggestion[]>([])
+  // True from keystroke until the lookup for it resolves, so the dropdown can
+  // say "Searching" instead of a premature "No accounts found".
+  const [isFetching, setIsFetching] = useState(false)
   const serverRequestRef = useRef(0)
+  useEffect(() => {
+    if (!serverSuggest) return
+    setIsFetching(inputValue.trim().length >= 2)
+  }, [serverSuggest, inputValue])
   useEffect(() => {
     if (!serverSuggest) return
     const term = debouncedValue.toLowerCase().trim()
     const requestId = ++serverRequestRef.current
     if (term.length < 2) {
       setServerSuggestions([])
+      setIsFetching(false)
       return
     }
     fetchAccountAutocomplete(term)
       .then((res) => {
         if (serverRequestRef.current !== requestId) return
+        setIsFetching(false)
         setServerSuggestions(
           res.suggestions.map((s) => ({
             name: s.value,
@@ -106,6 +115,7 @@ export function AccountAutocomplete({
         if (serverRequestRef.current !== requestId) return
         devError("account autocomplete failed:", err)
         setServerSuggestions([])
+        setIsFetching(false)
       })
   }, [serverSuggest, debouncedValue])
 
@@ -478,15 +488,22 @@ export function AccountAutocomplete({
           </div>
         )}
 
-        {/* No results message */}
-        {isOpen && debouncedValue.trim() && suggestions.length === 0 && (
+        {/* Searching / no results message */}
+        {isOpen && (isFetching ? inputValue : debouncedValue).trim() && suggestions.length === 0 && (
           <div
             ref={dropdownRef}
             className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg p-3 text-sm text-muted-foreground"
             role="status"
             aria-live="polite"
           >
-            No accounts found matching &quot;{debouncedValue}&quot;
+            {isFetching ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Searching accounts…
+              </span>
+            ) : (
+              <>No accounts found matching &quot;{debouncedValue}&quot;</>
+            )}
           </div>
         )}
       </div>

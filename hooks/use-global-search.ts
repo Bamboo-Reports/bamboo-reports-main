@@ -33,6 +33,8 @@ interface UseGlobalSearchReturn {
     prospects: GroupedResults
     total: number
   }
+  /** True from keystroke until the (debounced) lookup for it resolves. */
+  isSearching: boolean
   isOpen: boolean
   setIsOpen: (open: boolean) => void
   handleOpen: () => void
@@ -51,6 +53,7 @@ export function useGlobalSearch({
   const [query, setQuery] = useState("")
   const [debouncedQuery, setDebouncedQuery] = useState("")
   const [isOpen, setIsOpen] = useState(false)
+  const [isSearching, setIsSearching] = useState(false)
   const [serverResults, setServerResults] = useState(EMPTY_RESULTS)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const serverRequestRef = useRef(0)
@@ -67,6 +70,7 @@ export function useGlobalSearch({
     const requestId = ++serverRequestRef.current
     if (term.length < 2) {
       setServerResults(EMPTY_RESULTS)
+      setIsSearching(false)
       return
     }
     fetchSearch(term)
@@ -92,23 +96,34 @@ export function useGlobalSearch({
           prospects: group(res.prospects),
           total: res.total,
         })
+        setIsSearching(false)
       })
       .catch((err) => {
         if (serverRequestRef.current !== requestId) return
         devError("server search failed:", err)
         setServerResults(EMPTY_RESULTS)
+        setIsSearching(false)
       })
   }, [serverMode, debouncedQuery])
 
-  const handleSetQuery = useCallback((value: string) => {
-    setQuery(value)
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current)
-    }
-    debounceRef.current = setTimeout(() => {
-      setDebouncedQuery(value)
-    }, DEBOUNCE_MS)
-  }, [])
+  // Client mode resolves synchronously once the debounce fires.
+  useEffect(() => {
+    if (!serverMode) setIsSearching(false)
+  }, [serverMode, debouncedQuery])
+
+  const handleSetQuery = useCallback(
+    (value: string) => {
+      setQuery(value)
+      setIsSearching(value.trim().length >= 2)
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current)
+      }
+      debounceRef.current = setTimeout(() => {
+        setDebouncedQuery(value)
+      }, DEBOUNCE_MS)
+    },
+    []
+  )
 
   useEffect(() => {
     return () => {
@@ -149,12 +164,14 @@ export function useGlobalSearch({
     setIsOpen(false)
     setQuery("")
     setDebouncedQuery("")
+    setIsSearching(false)
   }, [])
 
   return {
     query,
     setQuery: handleSetQuery,
     results,
+    isSearching,
     isOpen,
     setIsOpen,
     handleOpen,
