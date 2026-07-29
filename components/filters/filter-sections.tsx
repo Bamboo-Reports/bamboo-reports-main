@@ -191,7 +191,7 @@ export function AccountFiltersSection({
                 setPendingFilters((prev) => ({ ...prev, accountCenterEmployeesRangeValues: selected }))
                 setActiveFilter("accountCenterEmployeesRangeValues")
               }}
-              placeholder="Select centre employees..."
+              placeholder="Select headcount range..."
               isApplying={isApplying && activeFilter === "accountCenterEmployeesRangeValues"}
             />
           </div>
@@ -392,7 +392,7 @@ export function AccountFiltersSection({
                 setPendingFilters((prev) => ({ ...prev, accountHqIndustryValues: selected }))
                 setActiveFilter("accountHqIndustryValues")
               }}
-              placeholder="Select industries..."
+              placeholder="Select sub industries..."
               isApplying={isApplying && activeFilter === "accountHqIndustryValues"}
             />
           </div>
@@ -408,7 +408,7 @@ export function AccountFiltersSection({
                 setPendingFilters((prev) => ({ ...prev, accountPrimaryNatureValues: selected }))
                 setActiveFilter("accountPrimaryNatureValues")
               }}
-              placeholder="Select nature..."
+              placeholder="Select segments..."
               isApplying={isApplying && activeFilter === "accountPrimaryNatureValues"}
             />
           </div>
@@ -548,7 +548,7 @@ export function CenterFiltersSection({
                 setPendingFilters((prev) => ({ ...prev, functionNameValues: selected }))
                 setActiveFilter("functionNameValues")
               }}
-              placeholder="Select functions..."
+              placeholder="Select services..."
               isApplying={isApplying && activeFilter === "functionNameValues"}
             />
           </div>
@@ -669,7 +669,7 @@ export function CenterFiltersSection({
                 setPendingFilters((prev) => ({ ...prev, centerEmployeesRangeValues: selected }))
                 setActiveFilter("centerEmployeesRangeValues")
               }}
-              placeholder="Select employees range..."
+              placeholder="Select headcount range..."
               isApplying={isApplying && activeFilter === "centerEmployeesRangeValues"}
             />
           </div>
