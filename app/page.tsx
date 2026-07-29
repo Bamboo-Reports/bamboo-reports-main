@@ -712,14 +712,27 @@ function DashboardContent(): React.JSX.Element | null {
     hasTrackedDashboardLoadRef.current = true
   }, [dataLoaded, serverMode, serverData.summary, accounts.length, centers.length, services.length, prospects.length])
 
+  // A refresh keeps the current filters, so when the warehouse data is
+  // unchanged the re-render is pixel-identical. The spinner plus a completion
+  // toast are the only signals that the click did anything.
+  const refreshing = serverMode ? serverData.isRefreshing : loading
+  const refreshRequestedRef = useRef(false)
+
   const handleRefresh = useCallback(() => {
     captureEvent(ANALYTICS_EVENTS.DATA_REFRESH_CLICKED)
+    refreshRequestedRef.current = true
     if (serverMode) {
       serverData.reload()
       return
     }
     loadData(true)
   }, [serverMode, serverData, loadData])
+
+  useEffect(() => {
+    if (refreshing || !refreshRequestedRef.current) return
+    refreshRequestedRef.current = false
+    toast.success('Data refreshed')
+  }, [refreshing])
 
   const handleErrorRetry = useCallback(() => {
     captureEvent(ANALYTICS_EVENTS.ERROR_RETRY_CLICKED)
@@ -1271,7 +1284,7 @@ function DashboardContent(): React.JSX.Element | null {
       >
         Skip to main content
       </a>
-      <Header onRefresh={handleRefresh} onStartTour={startTour} onOpenSearch={handleSearchOpen} onOpenExports={() => setExportsDialogOpen(true)} onOpenHistory={() => setHistoryDialogOpen(true)} onOpenFavorites={handleOpenFavorites} />
+      <Header onRefresh={handleRefresh} refreshing={refreshing} onStartTour={startTour} onOpenSearch={handleSearchOpen} onOpenExports={() => setExportsDialogOpen(true)} onOpenHistory={() => setHistoryDialogOpen(true)} onOpenFavorites={handleOpenFavorites} />
       <ExportsDialog open={exportsDialogOpen} onOpenChange={setExportsDialogOpen} />
       <FavoritesDialog
         open={favoritesDialogOpen}

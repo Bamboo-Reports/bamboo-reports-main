@@ -116,6 +116,11 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
   const [entityPages, setEntityPages] = useState<EntityPages>({ accounts: null, centers: null, prospects: null })
   const [error, setError] = useState<string | null>(null)
   const [isFetching, setIsFetching] = useState(false)
+  // Distinct from isFetching: stays true for the whole reload() round trip so the
+  // header can show the refresh actually running. A refresh keeps the filters
+  // (and so effectiveKey) unchanged, which means the per-section `pending`
+  // skeletons never trigger and there would otherwise be no visible cue.
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   // The canonical (wire) filters JSON driving all fetches; updates are
   // debounced unless the target state is already cached.
@@ -148,6 +153,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
   const reload = useCallback(() => {
     clearClientDashboardCache()
     bypassUntilRef.current = Date.now() + 5000
+    setIsRefreshing(true)
     setRefreshKey((k) => k + 1)
   }, [])
 
@@ -180,6 +186,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
       setFacets(cachedFacets)
       setAppliedKeys((prev) => ({ ...prev, core: effectiveKey }))
       setError(null)
+      setIsRefreshing(false)
       return
     }
     const requestId = ++coreRequestRef.current
@@ -204,7 +211,10 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
         setError(err instanceof Error ? err.message : "Failed to load dashboard data")
       })
       .finally(() => {
-        if (coreRequestRef.current === requestId) setIsFetching(false)
+        if (coreRequestRef.current === requestId) {
+          setIsFetching(false)
+          setIsRefreshing(false)
+        }
       })
   }, [enabled, effectiveKey, refreshKey])
 
@@ -378,6 +388,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
     entityPages,
     error,
     isFetching,
+    isRefreshing,
     initialLoading,
     pending,
     reload,

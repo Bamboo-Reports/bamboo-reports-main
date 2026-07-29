@@ -24,6 +24,8 @@ import type { Profile } from '@/lib/types'
 
 interface HeaderProps {
   onRefresh: () => void
+  /** True while a refresh is in flight; spins the icon and blocks re-entry. */
+  refreshing?: boolean
   onStartTour?: () => void
   onOpenSearch?: () => void
   onOpenExports?: () => void
@@ -89,7 +91,7 @@ function ProfileThemeSwitcher() {
   )
 }
 
-export const Header = React.memo(function Header({ onRefresh, onStartTour, onOpenSearch, onOpenExports, onOpenHistory, onOpenFavorites }: HeaderProps): React.JSX.Element {
+export const Header = React.memo(function Header({ onRefresh, refreshing = false, onStartTour, onOpenSearch, onOpenExports, onOpenHistory, onOpenFavorites }: HeaderProps): React.JSX.Element {
   const environmentLabel = getEnvironmentLabel()
   const router = useRouter()
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -222,8 +224,23 @@ export const Header = React.memo(function Header({ onRefresh, onStartTour, onOpe
                 <span className="flex-1 text-left text-xs">Search…</span>
               </button>
             )}
-            <Button variant="ghost" size="sm" onClick={onRefresh} className="h-8 px-3 group" title="Refresh" aria-label="Refresh data">
-              <RefreshCw className="h-4 w-4 group-hover:rotate-180 transition-transform duration-300" />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onRefresh}
+              disabled={refreshing}
+              aria-busy={refreshing}
+              className="h-8 px-3 group"
+              title={refreshing ? 'Refreshing…' : 'Refresh'}
+              aria-label={refreshing ? 'Refreshing data' : 'Refresh data'}
+            >
+              <RefreshCw
+                className={
+                  refreshing
+                    ? 'h-4 w-4 animate-spin'
+                    : 'h-4 w-4 group-hover:rotate-180 transition-transform duration-300'
+                }
+              />
             </Button>
             {NOTIFICATIONS_ENABLED ? <NotificationDropdown /> : null}
             <DropdownMenu>
