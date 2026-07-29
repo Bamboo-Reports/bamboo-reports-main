@@ -18,8 +18,14 @@ const textOrder = (column: string, direction: "asc" | "desc") =>
   `lower(${column}) collate "C" ${direction}, ${column} ${direction}`
 
 describe("resolveOrder", () => {
-  it("appends the center key to the default center_name order", () => {
-    expect(resolveOrder("centers", undefined)).toBe(`${textOrder("center_name", "asc")}, cn_unique_key asc`)
+  it("defaults every entity to the account name", () => {
+    expect(resolveOrder("centers", undefined)).toBe(
+      `${textOrder("account_global_legal_name", "asc")}, cn_unique_key asc`
+    )
+    expect(resolveOrder("prospects", undefined)).toBe(
+      `${textOrder("account_global_legal_name", "asc")}, ps_unique_key asc, prospect_email asc, ` +
+        "prospect_full_name asc, prospect_first_name asc, prospect_last_name asc"
+    )
   })
 
   it("appends the center key to a user-chosen sort", () => {

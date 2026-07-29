@@ -41,7 +41,7 @@ const CONFIG: Record<QueryEntity, EntityConfig> = {
   centers: {
     projection: CENTER_COLUMNS.join(", "),
     sortable: new Set(CENTER_COLUMNS),
-    defaultColumn: "center_name",
+    defaultColumn: "account_global_legal_name",
     tiebreak: ["cn_unique_key"],
     rows: buildCentersQuery,
     count: buildCentersCountQuery,
@@ -49,7 +49,7 @@ const CONFIG: Record<QueryEntity, EntityConfig> = {
   prospects: {
     projection: PROSPECT_COLUMNS.join(", "),
     sortable: new Set(PROSPECT_COLUMNS),
-    defaultColumn: "ps_unique_key",
+    defaultColumn: "account_global_legal_name",
     // Prospects have no primary key: ps_unique_key is nullable and non-unique
     // (hence the keyless-prospect handling in lib/exports/server-builder.ts), so
     // the tiebreak falls back to the ETL's row identity (the prospects
