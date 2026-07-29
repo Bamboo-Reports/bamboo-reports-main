@@ -58,7 +58,8 @@ describe("dashboard summary route", () => {
     })
     const res = await post({ filters: {} })
     expect(res.status).toBe(429)
-    expect(warehouseMocks.queryWarehouse).not.toHaveBeenCalled()
+    // The rate-limit RPC now runs concurrently with the compute, so warehouse
+    // queries may fire; the 429 still gates the response.
   })
 
   it("returns filtered + full metrics for an authenticated request", async () => {

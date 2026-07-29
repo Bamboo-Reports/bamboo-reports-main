@@ -14,4 +14,7 @@ if [ ! -f "$SCRIPT_DIR/pyproject.toml" ]; then
     exit 1
 fi
 
-exec uv run --project "$SCRIPT_DIR" --locked python "$SCRIPT_DIR/main.py" "$@"
+# main_cache_purge.py is the primary entry: same import as main.py plus a purge
+# of the app's dashboard response cache (Upstash Redis) after a successful run.
+# main.py is kept as a no-purge backup, runnable directly with uv run if needed.
+exec uv run --project "$SCRIPT_DIR" --locked python "$SCRIPT_DIR/main_cache_purge.py" "$@"

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const authMocks = vi.hoisted(() => ({
   extractBearerToken: vi.fn((h: string | null) => (h === "Bearer token-1" ? "token-1" : null)),
@@ -69,5 +69,35 @@ describe("account autocomplete route", () => {
     warehouseMocks.queryWarehouse.mockRejectedValue(new Error("db down"))
     const res = await get("gbx")
     expect(res.status).toBe(500)
+  })
+
+  describe("response caching", () => {
+    beforeEach(async () => {
+      process.env.DASHBOARD_CACHE_TTL_MS = "600000"
+      const { clearCache } = await import("@/lib/cache/memory")
+      clearCache()
+    })
+    afterEach(() => {
+      process.env.DASHBOARD_CACHE_TTL_MS = "0"
+    })
+
+    it("serves a repeated prefix from cache (no warehouse queries)", async () => {
+      const first = await get("gbx")
+      expect(first.status).toBe(200)
+      const callsAfterFirst = warehouseMocks.queryWarehouse.mock.calls.length
+      expect(callsAfterFirst).toBeGreaterThan(0)
+
+      const second = await get("gbx")
+      expect(second.status).toBe(200)
+      expect(warehouseMocks.queryWarehouse.mock.calls.length).toBe(callsAfterFirst)
+      expect(await second.json()).toEqual(await first.json())
+    })
+
+    it("different prefixes use different cache entries", async () => {
+      await get("gbx")
+      const callsAfterFirst = warehouseMocks.queryWarehouse.mock.calls.length
+      await get("acme")
+      expect(warehouseMocks.queryWarehouse.mock.calls.length).toBeGreaterThan(callsAfterFirst)
+    })
   })
 })

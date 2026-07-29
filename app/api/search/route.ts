@@ -4,10 +4,21 @@ import { createLogger } from "@/lib/logger"
 import { queryWarehouse } from "@/lib/db/warehouse"
 import { buildAccountSearch, buildCenterSearch, buildProspectSearch, MIN_QUERY_LENGTH } from "@/lib/search/search-sql"
 import { ACCOUNT_PROJECTION, CENTER_COLUMNS, PROSPECT_COLUMNS } from "@/lib/dashboard/entity-columns"
+import { dashboardCacheTtlMs, getOrCompute } from "@/lib/cache/memory"
 
 export const dynamic = "force-dynamic"
 
 const logger = createLogger("api/search")
+
+// Results depend only on the query term (warehouse data is weekly-static), so
+// they cache under the shared dash: prefix and the ETL purge clears them on
+// import. 24h bounds keyspace growth from high-cardinality terms; TTL 0 on
+// DASHBOARD_CACHE_TTL_MS still disables caching globally.
+const SEARCH_CACHE_TTL_MS = 24 * 60 * 60 * 1000
+
+function searchCacheTtl(): number {
+  return dashboardCacheTtlMs() === 0 ? 0 : SEARCH_CACHE_TTL_MS
+}
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } })
@@ -44,8 +55,9 @@ export async function GET(request: Request) {
   } catch {
     return json({ error: "Invalid or expired token" }, 401)
   }
-  const limited = await enforceRateLimit({ userId, bucket: "search" })
-  if (!limited.ok) return limited.response
+  // Not awaited yet: the RPC runs while the (usually cached) search resolves;
+  // the outcome gates the response below.
+  const limitedPromise = enforceRateLimit({ userId, bucket: "search" })
 
   const term = (new URL(request.url).searchParams.get("q") ?? "").toLowerCase().trim()
   const empty = { items: [], totalMatches: 0 }
@@ -54,61 +66,71 @@ export async function GET(request: Request) {
   }
 
   try {
-    const acc = buildAccountSearch(term)
-    const cen = buildCenterSearch(term)
-    const pro = buildProspectSearch(term)
-    const [aItems, aCount, cItems, cCount, pItems, pCount] = await Promise.all([
-      queryWarehouse<Record<string, string | null>>(acc.items),
-      queryWarehouse(acc.count),
-      queryWarehouse<Record<string, string | null>>(cen.items),
-      queryWarehouse(cen.count),
-      queryWarehouse<Record<string, string | null>>(pro.items),
-      queryWarehouse(pro.count),
-    ])
+    const body = await getOrCompute(
+      `search:${term}`,
+      searchCacheTtl(),
+      async () => {
+        const acc = buildAccountSearch(term)
+        const cen = buildCenterSearch(term)
+        const pro = buildProspectSearch(term)
+        const [aItems, aCount, cItems, cCount, pItems, pCount] = await Promise.all([
+          queryWarehouse<Record<string, string | null>>(acc.items),
+          queryWarehouse(acc.count),
+          queryWarehouse<Record<string, string | null>>(cen.items),
+          queryWarehouse(cen.count),
+          queryWarehouse<Record<string, string | null>>(pro.items),
+          queryWarehouse(pro.count),
+        ])
 
-    const [accountRows, centerRows, prospectRows] = await Promise.all([
-      hydrate("accounts", "account_global_legal_name", ACCOUNT_PROJECTION, aItems.map((r) => r.id)),
-      hydrate("centers", "cn_unique_key", CENTER_COLUMNS.join(", "), cItems.map((r) => r.id)),
-      hydrate("prospects", "ps_unique_key", PROSPECT_COLUMNS.join(", "), pItems.map((r) => r.id)),
-    ])
+        const [accountRows, centerRows, prospectRows] = await Promise.all([
+          hydrate("accounts", "account_global_legal_name", ACCOUNT_PROJECTION, aItems.map((r) => r.id)),
+          hydrate("centers", "cn_unique_key", CENTER_COLUMNS.join(", "), cItems.map((r) => r.id)),
+          hydrate("prospects", "ps_unique_key", PROSPECT_COLUMNS.join(", "), pItems.map((r) => r.id)),
+        ])
 
-    const accounts = {
-      items: aItems.map((r) => ({
-        type: "account" as const,
-        id: r.id,
-        title: r.id,
-        subtitle: joinParts([r.industry, r.country], " · "),
-        data: r.id ? accountRows.get(r.id) : undefined,
-      })),
-      totalMatches: total(aCount),
-    }
-    const centers = {
-      items: cItems.map((r) => ({
-        type: "center" as const,
-        id: r.id,
-        title: r.title,
-        subtitle: joinParts([r.city, r.state, r.country], ", "),
-        data: r.id ? centerRows.get(r.id) : undefined,
-      })),
-      totalMatches: total(cCount),
-    }
-    const prospects = {
-      items: pItems.map((r) => ({
-        type: "prospect" as const,
-        id: r.id || `${r.account}::${r.fullname}`,
-        title: r.fullname || "Unknown",
-        subtitle: joinParts([r.title, r.account], " · "),
-        data: r.id ? prospectRows.get(r.id) : undefined,
-      })),
-      totalMatches: total(pCount),
-    }
+        const accounts = {
+          items: aItems.map((r) => ({
+            type: "account" as const,
+            id: r.id,
+            title: r.id,
+            subtitle: joinParts([r.industry, r.country], " · "),
+            data: r.id ? accountRows.get(r.id) : undefined,
+          })),
+          totalMatches: total(aCount),
+        }
+        const centers = {
+          items: cItems.map((r) => ({
+            type: "center" as const,
+            id: r.id,
+            title: r.title,
+            subtitle: joinParts([r.city, r.state, r.country], ", "),
+            data: r.id ? centerRows.get(r.id) : undefined,
+          })),
+          totalMatches: total(cCount),
+        }
+        const prospects = {
+          items: pItems.map((r) => ({
+            type: "prospect" as const,
+            id: r.id || `${r.account}::${r.fullname}`,
+            title: r.fullname || "Unknown",
+            subtitle: joinParts([r.title, r.account], " · "),
+            data: r.id ? prospectRows.get(r.id) : undefined,
+          })),
+          totalMatches: total(pCount),
+        }
 
-    return json({
-      accounts,
-      centers,
-      prospects,
-      total: accounts.totalMatches + centers.totalMatches + prospects.totalMatches,
-    })
+        return {
+          accounts,
+          centers,
+          prospects,
+          total: accounts.totalMatches + centers.totalMatches + prospects.totalMatches,
+        }
+      },
+      { bypassRead: request.headers.get("x-no-cache") === "1" }
+    )
+    const limited = await limitedPromise
+    if (!limited.ok) return limited.response
+    return json(body)
   } catch (err) {
     logger.error("search_failed", { error: err })
     return json({ error: "Search failed" }, 500)

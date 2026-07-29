@@ -25,8 +25,9 @@ export async function handleEntityQuery(entity: QueryEntity, request: Request): 
   } catch {
     return json({ error: "Invalid or expired token" }, 401)
   }
-  const limited = await enforceRateLimit({ userId, bucket: `${entity}:query` })
-  if (!limited.ok) return limited.response
+  // Not awaited yet: the RPC runs while the body parses and the (usually
+  // cached) compute happens; the outcome gates the response below.
+  const limitedPromise = enforceRateLimit({ userId, bucket: `${entity}:query` })
 
   let body: { filters?: unknown; page?: unknown; pageSize?: unknown; sort?: { column?: unknown; direction?: unknown } }
   try {
@@ -50,6 +51,8 @@ export async function handleEntityQuery(entity: QueryEntity, request: Request): 
         }),
       { bypassRead: request.headers.get("x-no-cache") === "1" }
     )
+    const limited = await limitedPromise
+    if (!limited.ok) return limited.response
     return json(result)
   } catch (err) {
     logger.error("entity_query_failed", { entity, error: err })

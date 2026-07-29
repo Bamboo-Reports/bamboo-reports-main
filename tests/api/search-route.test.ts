@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const authMocks = vi.hoisted(() => ({
   extractBearerToken: vi.fn((h: string | null) => (h === "Bearer token-1" ? "token-1" : null)),
@@ -77,5 +77,42 @@ describe("search route", () => {
     warehouseMocks.queryWarehouse.mockRejectedValue(new Error("db down"))
     const res = await get("acme")
     expect(res.status).toBe(500)
+  })
+
+  describe("response caching", () => {
+    beforeEach(async () => {
+      process.env.DASHBOARD_CACHE_TTL_MS = "600000"
+      const { clearCache } = await import("@/lib/cache/memory")
+      clearCache()
+    })
+    afterEach(() => {
+      process.env.DASHBOARD_CACHE_TTL_MS = "0"
+    })
+
+    it("serves a repeated query from cache (no warehouse queries)", async () => {
+      const first = await get("acme")
+      expect(first.status).toBe(200)
+      const callsAfterFirst = warehouseMocks.queryWarehouse.mock.calls.length
+      expect(callsAfterFirst).toBeGreaterThan(0)
+
+      const second = await get("acme")
+      expect(second.status).toBe(200)
+      expect(warehouseMocks.queryWarehouse.mock.calls.length).toBe(callsAfterFirst)
+      expect(await second.json()).toEqual(await first.json())
+    })
+
+    it("normalizes the term, so case and padding share one cache entry", async () => {
+      await get("acme")
+      const callsAfterFirst = warehouseMocks.queryWarehouse.mock.calls.length
+      await get("  ACME  ")
+      expect(warehouseMocks.queryWarehouse.mock.calls.length).toBe(callsAfterFirst)
+    })
+
+    it("different terms use different cache entries", async () => {
+      await get("acme")
+      const callsAfterFirst = warehouseMocks.queryWarehouse.mock.calls.length
+      await get("globex")
+      expect(warehouseMocks.queryWarehouse.mock.calls.length).toBeGreaterThan(callsAfterFirst)
+    })
   })
 })

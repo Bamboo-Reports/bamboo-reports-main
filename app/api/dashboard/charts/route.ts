@@ -49,8 +49,9 @@ export async function POST(request: Request) {
   } catch {
     return json({ error: "Invalid or expired token" }, 401)
   }
-  const limited = await enforceRateLimit({ userId, bucket: "dashboard:charts" })
-  if (!limited.ok) return limited.response
+  // Not awaited yet: the RPC runs while the body parses and the (usually
+  // cached) compute happens; the outcome gates the response below.
+  const limitedPromise = enforceRateLimit({ userId, bucket: "dashboard:charts" })
 
   let rawBody: unknown
   try {
@@ -107,6 +108,8 @@ export async function POST(request: Request) {
       },
       { bypassRead: request.headers.get("x-no-cache") === "1" }
     )
+    const limited = await limitedPromise
+    if (!limited.ok) return limited.response
     return json(body)
   } catch (err) {
     logger.error("charts_failed", { error: err })
