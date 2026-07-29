@@ -102,7 +102,6 @@ function DashboardContent(): React.JSX.Element | null {
     tech,
     prospects,
     aliases,
-    lockedProspectTeasers,
     summary,
     loading,
     error,
@@ -357,19 +356,6 @@ function DashboardContent(): React.JSX.Element | null {
   const previousSidebarCollapsedRef = useRef<boolean | null>(null)
 
   const activeFiltersCount = getTotalActiveFilters()
-  const filteredLockedProspectTeasers = useMemo(() => {
-    // Server mode: the per-account prospect limit is disabled in this
-    // deployment, so there are no teasers to thread through.
-    if (serverMode) return []
-    const visibleAccountNames = new Set(
-      filteredData.filteredAccounts
-        .map((account) => account.account_global_legal_name)
-        .filter((name): name is string => Boolean(name))
-    )
-
-    return lockedProspectTeasers.filter((teaser) => visibleAccountNames.has(teaser.account_global_legal_name))
-  }, [serverMode, filteredData.filteredAccounts, lockedProspectTeasers])
-
   const currentScreenView = useMemo(() => {
     if (activeSection === "accounts") {
       return accountsView
@@ -1323,7 +1309,6 @@ function DashboardContent(): React.JSX.Element | null {
           account={searchSelectedAccount}
           centers={centers}
           prospects={prospects}
-          lockedProspectTeasers={lockedProspectTeasers}
           services={services}
           tech={tech}
           open={searchAccountDialogOpen}
@@ -1388,7 +1373,6 @@ function DashboardContent(): React.JSX.Element | null {
             data={exportPayload.data}
             isFiltered={exportPayload.isFiltered}
             filtersSnapshot={exportPayload.filtersSnapshot}
-            lockedProspectsCount={filteredLockedProspectTeasers.length}
             accountNames={exportPayload.accountNames}
             centerKeys={exportPayload.centerKeys}
             prospectKeys={exportPayload.prospectKeys}
@@ -1464,7 +1448,6 @@ function DashboardContent(): React.JSX.Element | null {
                       accounts={viewAccounts}
                       centers={filteredData.filteredCenters}
                       prospects={filteredData.filteredProspects}
-                      lockedProspectTeasers={filteredLockedProspectTeasers}
                       services={filteredData.filteredServices}
                       tech={tech}
                       functions={functions}
@@ -1495,7 +1478,6 @@ function DashboardContent(): React.JSX.Element | null {
                       centers={viewCenters}
                       allCenters={centers}
                       prospects={filteredData.filteredProspects}
-                      lockedProspectTeasers={filteredLockedProspectTeasers}
                       functions={functions}
                       services={filteredData.filteredServices}
                       tech={tech}
@@ -1526,7 +1508,6 @@ function DashboardContent(): React.JSX.Element | null {
                       centers={filteredData.filteredCenters}
                       prospects={viewProspects}
                       allProspects={prospects}
-                      lockedProspectTeasers={filteredLockedProspectTeasers}
                       services={filteredData.filteredServices}
                       tech={tech}
                       server={prospectsServerProps}

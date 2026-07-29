@@ -1,6 +1,4 @@
-import type { Account, Center, LockedProspectTeaser, Prospect, Service, Tech } from "@/lib/types"
-import { getProspectsPerAccountLimit } from "@/lib/config/dashboard-access"
-import { partitionProspectsByAccess } from "@/lib/dashboard/prospect-access"
+import type { Account, Center, Prospect, Service, Tech } from "@/lib/types"
 import {
   ACCOUNT_PROJECTION,
   CENTER_COLUMNS,
@@ -17,15 +15,12 @@ export type AccountRelatedResult = {
   services: Service[]
   tech: Tech[]
   prospects: Prospect[]
-  lockedProspectTeasers: LockedProspectTeaser[]
 }
 
 /**
  * Everything the account detail dialog needs for one account: the account row,
  * its centers, the services rows for those centers, its tech rows, and its
- * prospects partitioned by the per-account access limit (same rule as the
- * dashboard payload in app/actions/data.ts). Section entitlements gate each
- * piece like getDashboardData does.
+ * prospects. Section entitlements gate each piece like getDashboardData does.
  */
 export async function getAccountRelated(name: string, access: FilterAccess): Promise<AccountRelatedResult> {
   const values = [name]
@@ -34,7 +29,7 @@ export async function getAccountRelated(name: string, access: FilterAccess): Pro
   const prospectsEnabled = access.prospectsEnabled !== false
 
   const empty = Promise.resolve([] as never[])
-  const [accountRows, centers, services, tech, rawProspects] = await Promise.all([
+  const [accountRows, centers, services, tech, prospects] = await Promise.all([
     accountsEnabled
       ? queryWarehouse<Account>({
           text: `select ${ACCOUNT_PROJECTION} from accounts where account_global_legal_name = $1 limit 1`,
@@ -67,17 +62,11 @@ export async function getAccountRelated(name: string, access: FilterAccess): Pro
       : empty,
   ])
 
-  const { visibleProspects, lockedProspectTeasers } = partitionProspectsByAccess(
-    rawProspects,
-    getProspectsPerAccountLimit()
-  )
-
   return {
     account: accountRows[0] ?? null,
     centers,
     services,
     tech,
-    prospects: visibleProspects,
-    lockedProspectTeasers,
+    prospects,
   }
 }

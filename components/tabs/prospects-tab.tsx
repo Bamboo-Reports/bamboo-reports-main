@@ -20,7 +20,6 @@ import {
 import { EmptyState } from "@/components/states/empty-state"
 import { ProspectDetailsDialog } from "@/components/dialogs/prospect-details-dialog"
 import { AccountDetailsDialog } from "@/components/dialogs/account-details-tabbed-dialog"
-import { LockedProspectTeaserCard, LockedProspectTeaserRow } from "@/components/prospects/locked-prospect-teaser-section"
 import { getPaginatedData, formatProspectLocation } from "@/lib/utils/helpers"
 import { ViewSwitcher } from "@/components/ui/view-switcher"
 import { SortButton } from "@/components/ui/sort-button"
@@ -33,14 +32,13 @@ import { fetchAccountRelated } from "@/lib/dashboard/api-client"
 import { devError } from "@/lib/utils/dev-log"
 import { GridSkeletonCards, TableSkeletonRows, type TabServerProps } from "@/components/tabs/accounts-tab"
 import { cn } from "@/lib/utils"
-import type { Account, Center, LockedProspectTeaser, Prospect, Service, Tech } from "@/lib/types"
+import type { Account, Center, Prospect, Service, Tech } from "@/lib/types"
 
 interface ProspectsTabProps {
   accounts: Account[]
   centers: Center[]
   prospects: Prospect[]
   allProspects: Prospect[]
-  lockedProspectTeasers: LockedProspectTeaser[]
   services: Service[]
   tech: Tech[]
   prospectChartData: {
@@ -79,7 +77,6 @@ export function ProspectsTab({
   centers,
   prospects,
   allProspects,
-  lockedProspectTeasers,
   services,
   tech,
   prospectChartData,
@@ -294,43 +291,9 @@ export function ProspectsTab({
     return sort.direction === "asc" ? sorted : sorted.reverse()
   }, [prospects, sort, server])
 
-  const lockedTeaserCountsByAccount = React.useMemo(() => {
-    const counts = new Map<string, number>()
-    for (const teaser of lockedProspectTeasers) {
-      counts.set(teaser.account_global_legal_name, (counts.get(teaser.account_global_legal_name) ?? 0) + 1)
-    }
-    return counts
-  }, [lockedProspectTeasers])
-
-  const gridItems = React.useMemo(
-    () => [
-      ...sortedProspects.map((prospect) => ({ type: "visible" as const, prospect })),
-      ...lockedProspectTeasers.map((teaser) => ({ type: "locked" as const, teaser })),
-    ],
-    [sortedProspects, lockedProspectTeasers]
-  )
-  const tableItems = React.useMemo(
-    () => [
-      ...sortedProspects.map((prospect) => ({ type: "visible" as const, prospect })),
-      ...lockedProspectTeasers.map((teaser) => ({ type: "locked" as const, teaser })),
-    ],
-    [sortedProspects, lockedProspectTeasers]
-  )
-
-  const pageTableItems = React.useMemo(
-    () => (server ? tableItems : getPaginatedData(tableItems, currentPage, itemsPerPage)),
-    [server, tableItems, currentPage, itemsPerPage]
-  )
-  const pageGridItems = React.useMemo(
-    () => (server ? gridItems : getPaginatedData(gridItems, currentPage, itemsPerPage)),
-    [server, gridItems, currentPage, itemsPerPage]
-  )
   const pageProspects = React.useMemo(
-    () =>
-      pageTableItems
-        .filter((item) => item.type === "visible")
-        .map((item) => item.prospect),
-    [pageTableItems]
+    () => (server ? sortedProspects : getPaginatedData(sortedProspects, currentPage, itemsPerPage)),
+    [server, sortedProspects, currentPage, itemsPerPage]
   )
   const {
     selected: selectedKeys,
@@ -364,7 +327,7 @@ export function ProspectsTab({
   }
 
   // Show empty state when no prospects
-  if (server ? server.total === 0 && !server.loading : prospects.length === 0 && lockedProspectTeasers.length === 0) {
+  if (server ? server.total === 0 && !server.loading : prospects.length === 0) {
     return (
       <TabsContent value="prospects">
         <EmptyState type="no-results" />
@@ -507,29 +470,19 @@ export function ProspectsTab({
                     <TableBody>
                       {server?.loading ? (
                         <TableSkeletonRows columns={1 + (["avatar", "name", "location", "title", "department"] as const).filter(isColumnVisible).length} />
-                      ) : pageTableItems.map((item) =>
-                        item.type === "visible" ? (
-                          <ProspectRow
-                            key={getProspectRecordId(item.prospect)}
-                            prospect={item.prospect}
-                            onOpen={handleRowOpen}
-                            visibleColumns={visibleColumnSet}
-                            selectable
-                            isSelected={selectedKeys.has(getProspectRecordId(item.prospect))}
-                            onSelectChange={handleRowSelectChange}
-                            isFavorite={favoriteKeys?.has(`prospect:${getProspectRecordId(item.prospect)}`)}
-                            onToggleFavorite={onToggleFavorite ? handleRowToggleFavorite : undefined}
-                          />
-                        ) : (
-                          <LockedProspectTeaserRow
-                            key={item.teaser.id}
-                            teaser={item.teaser}
-                            remainingCount={lockedTeaserCountsByAccount.get(item.teaser.account_global_legal_name) ?? 0}
-                            visibleColumns={visibleColumnSet}
-                            selectable
-                          />
-                        )
-                      )}
+                      ) : pageProspects.map((prospect) => (
+                        <ProspectRow
+                          key={getProspectRecordId(prospect)}
+                          prospect={prospect}
+                          onOpen={handleRowOpen}
+                          visibleColumns={visibleColumnSet}
+                          selectable
+                          isSelected={selectedKeys.has(getProspectRecordId(prospect))}
+                          onSelectChange={handleRowSelectChange}
+                          isFavorite={favoriteKeys?.has(`prospect:${getProspectRecordId(prospect)}`)}
+                          onToggleFavorite={onToggleFavorite ? handleRowToggleFavorite : undefined}
+                        />
+                      ))}
                     </TableBody>
                   </Table>
                 ) : (
@@ -555,32 +508,24 @@ export function ProspectsTab({
                       </Button>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
-                      {server?.loading ? <GridSkeletonCards /> : pageGridItems.map((item) =>
-                        item.type === "visible" ? (
-                          <ProspectGridCard
-                            key={getProspectRecordId(item.prospect)}
-                            prospect={item.prospect}
-                            onClick={() => handleProspectClick(item.prospect, "grid_card")}
-                          />
-                        ) : (
-                          <LockedProspectTeaserCard
-                            key={item.teaser.id}
-                            teaser={item.teaser}
-                            remainingCount={lockedTeaserCountsByAccount.get(item.teaser.account_global_legal_name) ?? 0}
-                          />
-                        )
-                      )}
+                      {server?.loading ? <GridSkeletonCards /> : pageProspects.map((prospect) => (
+                        <ProspectGridCard
+                          key={getProspectRecordId(prospect)}
+                          prospect={prospect}
+                          onClick={() => handleProspectClick(prospect, "grid_card")}
+                        />
+                      ))}
                     </div>
                   </div>
                 )}
               </div>
-                  {(server ? server.total : dataLayout === "grid" ? gridItems.length : tableItems.length) > 0 && (
+                  {(server ? server.total : sortedProspects.length) > 0 && (
                     <PaginationControls
                       currentPage={currentPage}
-                      totalItems={server ? server.total : dataLayout === "grid" ? gridItems.length : tableItems.length}
+                      totalItems={server ? server.total : sortedProspects.length}
                       itemsPerPage={itemsPerPage}
                       onPageChange={setCurrentPage}
-                      dataLength={server ? server.total : dataLayout === "grid" ? gridItems.length : tableItems.length}
+                      dataLength={server ? server.total : sortedProspects.length}
                     />
                   )}
             </CardContent>
@@ -601,7 +546,6 @@ export function ProspectsTab({
         account={selectedAccount}
         centers={centers}
         prospects={allProspects}
-        lockedProspectTeasers={lockedProspectTeasers}
         services={services}
         tech={tech}
         open={isAccountDialogOpen}

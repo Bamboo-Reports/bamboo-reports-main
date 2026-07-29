@@ -8,7 +8,6 @@ const rateLimitMocks = vi.hoisted(() => ({ enforceRateLimit: vi.fn() }))
 const warehouseMocks = vi.hoisted(() => ({ queryWarehouse: vi.fn() }))
 const accessMocks = vi.hoisted(() => ({
   isSectionEnabled: vi.fn(() => true),
-  getProspectsPerAccountLimit: vi.fn((): number | null => null),
 }))
 
 vi.mock("@/lib/auth/server", () => authMocks)
@@ -56,7 +55,6 @@ describe("GET /api/accounts/[name]/related", () => {
     authMocks.resolveAuthenticatedUserId.mockResolvedValue("user-1")
     rateLimitMocks.enforceRateLimit.mockResolvedValue({ ok: true })
     accessMocks.isSectionEnabled.mockReturnValue(true)
-    accessMocks.getProspectsPerAccountLimit.mockReturnValue(null)
     mockWarehouse()
   })
 
@@ -82,20 +80,10 @@ describe("GET /api/accounts/[name]/related", () => {
       services: [SERVICE],
       tech: [TECH],
       prospects: PROSPECTS,
-      lockedProspectTeasers: [],
     })
     for (const call of warehouseMocks.queryWarehouse.mock.calls) {
       expect((call[0] as { values: unknown[] }).values).toEqual(["Acme & Co"])
     }
-  })
-
-  it("partitions prospects into teasers when a per-account limit applies", async () => {
-    accessMocks.getProspectsPerAccountLimit.mockReturnValue(1)
-    const res = await get("Acme%20Corp")
-    const body = (await res.json()) as { prospects: unknown[]; lockedProspectTeasers: Array<{ locked: boolean }> }
-    expect(body.prospects).toEqual([PROSPECTS[0]])
-    expect(body.lockedProspectTeasers).toHaveLength(1)
-    expect(body.lockedProspectTeasers[0].locked).toBe(true)
   })
 
   it("returns 404 for an unknown account", async () => {
@@ -117,6 +105,5 @@ describe("GET /api/accounts/[name]/related", () => {
     expect(body.centers).toEqual([])
     expect(body.services).toEqual([])
     expect(body.prospects).toEqual([])
-    expect(body.lockedProspectTeasers).toEqual([])
   })
 })

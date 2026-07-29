@@ -7,7 +7,6 @@ import {
   getAccessibleDefaultSection,
   getDatasetUnavailableMessage,
   getEnabledSections,
-  getProspectsPerAccountLimit,
   getSectionUnavailableMessage,
   isDatasetEnabled,
   isSectionDisabled,
@@ -68,29 +67,6 @@ describe("dashboard access config", () => {
       expect(isDatasetEnabled("services")).toBe(false)
       expect(isDatasetEnabled("centers")).toBe(false)
       expect(isDatasetEnabled("accounts")).toBe(true)
-    })
-  })
-
-  describe("limits", () => {
-    it("returns null if limit is null", () => {
-      DASHBOARD_ACCESS_CONFIG.limits.prospectsPerAccount = null
-      expect(getProspectsPerAccountLimit()).toBeNull()
-    })
-
-    it("returns null if limit is not finite", () => {
-      DASHBOARD_ACCESS_CONFIG.limits.prospectsPerAccount = Infinity as any
-      expect(getProspectsPerAccountLimit()).toBeNull()
-
-      DASHBOARD_ACCESS_CONFIG.limits.prospectsPerAccount = NaN as any
-      expect(getProspectsPerAccountLimit()).toBeNull()
-    })
-
-    it("returns floored positive integer", () => {
-      DASHBOARD_ACCESS_CONFIG.limits.prospectsPerAccount = 5.7
-      expect(getProspectsPerAccountLimit()).toBe(5)
-
-      DASHBOARD_ACCESS_CONFIG.limits.prospectsPerAccount = -5
-      expect(getProspectsPerAccountLimit()).toBe(0)
     })
   })
 

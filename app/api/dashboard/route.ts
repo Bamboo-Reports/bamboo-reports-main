@@ -54,7 +54,6 @@ async function fetchAndCache() {
     accounts_count: data.accounts.length,
     centers_count: data.centers.length,
     prospects_count: data.prospects.length,
-    locked_prospect_teasers_count: data.lockedProspectTeasers.length,
     error: data.error,
   })
 

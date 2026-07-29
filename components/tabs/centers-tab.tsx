@@ -34,14 +34,13 @@ import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { fetchAccountRelated, type CityAggregate, type StateAggregate } from "@/lib/dashboard/api-client"
 import { devError } from "@/lib/utils/dev-log"
 import { GridSkeletonCards, MapUpdatingPill, TableSkeletonRows, type TabServerProps } from "@/components/tabs/accounts-tab"
-import type { Account, Center, Function, LockedProspectTeaser, Prospect, Service, Tech } from "@/lib/types"
+import type { Account, Center, Function, Prospect, Service, Tech } from "@/lib/types"
 
 interface CentersTabProps {
   accounts: Account[]
   centers: Center[]
   allCenters: Center[]
   prospects: Prospect[]
-  lockedProspectTeasers: LockedProspectTeaser[]
   functions: Function[]
   services: Service[]
   tech: Tech[]
@@ -87,7 +86,6 @@ export function CentersTab({
   centers,
   allCenters,
   prospects,
-  lockedProspectTeasers,
   services,
   tech,
   centerChartData,
@@ -627,7 +625,6 @@ export function CentersTab({
         account={selectedAccount}
         centers={centers}
         prospects={prospects}
-        lockedProspectTeasers={lockedProspectTeasers}
         services={services}
         tech={tech}
         open={isAccountDialogOpen}

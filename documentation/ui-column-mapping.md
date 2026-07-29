@@ -312,8 +312,6 @@ Shows a list of prospects/contacts for this account, each displaying:
 | Department | `prospect_department` | `prospects` |
 | Seniority Level | `prospect_level` | `prospects` |
 
-When prospect packaging is active, additional locked teaser contacts may appear in the same surface. Those rows/cards intentionally omit real name, title, email, and LinkedIn details.
-
 ---
 
 ### 3.2 Center Details Dialog

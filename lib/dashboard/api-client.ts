@@ -6,7 +6,6 @@ import type {
   Center,
   ChartData,
   Filters,
-  LockedProspectTeaser,
   Prospect,
   Service,
   Tech,
@@ -121,7 +120,6 @@ export type AccountRelatedResponse = {
   services: Service[]
   tech: Tech[]
   prospects: Prospect[]
-  lockedProspectTeasers: LockedProspectTeaser[]
 }
 
 export type CenterDetailResponse = { center: Center; services: Service[]; tech: Tech[] }

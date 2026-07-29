@@ -47,8 +47,6 @@ interface ExportDialogProps {
   prospectKeys?: string[] | null
   /** Prospect composite row ids for selected prospects that do not have ps_unique_key. */
   keylessProspectIds?: string[] | null
-  /** Locked prospect teasers matching the current export scope. */
-  lockedProspectsCount?: number
   /**
    * Export-by-filter (#249): dashboard filter state sent to the server, which
    * builds the export through the filter engine (key lists are ignored).
@@ -113,7 +111,6 @@ export function ExportDialog({
   centerKeys,
   prospectKeys,
   keylessProspectIds,
-  lockedProspectsCount = 0,
   filters,
   rowCounts,
   allowedDatasets,
@@ -222,12 +219,11 @@ export function ExportDialog({
       row_count_centers: countOf("centers"),
       row_count_services: countOf("services"),
       row_count_prospects: countOf("prospects"),
-      row_count_locked_prospects: lockedProspectsCount,
       selected_datasets: initiallySelectedDatasets,
       selected_dataset_count: initiallySelectedDatasets.length,
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, data, rowCounts, isFiltered, lockedProspectsCount, allowedDatasets])
+  }, [open, data, rowCounts, isFiltered, allowedDatasets])
 
   const totalSelected = useMemo(
     () => Object.values(selection).filter(Boolean).length,
@@ -302,7 +298,6 @@ export function ExportDialog({
       row_count_centers: selection.centers ? countOf("centers") : 0,
       row_count_services: selection.services ? countOf("services") : 0,
       row_count_prospects: selection.prospects ? countOf("prospects") : 0,
-      row_count_locked_prospects: selection.prospects ? lockedProspectsCount : 0,
     })
 
     // Fake but plausible progress ramp while the server is working. The
@@ -383,7 +378,6 @@ export function ExportDialog({
         row_count_centers: selection.centers ? data.centers.length : 0,
         row_count_services: selection.services ? data.services.length : 0,
         row_count_prospects: selection.prospects ? data.prospects.length : 0,
-        row_count_locked_prospects: selection.prospects ? lockedProspectsCount : 0,
         stage: toTrackedStringArray([stage])[0] ?? null,
         has_error: Boolean(error),
       })
@@ -528,11 +522,6 @@ export function ExportDialog({
                   {selectedRowCount.toLocaleString()} rows will be included in this export.
                 </p>
               </div>
-              {selection.prospects && lockedProspectsCount > 0 ? (
-                <Badge variant="outline" className="w-fit border-amber-500/30 bg-amber-500/10 text-[11px] text-amber-700 dark:text-amber-300">
-                  {lockedProspectsCount.toLocaleString()} locked prospects excluded
-                </Badge>
-              ) : null}
             </div>
             <div className="mt-3 grid gap-2 sm:grid-cols-4">
               {readinessItems.map((item) => {

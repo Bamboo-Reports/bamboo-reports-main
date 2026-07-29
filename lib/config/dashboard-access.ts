@@ -6,9 +6,6 @@ export type DashboardDataset = ExportDatasetKey
 
 type DashboardAccessConfig = {
   sections: Record<DashboardSection, DashboardAccessState>
-  limits: {
-    prospectsPerAccount: number | null
-  }
 }
 
 /**
@@ -23,9 +20,6 @@ export const DASHBOARD_ACCESS_CONFIG: DashboardAccessConfig = {
     accounts: "enabled",
     centers: "enabled",
     prospects: "enabled",
-  },
-  limits: {
-    prospectsPerAccount: null,
   },
 }
 
@@ -67,20 +61,6 @@ export function isDatasetEnabled(dataset: DashboardDataset): boolean {
     case "prospects":
       return isSectionEnabled(dataset)
   }
-}
-
-export function getProspectsPerAccountLimit(): number | null {
-  const limit = DASHBOARD_ACCESS_CONFIG.limits.prospectsPerAccount
-
-  if (limit === null) {
-    return null
-  }
-
-  if (!Number.isFinite(limit)) {
-    return null
-  }
-
-  return Math.max(0, Math.floor(limit))
 }
 
 export function canAccessAccountsMapView(): boolean {

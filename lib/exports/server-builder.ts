@@ -1,7 +1,5 @@
 import ExcelJS from "exceljs"
 import { getPrismaOrThrow } from "@/lib/db/prisma"
-import { getProspectsPerAccountLimit } from "@/lib/config/dashboard-access"
-import { partitionProspectsByAccess } from "@/lib/dashboard/prospect-access"
 import {
   buildAccountsQuery,
   buildCentersQuery,
@@ -230,9 +228,8 @@ export async function buildServerExport(
   selection: ServerExportSelection
 ): Promise<ServerExportResult> {
   const { datasets, accountNames, centerKeys, prospectKeys, keylessProspectIds, filters, access } = selection
-  const prospectsPerAccountLimit = getProspectsPerAccountLimit()
 
-  const [accounts, centers, services, rawProspects] = filters
+  const [accounts, centers, services, prospects] = filters
     ? await Promise.all([
         datasets.includes("accounts") ? fetchAccountsByFilters(filters, access ?? {}) : Promise.resolve([] as Account[]),
         datasets.includes("centers") ? fetchCentersByFilters(filters, access ?? {}) : Promise.resolve([] as Center[]),
@@ -245,7 +242,6 @@ export async function buildServerExport(
         datasets.includes("services") ? fetchServices(centerKeys) : Promise.resolve([] as Service[]),
         datasets.includes("prospects") ? fetchProspects(accountNames, prospectKeys, keylessProspectIds) : Promise.resolve([] as Prospect[]),
       ])
-  const { visibleProspects: prospects } = partitionProspectsByAccess(rawProspects, prospectsPerAccountLimit)
 
   const workbook = new ExcelJS.Workbook()
 

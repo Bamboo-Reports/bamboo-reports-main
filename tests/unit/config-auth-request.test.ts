@@ -6,7 +6,6 @@ import {
   getAccessibleDefaultSection,
   getDatasetUnavailableMessage,
   getEnabledSections,
-  getProspectsPerAccountLimit,
   getSectionUnavailableMessage,
   isDatasetEnabled,
   isSectionDisabled,
@@ -30,7 +29,6 @@ describe("config, auth, request, and ticker helpers", () => {
     expect(isSectionDisabled("accounts")).toBe(false)
     expect(isDatasetEnabled("services")).toBe(true)
     expect(canAccessAccountsMapView()).toBe(true)
-    expect(getProspectsPerAccountLimit()).toBeNull()
     expect(() => assertSectionEnabled("accounts")).not.toThrow()
     expect(() => assertDatasetEnabled("accounts")).not.toThrow()
     expect(getSectionUnavailableMessage("centers")).toBe("Centres is Not Procured.")

@@ -6,7 +6,6 @@ import { makeAccount, makeCenter, makeProspect, makeService } from "../fixtures/
 const mocks = vi.hoisted(() => ({
   queryRaw: vi.fn(),
   queryWarehouse: vi.fn(),
-  getProspectsPerAccountLimit: vi.fn(),
 }))
 
 vi.mock("@/lib/db/prisma", () => ({
@@ -19,14 +18,9 @@ vi.mock("@/lib/db/warehouse", () => ({
   queryWarehouse: mocks.queryWarehouse,
 }))
 
-vi.mock("@/lib/config/dashboard-access", () => ({
-  getProspectsPerAccountLimit: () => mocks.getProspectsPerAccountLimit(),
-}))
-
 describe("server export builder", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mocks.getProspectsPerAccountLimit.mockReturnValue(null)
     mocks.queryRaw.mockImplementation(async (strings: TemplateStringsArray) => {
       const query = strings.join(" ")
       if (query.includes("FROM accounts")) return [makeAccount({ account_global_legal_name: "Acme Corp" })]
@@ -53,11 +47,10 @@ describe("server export builder", () => {
     expect(workbook.worksheets.map((sheet) => sheet.name)).toEqual(["Accounts", "Centres"])
   })
 
-  it("applies the prospect access limit before writing row counts", async () => {
-    mocks.getProspectsPerAccountLimit.mockReturnValue(1)
+  it("writes every prospect row returned by the query", async () => {
     const result = await buildServerExport({ datasets: ["prospects"] })
-    expect(result.rowCounts.prospects).toBe(1)
-    expect(result.totalRows).toBe(1)
+    expect(result.rowCounts.prospects).toBe(2)
+    expect(result.totalRows).toBe(2)
   })
 
   it("passes precise account, center, and prospect selections into Prisma queries", async () => {

@@ -43,7 +43,7 @@ import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { canAccessAccountsMapView } from "@/lib/config/dashboard-access"
 import { getPaginatedData } from "@/lib/utils/helpers"
 import type { CityAggregate, StateAggregate } from "@/lib/dashboard/api-client"
-import type { Account, Center, Prospect, Service, Function, Tech, LockedProspectTeaser } from "@/lib/types"
+import type { Account, Center, Prospect, Service, Function, Tech } from "@/lib/types"
 
 /**
  * Server mode (#249): rows arrive pre-paginated/sorted from the query
@@ -59,7 +59,6 @@ interface AccountsTabProps {
   accounts: Account[]
   centers: Center[]
   prospects: Prospect[]
-  lockedProspectTeasers: LockedProspectTeaser[]
   services: Service[]
   tech: Tech[]
   functions: Function[]
@@ -174,7 +173,6 @@ export function AccountsTab({
   accounts,
   centers,
   prospects,
-  lockedProspectTeasers,
   services,
   tech,
   accountChartData,
@@ -683,7 +681,6 @@ export function AccountsTab({
         account={selectedAccount}
         centers={centers}
         prospects={prospects}
-        lockedProspectTeasers={lockedProspectTeasers}
         services={services}
         tech={tech}
         open={isDialogOpen}
