@@ -276,9 +276,16 @@ export const SummaryCards = React.memo(function SummaryCards({
             </CardHeader>
             <CardContent className="relative flex flex-wrap items-end justify-between gap-2 px-4 pt-0 pb-3.5">
               {updating ? (
-                <div className="min-w-0 space-y-2 py-1" aria-label="Loading count">
-                  <Skeleton className="h-7 w-20 lg:h-8" />
-                  <Skeleton className="h-3 w-24" />
+                // Mirrors the loaded layout's exact line boxes (text-2xl/3xl
+                // leading-tight number, mt-0.5 text-xs label) so swapping the
+                // skeleton in and out never shifts the content below.
+                <div className="min-w-0" aria-label="Loading count">
+                  <div className="flex h-[30px] items-center lg:h-[37.5px]">
+                    <Skeleton className="h-6 w-20 lg:h-7" />
+                  </div>
+                  <div className="mt-0.5 flex h-4 items-center">
+                    <Skeleton className="h-3 w-24" />
+                  </div>
                 </div>
               ) : (
                 <div className="min-w-0">
