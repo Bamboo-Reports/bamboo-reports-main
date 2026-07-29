@@ -436,6 +436,13 @@ def check_sheet_headers(schema_def: Dict[str, Any], target_tables: List[str] = N
 # ── Data Processing ──────────────────────────────────────────────────────────
 
 
+# Invisible characters that arrive via copy-paste into the source sheet:
+# zero-width space/non-joiner/joiner, BOM, soft hyphen. They render as nothing
+# in Google Sheets but corrupt keys, sorting, and search in the warehouse
+# (the "Freudenberg SE" incident, 2026-07-29). Stripped from every value.
+INVISIBLE_CHARS_RE = re.compile("[​‌‍﻿­]")
+
+
 def clean_dataframe(df: pd.DataFrame, table_schema: Dict) -> pd.DataFrame:
     columns_def = table_schema["columns"]
     schema_cols = [c["Column"] for c in columns_def]
@@ -453,13 +460,21 @@ def clean_dataframe(df: pd.DataFrame, table_schema: Dict) -> pd.DataFrame:
         try:
             if ctype in ("INTEGER", "BIGINT"):
                 df[col_name] = (
-                    pd.to_numeric(series.astype(str).str.replace(",", ""), errors="coerce")
+                    pd.to_numeric(
+                        series.astype(str)
+                        .str.replace(INVISIBLE_CHARS_RE, "", regex=True)
+                        .str.replace(",", ""),
+                        errors="coerce",
+                    )
                     .round()
                     .astype("Int64")
                 )
             elif ctype in ("DOUBLE PRECISION", "FLOAT"):
                 df[col_name] = pd.to_numeric(
-                    series.astype(str).str.replace(",", ""), errors="coerce"
+                    series.astype(str)
+                    .str.replace(INVISIBLE_CHARS_RE, "", regex=True)
+                    .str.replace(",", ""),
+                    errors="coerce",
                 )
             elif ctype == "TIMESTAMP":
                 df[col_name] = pd.to_datetime(series, errors="coerce")
@@ -501,7 +516,7 @@ def normalize_change_value(value: Any) -> Optional[str]:
     if isinstance(value, (datetime.datetime, datetime.date, pd.Timestamp)):
         return value.isoformat()
 
-    value_str = str(value).strip()
+    value_str = INVISIBLE_CHARS_RE.sub("", str(value)).strip()
     if value_str.lower() in {"nan", "none", "null", "nat"}:
         return None
     return value_str if value_str else None
@@ -521,7 +536,7 @@ def normalize_text_value(value: Any, col_name: str) -> Optional[str]:
             return match.group(1)
         return normalized
 
-    value_str = str(value).strip()
+    value_str = INVISIBLE_CHARS_RE.sub("", str(value)).strip()
     if value_str.lower() in {"nan", "none", "null", "nat", ""}:
         return None
     return value_str
