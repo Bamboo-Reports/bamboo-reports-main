@@ -112,7 +112,7 @@ export function CompanyLogo({
   if (effectiveTheme !== "auto") {
     segments.push(`theme/${effectiveTheme}`)
   }
-  segments.push("fallback/404", "type/icon")
+  segments.push("fallback/404", "type/icon.png")
   const logoUrl = new URL(`https://cdn.brandfetch.io/${segments.join("/")}`)
   logoUrl.searchParams.set("c", BRANDFETCH_CLIENT_ID)
 
