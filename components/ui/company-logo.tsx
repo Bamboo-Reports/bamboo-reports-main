@@ -136,6 +136,10 @@ export function CompanyLogo({
         src={logoUrl.toString()}
         alt={`${companyName} logo`}
         fill
+        // Brandfetch already serves exact-size WebP, and its bot protection
+        // blocks the Next image optimizer's server-side fetch. Load directly
+        // in the browser instead.
+        unoptimized
         className={cn(
           "object-contain transition-opacity duration-300",
           imageLoaded ? "opacity-100" : "opacity-0"
