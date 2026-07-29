@@ -47,6 +47,10 @@ const tech = [
   t("c3", "Workday"),
   t("c4", null),
   t("c5", "SAP ERP"),
+  // A keyless tech row: the client engine skips it, and the SQL must too. A
+  // NULL reaching the exclude subquery makes `not in (...)` never true, which
+  // would drop every center from a software-exclude filter.
+  t(null, "Oracle Database"),
 ] as unknown as Tech[]
 
 const prospects = [
@@ -79,7 +83,7 @@ function c(cn: string, account: string, o: Record<string, unknown>) {
 function fn(cn: string, name: string) {
   return { cn_unique_key: cn, function_name: name }
 }
-function t(cn: string, sw: string | null) {
+function t(cn: string | null, sw: string | null) {
   return { cn_unique_key: cn, software_in_use: sw }
 }
 function pr(id: string, account: string, o: Record<string, unknown>) {

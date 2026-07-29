@@ -23,6 +23,8 @@ type EntityConfig = {
   projection: string
   sortable: Set<string>
   defaultOrder: string
+  /** Columns appended to every ORDER BY to make it total. See resolveOrder. */
+  tiebreak: string[]
   rows: (f: Filters, a: FilterAccess, o: { columns: string; orderBy: string; limit: number; offset: number }) => SqlQuery
   count: (f: Filters, a: FilterAccess) => SqlQuery
 }
@@ -32,6 +34,7 @@ const CONFIG: Record<QueryEntity, EntityConfig> = {
     projection: ACCOUNT_PROJECTION,
     sortable: new Set([...ACCOUNT_COLUMNS, "account_hq_revenue"]),
     defaultOrder: "account_global_legal_name asc",
+    tiebreak: ["account_global_legal_name"],
     rows: buildAccountsQuery,
     count: buildAccountsCountQuery,
   },
@@ -39,6 +42,7 @@ const CONFIG: Record<QueryEntity, EntityConfig> = {
     projection: CENTER_COLUMNS.join(", "),
     sortable: new Set(CENTER_COLUMNS),
     defaultOrder: "center_name asc",
+    tiebreak: ["cn_unique_key"],
     rows: buildCentersQuery,
     count: buildCentersCountQuery,
   },
@@ -46,6 +50,18 @@ const CONFIG: Record<QueryEntity, EntityConfig> = {
     projection: PROSPECT_COLUMNS.join(", "),
     sortable: new Set(PROSPECT_COLUMNS),
     defaultOrder: "ps_unique_key asc",
+    // Prospects have no primary key: ps_unique_key is nullable and non-unique
+    // (hence the keyless-prospect handling in lib/exports/server-builder.ts), so
+    // the tiebreak falls back to the ETL's row identity (the prospects
+    // secondary_id in etl/V2/main.py).
+    tiebreak: [
+      "ps_unique_key",
+      "prospect_email",
+      "prospect_full_name",
+      "prospect_first_name",
+      "prospect_last_name",
+      "account_global_legal_name",
+    ],
     rows: buildProspectsQuery,
     count: buildProspectsCountQuery,
   },
@@ -53,13 +69,28 @@ const CONFIG: Record<QueryEntity, EntityConfig> = {
 
 export type SortSpec = { column?: unknown; direction?: unknown }
 
-function resolveOrder(cfg: EntityConfig, sort: SortSpec | undefined): string {
-  if (!sort || typeof sort.column !== "string" || !cfg.sortable.has(sort.column)) {
-    return cfg.defaultOrder
-  }
-  const dir = sort.direction === "desc" ? "desc" : "asc"
-  // NULLS LAST keeps empty values at the end regardless of direction.
-  return `${sort.column} ${dir} nulls last`
+/**
+ * Resolves the ORDER BY for a page request, always ending in a tiebreak that
+ * makes the ordering total.
+ *
+ * Pages are fetched one query per page, so an ordering with ties lets the
+ * planner return tied rows in a different order per page: the same row can show
+ * up on two pages while another is never returned at all. Every sortable column
+ * here (and both non-key defaults) has ties, so the entity's tiebreak columns
+ * are appended unless the chosen column already is the tiebreak.
+ */
+export function resolveOrder(entity: QueryEntity, sort: SortSpec | undefined): string {
+  const cfg = CONFIG[entity]
+  const base =
+    !sort || typeof sort.column !== "string" || !cfg.sortable.has(sort.column)
+      ? cfg.defaultOrder
+      : // NULLS LAST keeps empty values at the end regardless of direction.
+        `${sort.column} ${sort.direction === "desc" ? "desc" : "asc"} nulls last`
+
+  const baseColumn = base.split(" ")[0]
+  const extra = cfg.tiebreak.filter((column) => column !== baseColumn)
+  if (extra.length === 0) return base
+  return `${base}, ${extra.map((column) => `${column} asc`).join(", ")}`
 }
 
 export function clampPage(page: unknown): number {
@@ -84,7 +115,7 @@ export async function queryEntity(
   const cfg = CONFIG[entity]
   const page = clampPage(opts.page)
   const pageSize = clampPageSize(opts.pageSize)
-  const orderBy = resolveOrder(cfg, opts.sort)
+  const orderBy = resolveOrder(entity, opts.sort)
 
   const rowsQuery = cfg.rows(filters, access, {
     columns: cfg.projection,

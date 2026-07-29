@@ -6,6 +6,10 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": resolve(process.cwd()),
+      // "server-only" throws on import outside a Server Component, which blocks
+      // tests from importing any module that transitively pulls it in (e.g.
+      // lib/db/warehouse). Stub it out: the guard is a build-time concern.
+      "server-only": resolve(process.cwd(), "tests/stubs/server-only.ts"),
     },
   },
   test: {

@@ -230,7 +230,13 @@ function softwareClause(f: Filters, p: Params): string | null {
     kws.map((kw) => `software_in_use ilike ${p.add(`%${escapeLike(kw)}%`)}`).join(" or ")
   const parts: string[] = []
   if (exclude.length > 0) {
-    parts.push(`cn_unique_key not in (select cn_unique_key from tech where ${techLike(exclude)})`)
+    // tech.cn_unique_key is nullable, and `x not in (...)` is never true once the
+    // subquery yields a single NULL, which would silently drop every center. The
+    // client engine skips keyless tech rows outright (buildCenterSoftwareIndex in
+    // lib/dashboard/filtering.ts), so exclude them here too.
+    parts.push(
+      `cn_unique_key not in (select cn_unique_key from tech where cn_unique_key is not null and (${techLike(exclude)}))`
+    )
   }
   if (include.length > 0) {
     parts.push(`cn_unique_key in (select cn_unique_key from tech where ${techLike(include)})`)
