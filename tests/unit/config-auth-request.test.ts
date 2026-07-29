@@ -11,7 +11,7 @@ import {
   isSectionDisabled,
   isSectionEnabled,
 } from "@/lib/config/dashboard-access"
-import { getEnvironmentLabel, getLogoDevPublicKey } from "@/lib/config/environment"
+import { getBrandfetchClientId, getEnvironmentLabel } from "@/lib/config/environment"
 import { canExportData, normalizeUserRole } from "@/lib/auth/roles"
 import { extractBearerToken } from "@/lib/auth/server"
 import { getClientInfo } from "@/lib/request/client-info"
@@ -37,9 +37,9 @@ describe("config, auth, request, and ticker helpers", () => {
 
   it("normalizes environment values", () => {
     vi.stubEnv("NEXT_PUBLIC_ENVIRONMENT_LABEL", " staging ")
-    vi.stubEnv("NEXT_PUBLIC_LOGO_DEV_TOKEN", " token ")
+    vi.stubEnv("NEXT_PUBLIC_BRANDFETCH_CLIENT_ID", " client-id ")
     expect(getEnvironmentLabel()).toBe("STAGING")
-    expect(getLogoDevPublicKey()).toBe("token")
+    expect(getBrandfetchClientId()).toBe("client-id")
   })
 
   it("handles roles and bearer tokens", () => {
