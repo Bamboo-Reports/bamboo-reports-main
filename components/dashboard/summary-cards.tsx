@@ -287,10 +287,10 @@ export const SummaryCards = React.memo(function SummaryCards({
                     </span>
                     <Skeleton className="absolute inset-y-0.5 left-0 w-20" />
                   </div>
-                  <p className="invisible relative mt-0.5 text-xs">
+                  <div className="invisible relative mt-0.5 text-xs">
                     <Skeleton className="visible absolute inset-y-0.5 left-0 w-24" />
                     &nbsp;
-                  </p>
+                  </div>
                 </div>
               ) : (
                 <div className="min-w-0">
