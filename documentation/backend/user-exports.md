@@ -37,7 +37,7 @@ ExportsDialog ("My exports")
 | `components/exports/exports-dialog.tsx` | "My exports" listing dialog |
 | `lib/supabase/server.ts` | Service-role Supabase client (for Storage ops) |
 | `lib/request/client-info.ts` | Extracts IP + UA from Next.js `Request` |
-| `documentation/user-exports-schema.sql` | Table + RLS + Storage policy DDL |
+| `user-exports-schema.sql` | Table + RLS + Storage policy DDL |
 
 ## Database schema
 
@@ -67,7 +67,7 @@ Storage: private bucket `user-exports`, path convention `{user_id}/{export_id}.x
 
 Required per environment:
 
-1. Run `documentation/user-exports-schema.sql` against the Supabase project (SQL Editor → paste → Run).
+1. Run `user-exports-schema.sql` against the Supabase project (SQL Editor → paste → Run).
 2. In **Supabase Dashboard → Storage**, create a **private** bucket named exactly `user-exports`.
 3. Add env var `SUPABASE_SERVICE_ROLE_KEY` — the service-role secret key from Supabase → Project Settings → API. Server-only (do not prefix with `NEXT_PUBLIC_`).
 
@@ -87,7 +87,7 @@ Required per environment:
 |---------|-------|-----|
 | `Export failed: Supabase server config missing` | `SUPABASE_SERVICE_ROLE_KEY` not set | Add the env var and restart the dev server |
 | `Failed to archive export` | Storage bucket missing or wrong name | Create a private bucket named exactly `user-exports` |
-| `Failed to record export: relation "public.user_exports" does not exist` | Schema SQL not run | Run `documentation/user-exports-schema.sql` |
+| `Failed to record export: relation "public.user_exports" does not exist` | Schema SQL not run | Run `user-exports-schema.sql` |
 | `Centers export is Not Procured.` (or similar) | The dataset is disabled in `lib/config/dashboard-access.ts` for this deployment | Re-enable the dataset in config, or remove it from the export selection |
 | My exports dialog is empty despite rows in DB | Stale dev-server module cache | Hard-refresh the page; restart `next dev` |
 | Re-download 404 | User signed in as a different account than when the export was made | Users only see their own exports by design |

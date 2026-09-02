@@ -52,7 +52,7 @@ Bamboo Reports provides a unified view of business entities (**Accounts**, **Cen
 ### Dashboard and Insights
 - **Smart Summary Cards:** Real-time filtered vs. total counts per entity.
 - **Interactive Charts:** Highcharts donut charts and a technology treemap for categorical breakdowns (Country, Industry, Revenue, Headcount, Technology), plus a Recharts revenue trend chart in the Account details dialog.
-- **Tabbed Navigation:** Seamless switching between Accounts, Centers, Prospects, and Services contexts.
+- **Tabbed Navigation:** Switch between Accounts, Centers, Prospects, and Services tabs.
 - **Deployment-Level Access Control:** Accounts, Centers, and Prospects can be enabled or disabled per deployment via `lib/config/dashboard-access.ts`.
 - **Geospatial Analytics:**
   - MapLibre cluster map optimized for 5000+ center points over a keyless Carto basemap.
@@ -66,6 +66,7 @@ Bamboo Reports provides a unified view of business entities (**Accounts**, **Cen
 - **Range Sliders:** Revenue, Employee count, and Years in India sliders with logarithmic scaling.
 - **Premium Filter Reveal:** Accounts and Centers support config-driven `Show More` premium filters via `lib/config/filters.ts`.
 - **Saved Filters:** Persist complex filter sets to Supabase with Row-Level Security isolation.
+- **Filter Sharing:** Share a saved filter with a specific teammate by email; the recipient gets read access to that one filter only.
 - **Debounced Search:** 300ms debounce on keyword inputs to optimize performance.
 - **Active Filter Count:** Visual badge indicator showing the number of applied filters.
 
@@ -74,6 +75,13 @@ Bamboo Reports provides a unified view of business entities (**Accounts**, **Cen
 - **Row-Level Details:** Comprehensive tabbed dialog views for Accounts, Centers, and Prospects.
 - **Type Safety:** Shared TypeScript definitions ensuring consistency from database to UI.
 
+### AI Account Summaries
+- **Executive Briefs:** One short, grounded paragraph per account in the Account details dialog, generated on demand via the Vercel AI SDK and OpenRouter.
+- **Data-Only Grounding:** The prompt is restricted to the account's own warehouse snapshot; no outside knowledge, no investment advice, no prospect identities.
+- **Swappable Model:** Default model is configurable via `AI_ACCOUNT_SUMMARY_MODEL` with no code change.
+
+> **Details:** See [AI Account Summaries](documentation/backend/ai-account-summaries.md).
+
 ### Export and Integrations
 - **Server-Side `.xlsx` Exports:** ExcelJS builds multi-sheet workbooks on the server against a full-schema `SELECT *`, so exports include every database column regardless of what the dashboard renders.
 - **Filter-Aware:** The client sends account / center identifier lists so filtered exports only include matching rows; unfiltered exports pull the full tables.
@@ -81,13 +89,20 @@ Bamboo Reports provides a unified view of business entities (**Accounts**, **Cen
 - **Logo Integration:** Automated company logo fetching via Logo.dev API with fallback initials.
 - **Financial Data:** Stock information and financial metrics via Yahoo Finance integration.
 
-> **Details:** See [User Exports & Audit Log](documentation/user-exports.md) for the architecture, setup steps, and troubleshooting.
+> **Details:** See [User Exports & Audit Log](documentation/backend/user-exports.md) for the architecture, setup steps, and troubleshooting.
 
 ### Notifications
 - **Recently Updated Accounts:** Tracks account-level changes with grouped notifications.
 - **Recently Updated Records:** Table-level update summaries across all entities.
 - **Unread Count Badge:** Bell icon with visual count indicator.
 - **Feature Flag:** Toggle via `NEXT_PUBLIC_NOTIFICATIONS_ENABLED` environment variable.
+
+### Personalization
+- **Favorites:** Star any account, center, or prospect and revisit it from a dedicated list, private per user.
+- **Recently Viewed History:** Automatic tracking of recently opened detail dialogs.
+- **Guided Product Tour:** Auto-starting, replayable `driver.js` walkthrough for first-time users, with per-browser and per-account completion tracking.
+
+> **Details:** See [Favorites & Filter Sharing](documentation/backend/favorites-and-filter-sharing.md) and [Product Tour](documentation/frontend/product-tour.md).
 
 ---
 
@@ -120,7 +135,7 @@ graph TD
 1. **Initial Load:** The client fetches the full dashboard dataset from the `GET /api/dashboard` Route Handler, which wraps the underlying Server Action with an in-memory SWR cache and gzip compression.
 2. **Filtering:** User actions update React state; client-side filtering and chart aggregation run locally for responsiveness.
 3. **Server Actions:** Modular action files (`app/actions/data.ts`, `app/actions/saved-filters.ts`, `app/actions/financial.ts`, `app/actions/notifications.ts`, `app/actions/system.ts`) handle database communication.
-4. **Runtime Behavior:** Server Actions keep no cross-request cache and fetch fresh data with retry logic (3 retries, exponential backoff). The `/api/dashboard` Route Handler adds an in-memory stale-while-revalidate cache on top. See [API Caching](documentation/api-caching-swr.md).
+4. **Runtime Behavior:** Server Actions keep no cross-request cache and fetch fresh data with retry logic (3 retries, exponential backoff). The `/api/dashboard` Route Handler adds an in-memory stale-while-revalidate cache on top. See [API Caching](documentation/backend/api-caching-swr.md).
 
 ---
 
@@ -215,19 +230,25 @@ bamboo-reports-nextjs/
 │
 ├── hooks/                          # Custom React Hooks
 │   ├── use-auth-guard.ts           # Authentication guard
+│   ├── use-copy-to-clipboard.ts    # Copy-to-clipboard with reset timeout
 │   ├── use-dashboard-data.ts       # Data fetching and loading state
 │   ├── use-dashboard-filters.ts    # Complex filter state management
+│   ├── use-favorites.ts            # Favorites CRUD (accounts/centers/prospects)
 │   ├── use-global-search.ts        # Alias-aware global search
 │   ├── use-notifications.ts        # Notification tracking
-│   ├── use-product-tour.ts         # Guided product tour
+│   ├── use-product-tour.ts         # Guided product tour orchestration (driver.js)
 │   ├── use-recent-items.ts         # Recently viewed history tracking
+│   ├── use-row-selection.ts        # Generic row selection state
 │   ├── use-saved-filters.ts        # Saved filter persistence
-│   └── use-table-column-preferences.ts  # Table column visibility prefs
+│   ├── use-table-column-preferences.ts  # Table column visibility prefs
+│   ├── use-table-row-selection.ts  # Table-specific row selection wiring
+│   └── use-tour-persistence.ts     # Tour completion tracking (localStorage + Supabase)
 │
 ├── lib/                            # Utilities & Configuration
+│   ├── ai/                         # AI account summary context, generator (OpenRouter), client hook
 │   ├── analytics/                  # PostHog client, events, tracking
-│   ├── auth/                       # Role-based access control
-│   ├── config/                     # Environment, dashboard access, filters, notifications
+│   ├── auth/                       # Role-based access control + server-side token verification
+│   ├── config/                     # Environment, dashboard access, filters, server mode, notifications
 │   ├── dashboard/                  # Dashboard utility functions
 │   ├── db/                         # Neon PostgreSQL client + retry logic
 │   ├── exports/                    # Export request client + server-side workbook builder
@@ -241,7 +262,7 @@ bamboo-reports-nextjs/
 │   ├── validators/                 # Zod validation schemas
 │   └── types.ts                    # Shared TypeScript interfaces
 │
-├── contexts/                       # React context providers
+├── contexts/                       # React context providers (notification-context.tsx)
 │
 ├── etl/V2/                         # Active Python ETL pipeline (data import)
 │   ├── main.py                     # Import script with change notifications
@@ -249,23 +270,37 @@ bamboo-reports-nextjs/
 │   ├── pyproject.toml              # Python project and dependencies (uv)
 │   ├── uv.lock                     # Locked Python dependencies
 │   └── run.sh                      # ETL runner script
+│                                    # See documentation/etl-pipeline.md for the full process
 │
 ├── documentation/                  # Technical documentation
-│   ├── sql/                        # Supabase migration scripts
-│   ├── tech-stack.md               # Detailed tech stack reference
-│   ├── project-architecture.md     # Architecture and data flow
-│   ├── schema-migration-guide.md   # Database schema reference
-│   ├── developer-workflow.md       # Developer guide and coding standards
-│   ├── api-caching-swr.md          # Dashboard API SWR cache reference
-│   ├── supabase-auth-setup.md      # Auth setup guide
-│   ├── supabase-saved-filters.md   # Saved filters spec
-│   ├── user-exports.md             # Export audit log and Storage archive
-│   ├── ui-column-mapping.md        # UI label to database column mapping
-│   ├── logo-integration.md         # Logo.dev integration guide
-│   └── map-disputed-boundaries.md  # Choropleth boundary handling
+│   ├── tech-stack.md               # Detailed tech stack reference (whole app)
+│   ├── project-architecture.md     # Architecture and data flow (whole app)
+│   ├── developer-workflow.md       # Developer guide and coding standards (whole app)
+│   ├── testing-guide.md            # Vitest setup, mocking patterns, how to add tests (whole app)
+│   ├── scripts-and-tooling.md      # Standalone dev scripts (benchmark, work summary)
+│   │
+│   ├── backend/                    # Data layer, auth, and server-side feature docs
+│   │   ├── sql/                    # Supabase migration scripts
+│   │   ├── schema-migration-guide.md    # Database schema reference (column-level)
+│   │   ├── table-relationships.md       # Table hierarchy, keys, FK constraints, import order
+│   │   ├── etl-pipeline.md              # ETL process: source, diffing, audit trail, extending it
+│   │   ├── api-caching-swr.md           # Dashboard API SWR cache reference
+│   │   ├── supabase-auth-setup.md       # Auth setup guide
+│   │   ├── rbac-and-auth-guards.md      # Role enforcement and request authentication
+│   │   ├── supabase-saved-filters.md    # Saved filters spec
+│   │   ├── favorites-and-filter-sharing.md  # Favorites and filter-sharing tables/RLS
+│   │   ├── user-exports.md              # Export audit log and Storage archive
+│   │   └── ai-account-summaries.md      # AI-generated account summary feature
+│   │
+│   └── frontend/                   # UI-facing feature docs
+│       ├── product-tour.md              # Guided onboarding tour
+│       ├── ui-column-mapping.md         # UI label to database column mapping
+│       ├── filter-column-ui-label-map.json  # Machine-readable UI label to column map
+│       ├── logo-integration.md          # Logo.dev integration guide
+│       └── map-disputed-boundaries.md   # Choropleth boundary handling
 │
-├── scripts/                        # Standalone scripts (e.g. load benchmark)
-├── tests/                          # Vitest test suite (unit and integration tests)
+├── scripts/                        # Standalone scripts (load benchmark, work summary report)
+├── tests/                          # Vitest test suite (unit, integration, and API route tests)
 ├── types/                          # Additional type definitions
 ├── public/                         # Static assets (logos, images, data)
 └── styles/                         # Additional stylesheets
@@ -332,6 +367,7 @@ bamboo-reports-nextjs/
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | **Yes** | Supabase public anon key (safe for client). |
 | `SUPABASE_SERVICE_ROLE_KEY` | **Yes** | Supabase service-role secret. Server-only — used to write/read `user_exports` and upload archived exports to Storage. |
 | `DASHBOARD_CACHE_TTL_MS` | No | Override for the in-memory dashboard cache TTL. Default: `3600000` (1 hour). |
+| `EXPORT_RATE_LIMIT_PER_HOUR` | No | Max data exports per user per rolling hour. Default: `20`. |
 | `NEXT_PUBLIC_LOGO_DEV_KEY` | No | Logo.dev publishable key for company logos. |
 | `NEXT_PUBLIC_POSTHOG_KEY` | No | PostHog project API key for analytics. |
 | `NEXT_PUBLIC_POSTHOG_HOST` | No | PostHog host URL (defaults to PostHog cloud). |
@@ -380,8 +416,8 @@ The app delegates identity management to **Supabase Auth**.
 - **Security:** Row-Level Security (RLS) ensures full data isolation between users.
 
 > **Setup Guides:**
-> - Auth & profiles: [Supabase Auth Setup](documentation/supabase-auth-setup.md)
-> - Exports audit log + bucket: [User Exports & Audit Log](documentation/user-exports.md)
+> - Auth & profiles: [Supabase Auth Setup](documentation/backend/supabase-auth-setup.md)
+> - Exports audit log + bucket: [User Exports & Audit Log](documentation/backend/user-exports.md)
 
 ---
 
@@ -393,6 +429,7 @@ The core BI data resides in **Neon PostgreSQL**. All tables follow strict `snake
 | Table | Description | Database primary key | ETL/logical identity or link |
 |-------|-------------|----------------------|------------------------------|
 | `accounts` | Top-level company entities with HQ details, financials, workforce | `account_global_legal_name` | `account_global_legal_name` |
+| `ticker` | Stock ticker per account (one row per account) | `account_global_legal_name` | `account_global_legal_name` |
 | `centers` | Delivery centers / office locations with geospatial data | `cn_unique_key` | `cn_unique_key` |
 | `services` | Service-line rows linked to centers | *(none)* | `cn_unique_key` |
 | `functions` | Function rows linked to centers | *(none)* | `cn_unique_key`, `function_name` |
@@ -412,7 +449,7 @@ The core BI data resides in **Neon PostgreSQL**. All tables follow strict `snake
 - `services`, `functions`, and `tech` link to `centers` via `cn_unique_key` (cascades on delete)
 - `prospects` links to `accounts` via `account_global_legal_name` (cascades on delete)
 
-> **Reference:** See the [Schema Migration Guide](documentation/schema-migration-guide.md) for complete column definitions and table relationships.
+> **Reference:** See the [Schema Migration Guide](documentation/backend/schema-migration-guide.md) for complete column definitions and table relationships.
 
 ---
 
@@ -462,10 +499,10 @@ Subsequent pushes to the `main` branch trigger automatic deployments.
 | **Missing logos** | Logo.dev key | Ensure `NEXT_PUBLIC_LOGO_DEV_KEY` is set. If omitted, fallback initials are used. |
 | **Notifications not showing** | Feature flag | Set `NEXT_PUBLIC_NOTIFICATIONS_ENABLED=enabled` in your environment. |
 | **Charts not rendering** | Data issue | Check browser console for errors. Ensure data is being returned from server actions. |
-| **Unexpected map boundaries** | Basemap boundary layers are still visible | Verify `hideBasemapBoundaries` runs after map load and the local Survey of India overlay loads. See [Map Boundaries](documentation/map-disputed-boundaries.md). |
+| **Unexpected map boundaries** | Basemap boundary layers are still visible | Verify `hideBasemapBoundaries` runs after map load and the local Survey of India overlay loads. See [Map Boundaries](documentation/frontend/map-disputed-boundaries.md). |
 | **Export button disabled** | User role | Only `admin` users can export. Update the role in the `profiles` table. |
 | **Export fails with "Failed to archive export"** | `user-exports` Storage bucket missing | Create a **private** bucket named exactly `user-exports` in the Supabase dashboard. |
-| **Export fails with "Failed to record export: relation 'public.user_exports' does not exist"** | Schema SQL not run | Execute `documentation/user-exports-schema.sql` against your Supabase project. |
+| **Export fails with "Failed to record export: relation 'public.user_exports' does not exist"** | Schema SQL not run | Execute `documentation/backend/sql/user-exports-schema.sql` against your Supabase project. |
 | **"My exports" dialog is empty after a successful export** | Dev-server module cache | Hard-refresh the page; restart `next dev`. |
 
 ---
@@ -477,16 +514,23 @@ Detailed documentation for specific subsystems lives in the `documentation/` fol
 | Document | Description |
 |----------|-------------|
 | [**Tech Stack**](documentation/tech-stack.md) | Comprehensive technology reference with versions, purposes, and categories |
-| [**UI-to-Column Mapping**](documentation/ui-column-mapping.md) | Complete mapping of every UI label to its database column (filters, tables, dialogs, charts) |
+| [**UI-to-Column Mapping**](documentation/frontend/ui-column-mapping.md) | Complete mapping of every UI label to its database column (filters, tables, dialogs, charts) |
 | [**Project Architecture**](documentation/project-architecture.md) | High-level design, server actions, state management, and integrations |
-| [**Schema Guide**](documentation/schema-migration-guide.md) | Deep dive into the data model, table relationships, and migration paths |
+| [**Schema Guide**](documentation/backend/schema-migration-guide.md) | Deep dive into the data model, column definitions, and migration history |
+| [**Table Relationships**](documentation/backend/table-relationships.md) | Table hierarchy, primary keys, FK constraints, and ETL import order |
+| [**ETL Pipeline**](documentation/backend/etl-pipeline.md) | The import process itself: source data, diffing, audit trail, how to extend it |
 | [**Developer Workflow**](documentation/developer-workflow.md) | Guide for common tasks, coding standards, and troubleshooting |
-| [**API Caching (SWR)**](documentation/api-caching-swr.md) | Stale-while-revalidate cache behavior for the `/api/dashboard` route |
-| [**Supabase Auth**](documentation/supabase-auth-setup.md) | Setting up the `profiles` table, RLS policies, and auth triggers |
-| [**Saved Filters**](documentation/supabase-saved-filters.md) | Technical spec for the saved filters JSON structure |
-| [**User Exports & Audit Log**](documentation/user-exports.md) | Server-side export generation, Storage archive, and audit table |
-| [**Logo Integration**](documentation/logo-integration.md) | Setup and usage guide for the Logo.dev integration |
-| [**Map Boundaries**](documentation/map-disputed-boundaries.md) | Carto basemap and local Survey of India boundary behavior |
+| [**Testing Guide**](documentation/testing-guide.md) | Vitest setup, mocking patterns, and how to add a new test |
+| [**API Caching (SWR)**](documentation/backend/api-caching-swr.md) | Stale-while-revalidate cache behavior for the `/api/dashboard` route |
+| [**Supabase Auth**](documentation/backend/supabase-auth-setup.md) | Setting up the `profiles` table, RLS policies, and auth triggers |
+| [**RBAC & Auth Guards**](documentation/backend/rbac-and-auth-guards.md) | Role enforcement, client-side session guard, server-side token verification |
+| [**Saved Filters**](documentation/backend/supabase-saved-filters.md) | Technical spec for the saved filters JSON structure |
+| [**Favorites & Filter Sharing**](documentation/backend/favorites-and-filter-sharing.md) | Favorites and filter-sharing tables, RLS model, and hooks |
+| [**User Exports & Audit Log**](documentation/backend/user-exports.md) | Server-side export generation, Storage archive, and audit table |
+| [**Product Tour**](documentation/frontend/product-tour.md) | Guided onboarding walkthrough, completion tracking, and versioning |
+| [**Logo Integration**](documentation/frontend/logo-integration.md) | Setup and usage guide for the Brandfetch logo integration |
+| [**Scripts & Tooling**](documentation/scripts-and-tooling.md) | Standalone dev scripts: load benchmark and git-history work summary |
+| [**Map Boundaries**](documentation/frontend/map-disputed-boundaries.md) | Carto basemap and local Survey of India boundary behavior |
 
 ---
 

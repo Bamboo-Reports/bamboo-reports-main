@@ -536,7 +536,7 @@ Renders a state-level heatmap overlay showing center density per administrative 
 | Distinct Accounts | `account_global_legal_name` | `COUNT(DISTINCT)` per state | Number of unique accounts per state |
 | Headcount | `center_employees` | `SUM` per state | Total employees per state |
 
-**Boundary matching:** Centers are matched to local administrative GeoJSON features using `center_country_iso2` (ISO2 country code) + `center_state` (state name). See `documentation/map-disputed-boundaries.md`.
+**Boundary matching:** Centers are matched to local administrative GeoJSON features using `center_country_iso2` (ISO2 country code) + `center_state` (state name). See `documentation/frontend/map-disputed-boundaries.md`.
 
 ---
 

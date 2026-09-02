@@ -170,7 +170,7 @@ where email = 'your-admin-email@example.com';
 
 Do not expose role promotion through browser Supabase clients. Authenticated users intentionally do not receive `insert` or `update` privileges on the `role` column.
 
-You can also run the same SQL from: `documentation/sql/profiles-role-migration.sql`.
+You can also run the same SQL from: `sql/profiles-role-migration.sql`.
 
 ---
 
