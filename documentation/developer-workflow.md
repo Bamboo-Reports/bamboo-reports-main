@@ -32,10 +32,13 @@ This guide is for developers maintaining or extending the Bamboo Reports applica
     - `DATABASE_URL` — Neon PostgreSQL pooled runtime connection string used by Prisma for warehouse data
     - `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL
     - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase public key
+    - `SUPABASE_SERVICE_ROLE_KEY` — Server-only secret for the export audit log and Storage archive (see [User Exports](backend/user-exports.md))
     - `NEXT_PUBLIC_MAPTILER_KEY` — MapTiler API key
 
     Optional variables:
     - `DIRECT_URL` — Direct Neon connection string for Prisma CLI commands
+    - `DASHBOARD_CACHE_TTL_MS` — Dashboard API SWR cache TTL override, default 1 hour
+    - `EXPORT_RATE_LIMIT_PER_HOUR` — Max exports per user per rolling hour, default 20
     - `NEXT_PUBLIC_POSTHOG_KEY` / `NEXT_PUBLIC_POSTHOG_HOST` — Analytics
     - `NEXT_PUBLIC_LOGO_DEV_KEY` — Company logos
     - `NEXT_PUBLIC_NOTIFICATIONS_ENABLED` — Set to `enabled` to activate notifications
@@ -43,6 +46,7 @@ This guide is for developers maintaining or extending the Bamboo Reports applica
     - `NEXT_PUBLIC_ENVIRONMENT_LABEL` — Set to `DEV` or `PROD` for environment badge
     - `NEXT_PUBLIC_MAPTILER_STATE_STYLE_ID` / `NEXT_PUBLIC_MAPTILER_CITY_STYLE_ID` — Custom map styles
     - `NEXT_PUBLIC_MAP_VIEWPOINT_ISO2` — Geopolitical boundary viewpoint (e.g., `IN`)
+    - `AI_ACCOUNT_SUMMARY_ENABLED` / `AI_ACCOUNT_SUMMARY_MODEL` / `OPENROUTER_API_KEY` — AI account summary feature (see [AI Account Summaries](backend/ai-account-summaries.md))
 
 3. **Run Development Server:**
     ```bash
@@ -61,6 +65,7 @@ This guide is for developers maintaining or extending the Bamboo Reports applica
 | `npm run typecheck` | Run TypeScript compiler checks |
 | `npm run test` | Run Vitest test suite |
 | `npm run test:watch` | Run Vitest in watch mode |
+| `npm run prisma:generate` | Regenerate the Prisma Client after a schema change |
 | `npm run benchmark` | Benchmark dashboard data loading (`scripts/benchmark-loading.mjs`) |
 
 ---
@@ -141,14 +146,15 @@ Prefer config changes over dashboard forks for client-specific packaging.
 
 ### 2.5 Database Schema Changes
 
-If you modify the database schema (e.g., rename a column):
+If you modify the database schema (e.g., rename a column), see [ETL Pipeline](backend/etl-pipeline.md) for how `etl/V2/main.py` applies schema changes and [Table Relationships](backend/table-relationships.md) if the change affects keys or FK constraints. Steps:
 
 1. **Update `etl/V2/master-schema.json`** with the new structure.
-2. **Update `documentation/schema-migration-guide.md`** to log the change.
-3. **Update `lib/types.ts`** to match the new column names.
-4. **Update server actions** in `app/actions/data.ts` to use the new column names.
-5. **Update filter helpers** in `lib/utils/filter-helpers.ts` if filters reference the changed columns.
-6. **Update `documentation/filter-column-ui-label-map.json`** if UI labels changed.
+2. **Update `documentation/backend/schema-migration-guide.md`** to log the change.
+3. **Update `documentation/backend/table-relationships.md`** if the change affects primary keys, FK constraints, or import order.
+4. **Update `lib/types.ts`** to match the new column names.
+5. **Update server actions** in `app/actions/data.ts` to use the new column names.
+6. **Update filter helpers** in `lib/utils/filter-helpers.ts` if filters reference the changed columns.
+7. **Update `documentation/frontend/filter-column-ui-label-map.json`** if UI labels changed.
 
 ### 2.6 Adjusting Dashboard Panel Height
 
@@ -213,6 +219,7 @@ If UI alignment needs tuning:
 - **Framework**: We use Vitest for unit and integration testing, and React Testing Library for UI components.
 - **Coverage**: Aim to maintain high test coverage, particularly for core logic and shared UI components.
 - **Execution**: Run `npm run test` before opening a pull request to ensure no regressions.
+- **Deep reference**: See [Testing Guide](testing-guide.md) for the Vitest config, directory conventions, and mocking patterns for Prisma/Supabase/fetch.
 
 ---
 
@@ -241,7 +248,7 @@ If UI alignment needs tuning:
 | **Slow queries** | `app/actions/data.ts` | Ensure SQL queries have appropriate indexes in Neon. Use `EXPLAIN ANALYZE` in Neon console. |
 | **Map not rendering** | MapTiler key | Verify `NEXT_PUBLIC_MAPTILER_KEY` is set and active. Check browser console for tile fetch errors. |
 | **Notifications not appearing** | Feature flag | Set `NEXT_PUBLIC_NOTIFICATIONS_ENABLED=enabled` in `.env.local`. Restart dev server. |
-| **Choropleth seams** | Map style | Disable disputed boundary layers in your MapTiler style. See `documentation/map-disputed-boundaries.md`. |
+| **Choropleth seams** | Map style | Disable disputed boundary layers in your MapTiler style. See `documentation/frontend/map-disputed-boundaries.md`. |
 | **Export button disabled** | User role | Only `admin` role can export. Update the `role` column in `public.profiles`. |
 | **PostHog events missing** | Environment variables | Verify `NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_POSTHOG_HOST` are set. Check that `providers.tsx` is wrapping the app. |
 | **Company logos not loading** | Logo.dev key | Set `NEXT_PUBLIC_LOGO_DEV_KEY`. If the company isn't in Logo.dev's index, the fallback icon is expected. |

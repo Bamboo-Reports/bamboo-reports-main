@@ -2,7 +2,7 @@
 
 A comprehensive breakdown of every technology used in the Bamboo Reports project, organized by category. This document is designed to give both technical and non-technical stakeholders a clear understanding of what powers the application and why each technology was chosen.
 
-> **Last Updated:** May 2026
+> **Last Updated:** September 2026
 > **Audience:** Engineering leads, project managers, and stakeholders
 
 ---
@@ -39,6 +39,7 @@ A comprehensive breakdown of every technology used in the Bamboo Reports project
 | **Authentication** | Supabase Auth |
 | **Analytics** | PostHog, Vercel Analytics, Vercel Speed Insights |
 | **Export** | ExcelJS |
+| **AI** | Vercel AI SDK + OpenRouter (account summaries) |
 | **Deployment** | Vercel |
 
 ---
@@ -218,9 +219,21 @@ Technologies for storing and querying data.
 | **Why we use it** | Acts as the primary Business Intelligence data warehouse. Serverless architecture supports Vercel deployments and Neon connection pooling |
 | **Access pattern** | Prisma model reads for `accounts` and `centers`; Prisma tagged raw SQL for linked child tables, analytical queries, and computed-selection queries |
 | **Key features** | Connection pooling, generated TypeScript client, parameterized queries |
-| **Tables** | `accounts`, `centers`, `alias`, `services`, `functions`, `tech`, `prospects`, plus audit tables |
+| **Tables** | `accounts`, `ticker`, `centers`, `alias`, `services`, `functions`, `tech`, `prospects`, plus audit tables |
 | **Retry logic** | Exponential retry wrapper in `lib/db/prisma.ts` |
-| **Package** | `prisma`, `@prisma/client`, `@prisma/adapter-neon` |
+| **Package** | `prisma`, `@prisma/client`, `@prisma/adapter-neon`, `ws` (WebSocket driver required by `@prisma/adapter-neon` outside edge runtimes) |
+
+### OpenRouter + Vercel AI SDK
+
+| | |
+|---|---|
+| **What it is** | The Vercel AI SDK (`ai`) provides a model-agnostic `generateText`/structured-output API; OpenRouter (`@openrouter/ai-sdk-provider`) routes those calls to a configurable underlying LLM |
+| **Why we use it** | Powers the AI-generated account summary feature without hardcoding a single model provider; the model is swappable via an environment variable with no code change |
+| **Used for** | One-paragraph executive account summaries in the Account details dialog, grounded strictly in the account's own warehouse data |
+| **Default model** | `deepseek/deepseek-v4-flash`, overridable via `AI_ACCOUNT_SUMMARY_MODEL` |
+| **Package** | `ai`, `@openrouter/ai-sdk-provider` |
+
+> **Details:** See [AI Account Summaries](backend/ai-account-summaries.md) for the full request flow, prompt design, and env vars.
 
 ### Dashboard API Route (`/api/dashboard`)
 

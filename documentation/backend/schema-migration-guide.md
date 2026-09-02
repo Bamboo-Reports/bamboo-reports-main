@@ -1,9 +1,9 @@
 # Schema Migration & Reference Guide (2026-05)
 
-This guide documents the migration from the legacy column naming (uppercase, space-separated) to the new snake_case schema and provides a comprehensive reference for the current database columns (`etl/V2/master-schema.json`). For table hierarchy, primary keys, and linking columns, use `documentation/table-relationships.md` as the source of truth.
+This guide documents the migration from the legacy column naming (uppercase, space-separated) to the new snake_case schema and provides a comprehensive reference for the current database columns (`etl/V2/master-schema.json`). For table hierarchy, primary keys, and linking columns, use `documentation/backend/table-relationships.md` as the source of truth.
 
 > Target Audience: Backend engineers, Data engineers, and Frontend developers wiring up UI components.
-> Source of Truth: Column definitions below are derived from the master schema JSON. Relationship and key semantics are defined in `documentation/table-relationships.md`.
+> Source of Truth: Column definitions below are derived from the master schema JSON. Relationship and key semantics are defined in `documentation/backend/table-relationships.md`.
 
 ---
 
@@ -12,7 +12,7 @@ This guide documents the migration from the legacy column naming (uppercase, spa
 - Core Tables: `accounts`, `ticker`, `centers`, `services`, `functions`, `tech`, `prospects`, `alias`.
 - Audit Tables: `audit.import_runs`, `audit.field_change_events`, `audit.notification_reads`.
 - Naming Convention: strict `snake_case`.
-- Primary keys and table relationships: see `documentation/table-relationships.md`.
+- Primary keys and table relationships: see `documentation/backend/table-relationships.md`.
 - Linkage:
   - `centers` links to `accounts` via `account_global_legal_name`.
   - `services`, `functions`, and `tech` link to `centers` via `cn_unique_key`.
@@ -53,7 +53,7 @@ Notable columns:
 Description: Service-line rows linked to centers.
 
 Notable columns:
-- Keys and metadata: `cn_unique_key` (service row identity, see `documentation/table-relationships.md`), `uuid`, `last_update_date`
+- Keys and metadata: `cn_unique_key` (service row identity, see `documentation/backend/table-relationships.md`), `uuid`, `last_update_date`
 - Linkage: `cn_unique_key`, `account_global_legal_name`
 - Denormalized center fields: `center_name`, `center_type`, `center_focus`, `center_city`
 - Service taxonomy: `primary_service`, `focus_region`, `service_it`, `service_erd`, `service_fna`, `service_hr`, `service_procurement`, `service_sales_marketing`, `service_customer_support`, `service_others`
@@ -80,7 +80,7 @@ Columns:
 - `software_vendor`
 - `software_category`
 
-Relationship identity: linked to centers by `cn_unique_key`; see `documentation/table-relationships.md` for the composite relationship semantics.
+Relationship identity: linked to centers by `cn_unique_key`; see `documentation/backend/table-relationships.md` for the composite relationship semantics.
 
 ### 2.6 Table: `prospects`
 Description: Contact/lead rows linked to accounts.
@@ -89,7 +89,7 @@ Columns:
 - `uuid`
 - `last_update_date`
 - `last_review_date`, `email_verification_date`, `contact_status` (internal review metadata, not shown in the UI)
-- `ps_unique_key` (prospect row identity, see `documentation/table-relationships.md`)
+- `ps_unique_key` (prospect row identity, see `documentation/backend/table-relationships.md`)
 - `account_global_legal_name`
 - `center_name`
 - `prospect_full_name`, `prospect_first_name`, `prospect_last_name`
@@ -103,7 +103,7 @@ Description: Alternate names and brands for an account, sourced from the "alias"
 
 Columns:
 - `uuid`
-- `account_global_legal_name` (alias row identity and FK to `accounts`, see `documentation/table-relationships.md`)
+- `account_global_legal_name` (alias row identity and FK to `accounts`, see `documentation/backend/table-relationships.md`)
 - `short_legal_name`
 - `brand_name`
 - `abbreviated_name`
@@ -120,7 +120,7 @@ Columns:
 - `account_hq_stock_ticker`
 - `notes`
 
-> Relationship reference: `documentation/table-relationships.md`.
+> Relationship reference: `documentation/backend/table-relationships.md`.
 
 ---
 

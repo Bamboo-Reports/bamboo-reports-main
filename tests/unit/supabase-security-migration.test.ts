@@ -9,10 +9,10 @@ function readSql(path: string) {
 }
 
 const hardeningSql = readSql(
-  "documentation/sql/supabase-security-hardening-migration.sql"
+  "documentation/backend/sql/supabase-security-hardening-migration.sql"
 )
-const filterSharesSql = readSql("documentation/sql/filter-shares-migration.sql")
-const userExportsSql = readSql("documentation/user-exports-schema.sql")
+const filterSharesSql = readSql("documentation/backend/sql/filter-shares-migration.sql")
+const userExportsSql = readSql("documentation/backend/sql/user-exports-schema.sql")
 
 describe("Supabase security migrations", () => {
   it("removes broad profile reads and keeps direct access owner-scoped", () => {

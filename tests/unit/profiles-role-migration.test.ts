@@ -3,7 +3,7 @@ import { resolve } from "node:path"
 import { describe, expect, it } from "vitest"
 
 const migrationSql = readFileSync(
-  resolve(process.cwd(), "documentation/sql/profiles-role-migration.sql"),
+  resolve(process.cwd(), "documentation/backend/sql/profiles-role-migration.sql"),
   "utf8"
 ).replace(/\s+/g, " ")
 
