@@ -228,4 +228,4 @@ CREATE POLICY "Users can view filters shared with them"
 
 ### 5.5 Migration
 
-See `documentation/sql/filter-shares-migration.sql` for the complete migration script.
+See `sql/filter-shares-migration.sql` for the complete migration script.

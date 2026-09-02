@@ -124,4 +124,4 @@ Only `AccountWarehouse` (`accounts`) and `CenterWarehouse` (`centers`) are model
 | `app/actions/data.ts` | Server-side data fetching with DB-level joins |
 | `lib/dashboard/filtering.ts` | Client-side in-memory linking and filter propagation |
 | `lib/exports/server-builder.ts` | Export queries filtered by `account_global_legal_name` / `cn_unique_key` |
-| `documentation/schema-migration-guide.md` | Full column definitions and migration history |
+| `documentation/backend/schema-migration-guide.md` | Full column definitions and migration history |

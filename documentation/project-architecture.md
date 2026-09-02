@@ -45,7 +45,7 @@ Supabase-backed user data (auth, profiles, saved filters, favorites, export audi
 -   **`page.tsx`**: Main dashboard entry point and UI orchestrator. Wires auth, data loading, filtering hooks, and layout composition.
 -   **`providers.tsx`**: Application-level providers (PostHog analytics).
 -   **`(auth)/`**: Auth route group containing `signin/` and `signup/` pages.
--   **`api/dashboard/`**: Route Handler that serves the full dashboard dataset with an in-memory SWR cache and gzip compression (see `documentation/api-caching-swr.md`).
+-   **`api/dashboard/`**: Route Handler that serves the full dashboard dataset with an in-memory SWR cache and gzip compression (see `documentation/backend/api-caching-swr.md`).
 -   **`api/exports/`**: Route Handlers for generating, listing, and re-downloading user exports.
 -   **Rule:** Neon database access is isolated to `app/actions/*`, `app/api/*`, and `lib/db/prisma.ts`. Supabase Auth, RLS-backed user tables, and Storage continue to use Supabase client/service-role APIs.
 
@@ -84,21 +84,27 @@ Key components:
 | Hook | Responsibility |
 |------|---------------|
 | `use-auth-guard.ts` | Redirects unauthenticated users to sign-in |
+| `use-copy-to-clipboard.ts` | Copy-to-clipboard with auto-reset "copied" state |
 | `use-dashboard-data.ts` | Orchestrates data fetching and loading state |
 | `use-dashboard-filters.ts` | Complex filter state management (the largest hook, manages all filter logic, include/exclude modes, range sliders, keyword search) |
+| `use-favorites.ts` | Favorites CRUD and toggle state for accounts/centers/prospects (see [Favorites & Filter Sharing](backend/favorites-and-filter-sharing.md)) |
 | `use-global-search.ts` | Alias-aware global account search state |
 | `use-notifications.ts` | Notification state, unread counts, and read tracking |
-| `use-product-tour.ts` | Guided product tour orchestration (driver.js) |
+| `use-product-tour.ts` | Guided product tour orchestration (driver.js, see [Product Tour](frontend/product-tour.md)) |
 | `use-recent-items.ts` | Tracks recently viewed records for the History dialog |
+| `use-row-selection.ts` | Generic multi-row selection state |
 | `use-saved-filters.ts` | Saved filter CRUD with Supabase |
 | `use-table-column-preferences.ts` | Per-user table column visibility preferences |
+| `use-table-row-selection.ts` | Wires `use-row-selection.ts` into a specific data table |
+| `use-tour-persistence.ts` | Tour completion tracking (localStorage + Supabase) |
 
 ### 2.4 `lib/` (Utilities & Configuration)
 
 | Directory | Responsibility |
 |-----------|---------------|
+| `ai/` | AI account summary context building, OpenRouter generator, client hook (see [AI Account Summaries](backend/ai-account-summaries.md)) |
 | `analytics/` | PostHog client initialization, event definitions, tracking helpers |
-| `auth/` | Role-based access control (`UserRole`, `canExportData()`) |
+| `auth/` | Role-based access control and server-side token verification (see [RBAC & Auth Guards](backend/rbac-and-auth-guards.md)) |
 | `config/` | Environment label, dashboard access, premium filter reveal, MapTiler configuration, notification settings |
 | `dashboard/` | Dashboard-specific data transformation utilities |
 | `db/` | Prisma Client singleton for Neon PostgreSQL warehouse access with retry logic |
@@ -155,7 +161,7 @@ Managed by `useNotifications` hook.
 
 ### 4.1 Neon PostgreSQL (Data Warehouse)
 
-We use Prisma ORM over Neon PostgreSQL only. `accounts` and `centers` are modelled in Prisma, matching `documentation/table-relationships.md`. The linked child tables (`alias`, `functions`, `services`, `tech`, `prospects`) stay on Prisma tagged raw SQL; their linkage is handled through `account_global_legal_name` and `cn_unique_key` in query logic and client-side filters. Aggregation-heavy queries and edge-case selection logic also use Prisma raw SQL for control over query structure.
+We use Prisma ORM over Neon PostgreSQL only. `accounts` and `centers` are modelled in Prisma, matching `documentation/backend/table-relationships.md`. The linked child tables (`alias`, `functions`, `services`, `tech`, `prospects`) stay on Prisma tagged raw SQL; their linkage is handled through `account_global_legal_name` and `cn_unique_key` in query logic and client-side filters. Aggregation-heavy queries and edge-case selection logic also use Prisma raw SQL for control over query structure.
 
 ```typescript
 // app/actions/data.ts
@@ -169,7 +175,7 @@ const accounts = await queryWithRetry(() =>
 -   **Safety:** Prisma model queries and Prisma tagged raw queries keep dynamic values parameterized.
 -   **Performance:** `Promise.all` in `getAllData` fetches Accounts, Centers, and Prospects concurrently.
 -   **Retry Logic:** Exponential retry handling via `queryWithRetry` in `lib/db/prisma.ts`.
--   **Caching:** Server Actions themselves keep no cross-request cache and fetch fresh data. The `GET /api/dashboard` Route Handler layers an in-memory stale-while-revalidate cache (default 1-hour TTL, configurable via `DASHBOARD_CACHE_TTL_MS`) over the dashboard query. See `documentation/api-caching-swr.md`.
+-   **Caching:** Server Actions themselves keep no cross-request cache and fetch fresh data. The `GET /api/dashboard` Route Handler layers an in-memory stale-while-revalidate cache (default 1-hour TTL, configurable via `DASHBOARD_CACHE_TTL_MS`) over the dashboard query. See `documentation/backend/api-caching-swr.md`.
 
 ### 4.2 Supabase PostgreSQL (User Data)
 
@@ -193,7 +199,7 @@ Two columns on `accounts` control whether an account is included by default in d
 
 The `public.alias` table stores alternate names for each account (short legal name, brand name, abbreviation, flagship products, "currently known as"), linked to `accounts` by a foreign key on `account_global_legal_name` with `ON UPDATE`/`ON DELETE CASCADE`.
 
-Alias rows power alias-aware account search: the global search (`components/search/global-search.tsx`) and the account filter autocomplete (`components/filters/account-autocomplete.tsx`) match a query against both account names and alias values, so searching for an alternate name (for example "HMH" or "HackerRank") resolves to the underlying account. Matches found through an alias surface a "Known as: <alias>" hint so the result is not confusing. Matching logic lives in `lib/search/alias-utils.ts` and `lib/search/index.ts`; the alias dataset is loaded alongside dashboard data in `app/actions/data.ts`. The migration is `documentation/sql/alias-table-migration.sql`.
+Alias rows power alias-aware account search: the global search (`components/search/global-search.tsx`) and the account filter autocomplete (`components/filters/account-autocomplete.tsx`) match a query against both account names and alias values, so searching for an alternate name (for example "HMH" or "HackerRank") resolves to the underlying account. Matches found through an alias surface a "Known as: <alias>" hint so the result is not confusing. Matching logic lives in `lib/search/alias-utils.ts` and `lib/search/index.ts`; the alias dataset is loaded alongside dashboard data in `app/actions/data.ts`. The migration is `documentation/backend/sql/alias-table-migration.sql`.
 
 ---
 
@@ -214,13 +220,18 @@ Alias rows power alias-aware account search: the global search (`components/sear
 -   **Purpose:** Fetches stock prices and financial metrics for account entities with stock tickers.
 -   **Integration:** Server-side only (via server actions).
 
-### 5.4 PostHog Analytics
+### 5.4 OpenRouter (AI Account Summaries)
+-   Used in `lib/ai/account-summary-generator.ts`, called from `app/api/accounts/ai-summary/route.ts`.
+-   **Purpose:** Generates a short, grounded executive summary paragraph per account via the Vercel AI SDK (`ai`) routed through OpenRouter (`@openrouter/ai-sdk-provider`).
+-   **Integration:** Server-side only, gated by `AI_ACCOUNT_SUMMARY_ENABLED`. See [AI Account Summaries](backend/ai-account-summaries.md).
+
+### 5.5 PostHog Analytics
 -   Initialized in `app/providers.tsx` and `lib/analytics/client.ts`.
 -   **Event tracking:** Defined in `lib/analytics/events.ts`, executed via helpers in `lib/analytics/tracking.ts`.
 -   **Events tracked:** Page views, filter interactions, export actions, tab navigation, session duration.
 -   **User identification:** Tied to Supabase user ID for cross-session tracking.
 
-### 5.5 Vercel Analytics
+### 5.6 Vercel Analytics
 -   Automatic Core Web Vitals tracking via `@vercel/analytics`.
 -   Zero configuration required — works automatically when deployed on Vercel.
 
