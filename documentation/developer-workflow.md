@@ -35,10 +35,13 @@ This guide is for developers maintaining or extending the Bamboo Reports applica
 
     Optional variables:
     - `DIRECT_URL` — Direct Neon connection string for Prisma CLI commands
-    - `DASHBOARD_CACHE_TTL_MS` — Dashboard API SWR cache TTL override, default 1 hour
+    - `DASHBOARD_CACHE_TTL_MS` — Response cache TTL override (code default 10 min; 8 days recommended since the ETL purges the cache weekly)
     - `EXPORT_RATE_LIMIT_PER_HOUR` — Max exports per user per rolling hour, default 20
+    - `DATA_RATE_LIMIT_PER_MIN` — Max requests per user per minute on data endpoints, default 60
+    - `NEXT_PUBLIC_DASHBOARD_SERVER_MODE` — Set to `1` to use the server-backed dashboard data path (see [Server-Mode Dashboard](backend/server-dashboard-mode.md))
+    - `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` — Optional Redis L2 for the response cache (see [Caching and Rate Limiting](backend/caching-and-rate-limiting.md))
     - `NEXT_PUBLIC_POSTHOG_KEY` / `NEXT_PUBLIC_POSTHOG_HOST` — Analytics
-    - `NEXT_PUBLIC_LOGO_DEV_KEY` — Company logos
+    - `NEXT_PUBLIC_BRANDFETCH_CLIENT_ID` — Company logos (Brandfetch)
     - `NEXT_PUBLIC_NOTIFICATIONS_ENABLED` — Set to `enabled` to activate notifications
     - `NEXT_PUBLIC_MAINTENANCE_MODE`: set to `true` to show a maintenance page instead of the dashboard
     - `NEXT_PUBLIC_ENVIRONMENT_LABEL` — Set to `DEV` or `PROD` for environment badge
@@ -92,6 +95,9 @@ To add a new filter (e.g., "Founded Year") to the sidebar:
 
 5. **Update Saved Filters (if applicable):**
     If users should be able to save this filter, ensure the key is included in the filter serialization logic in `components/saved-filters-manager.tsx`.
+
+6. **Update the server-side SQL translation:**
+    Server mode translates filters to SQL in `lib/dashboard/filtering-sql.ts`. Every new filter must be implemented there too, and covered by the parity suite (`tests/unit/filtering-sql-parity.test.ts`) so the client and server engines stay equivalent. See [Server-Mode Dashboard](backend/server-dashboard-mode.md).
 
 ### 2.2 Adjusting Deployment Access or Premium Filters
 
@@ -243,5 +249,5 @@ If UI alignment needs tuning:
 | **Unexpected map boundaries** | Basemap boundary layers remain visible | Verify `hideBasemapBoundaries` runs after map load and the local boundary overlay loads. See `documentation/frontend/map-disputed-boundaries.md`. |
 | **Export button disabled** | User role | Only `admin` role can export. Update the `role` column in `public.profiles`. |
 | **PostHog events missing** | Environment variables | Verify `NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_POSTHOG_HOST` are set. Check that `providers.tsx` is wrapping the app. |
-| **Company logos not loading** | Logo.dev key | Set `NEXT_PUBLIC_LOGO_DEV_KEY`. If the company isn't in Logo.dev's index, the fallback icon is expected. |
+| **Company logos not loading** | Brandfetch client ID | Set `NEXT_PUBLIC_BRANDFETCH_CLIENT_ID`. If Brandfetch has no logo for the domain, the monogram fallback is expected. |
 | **Financial data missing** | Yahoo Finance | The Yahoo Finance API can be rate-limited. Check server action logs for errors. |

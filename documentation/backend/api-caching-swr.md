@@ -1,6 +1,6 @@
 # API Caching with Stale-While-Revalidate (SWR)
 
-> **Last Updated:** May 2026
+> **Last Updated:** September 2026
 > **Audience:** Engineering team
 
 ---
@@ -8,6 +8,8 @@
 ## Overview
 
 The `/api/dashboard` route uses an **in-memory SWR (Stale-While-Revalidate) cache** to avoid redundant database queries. Since the underlying data changes only via batch imports, most requests can be served from cache with near-zero latency.
+
+This doc covers only the route-local cache for the full `/api/dashboard` payload. The filter-state endpoints (summary, facets, charts, map, entity queries, search, autocomplete) use a separate two-tier cache (in-process + Upstash Redis), and both GET and POST here now require auth and per-user rate limiting. See [`caching-and-rate-limiting.md`](caching-and-rate-limiting.md).
 
 ---
 
@@ -72,16 +74,15 @@ The cache is in-memory, so it resets on every server restart or deployment.
 
 ## Terminal Debug Logs
 
-All cache operations are logged with the `[Cache]` prefix:
+Cache operations are logged through the structured logger (`createLogger("api/dashboard")`) as events:
 
 ```
-[Cache] MISS — fetching from database
-[Cache] Populated: DB 2341ms, gzip 89ms, raw 4.2MB, compressed 0.8MB
-[Cache] HIT (age: 23s, TTL: 3600s) — 1ms
-[Cache] STALE (age: 3725s, TTL: 3600s) — 0ms
-[Cache] Stale — revalidating in background
-[Cache] Invalidated via POST
-[Cache] Background revalidation failed: <error>
+dashboard_cache_miss
+dashboard_cache_populate_started / dashboard_cache_populated   (query_ms, gzip_ms, raw_mb, compressed_mb, row counts)
+dashboard_cache_hit    (age_seconds, ttl_seconds, duration_ms)
+dashboard_cache_stale  (age_seconds, ttl_seconds, duration_ms)
+dashboard_cache_background_revalidation_started / _failed
+dashboard_cache_invalidated
 ```
 
 ---
@@ -98,7 +99,8 @@ All cache operations are logged with the `[Cache]` prefix:
 
 ## Architecture Notes
 
-- **In-memory only** — no external dependencies (Redis, etc.). Trades durability for simplicity. Cache is lost on cold starts, which is acceptable since the first request repopulates it.
-- **Single revalidation guard** — the `revalidating` flag prevents multiple concurrent background fetches when many users hit a stale cache simultaneously.
-- **Force-dynamic** — the route uses `export const dynamic = "force-dynamic"` so Next.js doesn't interfere with its own static caching. The SWR logic is fully custom.
-- **Gzip stored in cache** — both raw JSON and gzipped Buffer are cached, so no re-compression is needed on cache hits.
+- **In-memory only (this route)**: the full-payload cache has no external dependencies and trades durability for simplicity. Cache is lost on cold starts, which is acceptable since the first request repopulates it. The filter-state endpoints do use a shared Redis layer, see [`caching-and-rate-limiting.md`](caching-and-rate-limiting.md).
+- **Single revalidation guard**: the `revalidating` flag prevents multiple concurrent background fetches when many users hit a stale cache simultaneously.
+- **Force-dynamic**: the route uses `export const dynamic = "force-dynamic"` so Next.js doesn't interfere with its own static caching. The SWR logic is fully custom.
+- **Gzip stored in cache**: both raw JSON and gzipped Buffer are cached, so no re-compression is needed on cache hits.
+- **Auth and rate limits**: GET requires a Bearer token and is limited per user (`dashboard:get`); POST is limited to 10/min (`dashboard:post`) since invalidation forces a full DB re-query.

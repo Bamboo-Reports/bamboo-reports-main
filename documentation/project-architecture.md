@@ -29,6 +29,19 @@ Component Mount / User Action
     → UI Re-render
 ```
 
+With `NEXT_PUBLIC_DASHBOARD_SERVER_MODE=1` (#249), the first flow changes shape: filters are sent to server read endpoints, translated to parameterized SQL, and only paginated/aggregated slices reach the browser:
+
+```
+User Interaction
+    → React State Update (useDashboardFilters)
+    → useServerDashboardData → /api/dashboard/{summary,facets,charts}, /api/{entity}/query
+    → SQL filter translation (lib/dashboard/filtering-sql.ts) → Neon PostgreSQL
+    → Paginated/aggregated response (cached: L1 + Upstash Redis L2)
+    → UI Re-render
+```
+
+See [Server-Mode Dashboard](backend/server-dashboard-mode.md).
+
 Supabase-backed user data (auth, profiles, saved filters, favorites, export audit rows, and Storage) stays on the Supabase client/service-role APIs so RLS/Auth/Storage behavior remains unchanged.
 
 ---
@@ -46,6 +59,8 @@ Supabase-backed user data (auth, profiles, saved filters, favorites, export audi
 -   **`providers.tsx`**: Application-level providers (PostHog analytics).
 -   **`(auth)/`**: Auth route group containing `signin/` and `signup/` pages.
 -   **`api/dashboard/`**: Route Handler that serves the full dashboard dataset with an in-memory SWR cache and gzip compression (see `documentation/backend/api-caching-swr.md`).
+-   **`api/dashboard/{summary,facets,charts}/`**, **`api/{accounts,centers,prospects}/query/`**, **`api/search/`**, **`api/accounts/autocomplete/`**, **`api/centers/map/`**: Server-mode read endpoints (#249) that serve aggregated and paginated slices with filters translated to SQL (see `documentation/backend/server-dashboard-mode.md`).
+-   **`api/financials/`**: Authed, rate-limited proxy for Yahoo Finance data.
 -   **`api/exports/`**: Route Handlers for generating, listing, and re-downloading user exports.
 -   **Rule:** Neon database access is isolated to `app/actions/*`, `app/api/*`, and `lib/db/prisma.ts`. Supabase Auth, RLS-backed user tables, and Storage continue to use Supabase client/service-role APIs.
 
@@ -93,6 +108,7 @@ Key components:
 | `use-recent-items.ts` | Tracks recently viewed records for the History dialog |
 | `use-row-selection.ts` | Generic multi-row selection state |
 | `use-saved-filters.ts` | Saved filter CRUD with Supabase |
+| `use-server-dashboard-data.ts` | Server-mode data orchestration: fetches summary/facets/charts and paginated entity slices (see [Server-Mode Dashboard](backend/server-dashboard-mode.md)) |
 | `use-table-column-preferences.ts` | Per-user table column visibility preferences |
 | `use-table-row-selection.ts` | Wires `use-row-selection.ts` into a specific data table |
 | `use-tour-persistence.ts` | Tour completion tracking (localStorage + Supabase) |
@@ -101,21 +117,24 @@ Key components:
 
 | Directory | Responsibility |
 |-----------|---------------|
-| `ai/` | AI account summary context building, OpenRouter generator, client hook (see [AI Account Summaries](backend/ai-account-summaries.md)) |
 | `analytics/` | PostHog client initialization, event definitions, tracking helpers |
 | `auth/` | Role-based access control and server-side token verification (see [RBAC & Auth Guards](backend/rbac-and-auth-guards.md)) |
+| `cache/` | Two-tier response cache: in-process L1 with residency cap + optional Upstash Redis L2 (see [Caching and Rate Limiting](backend/caching-and-rate-limiting.md)) |
 | `config/` | Environment label, dashboard access, premium filter reveal, server dashboard mode, notification settings |
 | `dashboard/` | Dashboard-specific data transformation utilities |
 | `db/` | Prisma Client singleton for Neon PostgreSQL warehouse access with retry logic |
 | `exports/` | Export request client and server-side ExcelJS workbook builder |
 | `finance/` | Financial data transformation utilities |
+| `maps/` | Carto basemap style helpers and boundary handling |
 | `notifications/` | Notification message formatting helpers |
+| `rate-limit/` | Per-user rate limiting for data endpoints (see [Caching and Rate Limiting](backend/caching-and-rate-limiting.md)) |
 | `request/` | Request metadata helpers (client IP, user-agent) for the export audit log |
 | `search/` | Account search index and alias matching (`alias-utils.ts`, `index.ts`) |
 | `supabase/` | Supabase client factory (singleton) |
 | `tour/` | Guided product tour steps and configuration |
 | `utils/` | General helpers (chart data transformers, export helpers, filter logic, formatters) |
 | `validators/` | Zod schemas for runtime validation |
+| `logger.ts` | Structured server-side logger used by route handlers |
 | `types.ts` | Shared TypeScript interfaces (Account, Center, Service, Function, Tech, Prospect, Filters) |
 
 ---
@@ -208,28 +227,23 @@ Alias rows power alias-aware account search: the global search (`components/sear
 -   **Choropleth Map** (`components/maps/centers-choropleth-map.tsx`): State-level fills driven by center aggregation data and local Survey of India GeoJSON.
 -   **Basemap:** Both views use the keyless Carto Positron style; de-facto boundary layers are hidden in favor of the local administrative overlay.
 
-### 5.2 Logo.dev
+### 5.2 Brandfetch
 -   Used in `components/ui/company-logo.tsx`.
--   **Mechanism:** Constructs a URL `https://img.logo.dev/{domain}?token=...`.
--   **Fallback:** Renders a colored badge with initials if the image fails to load or the company is not in the Logo.dev index.
+-   **Mechanism:** Constructs a `https://cdn.brandfetch.io/{domain}/...` URL from the account or center website domain, keyed by `NEXT_PUBLIC_BRANDFETCH_CLIENT_ID`.
+-   **Fallback:** Renders a monogram badge if the image fails to load or no client ID is configured. See [Logo Integration](frontend/logo-integration.md).
 
 ### 5.3 Yahoo Finance
 -   Used in `app/actions/financial.ts` and `lib/finance/`.
 -   **Purpose:** Fetches stock prices and financial metrics for account entities with stock tickers.
 -   **Integration:** Server-side only (via server actions).
 
-### 5.4 OpenRouter (AI Account Summaries)
--   Used in `lib/ai/account-summary-generator.ts`, called from `app/api/accounts/ai-summary/route.ts`.
--   **Purpose:** Generates a short, grounded executive summary paragraph per account via the Vercel AI SDK (`ai`) routed through OpenRouter (`@openrouter/ai-sdk-provider`).
--   **Integration:** Server-side only, gated by `AI_ACCOUNT_SUMMARY_ENABLED`. See [AI Account Summaries](backend/ai-account-summaries.md).
-
-### 5.5 PostHog Analytics
+### 5.4 PostHog Analytics
 -   Initialized in `app/providers.tsx` and `lib/analytics/client.ts`.
 -   **Event tracking:** Defined in `lib/analytics/events.ts`, executed via helpers in `lib/analytics/tracking.ts`.
 -   **Events tracked:** Page views, filter interactions, export actions, tab navigation, session duration.
 -   **User identification:** Tied to Supabase user ID for cross-session tracking.
 
-### 5.6 Vercel Analytics
+### 5.5 Vercel Analytics
 -   Automatic Core Web Vitals tracking via `@vercel/analytics`.
 -   Zero configuration required — works automatically when deployed on Vercel.
 

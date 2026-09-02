@@ -43,9 +43,11 @@ extractBearerToken(authHeader: string | null): string | null
 resolveAuthenticatedUserId(accessToken: string): Promise<string>
 ```
 
-`extractBearerToken` parses `Authorization: Bearer <token>` headers. `resolveAuthenticatedUserId` calls `supabase.auth.getUser(token)` with a short-lived, non-persisting Supabase client (`persistSession: false`) and returns the verified `user.id`, throwing if the token is missing, malformed, or rejected by Supabase.
+`extractBearerToken` parses `Authorization: Bearer <token>` headers. `resolveAuthenticatedUserId` calls `supabase.auth.getUser(token)` with a module-level, non-persisting Supabase client (`persistSession: false`) and returns the verified `user.id`, throwing if the token is missing, malformed, or rejected by Supabase.
 
-Route handlers that need to know who's calling (for example, the exports and AI-summary routes) use this pair to turn a raw header into a trusted user ID before doing anything else. There is no separate role check baked into this helper: routes that need `admin` (exports) fetch the caller's `profiles.role` themselves and call `canExportData()`.
+Successful validations are cached in-process for 60 seconds (`TOKEN_CACHE_TTL_MS`, max 500 entries with oldest-entry eviction) so warm dashboard requests skip the Supabase auth round trip. The accepted tradeoff: a revoked token keeps working for up to 60 seconds on instances that saw it recently, which is acceptable for read-only dashboard data. Failed validations are never cached.
+
+Route handlers that need to know who's calling (for example, the exports and server-mode data routes) use this pair to turn a raw header into a trusted user ID before doing anything else. There is no separate role check baked into this helper: routes that need `admin` (exports) fetch the caller's `profiles.role` themselves and call `canExportData()`.
 
 ## 4. Sign-in / Sign-up Validation: `lib/validators/auth.ts`
 

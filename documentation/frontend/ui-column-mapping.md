@@ -116,7 +116,7 @@ Each tab in the dashboard displays a paginated data table. Tables show 50 rows p
 
 | Column Header | Database Column | Table | Display Type | Notes |
 |---------------|----------------|-------|-------------|-------|
-| *(Logo)* | `account_hq_website` | `accounts` | Company logo image | Logo.dev lookup by domain; falls back to building icon |
+| *(Logo)* | `account_hq_website` | `accounts` | Company logo image | Brandfetch lookup by domain; falls back to a monogram badge |
 | Account Name | `account_global_legal_name` | `accounts` | Clickable text | Opens Account Details dialog on click |
 | *(NASSCOM badge)* | `account_nasscom_status` | `accounts` | Badge | Shows green "NASSCOM" badge when value is `"yes"` |
 | Industry | `account_hq_industry` | `accounts` | Text | — |
@@ -135,7 +135,7 @@ Each tab in the dashboard displays a paginated data table. Tables show 50 rows p
 
 | Column Header | Database Column | Table | Display Type | Notes |
 |---------------|----------------|-------|-------------|-------|
-| *(Logo)* | `center_account_website` | `centers` | Company logo image | Logo.dev lookup by parent account domain |
+| *(Logo)* | `center_account_website` | `centers` | Company logo image | Brandfetch lookup by parent account domain |
 | Center Name | `center_name` | `centers` | Clickable text | Opens Center Details dialog on click; secondary line shows `account_global_legal_name` |
 | Location | `center_city` + `center_state` | `centers` | Computed text | Format: "City, State" |
 | Center Type | `center_type` | `centers` | Text | — |

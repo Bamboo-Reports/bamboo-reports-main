@@ -8,7 +8,7 @@ function readSql(path: string) {
     .replace(/\s+/g, " ")
 }
 
-const rateLimitsSql = readSql("documentation/sql/rate-limits-migration.sql")
+const rateLimitsSql = readSql("documentation/backend/sql/rate-limits-migration.sql")
 
 describe("rate limits migration", () => {
   it("creates a per-user, per-bucket, per-window counter table", () => {

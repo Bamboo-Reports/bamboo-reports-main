@@ -39,7 +39,7 @@ A comprehensive breakdown of every technology used in the Bamboo Reports project
 | **Authentication** | Supabase Auth |
 | **Analytics** | PostHog, Vercel Analytics, Vercel Speed Insights |
 | **Export** | ExcelJS |
-| **AI** | Vercel AI SDK + OpenRouter (account summaries) |
+| **Caching** | In-memory L1 + Upstash Redis L2 response cache |
 | **Deployment** | Vercel |
 
 ---
@@ -223,18 +223,6 @@ Technologies for storing and querying data.
 | **Retry logic** | Exponential retry wrapper in `lib/db/prisma.ts` |
 | **Package** | `prisma`, `@prisma/client`, `@prisma/adapter-neon`, `ws` (WebSocket driver required by `@prisma/adapter-neon` outside edge runtimes) |
 
-### OpenRouter + Vercel AI SDK
-
-| | |
-|---|---|
-| **What it is** | The Vercel AI SDK (`ai`) provides a model-agnostic `generateText`/structured-output API; OpenRouter (`@openrouter/ai-sdk-provider`) routes those calls to a configurable underlying LLM |
-| **Why we use it** | Powers the AI-generated account summary feature without hardcoding a single model provider; the model is swappable via an environment variable with no code change |
-| **Used for** | One-paragraph executive account summaries in the Account details dialog, grounded strictly in the account's own warehouse data |
-| **Default model** | `deepseek/deepseek-v4-flash`, overridable via `AI_ACCOUNT_SUMMARY_MODEL` |
-| **Package** | `ai`, `@openrouter/ai-sdk-provider` |
-
-> **Details:** See [AI Account Summaries](backend/ai-account-summaries.md) for the full request flow, prompt design, and env vars.
-
 ### Dashboard API Route (`/api/dashboard`)
 
 | | |
@@ -245,6 +233,7 @@ Technologies for storing and querying data.
 | **Compression** | Pre-gzipped payload returned when the client sends `Accept-Encoding: gzip`; raw JSON otherwise |
 | **Authentication** | Requires a Supabase JWT bearer token in the `Authorization` header, validated server-side before any cached data is returned |
 | **Cache invalidation** | `POST /api/dashboard` (also auth-gated) clears the cache; called by the client before a force-refresh |
+| **Related** | The server-mode read endpoints use a separate shared two-tier cache (in-memory L1 + Upstash Redis L2); see [Caching and Rate Limiting](backend/caching-and-rate-limiting.md) |
 
 ### Supabase PostgreSQL
 
@@ -369,6 +358,7 @@ Tools used during development but not shipped to production.
 |------|---------|---------|
 | **Vitest** | 4.1.x | Fast unit and integration testing framework |
 | **React Testing Library** | 16.3.x | UI component testing |
+| **pg-mem** | 3.0.x | In-memory Postgres used to execute the server-mode SQL filter suites without a live database |
 | **ESLint** | 9.39.2 | JavaScript/TypeScript linting for code quality |
 | **eslint-config-next** | 16.2.6 | Next.js-specific ESLint rules (accessibility, best practices) |
 | **PostCSS** | 8.5 | CSS processing pipeline (required by Tailwind CSS) |
@@ -397,7 +387,7 @@ How the application is built, deployed, and served.
 | Setting | Value | Why |
 |---------|-------|-----|
 | TypeScript errors during builds | Ignored (`typescript.ignoreBuildErrors`) | Allows deployment while type issues are being resolved |
-| Image optimization | Disabled (`images.unoptimized: true`) | Avoids the optimizer; `img.logo.dev` is the only allowed remote pattern |
+| Image optimization | Disabled (`images.unoptimized: true`) | Avoids the optimizer; `cdn.brandfetch.io` is the only allowed remote pattern |
 | Response compression | Enabled (`compress: true`) | Gzip-compresses HTTP responses |
 
 ---
@@ -411,7 +401,8 @@ Third-party services the application communicates with at runtime.
 | **Neon PostgreSQL** | Primary BI data warehouse | Yes | `DATABASE_URL`; `DIRECT_URL` optional for Prisma CLI |
 | **Supabase** | Authentication, profiles, saved filters, favorites, export Storage | Yes | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` for server-side Storage/export operations |
 | **Carto Positron** | Basemap tiles for geospatial views | Yes | None |
-| **Logo.dev** | Company logo images | No | `NEXT_PUBLIC_LOGO_DEV_KEY` |
+| **Brandfetch** | Company logo images | No | `NEXT_PUBLIC_BRANDFETCH_CLIENT_ID` |
+| **Upstash Redis** | L2 response cache (optional; L1-only without it) | No | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` (or `KV_REST_API_*`) |
 | **PostHog** | Product analytics | No | `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST` |
 | **Yahoo Finance** | Stock prices and financial data | No | None (public API) |
 

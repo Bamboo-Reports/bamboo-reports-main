@@ -35,7 +35,7 @@ retrieval stays on the admin-only export path.
 - DB-backed per-user rate limiter `lib/rate-limit/server.ts`: 429 + `Retry-After`,
   fails open on backend error, env-tunable (`DATA_RATE_LIMIT_PER_MIN`, default 60).
   Applied to `/api/dashboard` (GET/POST) and export list/download routes.
-- `documentation/sql/rate-limits-migration.sql`: `rate_limit_counters` table +
+- `documentation/backend/sql/rate-limits-migration.sql`: `rate_limit_counters` table +
   `increment_rate_limit()` function. **Applied to the Supabase project
   `qeidxxszpbzfdnqqmdkw`** (BR-USER-AUTH-NEXTJS). Verified enforcing live.
 - Closed an unauthenticated hole: `getAccountFinancialInfo` (4 Yahoo calls, no
@@ -179,7 +179,7 @@ Fixes the reported slowness (10s+ snap-back when removing a filter):
 - DEPLOY: user adds the two env vars in Vercel (Production) and redeploys.
   Local dev creds live in `.env.local` (gitignored).
 - Benchmark over the seeded 60-scenario filter matrix:
-  `documentation/redis-cache-benchmark.md` (facets p95 5077ms -> 699ms).
+  `documentation/backend/redis-cache-benchmark.md` (facets p95 5077ms -> 699ms).
 - ETL freshness: `etl/V2/main_cache_purge.py` (copy of main.py, which is kept
   untouched) purges the `dash:*` keys after a successful import when the
   Upstash env vars are set in the ETL `.env` (verified live, 175 keys).
