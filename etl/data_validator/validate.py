@@ -84,11 +84,27 @@ EMAIL_PATTERN = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
 # render as nothing in Google Sheets but corrupt keys, joins, sorting, and
 # search downstream (the "Freudenberg SE" incident, 2026-07-29).
 INVISIBLE_CHARS = {
-    "​": "zero-width space",
-    "‌": "zero-width non-joiner",
-    "‍": "zero-width joiner",
-    "﻿": "byte order mark",
-    "­": "soft hyphen",
+    "\u200b": "zero-width space",
+    "\u200c": "zero-width non-joiner",
+    "\u200d": "zero-width joiner",
+    "\u2060": "word joiner",
+    "\ufeff": "byte order mark",
+    "\u00ad": "soft hyphen",
+    # Bidirectional formatting controls. Just as invisible and just as
+    # damaging as the zero-width characters above: centers!center_boardline
+    # row 4286 and three prospects!prospect_title cells carry these and were
+    # reported clean before they were added here.
+    "\u200e": "left-to-right mark",
+    "\u200f": "right-to-left mark",
+    "\u202a": "left-to-right embedding",
+    "\u202b": "right-to-left embedding",
+    "\u202c": "pop directional formatting",
+    "\u202d": "left-to-right override",
+    "\u202e": "right-to-left override",
+    "\u2066": "left-to-right isolate",
+    "\u2067": "right-to-left isolate",
+    "\u2068": "first strong isolate",
+    "\u2069": "pop directional isolate",
 }
 INVISIBLE_CHARS_RE = re.compile("[" + "".join(INVISIBLE_CHARS) + "]")
 
@@ -804,7 +820,9 @@ ALL_RULES = {
         "account_visibility": {
             "Can Be Nullable": "No",
             "Can Have URL": "No",
-            "Description": "should contain||include||exclude",
+            # Accepts both the legacy include/exclude values and the
+            # GCC / NON-GCC values used by the centers master sheet and updater app.
+            "Description": "should contain||include||exclude||GCC||NON-GCC",
         },
         "account_visibility_note": {
             "Can Be Nullable": "Yes",
@@ -1090,7 +1108,10 @@ def check_table_format(cache: SheetCache, table_name: str) -> bool:
                 if url_pattern.search(val):
                     errors.append((row_idx, col_name, f"Cannot contain URL: {val}"))
 
-            desc_lower = desc.lower()
+            # Descriptions are hand-written and carry stray double spaces, so
+            # collapse runs of whitespace before matching. Without this the
+            # center_country_iso2 rule ("should  be IN") never fired.
+            desc_lower = re.sub(r"\s+", " ", desc).strip().lower()
 
             if col_name == "uuid" or "uuid" in desc_lower:
                 pattern, expected_format = id_patterns.get(
@@ -1157,6 +1178,19 @@ def check_table_format(cache: SheetCache, table_name: str) -> bool:
                         )
                     )
 
+            # Rank caps come before the generic number check: these columns are
+            # described as "only number", so keying the caps off the description
+            # alone meant the number branch always won and the bounds never ran.
+            elif col_name.endswith("forbes_2000_rank") or "2000 rank" in desc_lower:
+                clean_val = val.replace(",", "")
+                if not clean_val.isdigit() or int(clean_val) > 2000:
+                    errors.append((row_idx, col_name, f"Must be number <= 2000: {val}"))
+
+            elif col_name.endswith("fortune_500_rank") or "500 rank" in desc_lower:
+                clean_val = val.replace(",", "")
+                if not clean_val.isdigit() or int(clean_val) > 500:
+                    errors.append((row_idx, col_name, f"Must be number <= 500: {val}"))
+
             elif "only number" in desc_lower or desc_lower == "number":
                 clean_val = val.replace(",", "")
                 if not clean_val.isdigit() and not re.match(
@@ -1197,17 +1231,6 @@ def check_table_format(cache: SheetCache, table_name: str) -> bool:
                     errors.append(
                         (row_idx, col_name, f"Must be valid coordinate: {val}")
                     )
-
-            # Rank checks
-            elif "2000 rank" in desc_lower:
-                clean_val = val.replace(",", "")
-                if not clean_val.isdigit() or int(clean_val) > 2000:
-                    errors.append((row_idx, col_name, f"Must be number <= 2000: {val}"))
-
-            elif "500 rank" in desc_lower:
-                clean_val = val.replace(",", "")
-                if not clean_val.isdigit() or int(clean_val) > 500:
-                    errors.append((row_idx, col_name, f"Must be number <= 500: {val}"))
 
     if errors:
         all_ok = False

@@ -17,7 +17,7 @@ from gspread.utils import a1_to_rowcol, rowcol_to_a1
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-SPREADSHEET_ID = "1Au4sjSHR9mMMrrgNteP-1_2t8JbByHbI8BMI2ugsTvg"
+SPREADSHEET_ID = "1aWhBqDm_e9WdG67XbpGS38uQmlot8tdaqWwsYLvmIFs"
 SERVICE_ACCOUNT_FILE = SCRIPT_DIR / "bamboo-reports-f3d45a15c2ce.json"
 DEFAULT_SHEET_NAME = "SM"
 DEFAULT_TARGET_COLUMNS = ["K", "M", "O", "Q", "S", "U", "W", "Y", "AA", "AC"]
