@@ -30,7 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Save, FolderOpen, Settings, X, ChevronDown, ShieldAlert, Share2, Users, Trash2 } from "lucide-react"
+import { Save, FolderOpen, Settings, X, ChevronDown, ShieldAlert, Share2, Users, Trash2, FileText } from "lucide-react"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { buildTrackedFiltersSnapshot, normalizeTrackedText, toTrackedStringArray } from "@/lib/analytics/tracking"
@@ -47,6 +47,9 @@ interface SavedFiltersManagerProps {
   onExport?: () => void
   canExport?: boolean
   exportBlockedMessage?: string
+  /** Downloads a PDF of the summary counts plus the filters that produced them. */
+  onGenerateReport?: () => void
+  isGeneratingReport?: boolean
 }
 
 export const SavedFiltersManager = memo(function SavedFiltersManager({
@@ -57,6 +60,8 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
   onExport,
   canExport = true,
   exportBlockedMessage = "You are not allowed to export data. Please contact an admin.",
+  onGenerateReport,
+  isGeneratingReport = false,
 }: SavedFiltersManagerProps) {
   const {
     savedFilters,
@@ -421,6 +426,22 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
             </Button>
           )}
         </div>
+      )}
+
+      {onGenerateReport && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onGenerateReport}
+          disabled={isGeneratingReport}
+          className="w-full h-8 text-xs font-medium"
+          aria-label="Download summary report as PDF"
+          title="Download a PDF with the current counts and applied filters"
+          data-tour="summary-report-button"
+        >
+          <FileText className="h-3.5 w-3.5" />
+          {isGeneratingReport ? "Preparing PDF..." : "Summary PDF"}
+        </Button>
       )}
 
       {exportAccessError ? (

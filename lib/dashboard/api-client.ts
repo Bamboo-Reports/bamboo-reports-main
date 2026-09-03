@@ -154,6 +154,10 @@ export const fetchDashboardFacets = (filters: Filters, opts: FetchOpts = {}) =>
 export const fetchDashboardCharts = (filters: Filters, opts: FetchOpts = {}) =>
   postFilters<ChartsResponse>("/api/dashboard/charts", filters, opts)
 
+/** Every chart bucket, uncapped (no top-10 or city "Others" grouping). Used by the summary PDF. */
+export const fetchDashboardChartsFull = (filters: Filters, opts: FetchOpts = {}) =>
+  request<ChartsResponse>("/api/dashboard/charts", { method: "POST", body: JSON.stringify({ filters, full: true }) }, opts)
+
 export const fetchCentersMap = (filters: Filters, opts: FetchOpts = {}) =>
   postFilters<CentersMapResponse>("/api/centers/map", filters, opts)
 

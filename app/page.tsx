@@ -30,6 +30,7 @@ import { isServerDashboardEnabled } from "@/lib/config/server-dashboard"
 import {
   fetchAccountRelated,
   fetchCenterDetail,
+  fetchDashboardChartsFull,
   fetchProspectById,
   type EntitySort,
   type FacetRanges,
@@ -39,6 +40,8 @@ import { useRecentItems } from "@/hooks/use-recent-items"
 import { useFavorites, type FavoriteItem, type FavoriteInput } from "@/hooks/use-favorites"
 import { getProspectRecordId } from "@/lib/dashboard/prospect-id"
 import { countsTowardHeadcount } from "@/lib/dashboard/headcount"
+import { buildSummaryReport } from "@/lib/reports/summary-report"
+import { getReportChartData } from "@/lib/dashboard/charts"
 import {
   captureEvent,
   ensureAnalyticsSession,
@@ -46,6 +49,7 @@ import {
   setAnalyticsContext,
 } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
+import { devError } from "@/lib/utils/dev-log"
 import { buildTrackedFiltersSnapshot } from "@/lib/analytics/tracking"
 import { canExportData } from "@/lib/auth/roles"
 import {
@@ -265,6 +269,7 @@ function DashboardContent(): React.JSX.Element | null {
   const viewCenterChartData = serverMode ? (serverData.charts?.center ?? centerChartData) : centerChartData
   const viewProspectChartData = serverMode ? (serverData.charts?.prospect ?? prospectChartData) : prospectChartData
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false)
   const [exportScope, setExportScope] = useState<
     | { dataset: "accounts"; accountNames: string[] }
     | { dataset: "centers"; centerKeys: string[] }
@@ -784,6 +789,110 @@ function DashboardContent(): React.JSX.Element | null {
     },
     [canExport, cancelPendingScopeClear]
   )
+
+  const summaryCounts = useMemo(() => {
+    if (serverMode) {
+      const filtered = serverData.summary?.filtered
+      const full = serverData.summary?.full
+      return {
+        filteredAccountsCount: filtered?.accounts ?? 0,
+        totalAccountsCount: full?.accounts ?? 0,
+        filteredCentersCount: filtered?.centers ?? 0,
+        totalCentersCount: full?.centers ?? 0,
+        filteredUpcomingCentersCount: filtered?.upcomingCenters ?? 0,
+        totalUpcomingCentersCount: full?.upcomingCenters ?? 0,
+        filteredProspectsCount: filtered?.prospects ?? 0,
+        totalProspectsCount: full?.prospects ?? 0,
+        filteredHeadcount: filtered?.headcount ?? 0,
+        totalHeadcount: full?.headcount ?? 0,
+      }
+    }
+    return {
+      filteredAccountsCount: filteredData.filteredAccounts.length,
+      totalAccountsCount: summary.totalAccountsCountFull,
+      filteredCentersCount: filteredData.filteredCenters.length,
+      totalCentersCount: summary.totalCentersCountFull,
+      filteredUpcomingCentersCount: filteredData.filteredCenters.filter((c) => c.center_status === "Upcoming").length,
+      totalUpcomingCentersCount: summary.totalUpcomingCentersCountFull,
+      filteredProspectsCount: filteredData.filteredProspects.length,
+      totalProspectsCount: summary.totalProspectsCountFull,
+      filteredHeadcount: filteredData.filteredCenters.reduce(
+        (sum, c) => sum + (countsTowardHeadcount(c.center_type) ? (c.center_employees ?? 0) : 0),
+        0
+      ),
+      totalHeadcount: summary.totalHeadcountFull,
+    }
+  }, [serverMode, serverData.summary, filteredData, summary])
+
+  const handleGenerateReport = useCallback(async () => {
+    if (isGeneratingReport) return
+    setIsGeneratingReport(true)
+    try {
+      // Server mode: the dashboard payload is capped (top 10, city "Others"),
+      // so fetch every bucket for the report. Client mode counts locally.
+      const charts = serverMode
+        ? await fetchDashboardChartsFull(filters).then((res) => ({
+            accounts: res.account,
+            centers: res.center,
+            prospects: { departmentData: res.prospect.departmentData, levelData: res.prospect.levelData },
+          }))
+        : getReportChartData({
+            accounts: filteredData.filteredAccounts,
+            centers: filteredData.filteredCenters,
+            functions: filteredData.filteredFunctions,
+            prospects: filteredData.filteredProspects,
+          })
+      const model = buildSummaryReport({
+        filters,
+        counts: summaryCounts,
+        baselineRanges: {
+          revenue: revenueRange,
+          yearsInIndia: yearsInIndiaRange,
+          centerIncYear: centerIncYearRange,
+        },
+        enabledSections: {
+          accounts: accountsEnabled,
+          centers: centersEnabled,
+          prospects: prospectsEnabled,
+        },
+        activeView: activeSection,
+        activeFilterCount: activeFiltersCount,
+        charts,
+        generatedBy: userEmail ?? undefined,
+      })
+      const { downloadSummaryReportPdf } = await import("@/lib/reports/summary-report-pdf")
+      await downloadSummaryReportPdf(model)
+      toast.success("Summary PDF downloaded.")
+      captureEvent(ANALYTICS_EVENTS.SUMMARY_REPORT_DOWNLOADED, {
+        active_filters_count: activeFiltersCount,
+        active_view: activeSection,
+        metrics_count: model.metrics.length,
+      })
+    } catch (error) {
+      devError("Summary report failed", error)
+      toast.error("Could not generate the summary PDF. Please try again.")
+      captureEvent(ANALYTICS_EVENTS.SUMMARY_REPORT_FAILED, {
+        active_filters_count: activeFiltersCount,
+      })
+    } finally {
+      setIsGeneratingReport(false)
+    }
+  }, [
+    isGeneratingReport,
+    filters,
+    summaryCounts,
+    revenueRange,
+    yearsInIndiaRange,
+    centerIncYearRange,
+    accountsEnabled,
+    centersEnabled,
+    prospectsEnabled,
+    activeSection,
+    activeFiltersCount,
+    filteredData,
+    serverMode,
+    userEmail,
+  ])
 
   const handleExportDialogOpenChange = useCallback((open: boolean) => {
     setExportDialogOpen(open)
@@ -1416,6 +1525,8 @@ function DashboardContent(): React.JSX.Element | null {
             resetFilters={resetFilters}
             handleExportAll={handleExportAll}
             canExport={canExport}
+            handleGenerateReport={handleGenerateReport}
+            isGeneratingReport={isGeneratingReport}
             handleMinRevenueChange={handleMinRevenueChange}
             handleMaxRevenueChange={handleMaxRevenueChange}
             handleRevenueRangeChange={handleRevenueRangeChange}
@@ -1434,24 +1545,7 @@ function DashboardContent(): React.JSX.Element | null {
             <div className="flex-1 overflow-y-auto scrollbar-gutter-stable">
               <div className="px-6 pt-[var(--dashboard-content-top-gap)] pb-[var(--dashboard-content-bottom-gap)]">
                 <SummaryCards
-                  filteredAccountsCount={filteredCounts.accounts}
-                  totalAccountsCount={serverMode ? (serverData.summary?.full.accounts ?? 0) : summary.totalAccountsCountFull}
-                  filteredCentersCount={filteredCounts.centers}
-                  totalCentersCount={serverMode ? (serverData.summary?.full.centers ?? 0) : summary.totalCentersCountFull}
-                  filteredUpcomingCentersCount={
-                    serverMode
-                      ? (serverData.summary?.filtered.upcomingCenters ?? 0)
-                      : filteredData.filteredCenters.filter((c) => c.center_status === "Upcoming").length
-                  }
-                  totalUpcomingCentersCount={serverMode ? (serverData.summary?.full.upcomingCenters ?? 0) : summary.totalUpcomingCentersCountFull}
-                  filteredProspectsCount={filteredCounts.prospects}
-                  totalProspectsCount={serverMode ? (serverData.summary?.full.prospects ?? 0) : summary.totalProspectsCountFull}
-                  filteredHeadcount={
-                    serverMode
-                      ? (serverData.summary?.filtered.headcount ?? 0)
-                      : filteredData.filteredCenters.reduce((sum, c) => sum + (countsTowardHeadcount(c.center_type) ? (c.center_employees ?? 0) : 0), 0)
-                  }
-                  totalHeadcount={serverMode ? (serverData.summary?.full.headcount ?? 0) : summary.totalHeadcountFull}
+                  {...summaryCounts}
                   activeView={activeSection}
                   onSelect={handleSectionSelect}
                   updating={serverMode && serverData.pending.core}

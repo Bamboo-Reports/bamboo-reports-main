@@ -41,6 +41,8 @@ interface FiltersSidebarProps {
   resetFilters: () => void
   handleExportAll: () => void
   canExport: boolean
+  handleGenerateReport?: () => void
+  isGeneratingReport?: boolean
   handleMinRevenueChange: (value: string) => void
   handleMaxRevenueChange: (value: string) => void
   handleRevenueRangeChange: (value: [number, number]) => void
@@ -74,6 +76,8 @@ export function FiltersSidebar({
   resetFilters,
   handleExportAll,
   canExport,
+  handleGenerateReport,
+  isGeneratingReport,
   handleMinRevenueChange,
   handleMaxRevenueChange,
   handleRevenueRangeChange,
@@ -235,6 +239,8 @@ export function FiltersSidebar({
               onExport={handleExportAll}
               canExport={canExport}
               exportBlockedMessage="You are not allowed to export data. Please contact an admin."
+              onGenerateReport={handleGenerateReport}
+              isGeneratingReport={isGeneratingReport}
             />
           </div>
         </div>

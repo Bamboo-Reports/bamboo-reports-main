@@ -60,12 +60,14 @@ export async function POST(request: Request) {
     rawBody = {}
   }
   const filters = parseFilters((rawBody as { filters?: unknown })?.filters)
+  // full=true returns every bucket uncapped (used by the summary PDF report).
+  const full = (rawBody as { full?: unknown })?.full === true
   const access = resolveAccess()
   const g = (entity: AggregateEntity, column: string) => grouped(entity, filters, access, column)
 
   try {
     const body = await getOrCompute(
-      `charts:${JSON.stringify(filters)}`,
+      `charts:${full ? "full:" : ""}${JSON.stringify(filters)}`,
       dashboardCacheTtlMs(),
       async () => {
         const [
@@ -86,23 +88,26 @@ export async function POST(request: Request) {
           g("prospects", "prospect_city"),
         ])
 
+        const cap = full ? (rows: ChartData[]) => rows : top10
+        const cities = full ? (rows: ChartData[]) => rows : cityBucket
+
         return {
           account: {
-            regionData: top10(accCountry),
-            primaryNatureData: top10(accCategory),
-            revenueRangeData: top10(accRevenue),
-            employeesRangeData: top10(accEmployees),
+            regionData: cap(accCountry),
+            primaryNatureData: cap(accCategory),
+            revenueRangeData: cap(accRevenue),
+            employeesRangeData: cap(accEmployees),
           },
           center: {
-            centerTypeData: top10(cenType),
-            employeesRangeData: top10(cenEmployees),
-            cityData: cityBucket(cenCity),
-            functionData: top10(cenFunction),
+            centerTypeData: cap(cenType),
+            employeesRangeData: cap(cenEmployees),
+            cityData: cities(cenCity),
+            functionData: cap(cenFunction),
           },
           prospect: {
-            departmentData: top10(proDept),
-            levelData: top10(proLevel),
-            cityData: top10(proCity),
+            departmentData: cap(proDept),
+            levelData: cap(proLevel),
+            cityData: cap(proCity),
           },
         }
       },
