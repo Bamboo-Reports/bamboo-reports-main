@@ -47,6 +47,8 @@
     "highcharts": "^12.1.2",
     "highcharts-react-official": "^3.2.1",
     "input-otp": "^1.4.2",
+    "jspdf": "^3.0.4",
+    "jspdf-autotable": "^5.0.8",
     "lucide-react": "^0.454.0",
     "maplibre-gl": "^4.7.1",
     "next": "^16.2.6",

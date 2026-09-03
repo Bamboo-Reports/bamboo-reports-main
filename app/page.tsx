@@ -28,6 +28,8 @@ import { useRecentItems } from "@/hooks/use-recent-items"
 import { useFavorites, type FavoriteItem, type FavoriteInput } from "@/hooks/use-favorites"
 import { getProspectRecordId } from "@/lib/dashboard/prospect-id"
 import { countsTowardHeadcount } from "@/lib/dashboard/headcount"
+import { buildSummaryReport } from "@/lib/reports/summary-report"
+import { getReportChartData } from "@/lib/dashboard/charts"
 import {
   captureEvent,
   ensureAnalyticsSession,
@@ -35,6 +37,7 @@ import {
   setAnalyticsContext,
 } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
+import { devError } from "@/lib/utils/dev-log"
 import { buildTrackedFiltersSnapshot } from "@/lib/analytics/tracking"
 import { canExportData } from "@/lib/auth/roles"
 import {
@@ -120,6 +123,7 @@ function DashboardContent(): React.JSX.Element | null {
   const [prospectsView, setProspectsView] = useState<"chart" | "data">("chart")
   const [activeSection, setActiveSection] = useState<"accounts" | "centers" | "prospects">(defaultSection)
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false)
   const [exportScope, setExportScope] = useState<
     | { dataset: "accounts"; accountNames: string[] }
     | { dataset: "centers"; centerKeys: string[] }
@@ -627,6 +631,82 @@ function DashboardContent(): React.JSX.Element | null {
     [canExport, cancelPendingScopeClear]
   )
 
+  const summaryCounts = useMemo(() => ({
+    filteredAccountsCount: filteredData.filteredAccounts.length,
+    totalAccountsCount: summary.totalAccountsCountFull,
+    filteredCentersCount: filteredData.filteredCenters.length,
+    totalCentersCount: summary.totalCentersCountFull,
+    filteredUpcomingCentersCount: filteredData.filteredCenters.filter((c) => c.center_status === "Upcoming").length,
+    totalUpcomingCentersCount: summary.totalUpcomingCentersCountFull,
+    filteredProspectsCount: filteredData.filteredProspects.length,
+    totalProspectsCount: summary.totalProspectsCountFull,
+    filteredHeadcount: filteredData.filteredCenters.reduce(
+      (sum, c) => sum + (countsTowardHeadcount(c.center_type) ? (c.center_employees ?? 0) : 0),
+      0
+    ),
+    totalHeadcount: summary.totalHeadcountFull,
+  }), [filteredData, summary])
+
+  const handleGenerateReport = useCallback(async () => {
+    if (isGeneratingReport) return
+    setIsGeneratingReport(true)
+    try {
+      const model = buildSummaryReport({
+        filters,
+        counts: summaryCounts,
+        baselineRanges: {
+          revenue: revenueRange,
+          yearsInIndia: yearsInIndiaRange,
+          centerIncYear: centerIncYearRange,
+        },
+        enabledSections: {
+          accounts: accountsEnabled,
+          centers: centersEnabled,
+          prospects: prospectsEnabled,
+        },
+        activeView: activeSection,
+        activeFilterCount: activeFiltersCount,
+        charts: getReportChartData({
+          accounts: filteredData.filteredAccounts,
+          centers: filteredData.filteredCenters,
+          functions: filteredData.filteredFunctions,
+          prospects: filteredData.filteredProspects,
+        }),
+        generatedBy: userEmail ?? undefined,
+      })
+      const { downloadSummaryReportPdf } = await import("@/lib/reports/summary-report-pdf")
+      await downloadSummaryReportPdf(model)
+      toast.success("Summary PDF downloaded.")
+      captureEvent(ANALYTICS_EVENTS.SUMMARY_REPORT_DOWNLOADED, {
+        active_filters_count: activeFiltersCount,
+        active_view: activeSection,
+        metrics_count: model.metrics.length,
+      })
+    } catch (error) {
+      devError("Summary report failed", error)
+      toast.error("Could not generate the summary PDF. Please try again.")
+      captureEvent(ANALYTICS_EVENTS.SUMMARY_REPORT_FAILED, {
+        active_filters_count: activeFiltersCount,
+      })
+    } finally {
+      setIsGeneratingReport(false)
+    }
+  }, [
+    isGeneratingReport,
+    filters,
+    summaryCounts,
+    revenueRange,
+    yearsInIndiaRange,
+    centerIncYearRange,
+    accountsEnabled,
+    centersEnabled,
+    prospectsEnabled,
+    activeSection,
+    activeFiltersCount,
+    filteredData,
+    userEmail,
+  ])
+
   const handleExportDialogOpenChange = useCallback((open: boolean) => {
     setExportDialogOpen(open)
     if (!open) {
@@ -1119,6 +1199,8 @@ function DashboardContent(): React.JSX.Element | null {
             resetFilters={resetFilters}
             handleExportAll={handleExportAll}
             canExport={canExport}
+            handleGenerateReport={handleGenerateReport}
+            isGeneratingReport={isGeneratingReport}
             handleMinRevenueChange={handleMinRevenueChange}
             handleMaxRevenueChange={handleMaxRevenueChange}
             handleRevenueRangeChange={handleRevenueRangeChange}
@@ -1137,16 +1219,7 @@ function DashboardContent(): React.JSX.Element | null {
             <div className="flex-1 overflow-y-auto scrollbar-gutter-stable">
               <div className="px-6 pt-[var(--dashboard-content-top-gap)] pb-[var(--dashboard-content-bottom-gap)]">
                 <SummaryCards
-                  filteredAccountsCount={filteredData.filteredAccounts.length}
-                  totalAccountsCount={summary.totalAccountsCountFull}
-                  filteredCentersCount={filteredData.filteredCenters.length}
-                  totalCentersCount={summary.totalCentersCountFull}
-                  filteredUpcomingCentersCount={filteredData.filteredCenters.filter((c) => c.center_status === "Upcoming").length}
-                  totalUpcomingCentersCount={summary.totalUpcomingCentersCountFull}
-                  filteredProspectsCount={filteredData.filteredProspects.length}
-                  totalProspectsCount={summary.totalProspectsCountFull}
-                  filteredHeadcount={filteredData.filteredCenters.reduce((sum, c) => sum + (countsTowardHeadcount(c.center_type) ? (c.center_employees ?? 0) : 0), 0)}
-                  totalHeadcount={summary.totalHeadcountFull}
+                  {...summaryCounts}
                   activeView={activeSection}
                   onSelect={handleSectionSelect}
                 />
