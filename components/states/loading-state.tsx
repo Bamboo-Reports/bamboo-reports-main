@@ -5,11 +5,6 @@ import { ChartWaveSkeleton } from "@/components/ui/chart-wave-skeleton"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TopProgressBar } from "@/components/ui/top-progress-bar"
 
-interface LoadingStateProps {
-  /** Short, plain status line shown in the header while data loads. */
-  connectionStatus?: string
-}
-
 /**
  * Full-page loading state for the dashboard.
  *
@@ -23,11 +18,12 @@ interface LoadingStateProps {
  * the top progress bar, the skeleton shimmer and the resting chart wave. The
  * only extra moment is the four petals of the logo assembling once on entry.
  */
-export function LoadingState({ connectionStatus = "Loading your dashboard" }: LoadingStateProps) {
+export function LoadingState() {
   return (
     <div
       className="flex h-screen flex-col overflow-hidden bg-[radial-gradient(circle_at_top_right,_hsl(var(--primary)/0.14),_transparent_36%),radial-gradient(circle_at_0%_45%,_hsl(var(--chart-3)/0.10),_transparent_34%),hsl(var(--background))]"
       aria-busy="true"
+      aria-label="Loading dashboard"
     >
       <TopProgressBar active />
 
@@ -42,20 +38,11 @@ export function LoadingState({ connectionStatus = "Loading your dashboard" }: Lo
               <p className="truncate text-lg font-bold text-foreground">Bamboo Reports</p>
             </div>
 
-            <div className="flex items-center gap-3">
-              <p role="status" className="hidden items-center gap-2 text-sm text-muted-foreground sm:flex">
-                <span className="relative flex h-2 w-2" aria-hidden="true">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/60" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
-                </span>
-                {connectionStatus}
-              </p>
-              <div className="hidden items-center gap-2 md:flex" aria-hidden="true">
-                <Skeleton className="h-9 w-9 rounded-lg" />
-                <Skeleton className="h-9 w-9 rounded-lg" />
-                <Skeleton className="h-9 w-9 rounded-lg" />
-                <Skeleton className="h-9 w-9 rounded-full" />
-              </div>
+            <div className="hidden items-center gap-2 md:flex" aria-hidden="true">
+              <Skeleton className="h-9 w-9 rounded-lg" />
+              <Skeleton className="h-9 w-9 rounded-lg" />
+              <Skeleton className="h-9 w-9 rounded-lg" />
+              <Skeleton className="h-9 w-9 rounded-full" />
             </div>
           </div>
         </div>

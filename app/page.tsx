@@ -601,7 +601,6 @@ function DashboardContent(): React.JSX.Element | null {
 
   const pageLoading = serverData.initialLoading
   const pageError = serverData.summary ? null : serverData.error
-  const pageConnectionStatus = "Loading your dashboard"
 
   useEffect(() => {
     if (!pageError) {
@@ -1214,7 +1213,7 @@ function DashboardContent(): React.JSX.Element | null {
   }
 
   if (pageLoading) {
-    return <LoadingState connectionStatus={pageConnectionStatus} />
+    return <LoadingState />
   }
 
   if (pageError) {
