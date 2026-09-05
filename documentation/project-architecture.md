@@ -69,7 +69,8 @@ Organized by feature domain:
 
 | Directory | Responsibility |
 |-----------|---------------|
-| `auth/` | Sign-in and sign-up form components |
+| `auth/` | `AuthShell`, the card frame shared by the sign-in, sign-up and password pages under `app/(auth)/` |
+| `brand/` | `BrandMark` (inline animated logo) and `BrandPage` (frame for every screen outside the dashboard shell) |
 | `cards/` | Card component variants |
 | `charts/` | Highcharts donut charts and the Technology treemap (the Recharts revenue area chart lives in `dialogs/`) |
 | `dashboard/` | Summary cards with filtered vs. total counts |
@@ -82,15 +83,17 @@ Organized by feature domain:
 | `maps/` | MapLibre cluster map and state choropleth map |
 | `notifications/` | Notification bell dropdown |
 | `search/` | Global search with alias-aware account matching |
-| `states/` | Loading and error state fallback components |
+| `states/` | Full-page loading skeleton (`LoadingState`), dashboard load error (`ErrorState`), in-place empty states |
 | `tables/` | Data grid row components (AccountRow, CenterRow, etc.) |
 | `tabs/` | Tab views (Accounts, Centers, Prospects, Services) |
-| `ui/` | Shared design system primitives (shadcn/ui) |
+| `ui/` | Shared design system primitives (shadcn/ui) plus skeleton primitives (`skeleton.tsx`, `chart-wave-skeleton.tsx`, `data-skeletons.tsx`) |
 
 Key components:
 -   **`filters/filters-sidebar.tsx`**: Composes filter sections and saved-filter controls; state lives in hooks at the page level.
 -   **`saved-filters-manager.tsx`**: Encapsulates all Supabase interaction for saving/loading user filter preferences.
 -   **`maps/centers-choropleth-map.tsx`**: State-level choropleth with disputed boundary alias handling.
+-   **`brand/brand-page.tsx`**: One frame for the auth, load error, 404, global error and maintenance screens, so they share the dashboard's gradient and brand lockup. See [Standalone Screens](frontend/standalone-screens.md).
+-   **`states/loading-state.tsx`**: A ghost of the dashboard shell (header, rail, five summary cards, chart card) shown before the first payload, so data fills into the same structure instead of swapping screens.
 
 ### 2.3 `hooks/` (Custom React Hooks)
 
@@ -155,7 +158,7 @@ The filter state is a complex object defined in `lib/types.ts` (`Filters` interf
 
 ### 3.2 Authentication State
 Managed by Supabase Auth.
--   **Session:** Stored in HTTP-only cookies (server-side).
+-   **Session:** Held browser-side by `@supabase/supabase-js`, in `localStorage` ("remember me") or `sessionStorage`. Route handlers receive the access token as a Bearer header and verify it in `lib/auth/server.ts`.
 -   **Guard:** `useAuthGuard` hook redirects unauthenticated users.
 -   **Profile:** Fetched from `public.profiles` table; provides role-based access (`viewer` / `admin`).
 
@@ -246,7 +249,10 @@ Alias rows power alias-aware account search: the global search (`components/sear
 ```
 app/layout.tsx (Root Layout)
 └── AppProviders (PostHog, Theme)
+    ├── MaintenancePage (only when NEXT_PUBLIC_MAINTENANCE_MODE=true; replaces everything below)
     └── app/page.tsx (Dashboard)
+        ├── LoadingState (ghost of the shell, before the first payload)
+        ├── ErrorState (when the summary request fails)
         └── DashboardContent
             ├── Header
             │   └── GlobalSearch, ThemeToggle, NotificationBell, UserMenu

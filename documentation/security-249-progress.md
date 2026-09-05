@@ -156,6 +156,11 @@ Fixes the reported slowness (10s+ snap-back when removing a filter):
   (components/ui/top-progress-bar.tsx) tracks fetches for what is on screen.
   Driven by per-piece `pending` flags in use-server-dashboard-data; cached
   states never flash loading cues.
+- Follow-up (PR #258, 2026-09-05): the first-load screen became a ghost of the
+  dashboard shell (components/states/loading-state.tsx), and every skeleton
+  was audited against the content it stands in for. Shared table/grid/map
+  skeletons moved to components/ui/data-skeletons.tsx. Conventions are in
+  documentation/frontend/standalone-screens.md.
 
 ### Upstash Redis for the server cache - DONE (prod is on Vercel)
 
