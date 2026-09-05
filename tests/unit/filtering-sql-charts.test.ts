@@ -3,7 +3,7 @@ import { newDb } from "pg-mem"
 import type { Account, Center, Function as FnRow, Prospect, Tech, Filters } from "@/lib/types"
 import { createDefaultFilters } from "@/lib/dashboard/defaults"
 import { getFilteredData } from "@/lib/dashboard/filtering"
-import { buildEntityAggregateQuery, type AggregateEntity } from "@/lib/dashboard/filtering-sql"
+import { buildEntityAggregateQuery, buildFacetCountsQuery, type AggregateEntity } from "@/lib/dashboard/filtering-sql"
 
 // Verifies the grouped-count SQL (with the "Unknown" coercion + cascade) matches
 // the engine's chart counting. The top-10 / city-Others bucketing is pure JS and
@@ -104,6 +104,17 @@ async function assertChartCounts(overrides: Partial<Filters>) {
   for (const [entity, column, expected] of checks) {
     expect(await sqlCounts(entity, filters, column), `${entity}.${column}`).toEqual(expected)
   }
+  // Same lists from the single union-all statement the charts endpoint runs
+  // ('' from coalesce becomes "Unknown", as in computeCharts).
+  const q = buildFacetCountsQuery(checks.map(([entity, column], id) => ({ id, entity, column })), filters, {}, { materialized: false })
+  const rows = (await pool.query(q.text, q.values)).rows as { facet: number; value: string | null; count: number }[]
+  checks.forEach(([entity, column, expected], id) => {
+    const got = rows
+      .filter((r) => Number(r.facet) === id)
+      .map((r) => [String(r.value ?? "") || "Unknown", Number(r.count)] as [string, number])
+      .sort((x, y) => y[1] - x[1] || (x[0] < y[0] ? -1 : 1))
+    expect(got, `${entity}.${column} (union)`).toEqual(expected)
+  })
 }
 
 describe("charts grouped-count parity", () => {

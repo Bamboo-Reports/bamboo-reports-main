@@ -3,15 +3,15 @@ import "server-only"
 import { buildCentersQuery, buildEntityAggregateQuery, buildFacetCountsQuery, type AggregateEntity, type FilterAccess, type SqlQuery } from "@/lib/dashboard/filtering-sql"
 import { queryWarehouse } from "@/lib/db/warehouse"
 import { dashboardCacheTtlMs, getOrCompute } from "@/lib/cache/memory"
-import type { FacetsResponse, SummaryResponse } from "@/lib/dashboard/api-client"
-import type { AvailableOptions, FilterOption, FilterValue, Filters } from "@/lib/types"
+import type { ChartsResponse, FacetsResponse, SummaryResponse } from "@/lib/dashboard/api-client"
+import type { AvailableOptions, ChartData, FilterOption, FilterValue, Filters } from "@/lib/types"
 
 /**
- * Server-side compute for the dashboard's always-visible data: the summary
- * cards and the sidebar facets. Shared by /api/dashboard/core (which returns
- * both in one request) and the older /api/dashboard/summary and
- * /api/dashboard/facets routes. Each half keeps its own cache key so the
- * routes and the merged endpoint share cache entries.
+ * Server-side compute for the dashboard aggregates: the summary cards, the
+ * sidebar facets and the chart buckets. Shared by /api/dashboard/core (which
+ * returns summary + facets in one request) and the /api/dashboard/summary,
+ * /api/dashboard/facets and /api/dashboard/charts routes. Each aggregate keeps
+ * its own cache key so the routes and the merged endpoint share entries.
  */
 
 type FacetSpec = { key: keyof AvailableOptions; entity: AggregateEntity; column: string }
@@ -169,5 +169,90 @@ export function computeSummary(filters: Filters, access: FilterAccess, opts: { b
       }
     },
     opts
+  )
+}
+
+// Chart buckets: grouped counts over each entity's filtered set, in the
+// order the response is assembled below.
+const CHARTS: { entity: AggregateEntity; column: string }[] = [
+  { entity: "accounts", column: "account_hq_country" },
+  { entity: "accounts", column: "account_primary_category" },
+  { entity: "accounts", column: "account_hq_revenue_range" },
+  { entity: "accounts", column: "account_center_employees_range" },
+  { entity: "centers", column: "center_type" },
+  { entity: "centers", column: "center_employees_range" },
+  { entity: "centers", column: "center_city" },
+  { entity: "functions", column: "function_name" },
+  { entity: "prospects", column: "prospect_department" },
+  { entity: "prospects", column: "prospect_level" },
+  { entity: "prospects", column: "prospect_city" },
+]
+
+const sortBuckets = (rows: ChartData[]) =>
+  rows.sort((a, b) => b.value - a.value || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
+
+// Top 10 (calculateChartData / calculateCenterChartData / calculateFunctionChartData).
+const top10 = (rows: ChartData[]): ChartData[] => rows.slice(0, 10)
+
+// Top 5 + "Others" (calculateCityChartData).
+function cityBucket(rows: ChartData[]): ChartData[] {
+  if (rows.length <= 5) return rows
+  const top5 = rows.slice(0, 5)
+  const others = rows.slice(5).reduce((sum, r) => sum + r.value, 0)
+  if (others > 0) top5.push({ name: "Others", value: others })
+  return top5
+}
+
+/**
+ * All 11 chart bucket lists from ONE union-all statement over a single
+ * cascade (charts never exclude themselves, so they all share the request
+ * filters). Name coercion matches the client (String(x ?? "") || "Unknown"):
+ * the builder groups null and '' together as '', mapped to "Unknown" here.
+ * `full` returns every bucket uncapped (used by the summary PDF report).
+ */
+export function computeCharts(
+  filters: Filters,
+  access: FilterAccess,
+  opts: { full?: boolean; bypassRead?: boolean } = {}
+): Promise<ChartsResponse> {
+  const full = opts.full === true
+  return getOrCompute(
+    `charts:${full ? "full:" : ""}${JSON.stringify(filters)}`,
+    dashboardCacheTtlMs(),
+    async () => {
+      const rows = await queryWarehouse<{ facet: number; value: string | null; count: number }>(
+        buildFacetCountsQuery(CHARTS.map((c, id) => ({ id, ...c })), filters, access)
+      )
+      const lists: ChartData[][] = CHARTS.map(() => [])
+      for (const r of rows) {
+        lists[Number(r.facet)]?.push({ name: String(r.value ?? "") || "Unknown", value: Number(r.count) })
+      }
+      const [accCountry, accCategory, accRevenue, accEmployees, cenType, cenEmployees, cenCity, cenFunction, proDept, proLevel, proCity] =
+        lists.map(sortBuckets)
+
+      const cap = full ? (list: ChartData[]) => list : top10
+      const cities = full ? (list: ChartData[]) => list : cityBucket
+
+      return {
+        account: {
+          regionData: cap(accCountry),
+          primaryNatureData: cap(accCategory),
+          revenueRangeData: cap(accRevenue),
+          employeesRangeData: cap(accEmployees),
+        },
+        center: {
+          centerTypeData: cap(cenType),
+          employeesRangeData: cap(cenEmployees),
+          cityData: cities(cenCity),
+          functionData: cap(cenFunction),
+        },
+        prospect: {
+          departmentData: cap(proDept),
+          levelData: cap(proLevel),
+          cityData: cap(proCity),
+        },
+      }
+    },
+    { bypassRead: opts.bypassRead }
   )
 }

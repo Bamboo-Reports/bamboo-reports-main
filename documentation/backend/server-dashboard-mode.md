@@ -168,7 +168,7 @@ Per [security-249-progress.md](../security-249-progress.md):
 | `lib/dashboard/api-client.ts` | Typed bearer-authed client fetchers |
 | `hooks/use-server-dashboard-data.ts` | Client orchestration: debounce, lazy fetch, prefetch, LRU cache, pending flags |
 | `app/api/dashboard/{core,summary,facets,charts}/route.ts` | Aggregate endpoints |
-| `lib/dashboard/dashboard-core.ts` | `computeSummary` / `computeFacets` shared by the core, summary and facets routes; facets run as one union-all statement per filter group via `buildFacetCountsQuery` |
+| `lib/dashboard/dashboard-core.ts` | `computeSummary` / `computeFacets` / `computeCharts` shared by the core, summary, facets and charts routes; facets run as one union-all statement per filter group and all 11 chart bucket lists as one statement, via `buildFacetCountsQuery` |
 | `app/api/{accounts,centers,prospects}/query/route.ts` | Paginated row endpoints |
 | `app/api/centers/map/route.ts` | Map aggregates endpoint |
 | `app/api/search/route.ts`, `app/api/accounts/autocomplete/route.ts` | Server-backed search and autocomplete |

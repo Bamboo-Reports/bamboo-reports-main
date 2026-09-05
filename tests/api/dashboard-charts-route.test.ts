@@ -39,9 +39,14 @@ describe("dashboard charts route", () => {
     const city = Array.from({ length: 7 }, (_, i) => ({ name: `City${i}`, value: 70 - i * 10 }))
     // A 12-value field -> sliced to 10.
     const big = Array.from({ length: 12 }, (_, i) => ({ name: `V${i}`, value: 120 - i }))
+    // One union-all statement: each `<id> as facet ... from <entity> ... group by coalesce(<column>, '')`
+    // branch gets its own rows; the city branch (id 6) gets the 7-city set.
     warehouseMocks.queryWarehouse.mockImplementation(async (q: { text: string }) => {
-      if (q.text.includes("center_city")) return city
-      return big
+      const ids = [...q.text.matchAll(/select (\d+) as facet/g)].map((m) => Number(m[1]))
+      expect(ids).toHaveLength(11)
+      return ids.flatMap((facet) =>
+        (q.text.includes(`select ${facet} as facet, coalesce(center_city, '')`) ? city : big).map((r) => ({ facet, value: r.name, count: r.value }))
+      )
     })
 
     const res = await post({ filters: { accountVisibilityMode: "all" } })
@@ -57,6 +62,17 @@ describe("dashboard charts route", () => {
     // city: top 5 + Others (sum of the remaining two: 20 + 10 = 30)
     expect(body.center.cityData).toHaveLength(6)
     expect(body.center.cityData[5]).toEqual({ name: "Others", value: 30 })
+    expect(warehouseMocks.queryWarehouse).toHaveBeenCalledTimes(1)
+  })
+
+  it("maps empty bucket values to Unknown", async () => {
+    warehouseMocks.queryWarehouse.mockImplementation(async (q: { text: string }) => {
+      const ids = [...q.text.matchAll(/select (\d+) as facet/g)].map((m) => Number(m[1]))
+      return ids.flatMap((facet) => [{ facet, value: "", count: 3 }, { facet, value: "Known", count: 9 }])
+    })
+    const res = await post({ filters: {} })
+    const body = (await res.json()) as { account: { regionData: { name: string; value: number }[] } }
+    expect(body.account.regionData).toEqual([{ name: "Known", value: 9 }, { name: "Unknown", value: 3 }])
   })
 
   it("returns 500 on warehouse failure", async () => {
