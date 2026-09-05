@@ -11,7 +11,7 @@ The app has two distinct server caches. Do not conflate them.
 | Cache | Code | Used by | Storage |
 |-------|------|---------|---------|
 | Route-local SWR payload cache | `app/api/dashboard/route.ts` | `GET /api/dashboard` only (the full gzipped dashboard payload) | Module-level variable, per instance, memory only |
-| Shared two-tier cache | `lib/cache/memory.ts` (`getOrCompute`) | Filter-state endpoints: summary, facets, charts, centers map, entity queries, search, autocomplete | L1 in-process Map + optional L2 Upstash Redis |
+| Shared two-tier cache | `lib/cache/memory.ts` (`getOrCompute`), Upstash client in `lib/cache/redis.ts` | Filter-state endpoints: summary, facets, charts, centers map, entity queries, search, autocomplete | L1 in-process Map + optional L2 Upstash Redis |
 
 The SWR cache predates the two-tier cache and is documented in [`api-caching-swr.md`](api-caching-swr.md). The rest of this section covers the two-tier cache.
 
@@ -111,15 +111,19 @@ The `KV_REST_API_*` names are the aliases Vercel's Upstash marketplace integrati
 
 ### Mechanism (`lib/rate-limit/server.ts`)
 
-Per-user, per-bucket fixed-window counters stored in Supabase Postgres, shared across all serverless instances.
+Per-user, per-bucket fixed-window counters, shared across all serverless instances.
 
-- `enforceRateLimit({ userId, bucket, maxPerWindow?, windowMs? })`: computes the current window start (`floor(now / windowMs) * windowMs`), calls the `increment_rate_limit` RPC, and returns `{ ok: false, response }` with a ready 429 (JSON body plus `Retry-After` in seconds) once the counter exceeds the budget.
+- `enforceRateLimit({ userId, bucket, maxPerWindow?, windowMs? })`: computes the current window start (`floor(now / windowMs) * windowMs`), bumps the window counter, and returns `{ ok: false, response }` with a ready 429 (JSON body plus `Retry-After` in seconds) once the counter exceeds the budget.
 - Defaults: 60 requests per rolling 60 s window, budget overridable via `DATA_RATE_LIMIT_PER_MIN` or per call site.
-- **Fails open**: any RPC error or thrown exception logs and returns `{ ok: true }`, so a transient DB issue never blocks legitimate traffic.
+- **Fails open**: any backend error or thrown exception logs and returns `{ ok: true }`, so a transient outage never blocks legitimate traffic.
 
-### Storage (Supabase)
+### Storage: Upstash Redis when configured, Supabase otherwise
 
-Migration: [`sql/rate-limits-migration.sql`](sql/rate-limits-migration.sql).
+When the Upstash REST credentials are set (the same pair the response cache uses), the counter lives in Redis: key `rl:<user>:<bucket>:<windowStartMs>`, bumped with `INCR` plus `PEXPIRE` (window + 1 s) in one pipelined round trip (about 20 ms). The `rl:` prefix sits outside the `dash:*` namespace, so the ETL's post-import purge never resets a budget. A Redis failure fails open; it does not fall back to Supabase.
+
+Why Redis: the counter gates every data response, including cache hits. The Supabase RPC cost a few hundred milliseconds per request and was the fixed latency floor measured in [`redis-cache-benchmark.md`](redis-cache-benchmark.md).
+
+Without Redis credentials the original Supabase path is used. Migration: [`sql/rate-limits-migration.sql`](sql/rate-limits-migration.sql).
 
 - Table `public.rate_limit_counters` with PK `(user_id, bucket_key, window_start)`, RLS enabled, all access revoked from `anon` and `authenticated`. Only the service role touches it.
 - Function `increment_rate_limit(user, bucket, window_start)`: `security definer`, empty `search_path`, executable by `service_role` only. Atomic upsert-increment returning the new count.
@@ -151,7 +155,7 @@ Export **generation** (`POST /api/exports/generate`) uses a separate mechanism: 
 | `lib/cache/memory.ts` | Two-tier `getOrCompute` cache (L1 Map + Upstash L2) |
 | `app/api/dashboard/route.ts` | Route-local SWR payload cache, POST purge handler |
 | `lib/dashboard/entity-query-route.ts` | Shared entity-query handler (cache + rate limit) |
-| `lib/rate-limit/server.ts` | `enforceRateLimit`, Supabase-backed fixed windows |
+| `lib/rate-limit/server.ts` | `enforceRateLimit`, fixed windows in Upstash Redis (Supabase fallback) |
 | `documentation/backend/sql/rate-limits-migration.sql` | `rate_limit_counters` table + `increment_rate_limit` RPC |
 | `app/api/financials/route.ts` | Authed, rate-limited Yahoo Finance proxy |
 | `app/api/exports/generate/route.ts` | Hourly export cap via `user_exports` row counts |

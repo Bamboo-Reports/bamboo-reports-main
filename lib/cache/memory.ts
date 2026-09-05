@@ -10,6 +10,8 @@
  * exactly the in-process cache as before.
  */
 
+import { redisCommand, redisConfig } from "@/lib/cache/redis"
+
 type Entry = { value: unknown; expires: number }
 
 const store = new Map<string, Entry>()
@@ -28,47 +30,10 @@ export function dashboardCacheTtlMs(): number {
 }
 
 // ---------------------------------------------------------------------------
-// Upstash Redis REST (optional shared L2). Plain fetch, no dependencies.
+// Upstash Redis REST (optional shared L2), via the shared client in redis.ts.
 // ---------------------------------------------------------------------------
 
 const REDIS_KEY_PREFIX = "dash:"
-const REDIS_TIMEOUT_MS = 1500
-
-let warnedRedisFailure = false
-
-/** Env-gated Upstash config, read per call so serverless env changes apply. */
-function redisConfig(): { url: string; token: string } | null {
-  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN
-  return url && token ? { url, token } : null
-}
-
-/** Runs one Redis command; returns its `result` or null on any failure. */
-async function redisCommand(command: (string | number)[]): Promise<unknown> {
-  const config = redisConfig()
-  if (!config) return null
-  try {
-    const response = await fetch(config.url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${config.token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(command),
-      signal: AbortSignal.timeout(REDIS_TIMEOUT_MS),
-    })
-    if (!response.ok) throw new Error(`Redis responded ${response.status}`)
-    const body = (await response.json()) as { result?: unknown; error?: string }
-    if (body.error) throw new Error(body.error)
-    return body.result ?? null
-  } catch (error) {
-    if (!warnedRedisFailure) {
-      warnedRedisFailure = true
-      console.warn("[cache] Redis unavailable, serving without shared cache:", error)
-    }
-    return null
-  }
-}
 
 async function redisGet(key: string): Promise<Entry | null> {
   const raw = await redisCommand(["GET", REDIS_KEY_PREFIX + key])
