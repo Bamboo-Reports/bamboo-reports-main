@@ -1,17 +1,22 @@
 "use client"
 
 import React, { useEffect, useRef, useState } from "react"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TabsContent } from "@/components/ui/tabs"
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Checkbox } from "@/components/ui/checkbox"
+import { cn } from "@/lib/utils"
 import { ArrowDownAZ, ArrowUpAZ, ArrowUpDown, PieChartIcon, Table as TableIcon, MapIcon, LayoutGrid, Layers, MapPin } from "lucide-react"
 import { CenterRow } from "@/components/tables"
 import { SelectionActionBar } from "@/components/tables/selection-action-bar"
 import { useTableRowSelection } from "@/hooks/use-table-row-selection"
 import type { FavoriteInput } from "@/hooks/use-favorites"
 import { CenterGridCard } from "@/components/cards/center-grid-card"
-import { PieChartCard } from "@/components/charts/pie-chart-card"
+import {
+  PieChartCard,
+  type PieChartLabelDisplay,
+} from "@/components/charts/pie-chart-card"
 import { EmptyState } from "@/components/states/empty-state"
 import { CenterDetailsDialog } from "@/components/dialogs/center-details-dialog"
 import { AccountDetailsDialog } from "@/components/dialogs/account-details-tabbed-dialog"
@@ -26,14 +31,16 @@ import { TableColumnMenu } from "@/components/tables/table-column-menu"
 import { useTableColumnPreferences } from "@/hooks/use-table-column-preferences"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
-import type { Account, Center, Function, LockedProspectTeaser, Prospect, Service, Tech } from "@/lib/types"
+import { fetchAccountRelated, type CityAggregate, type StateAggregate } from "@/lib/dashboard/api-client"
+import { devError } from "@/lib/utils/dev-log"
+import { GridSkeletonCards, MapUpdatingPill, TableSkeletonRows, type TabServerProps } from "@/components/tabs/accounts-tab"
+import type { Account, Center, Function, Prospect, Service, Tech } from "@/lib/types"
 
 interface CentersTabProps {
   accounts: Account[]
   centers: Center[]
   allCenters: Center[]
   prospects: Prospect[]
-  lockedProspectTeasers: LockedProspectTeaser[]
   functions: Function[]
   services: Service[]
   tech: Tech[]
@@ -43,6 +50,8 @@ interface CentersTabProps {
     cityData: Array<{ name: string; value: number; fill?: string }>
     functionData: Array<{ name: string; value: number; fill?: string }>
   }
+  chartLabelDisplay: PieChartLabelDisplay
+  onChartLabelDisplayChange: (display: PieChartLabelDisplay) => void
   centersView: "chart" | "data" | "map"
   setCentersView: (view: "chart" | "data" | "map") => void
   currentPage: number
@@ -54,6 +63,10 @@ interface CentersTabProps {
   onToggleFavorite?: (item: FavoriteInput) => void
   onFavoriteMany?: (items: FavoriteInput[]) => void
   onUnfavoriteMany?: (items: FavoriteInput[]) => void
+  server?: TabServerProps | null
+  mapData?: { cities: CityAggregate[]; states: StateAggregate[]; scaleStates?: StateAggregate[] | null } | null
+  chartsLoading?: boolean
+  mapLoading?: boolean
 }
 
 // Module-level so the references are stable across renders (passed to memo'd rows).
@@ -63,7 +76,7 @@ function buildCenterFavorite(center: Center): FavoriteInput {
   return {
     entity_type: "center",
     entity_id: center.cn_unique_key ?? "",
-    title: center.center_name || "Unknown Center",
+    title: center.center_name || "Unknown Centre",
     subtitle: formatCenterLocation(center.center_city, center.center_state) || center.account_global_legal_name || null,
   }
 }
@@ -73,10 +86,11 @@ export function CentersTab({
   centers,
   allCenters,
   prospects,
-  lockedProspectTeasers,
   services,
   tech,
   centerChartData,
+  chartLabelDisplay,
+  onChartLabelDisplayChange,
   centersView,
   setCentersView,
   currentPage,
@@ -88,6 +102,10 @@ export function CentersTab({
   onToggleFavorite,
   onFavoriteMany,
   onUnfavoriteMany,
+  server,
+  mapData,
+  chartsLoading = false,
+  mapLoading = false,
 }: CentersTabProps) {
   const [selectedCenter, setSelectedCenter] = useState<Center | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -143,13 +161,13 @@ export function CentersTab({
     onRecordOpened?.({
       type: "center",
       id: center.cn_unique_key ?? "",
-      title: center.center_name ?? "Unknown Center",
+      title: center.center_name ?? "Unknown Centre",
       subtitle: formatCenterLocation(center.center_city, center.center_state),
     })
     captureEvent(ANALYTICS_EVENTS.RECORD_OPENED, {
       entity: "center",
       record_id: center.cn_unique_key,
-      record_label: center.center_name ?? "Unknown Center",
+      record_label: center.center_name ?? "Unknown Centre",
       source_view: centersView,
       source_layout: centersView === "data" ? dataLayout : null,
       opened_from: openedFrom,
@@ -157,10 +175,7 @@ export function CentersTab({
     })
   }, [isDialogOpen, onRecordOpened, centersView, dataLayout])
 
-  const handleAccountOpen = (accountName: string) => {
-    const account = accounts.find((item) => item.account_global_legal_name === accountName)
-    if (!account) return
-
+  const openAccount = (account: Account) => {
     setIsDialogOpen(false)
     setSelectedAccount(account)
     setIsAccountDialogOpen(true)
@@ -179,6 +194,22 @@ export function CentersTab({
       opened_from: "related_account_link",
       has_website: Boolean(account.account_hq_website),
     })
+  }
+
+  const handleAccountOpen = (accountName: string) => {
+    const account = accounts.find((item) => item.account_global_legal_name === accountName)
+    if (account) {
+      openAccount(account)
+      return
+    }
+    // Server mode: the account is not in the current page rows; fetch it.
+    if (server) {
+      fetchAccountRelated(accountName)
+        .then((res) => {
+          if (res.account) openAccount(res.account)
+        })
+        .catch((err) => devError("related account fetch failed:", err))
+    }
   }
 
   const handleSort = (key: typeof sort.key) => {
@@ -200,6 +231,7 @@ export function CentersTab({
       sort_key: key,
       sort_direction: nextDirection ?? "none",
     })
+    server?.onSortChange(key, nextDirection)
     setCurrentPage(1)
   }
 
@@ -246,7 +278,8 @@ export function CentersTab({
 
 
   const sortedCenters = React.useMemo(() => {
-    if (!sort.direction) return centers
+    // Server mode: rows arrive already sorted and paginated.
+    if (server || !sort.direction) return centers
 
     const compare = (a: string | undefined | null, b: string | undefined | null) =>
       (a || "").localeCompare(b || "", undefined, { sensitivity: "base" })
@@ -268,11 +301,11 @@ export function CentersTab({
 
     const sorted = [...centers].sort((a, b) => compare(getValue(a), getValue(b)))
     return sort.direction === "asc" ? sorted : sorted.reverse()
-  }, [centers, sort])
+  }, [centers, sort, server])
 
   const pageCenters = React.useMemo(
-    () => getPaginatedData(sortedCenters, currentPage, itemsPerPage),
-    [sortedCenters, currentPage, itemsPerPage]
+    () => (server ? sortedCenters : getPaginatedData(sortedCenters, currentPage, itemsPerPage)),
+    [server, sortedCenters, currentPage, itemsPerPage]
   )
   const {
     selected: selectedKeys,
@@ -286,7 +319,7 @@ export function CentersTab({
     handleRowSelectChange,
     handleRowToggleFavorite,
   } = useTableRowSelection({
-    items: centers,
+    items: server ? pageCenters : centers,
     pageItems: pageCenters,
     getKey: getCenterKey,
     favoritePrefix: "center",
@@ -302,7 +335,7 @@ export function CentersTab({
   )
 
   // Show empty state when no centers
-  if (centers.length === 0) {
+  if (server ? server.total === 0 && !server.loading : centers.length === 0) {
     return (
       <TabsContent value="centers">
         <EmptyState type="no-results" />
@@ -314,8 +347,8 @@ export function CentersTab({
     <TabsContent value="centers">
       {/* Header with View Toggle */}
       <div className="flex items-center gap-2 mb-4">
-        <PieChartIcon className="h-5 w-5 text-[hsl(var(--chart-2))]" />
-        <h2 className="text-lg font-semibold text-foreground">Center Analytics</h2>
+        <PieChartIcon className="h-5 w-5 text-primary" />
+        <h2 className="text-lg font-semibold text-foreground">Centre Analytics</h2>
         <ViewSwitcher
           data-tour="view-switcher"
           value={centersView}
@@ -323,23 +356,23 @@ export function CentersTab({
           options={[
             {
               value: "chart",
-              label: <span className="text-[hsl(var(--chart-1))]">Charts</span>,
+              label: "Charts",
               icon: (
-                <PieChartIcon className="h-4 w-4 text-[hsl(var(--chart-1))]" />
+                <PieChartIcon className="h-4 w-4" />
               ),
             },
             {
               value: "map",
-              label: <span className="text-[hsl(var(--chart-4))]">Map</span>,
+              label: "Map",
               icon: (
-                <MapIcon className="h-4 w-4 text-[hsl(var(--chart-4))]" />
+                <MapIcon className="h-4 w-4" />
               ),
             },
             {
               value: "data",
-              label: <span className="text-[hsl(var(--chart-2))]">Data</span>,
+              label: "Data",
               icon: (
-                <TableIcon className="h-4 w-4 text-[hsl(var(--chart-2))]" />
+                <TableIcon className="h-4 w-4" />
               ),
             },
           ]}
@@ -352,28 +385,40 @@ export function CentersTab({
         <div className="w-full mb-6 view-content">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <PieChartCard
-              title="Center Type"
+              title="Centre Type"
               data={centerChartData.centerTypeData}
-              countLabel="Total Centers"
+              countLabel="Total Centres"
               showBigPercentage
+              labelDisplay={chartLabelDisplay}
+              onLabelDisplayChange={onChartLabelDisplayChange}
+              loading={chartsLoading}
             />
             <PieChartCard
-              title="Center Headcount"
+              title="Centre Headcount"
               data={centerChartData.employeesRangeData}
-              countLabel="Total Centers"
+              countLabel="Total Centres"
               showBigPercentage
+              labelDisplay={chartLabelDisplay}
+              onLabelDisplayChange={onChartLabelDisplayChange}
+              loading={chartsLoading}
             />
             <PieChartCard
               title="City"
               data={centerChartData.cityData}
-              countLabel="Total Centers"
+              countLabel="Total Centres"
               showBigPercentage
+              labelDisplay={chartLabelDisplay}
+              onLabelDisplayChange={onChartLabelDisplayChange}
+              loading={chartsLoading}
             />
             <PieChartCard
               title="Function"
               data={centerChartData.functionData}
-              countLabel="Total Centers"
+              countLabel="Total Centres"
               showBigPercentage
+              labelDisplay={chartLabelDisplay}
+              onLabelDisplayChange={onChartLabelDisplayChange}
+              loading={chartsLoading}
             />
           </div>
         </div>
@@ -384,32 +429,39 @@ export function CentersTab({
          <Card data-tour="map-view" className="w-full flex flex-col h-[var(--dashboard-panel-height)] border shadow-sm view-content">
            <CardHeader className="shrink-0 px-6 py-3">
              <div className="flex items-center gap-3">
-               <CardTitle className="text-base">Centers Map</CardTitle>
+               <CardTitle className="text-base">Centres Map</CardTitle>
                <ViewSwitcher
                  value={mapMode}
                  onValueChange={(value) => setMapMode(value as "city" | "state")}
                  options={[
                    {
                      value: "city",
-                     label: <span className="text-[hsl(var(--chart-4))]">City</span>,
-                     icon: <MapPin className="h-4 w-4 text-[hsl(var(--chart-4))]" />,
+                     label: "City",
+                     icon: <MapPin className="h-4 w-4" />,
                    },
                    {
                      value: "state",
-                     label: <span className="text-[hsl(var(--chart-3))]">State</span>,
-                     icon: <Layers className="h-4 w-4 text-[hsl(var(--chart-3))]" />,
+                     label: "State",
+                     icon: <Layers className="h-4 w-4" />,
                    },
                  ]}
                  className="ml-auto"
                />
              </div>
            </CardHeader>
-           <CardContent className="p-0 flex flex-col flex-1 overflow-hidden">
+           <CardContent className="relative p-0 flex flex-col flex-1 overflow-hidden">
+             {mapLoading && <MapUpdatingPill />}
              <MapErrorBoundary>
                {mapMode === "city" ? (
-                 <CentersMap centers={centers} heightClass="h-full" />
+                 <CentersMap centers={centers} cities={mapData?.cities} heightClass="h-full" />
                ) : (
-                 <CentersChoroplethMap centers={centers} allCenters={allCenters} heightClass="h-full" />
+                 <CentersChoroplethMap
+                   centers={centers}
+                   allCenters={allCenters}
+                   states={mapData?.states}
+                   scaleStates={mapData?.scaleStates}
+                   heightClass="h-full"
+                 />
                )}
              </MapErrorBoundary>
            </CardContent>
@@ -421,7 +473,7 @@ export function CentersTab({
          <Card className="w-full flex flex-col h-[var(--dashboard-panel-height)] border shadow-sm view-content">
            <CardHeader className="shrink-0 px-6 py-3">
              <div className="flex flex-wrap items-center gap-3">
-               <CardTitle className="text-base">Centers Data</CardTitle>
+               <CardTitle className="text-base">Centres Data</CardTitle>
                <div className="ml-auto flex items-center gap-2">
                  {dataLayout === "table" && (
                    <TableColumnMenu
@@ -437,16 +489,16 @@ export function CentersTab({
                    options={[
                      {
                        value: "table",
-                       label: <span className="text-[hsl(var(--chart-2))]">Table</span>,
+                       label: "Table",
                        icon: (
-                         <TableIcon className="h-4 w-4 text-[hsl(var(--chart-2))]" />
+                         <TableIcon className="h-4 w-4" />
                        ),
                      },
                      {
                        value: "grid",
-                       label: <span className="text-[hsl(var(--chart-3))]">Grid</span>,
+                       label: "Grid",
                        icon: (
-                         <LayoutGrid className="h-4 w-4 text-[hsl(var(--chart-3))]" />
+                         <LayoutGrid className="h-4 w-4" />
                        ),
                      },
                    ]}
@@ -464,12 +516,12 @@ export function CentersTab({
                           <Checkbox
                             checked={allPageSelected ? true : somePageSelected ? "indeterminate" : false}
                             onCheckedChange={(checked) => toggleMany(pageKeys, checked === true)}
-                            aria-label="Select all centers on this page"
+                            aria-label="Select all centres on this page"
                           />
                         </TableHead>
                         {isColumnVisible("name") && (
                         <TableHead className="w-[260px]">
-                          <SortButton label="Center Name" sortKey="name" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
+                          <SortButton label="Centre Name" sortKey="name" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
                         )}
                         {isColumnVisible("location") && (
@@ -479,18 +531,20 @@ export function CentersTab({
                         )}
                         {isColumnVisible("type") && (
                         <TableHead className="w-[200px]">
-                          <SortButton label="Center Type" sortKey="type" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
+                          <SortButton label="Centre Type" sortKey="type" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
                         )}
                         {isColumnVisible("employees") && (
                         <TableHead className="w-[160px]">
-                          <SortButton label="Center Headcount" sortKey="employees" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
+                          <SortButton label="Centre Headcount" sortKey="employees" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
                         )}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {pageCenters.map(
+                      {server?.loading ? (
+                        <TableSkeletonRows columns={1 + (["name", "location", "type", "employees"] as const).filter(isColumnVisible).length} />
+                      ) : pageCenters.map(
                         (center) => (
                           <CenterRow
                             key={center.cn_unique_key}
@@ -511,23 +565,26 @@ export function CentersTab({
                   <div className="flex flex-col">
                     <div className="flex items-center gap-2 px-6 py-3 border-b bg-muted/20">
                       <span className="text-xs font-medium text-muted-foreground">Sort</span>
-                      <button
+                      <Button
                         type="button"
+                        variant="outline"
+                        size="sm"
                         onClick={() => handleSort("name")}
-                        className="inline-flex items-center justify-center rounded-md border border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground hover:border-accent-foreground/20 shadow-sm transition-colors h-7 w-7"
-                        aria-label="Sort by center name"
+                        className="h-8 w-8 px-0"
+                        aria-label="Sort by centre name"
+                        aria-pressed={sort.key === "name" && sort.direction !== null}
                       >
                         {sort.key !== "name" || sort.direction === null ? (
                           <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
                         ) : sort.direction === "asc" ? (
-                          <ArrowUpAZ className="h-3.5 w-3.5 text-muted-foreground" />
+                          <ArrowUpAZ className="h-3.5 w-3.5 text-primary" />
                         ) : (
-                          <ArrowDownAZ className="h-3.5 w-3.5 text-muted-foreground" />
+                          <ArrowDownAZ className="h-3.5 w-3.5 text-primary" />
                         )}
-                      </button>
+                      </Button>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
-                      {getPaginatedData(sortedCenters, currentPage, itemsPerPage).map(
+                      {server?.loading ? <GridSkeletonCards /> : pageCenters.map(
                         (center) => (
                           <CenterGridCard
                             key={center.cn_unique_key}
@@ -540,13 +597,13 @@ export function CentersTab({
                   </div>
                 )}
               </div>
-                  {centers.length > 0 && (
+                  {(server ? server.total : centers.length) > 0 && (
                     <PaginationControls
                       currentPage={currentPage}
-                      totalItems={centers.length}
+                      totalItems={server ? server.total : centers.length}
                       itemsPerPage={itemsPerPage}
                       onPageChange={setCurrentPage}
-                      dataLength={centers.length}
+                      dataLength={server ? server.total : centers.length}
                     />
                   )}
             </CardContent>
@@ -561,17 +618,18 @@ export function CentersTab({
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         onAccountOpen={handleAccountOpen}
+        fetchDetail={Boolean(server)}
       />
 
       <AccountDetailsDialog
         account={selectedAccount}
         centers={centers}
         prospects={prospects}
-        lockedProspectTeasers={lockedProspectTeasers}
         services={services}
         tech={tech}
         open={isAccountDialogOpen}
         onOpenChange={setIsAccountDialogOpen}
+        fetchRelated={Boolean(server)}
       />
 
       <SelectionActionBar

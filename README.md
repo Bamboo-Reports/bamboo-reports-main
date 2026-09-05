@@ -55,11 +55,12 @@ Bamboo Reports provides a unified view of business entities (**Accounts**, **Cen
 - **Tabbed Navigation:** Switch between Accounts, Centers, Prospects, and Services tabs.
 - **Deployment-Level Access Control:** Accounts, Centers, and Prospects can be enabled or disabled per deployment via `lib/config/dashboard-access.ts`.
 - **Geospatial Analytics:**
-  - MapTiler (MapLibre) cluster map optimized for 5000+ center points.
-  - State-level choropleth map with disputed boundary handling (configurable per geopolitical viewpoint).
+  - MapLibre cluster map optimized for 5000+ center points over a keyless Carto basemap.
+  - State-level choropleth map using local Survey of India administrative boundaries.
 
 ### Advanced Filtering Engine
 - **Multi-Select Filters:** Country, Region, Industry, Category, Nature, Technology, Functions, and more.
+- **Server-Mode Filtering (#249):** Behind `NEXT_PUBLIC_DASHBOARD_SERVER_MODE=1`, filters are translated to parameterized SQL on the server and the client reads paginated slices, replacing the full-payload download. See [Server-Mode Dashboard](documentation/backend/server-dashboard-mode.md).
 - **Account Visibility Filter:** `ALL` / `GCCs` / `NON-GCCs` toggle (default `GCCs`) constrains tables, charts, and exports to the chosen account set, while summary cards still report the full universe.
 - **Alias-Aware Account Search:** Global search and the account filter autocomplete match accounts by alternate names (short legal name, brand, abbreviation, flagship products, "currently known as") and show a "Known as" hint on alias matches.
 - **Precision Slicing:** "Include" vs. "Exclude" toggle per filter group.
@@ -75,18 +76,11 @@ Bamboo Reports provides a unified view of business entities (**Accounts**, **Cen
 - **Row-Level Details:** Comprehensive tabbed dialog views for Accounts, Centers, and Prospects.
 - **Type Safety:** Shared TypeScript definitions ensuring consistency from database to UI.
 
-### AI Account Summaries
-- **Executive Briefs:** One short, grounded paragraph per account in the Account details dialog, generated on demand via the Vercel AI SDK and OpenRouter.
-- **Data-Only Grounding:** The prompt is restricted to the account's own warehouse snapshot; no outside knowledge, no investment advice, no prospect identities.
-- **Swappable Model:** Default model is configurable via `AI_ACCOUNT_SUMMARY_MODEL` with no code change.
-
-> **Details:** See [AI Account Summaries](documentation/backend/ai-account-summaries.md).
-
 ### Export and Integrations
 - **Server-Side `.xlsx` Exports:** ExcelJS builds multi-sheet workbooks on the server against a full-schema `SELECT *`, so exports include every database column regardless of what the dashboard renders.
-- **Filter-Aware:** The client sends account / center identifier lists so filtered exports only include matching rows; unfiltered exports pull the full tables.
+- **Filter-Aware:** The client sends account / center identifier lists (or, in server mode, the filter set itself) so filtered exports only include matching rows; unfiltered exports pull the full tables.
 - **Audit Log + Re-Download:** Every export is archived to a private Supabase Storage bucket and logged in `public.user_exports` with IP, user-agent, filters snapshot, and row counts. Users re-download past exports from the **My exports** dialog via short-lived signed URLs.
-- **Logo Integration:** Automated company logo fetching via Logo.dev API with fallback initials.
+- **Logo Integration:** Automated company logo fetching via the Brandfetch Logo API with monogram fallbacks.
 - **Financial Data:** Stock information and financial metrics via Yahoo Finance integration.
 
 > **Details:** See [User Exports & Audit Log](documentation/backend/user-exports.md) for the architecture, setup steps, and troubleshooting.
@@ -121,8 +115,8 @@ graph TD
     end
 
     subgraph External APIs
-        Client -->|Map Tiles| MapTiler[MapTiler Maps API]
-        Client -->|Company Logos| LogoDev[Logo.dev API]
+        Client -->|Basemap Tiles| Carto[Carto Positron]
+        Client -->|Company Logos| Brandfetch[Brandfetch Logo API]
     end
 
     subgraph Analytics
@@ -135,7 +129,8 @@ graph TD
 1. **Initial Load:** The client fetches the full dashboard dataset from the `GET /api/dashboard` Route Handler, which wraps the underlying Server Action with an in-memory SWR cache and gzip compression.
 2. **Filtering:** User actions update React state; client-side filtering and chart aggregation run locally for responsiveness.
 3. **Server Actions:** Modular action files (`app/actions/data.ts`, `app/actions/saved-filters.ts`, `app/actions/financial.ts`, `app/actions/notifications.ts`, `app/actions/system.ts`) handle database communication.
-4. **Runtime Behavior:** Server Actions keep no cross-request cache and fetch fresh data with retry logic (3 retries, exponential backoff). The `/api/dashboard` Route Handler adds an in-memory stale-while-revalidate cache on top. See [API Caching](documentation/backend/api-caching-swr.md).
+4. **Runtime Behavior:** Server Actions keep no cross-request cache and fetch fresh data with retry logic (3 retries, exponential backoff). The `/api/dashboard` Route Handler adds a two-tier stale-while-revalidate cache on top (in-memory L1 + optional Upstash Redis L2). See [API Caching](documentation/backend/api-caching-swr.md) and [Caching and Rate Limiting](documentation/backend/caching-and-rate-limiting.md).
+5. **Server Mode (#249):** With `NEXT_PUBLIC_DASHBOARD_SERVER_MODE=1`, the dashboard skips the full payload entirely: filters are translated to SQL on the server and the client reads paginated/aggregated slices from dedicated endpoints (`/api/dashboard/summary`, `/api/dashboard/facets`, `/api/dashboard/charts`, `/api/{accounts,centers,prospects}/query`, `/api/search`, `/api/centers/map`). See [Server-Mode Dashboard](documentation/backend/server-dashboard-mode.md).
 
 ---
 
@@ -164,7 +159,7 @@ For a comprehensive breakdown of every technology used in this project, see the 
 |------------|---------|
 | **Highcharts** | Donut charts for categorical breakdowns and the Technology treemap |
 | **Recharts** | Revenue trend area chart in the Account details dialog |
-| **MapLibre GL + MapTiler** | Cluster maps and state choropleth |
+| **MapLibre GL + Carto** | Cluster maps and state choropleth |
 
 ### Backend and Data
 | Technology | Purpose |
@@ -202,7 +197,12 @@ bamboo-reports-nextjs/
 │   │   ├── notifications.ts        # Notification logic
 │   │   └── system.ts               # System diagnostics
 │   ├── api/                        # Route Handlers
-│   │   ├── dashboard/              # SWR-cached dashboard dataset endpoint
+│   │   ├── dashboard/              # Cached dashboard payload + summary/facets/charts endpoints
+│   │   ├── accounts/               # Paginated account query, autocomplete, detail, related
+│   │   ├── centers/                # Paginated center query, detail, map data
+│   │   ├── prospects/              # Paginated prospect query and detail
+│   │   ├── search/                 # Server-side global search
+│   │   ├── financials/             # Authed, rate-limited Yahoo Finance proxy
 │   │   └── exports/                # Export generation, listing, and re-download
 │   ├── actions.ts                  # Central server action re-exports
 │   ├── layout.tsx                  # Root layout with providers
@@ -222,7 +222,6 @@ bamboo-reports-nextjs/
 │   ├── layout/                     # Header and Footer
 │   ├── maps/                       # MapLibre cluster + choropleth maps
 │   ├── notifications/              # Notification bell dropdown
-│   ├── prospects/                  # Locked prospect teaser cards
 │   ├── search/                     # Global search with alias-aware matching
 │   ├── states/                     # Loading and error state components
 │   ├── tables/                     # Data grid row components
@@ -241,26 +240,30 @@ bamboo-reports-nextjs/
 │   ├── use-recent-items.ts         # Recently viewed history tracking
 │   ├── use-row-selection.ts        # Generic row selection state
 │   ├── use-saved-filters.ts        # Saved filter persistence
+│   ├── use-server-dashboard-data.ts  # Server-mode data orchestration (paginated endpoints)
 │   ├── use-table-column-preferences.ts  # Table column visibility prefs
 │   ├── use-table-row-selection.ts  # Table-specific row selection wiring
 │   └── use-tour-persistence.ts     # Tour completion tracking (localStorage + Supabase)
 │
 ├── lib/                            # Utilities & Configuration
-│   ├── ai/                         # AI account summary context, generator (OpenRouter), client hook
 │   ├── analytics/                  # PostHog client, events, tracking
 │   ├── auth/                       # Role-based access control + server-side token verification
-│   ├── config/                     # Environment, dashboard access, filters, MapTiler, notifications
+│   ├── cache/                      # Two-tier response cache (in-memory L1 + Upstash Redis L2)
+│   ├── config/                     # Environment, dashboard access, filters, server mode, notifications
 │   ├── dashboard/                  # Dashboard utility functions
 │   ├── db/                         # Neon PostgreSQL client + retry logic
 │   ├── exports/                    # Export request client + server-side workbook builder
 │   ├── finance/                    # Financial data utilities
+│   ├── maps/                       # Carto basemap style and boundary helpers
 │   ├── notifications/              # Notification formatting helpers
+│   ├── rate-limit/                 # Per-user rate limiting for data endpoints
 │   ├── request/                    # Request metadata helpers (IP, user-agent)
 │   ├── search/                     # Account search index + alias matching
 │   ├── supabase/                   # Supabase client factory
 │   ├── tour/                       # Guided product tour steps and config
 │   ├── utils/                      # Helpers (chart, export, filter, general)
 │   ├── validators/                 # Zod validation schemas
+│   ├── logger.ts                   # Structured server-side logger
 │   └── types.ts                    # Shared TypeScript interfaces
 │
 ├── contexts/                       # React context providers (notification-context.tsx)
@@ -279,6 +282,8 @@ bamboo-reports-nextjs/
 │   ├── developer-workflow.md       # Developer guide and coding standards (whole app)
 │   ├── testing-guide.md            # Vitest setup, mocking patterns, how to add tests (whole app)
 │   ├── scripts-and-tooling.md      # Standalone dev scripts (benchmark, work summary)
+│   ├── security-249-progress.md    # Living log of the #249 data-exposure work
+│   ├── 2026-07-29-perf-and-data-hygiene.md  # Session log: cache tuning, Brandfetch, data hygiene
 │   │
 │   ├── backend/                    # Data layer, auth, and server-side feature docs
 │   │   ├── sql/                    # Supabase migration scripts
@@ -291,13 +296,16 @@ bamboo-reports-nextjs/
 │   │   ├── supabase-saved-filters.md    # Saved filters spec
 │   │   ├── favorites-and-filter-sharing.md  # Favorites and filter-sharing tables/RLS
 │   │   ├── user-exports.md              # Export audit log and Storage archive
-│   │   └── ai-account-summaries.md      # AI-generated account summary feature
+│   │   ├── server-dashboard-mode.md     # Server-mode dashboard (#249): endpoints and SQL filters
+│   │   ├── caching-and-rate-limiting.md # Two-tier response cache and per-user rate limits
+│   │   ├── filtering-sql-parity-report.md  # Real-data parity verification for server-side filtering
+│   │   └── redis-cache-benchmark.md     # Upstash Redis cache benchmark (#249)
 │   │
 │   └── frontend/                   # UI-facing feature docs
 │       ├── product-tour.md              # Guided onboarding tour
 │       ├── ui-column-mapping.md         # UI label to database column mapping
 │       ├── filter-column-ui-label-map.json  # Machine-readable UI label to column map
-│       ├── logo-integration.md          # Logo.dev integration guide
+│       ├── logo-integration.md          # Brandfetch logo integration guide
 │       └── map-disputed-boundaries.md   # Choropleth boundary handling
 │
 ├── scripts/                        # Standalone scripts (load benchmark, work summary report)
@@ -316,7 +324,6 @@ bamboo-reports-nextjs/
 - **npm** (v9+)
 - **Neon PostgreSQL:** Connection string for the data warehouse.
 - **Supabase Project:** For authentication and user state.
-- **MapTiler API Key:** For the geospatial views.
 
 ### Installation
 
@@ -368,17 +375,12 @@ bamboo-reports-nextjs/
 | `NEXT_PUBLIC_SUPABASE_URL` | **Yes** | Your Supabase project URL. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | **Yes** | Supabase public anon key (safe for client). |
 | `SUPABASE_SERVICE_ROLE_KEY` | **Yes** | Supabase service-role secret. Server-only — used to write/read `user_exports` and upload archived exports to Storage. |
-| `DASHBOARD_CACHE_TTL_MS` | No | Override for the in-memory dashboard cache TTL. Default: `3600000` (1 hour). |
+| `DASHBOARD_CACHE_TTL_MS` | No | Response cache TTL. Code default: `600000` (10 min); recommended `691200000` (8 days) since the ETL purges the cache after each weekly import. |
 | `EXPORT_RATE_LIMIT_PER_HOUR` | No | Max data exports per user per rolling hour. Default: `20`. |
-| `OPENROUTER_API_KEY` | No | OpenRouter API key for the AI account summary feature. Required only if `AI_ACCOUNT_SUMMARY_ENABLED=true`. |
-| `AI_ACCOUNT_SUMMARY_ENABLED` | No | Set to `true` to enable the AI-generated account summary feature. |
-| `AI_ACCOUNT_SUMMARY_MODEL` | No | OpenRouter model ID for account summaries. Default: `deepseek/deepseek-v4-flash`. |
-| `NEXT_PUBLIC_MAPTILER_KEY` | **Yes** | MapTiler public key for rendering map tiles. |
-| `NEXT_PUBLIC_MAPTILER_STATE_STYLE_ID` | No | MapTiler style ID for state choropleth view. |
-| `NEXT_PUBLIC_MAPTILER_CITY_STYLE_ID` | No | MapTiler style ID for city-level view. |
-| `NEXT_PUBLIC_MAPTILER_STYLE_ID` | No | Legacy fallback style ID (used if mode-specific IDs are not set). |
-| `NEXT_PUBLIC_MAP_VIEWPOINT_ISO2` | No | Geopolitical viewpoint for choropleth (e.g., `IN` for India). |
-| `NEXT_PUBLIC_LOGO_DEV_KEY` | No | Logo.dev publishable key for company logos. |
+| `NEXT_PUBLIC_BRANDFETCH_CLIENT_ID` | No | Brandfetch Logo API client ID. Without it the UI shows monogram fallbacks. |
+| `NEXT_PUBLIC_DASHBOARD_SERVER_MODE` | No | Set to `1` to switch the dashboard to the server-backed data path (paginated endpoints + SQL filters). |
+| `DATA_RATE_LIMIT_PER_MIN` | No | Max requests per user per minute on data endpoints. Default: `60`. |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | No | Upstash Redis credentials for the L2 response cache (`KV_REST_API_URL` / `KV_REST_API_TOKEN` also accepted). Without them the cache runs L1-only. |
 | `NEXT_PUBLIC_POSTHOG_KEY` | No | PostHog project API key for analytics. |
 | `NEXT_PUBLIC_POSTHOG_HOST` | No | PostHog host URL (defaults to PostHog cloud). |
 | `NEXT_PUBLIC_ENABLE_ANALYTICS` | No | Set to `true` to enable PostHog during local development. |
@@ -396,8 +398,6 @@ Two local config files control client-specific packaging without changing the co
 
 - `lib/config/dashboard-access.ts`
   - Controls whether top-level sections like `accounts`, `centers`, and `prospects` are accessible.
-  - Also supports deployment-level `prospectsPerAccount` packaging, so a client can see only the first `N` contacts per account while the total prospects badge still reflects the full platform count.
-  - When a prospect limit is configured, the remaining contacts stay visible only as locked teaser rows/cards. They do not expose real names, emails, LinkedIn URLs, search results, or export rows.
   - The same config is respected by dashboard navigation, search, exports, and server-side export enforcement.
 - `lib/config/filters.ts`
   - Controls which individual filters are enabled.
@@ -407,10 +407,6 @@ Typical use cases:
 
 - Client only needs Accounts + Prospects:
   - Set `centers` to `"disabled"` in `lib/config/dashboard-access.ts`
-- Client bought only 2 contacts per account:
-  - Set `limits.prospectsPerAccount` to `2` in `lib/config/dashboard-access.ts`
-- Client should see all contacts again:
-  - Set `limits.prospectsPerAccount` to `null` in `lib/config/dashboard-access.ts`
 - Client has standard filters only:
   - Set `showMoreEnabled: false` for the relevant filter section in `lib/config/filters.ts`
 
@@ -500,7 +496,7 @@ Subsequent pushes to the `main` branch trigger automatic deployments.
 
 ### Build Configuration
 - TypeScript errors are ignored during builds (`typescript.ignoreBuildErrors: true`)
-- Images are unoptimized (`images.unoptimized: true`); `img.logo.dev` is the only allowed remote pattern
+- Images are unoptimized (`images.unoptimized: true`); `cdn.brandfetch.io` is the only allowed remote pattern
 - HTTP response compression is enabled (`compress: true`)
 
 ---
@@ -509,13 +505,13 @@ Subsequent pushes to the `main` branch trigger automatic deployments.
 
 | Issue | Possible Cause | Solution |
 | :--- | :--- | :--- |
-| **Map not loading** | Invalid MapTiler Key | Check `NEXT_PUBLIC_MAPTILER_KEY`. Ensure the key is active and has map tile access. |
+| **Map not loading** | Basemap or local boundary request failed | Check access to `basemaps.cartocdn.com` and confirm `public/data/admin-1.geojson` is available. |
 | **"Database connection failed"** | Neon scaling / network | The Neon instance might be sleeping. Retry after a few seconds. Verify `DATABASE_URL`. For Prisma CLI issues, also verify `DIRECT_URL`. |
 | **Auth errors (401/403)** | Supabase config | Verify `NEXT_PUBLIC_SUPABASE_URL` and `ANON_KEY`. Check RLS policies in Supabase dashboard. |
-| **Missing logos** | Logo.dev key | Ensure `NEXT_PUBLIC_LOGO_DEV_KEY` is set. If omitted, fallback initials are used. |
+| **Missing logos** | Brandfetch client ID | Ensure `NEXT_PUBLIC_BRANDFETCH_CLIENT_ID` is set. If omitted, monogram fallbacks are used. |
 | **Notifications not showing** | Feature flag | Set `NEXT_PUBLIC_NOTIFICATIONS_ENABLED=enabled` in your environment. |
 | **Charts not rendering** | Data issue | Check browser console for errors. Ensure data is being returned from server actions. |
-| **Choropleth seams visible** | MapTiler style | Disable disputed boundary layers in your MapTiler style. See [Map Disputed Boundaries](documentation/frontend/map-disputed-boundaries.md). |
+| **Unexpected map boundaries** | Basemap boundary layers are still visible | Verify `hideBasemapBoundaries` runs after map load and the local Survey of India overlay loads. See [Map Boundaries](documentation/frontend/map-disputed-boundaries.md). |
 | **Export button disabled** | User role | Only `admin` users can export. Update the role in the `profiles` table. |
 | **Export fails with "Failed to archive export"** | `user-exports` Storage bucket missing | Create a **private** bucket named exactly `user-exports` in the Supabase dashboard. |
 | **Export fails with "Failed to record export: relation 'public.user_exports' does not exist"** | Schema SQL not run | Execute `documentation/backend/sql/user-exports-schema.sql` against your Supabase project. |
@@ -537,17 +533,20 @@ Detailed documentation for specific subsystems lives in the `documentation/` fol
 | [**ETL Pipeline**](documentation/backend/etl-pipeline.md) | The import process itself: source data, diffing, audit trail, how to extend it |
 | [**Developer Workflow**](documentation/developer-workflow.md) | Guide for common tasks, coding standards, and troubleshooting |
 | [**Testing Guide**](documentation/testing-guide.md) | Vitest setup, mocking patterns, and how to add a new test |
+| [**Server-Mode Dashboard**](documentation/backend/server-dashboard-mode.md) | The #249 server-backed data path: endpoints, SQL filter translation, rollout state |
+| [**Caching and Rate Limiting**](documentation/backend/caching-and-rate-limiting.md) | Two-tier response cache (L1 + Upstash Redis L2), cache purges, per-user rate limits |
 | [**API Caching (SWR)**](documentation/backend/api-caching-swr.md) | Stale-while-revalidate cache behavior for the `/api/dashboard` route |
+| [**Filtering SQL Parity Report**](documentation/backend/filtering-sql-parity-report.md) | Real-data verification that server-side SQL filtering matches the client engine |
+| [**Redis Cache Benchmark**](documentation/backend/redis-cache-benchmark.md) | Timing comparison for the Upstash Redis cache over the 60-scenario filter matrix |
 | [**Supabase Auth**](documentation/backend/supabase-auth-setup.md) | Setting up the `profiles` table, RLS policies, and auth triggers |
 | [**RBAC & Auth Guards**](documentation/backend/rbac-and-auth-guards.md) | Role enforcement, client-side session guard, server-side token verification |
 | [**Saved Filters**](documentation/backend/supabase-saved-filters.md) | Technical spec for the saved filters JSON structure |
 | [**Favorites & Filter Sharing**](documentation/backend/favorites-and-filter-sharing.md) | Favorites and filter-sharing tables, RLS model, and hooks |
 | [**User Exports & Audit Log**](documentation/backend/user-exports.md) | Server-side export generation, Storage archive, and audit table |
-| [**AI Account Summaries**](documentation/backend/ai-account-summaries.md) | AI-generated executive account summaries: flow, prompt design, env vars |
 | [**Product Tour**](documentation/frontend/product-tour.md) | Guided onboarding walkthrough, completion tracking, and versioning |
-| [**Logo Integration**](documentation/frontend/logo-integration.md) | Setup and usage guide for the Logo.dev integration |
+| [**Logo Integration**](documentation/frontend/logo-integration.md) | Setup and usage guide for the Brandfetch logo integration |
 | [**Scripts & Tooling**](documentation/scripts-and-tooling.md) | Standalone dev scripts: load benchmark and git-history work summary |
-| [**Map Disputed Boundaries**](documentation/frontend/map-disputed-boundaries.md) | State choropleth disputed-boundary behavior and alias rules |
+| [**Map Boundaries**](documentation/frontend/map-disputed-boundaries.md) | Carto basemap and local Survey of India boundary behavior |
 
 ---
 

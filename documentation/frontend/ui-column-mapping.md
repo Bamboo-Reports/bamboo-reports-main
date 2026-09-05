@@ -116,7 +116,7 @@ Each tab in the dashboard displays a paginated data table. Tables show 50 rows p
 
 | Column Header | Database Column | Table | Display Type | Notes |
 |---------------|----------------|-------|-------------|-------|
-| *(Logo)* | `account_hq_website` | `accounts` | Company logo image | Logo.dev lookup by domain; falls back to building icon |
+| *(Logo)* | `account_hq_website` | `accounts` | Company logo image | Brandfetch lookup by domain; falls back to a monogram badge |
 | Account Name | `account_global_legal_name` | `accounts` | Clickable text | Opens Account Details dialog on click |
 | *(NASSCOM badge)* | `account_nasscom_status` | `accounts` | Badge | Shows green "NASSCOM" badge when value is `"yes"` |
 | Industry | `account_hq_industry` | `accounts` | Text | — |
@@ -135,7 +135,7 @@ Each tab in the dashboard displays a paginated data table. Tables show 50 rows p
 
 | Column Header | Database Column | Table | Display Type | Notes |
 |---------------|----------------|-------|-------------|-------|
-| *(Logo)* | `center_account_website` | `centers` | Company logo image | Logo.dev lookup by parent account domain |
+| *(Logo)* | `center_account_website` | `centers` | Company logo image | Brandfetch lookup by parent account domain |
 | Center Name | `center_name` | `centers` | Clickable text | Opens Center Details dialog on click; secondary line shows `account_global_legal_name` |
 | Location | `center_city` + `center_state` | `centers` | Computed text | Format: "City, State" |
 | Center Type | `center_type` | `centers` | Text | — |
@@ -311,8 +311,6 @@ Shows a list of prospects/contacts for this account, each displaying:
 | Location | `prospect_city` + `prospect_state` + `prospect_country` | `prospects` |
 | Department | `prospect_department` | `prospects` |
 | Seniority Level | `prospect_level` | `prospects` |
-
-When prospect packaging is active, additional locked teaser contacts may appear in the same surface. Those rows/cards intentionally omit real name, title, email, and LinkedIn details.
 
 ---
 
@@ -538,7 +536,7 @@ Renders a state-level heatmap overlay showing center density per administrative 
 | Distinct Accounts | `account_global_legal_name` | `COUNT(DISTINCT)` per state | Number of unique accounts per state |
 | Headcount | `center_employees` | `SUM` per state | Total employees per state |
 
-**Tile matching:** Centers are matched to map tile features using `center_country_iso2` (ISO2 country code) + `center_state` (state name). Disputed boundary aliases are applied based on `NEXT_PUBLIC_MAP_VIEWPOINT_ISO2` (see `documentation/frontend/map-disputed-boundaries.md`).
+**Boundary matching:** Centers are matched to local administrative GeoJSON features using `center_country_iso2` (ISO2 country code) + `center_state` (state name). See `documentation/frontend/map-disputed-boundaries.md`.
 
 ---
 

@@ -16,6 +16,8 @@ import { Badge } from "@/components/ui/badge"
 import { DialogBreadcrumb, type DialogBreadcrumbItem } from "@/components/ui/dialog-breadcrumb"
 import { ProspectGridCard } from "@/components/cards/prospect-grid-card"
 import { PaginationControls } from "@/components/ui/pagination-controls"
+import { fetchAccountRelated } from "@/lib/dashboard/api-client"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface ProspectDetailsDialogProps {
   prospect: Prospect | null
@@ -23,6 +25,8 @@ interface ProspectDetailsDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onAccountOpen?: (accountName: string) => void
+  /** Server mode (#249): load company contacts from the related endpoint instead of the allProspects prop. */
+  fetchRelated?: boolean
 }
 
 function MetaRow({ label, value }: { label: string; value: string | number | null | undefined }) {
@@ -91,10 +95,11 @@ function QuickFilterGroup({
 
 export function ProspectDetailsDialog({
   prospect,
-  allProspects,
+  allProspects: allProspectsProp,
   open,
   onOpenChange,
   onAccountOpen,
+  fetchRelated = false,
 }: ProspectDetailsDialogProps) {
   const copy = useCopyToClipboard()
   const [copied, setCopied] = useState(false)
@@ -115,6 +120,29 @@ export function ProspectDetailsDialog({
   }, [prospect])
 
   const p = current
+
+  const [relatedProspects, setRelatedProspects] = useState<Prospect[] | null>(null)
+  const relatedAccount = fetchRelated && open ? (p?.account_global_legal_name ?? "") : ""
+  useEffect(() => {
+    if (!relatedAccount) {
+      setRelatedProspects(null)
+      return
+    }
+    let cancelled = false
+    fetchAccountRelated(relatedAccount)
+      .then((res) => {
+        if (!cancelled) setRelatedProspects(res.prospects)
+      })
+      .catch(() => {
+        if (!cancelled) setRelatedProspects(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [relatedAccount])
+
+  const relatedLoading = fetchRelated && open && !!p && relatedProspects === null
+  const allProspects = fetchRelated ? (relatedProspects ?? []) : allProspectsProp
 
   const companyContacts = useMemo(
     () =>
@@ -348,14 +376,24 @@ export function ProspectDetailsDialog({
                 <MetaRow label="Level" value={p.prospect_level} />
                 <MetaRow label="In Company Since" value={p.prospect_in_company_year} />
                 <MetaRow label="Current Role Since" value={p.prospect_current_year} />
-                <MetaRow label="Center" value={p.center_name} />
+                <MetaRow label="Centre" value={p.center_name} />
                 <MetaRow label="Location" value={location} />
                 <MetaRow label="Country" value={p.prospect_country?.trim().toUpperCase() === "TBA" || location === "India" ? null : p.prospect_country} />
               </div>
             </div>
           </section>
 
-          {companyContacts.length > 0 ? (
+          {relatedLoading && (
+            <section className="space-y-4">
+              <SectionHeader title={`More Contacts From ${p.account_global_legal_name}`} />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <Skeleton className="h-32 rounded-lg" />
+                <Skeleton className="h-32 rounded-lg" />
+                <Skeleton className="h-32 rounded-lg" />
+              </div>
+            </section>
+          )}
+          {!relatedLoading && companyContacts.length > 0 ? (
             <section className="space-y-4">
               <SectionHeader title={`More Contacts From ${p.account_global_legal_name}`} />
               <div className="space-y-2">

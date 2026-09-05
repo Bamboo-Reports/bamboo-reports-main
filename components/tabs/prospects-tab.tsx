@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useEffect, useRef, useState } from "react"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TabsContent } from "@/components/ui/tabs"
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -12,11 +13,13 @@ import { useTableRowSelection } from "@/hooks/use-table-row-selection"
 import { getProspectDisplayName as getProspectDisplayNameUtil, getProspectRecordId as getProspectRecordIdUtil } from "@/lib/dashboard/prospect-id"
 import type { FavoriteInput } from "@/hooks/use-favorites"
 import { ProspectGridCard } from "@/components/cards/prospect-grid-card"
-import { PieChartCard } from "@/components/charts/pie-chart-card"
+import {
+  PieChartCard,
+  type PieChartLabelDisplay,
+} from "@/components/charts/pie-chart-card"
 import { EmptyState } from "@/components/states/empty-state"
 import { ProspectDetailsDialog } from "@/components/dialogs/prospect-details-dialog"
 import { AccountDetailsDialog } from "@/components/dialogs/account-details-tabbed-dialog"
-import { LockedProspectTeaserCard, LockedProspectTeaserRow } from "@/components/prospects/locked-prospect-teaser-section"
 import { getPaginatedData, formatProspectLocation } from "@/lib/utils/helpers"
 import { ViewSwitcher } from "@/components/ui/view-switcher"
 import { SortButton } from "@/components/ui/sort-button"
@@ -25,20 +28,25 @@ import { TableColumnMenu } from "@/components/tables/table-column-menu"
 import { useTableColumnPreferences } from "@/hooks/use-table-column-preferences"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
-import type { Account, Center, LockedProspectTeaser, Prospect, Service, Tech } from "@/lib/types"
+import { fetchAccountRelated } from "@/lib/dashboard/api-client"
+import { devError } from "@/lib/utils/dev-log"
+import { GridSkeletonCards, TableSkeletonRows, type TabServerProps } from "@/components/tabs/accounts-tab"
+import { cn } from "@/lib/utils"
+import type { Account, Center, Prospect, Service, Tech } from "@/lib/types"
 
 interface ProspectsTabProps {
   accounts: Account[]
   centers: Center[]
   prospects: Prospect[]
   allProspects: Prospect[]
-  lockedProspectTeasers: LockedProspectTeaser[]
   services: Service[]
   tech: Tech[]
   prospectChartData: {
     departmentData: Array<{ name: string; value: number; fill?: string }>
     levelData: Array<{ name: string; value: number; fill?: string }>
   }
+  chartLabelDisplay: PieChartLabelDisplay
+  onChartLabelDisplayChange: (display: PieChartLabelDisplay) => void
   prospectsView: "chart" | "data"
   setProspectsView: (view: "chart" | "data") => void
   currentPage: number
@@ -50,6 +58,8 @@ interface ProspectsTabProps {
   onToggleFavorite?: (item: FavoriteInput) => void
   onFavoriteMany?: (items: FavoriteInput[]) => void
   onUnfavoriteMany?: (items: FavoriteInput[]) => void
+  server?: TabServerProps | null
+  chartsLoading?: boolean
 }
 
 // Module-level so the reference is stable across renders (passed to memo'd rows).
@@ -67,10 +77,11 @@ export function ProspectsTab({
   centers,
   prospects,
   allProspects,
-  lockedProspectTeasers,
   services,
   tech,
   prospectChartData,
+  chartLabelDisplay,
+  onChartLabelDisplayChange,
   prospectsView,
   setProspectsView,
   currentPage,
@@ -82,6 +93,8 @@ export function ProspectsTab({
   onToggleFavorite,
   onFavoriteMany,
   onUnfavoriteMany,
+  server,
+  chartsLoading = false,
 }: ProspectsTabProps) {
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -162,10 +175,7 @@ export function ProspectsTab({
     })
   }, [isDialogOpen, onRecordOpened, prospectsView, dataLayout, getProspectDisplayName, getProspectRecordId])
 
-  const handleAccountOpen = (accountName: string) => {
-    const account = accounts.find((item) => item.account_global_legal_name === accountName)
-    if (!account) return
-
+  const openAccount = (account: Account) => {
     setIsDialogOpen(false)
     setSelectedAccount(account)
     setIsAccountDialogOpen(true)
@@ -184,6 +194,22 @@ export function ProspectsTab({
       opened_from: "related_account_link",
       has_website: Boolean(account.account_hq_website),
     })
+  }
+
+  const handleAccountOpen = (accountName: string) => {
+    const account = accounts.find((item) => item.account_global_legal_name === accountName)
+    if (account) {
+      openAccount(account)
+      return
+    }
+    // Server mode: the account is not in the current page rows; fetch it.
+    if (server) {
+      fetchAccountRelated(accountName)
+        .then((res) => {
+          if (res.account) openAccount(res.account)
+        })
+        .catch((err) => devError("related account fetch failed:", err))
+    }
   }
 
   const handleSort = (key: typeof sort.key) => {
@@ -205,6 +231,7 @@ export function ProspectsTab({
       sort_key: key,
       sort_direction: nextDirection ?? "none",
     })
+    server?.onSortChange(key, nextDirection)
     setCurrentPage(1)
   }
 
@@ -238,7 +265,8 @@ export function ProspectsTab({
 
 
   const sortedProspects = React.useMemo(() => {
-    if (!sort.direction) return prospects
+    // Server mode: rows arrive already sorted and paginated.
+    if (server || !sort.direction) return prospects
 
     const compare = (a: string | undefined | null, b: string | undefined | null) =>
       (a || "").localeCompare(b || "", undefined, { sensitivity: "base" })
@@ -261,37 +289,11 @@ export function ProspectsTab({
 
     const sorted = [...prospects].sort((a, b) => compare(getValue(a), getValue(b)))
     return sort.direction === "asc" ? sorted : sorted.reverse()
-  }, [prospects, sort])
-
-  const lockedTeaserCountsByAccount = React.useMemo(() => {
-    const counts = new Map<string, number>()
-    for (const teaser of lockedProspectTeasers) {
-      counts.set(teaser.account_global_legal_name, (counts.get(teaser.account_global_legal_name) ?? 0) + 1)
-    }
-    return counts
-  }, [lockedProspectTeasers])
-
-  const gridItems = React.useMemo(
-    () => [
-      ...sortedProspects.map((prospect) => ({ type: "visible" as const, prospect })),
-      ...lockedProspectTeasers.map((teaser) => ({ type: "locked" as const, teaser })),
-    ],
-    [sortedProspects, lockedProspectTeasers]
-  )
-  const tableItems = React.useMemo(
-    () => [
-      ...sortedProspects.map((prospect) => ({ type: "visible" as const, prospect })),
-      ...lockedProspectTeasers.map((teaser) => ({ type: "locked" as const, teaser })),
-    ],
-    [sortedProspects, lockedProspectTeasers]
-  )
+  }, [prospects, sort, server])
 
   const pageProspects = React.useMemo(
-    () =>
-      getPaginatedData(tableItems, currentPage, itemsPerPage)
-        .filter((item) => item.type === "visible")
-        .map((item) => item.prospect),
-    [tableItems, currentPage, itemsPerPage]
+    () => (server ? sortedProspects : getPaginatedData(sortedProspects, currentPage, itemsPerPage)),
+    [server, sortedProspects, currentPage, itemsPerPage]
   )
   const {
     selected: selectedKeys,
@@ -305,7 +307,7 @@ export function ProspectsTab({
     handleRowSelectChange,
     handleRowToggleFavorite,
   } = useTableRowSelection({
-    items: prospects,
+    items: server ? pageProspects : prospects,
     pageItems: pageProspects,
     getKey: getProspectRecordIdUtil,
     favoritePrefix: "prospect",
@@ -325,7 +327,7 @@ export function ProspectsTab({
   }
 
   // Show empty state when no prospects
-  if (prospects.length === 0 && lockedProspectTeasers.length === 0) {
+  if (server ? server.total === 0 && !server.loading : prospects.length === 0) {
     return (
       <TabsContent value="prospects">
         <EmptyState type="no-results" />
@@ -337,7 +339,7 @@ export function ProspectsTab({
     <TabsContent value="prospects">
       {/* Header with View Toggle */}
       <div className="flex items-center gap-2 mb-4">
-        <PieChartIcon className="h-5 w-5 text-[hsl(var(--chart-1))]" />
+        <PieChartIcon className="h-5 w-5 text-primary" />
         <h2 className="text-lg font-semibold text-foreground">Prospect Analytics</h2>
         <ViewSwitcher
           data-tour="view-switcher"
@@ -346,16 +348,16 @@ export function ProspectsTab({
           options={[
             {
               value: "chart",
-              label: <span className="text-[hsl(var(--chart-1))]">Charts</span>,
+              label: "Charts",
               icon: (
-                <PieChartIcon className="h-4 w-4 text-[hsl(var(--chart-1))]" />
+                <PieChartIcon className="h-4 w-4" />
               ),
             },
             {
               value: "data",
-              label: <span className="text-[hsl(var(--chart-2))]">Data</span>,
+              label: "Data",
               icon: (
-                <TableIcon className="h-4 w-4 text-[hsl(var(--chart-2))]" />
+                <TableIcon className="h-4 w-4" />
               ),
             },
           ]}
@@ -372,12 +374,18 @@ export function ProspectsTab({
               data={prospectChartData.departmentData}
               countLabel="Total Prospects"
               showBigPercentage
+              labelDisplay={chartLabelDisplay}
+              onLabelDisplayChange={onChartLabelDisplayChange}
+              loading={chartsLoading}
             />
             <PieChartCard
               title="Level"
               data={prospectChartData.levelData}
               countLabel="Total Prospects"
               showBigPercentage
+              labelDisplay={chartLabelDisplay}
+              onLabelDisplayChange={onChartLabelDisplayChange}
+              loading={chartsLoading}
             />
           </div>
         </div>
@@ -404,16 +412,16 @@ export function ProspectsTab({
                    options={[
                      {
                        value: "table",
-                       label: <span className="text-[hsl(var(--chart-2))]">Table</span>,
+                       label: "Table",
                        icon: (
-                         <TableIcon className="h-4 w-4 text-[hsl(var(--chart-2))]" />
+                         <TableIcon className="h-4 w-4" />
                        ),
                      },
                      {
                        value: "grid",
-                       label: <span className="text-[hsl(var(--chart-3))]">Grid</span>,
+                       label: "Grid",
                        icon: (
-                         <LayoutGrid className="h-4 w-4 text-[hsl(var(--chart-3))]" />
+                         <LayoutGrid className="h-4 w-4" />
                        ),
                      },
                    ]}
@@ -460,77 +468,64 @@ export function ProspectsTab({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {getPaginatedData(tableItems, currentPage, itemsPerPage).map((item) =>
-                        item.type === "visible" ? (
-                          <ProspectRow
-                            key={getProspectRecordId(item.prospect)}
-                            prospect={item.prospect}
-                            onOpen={handleRowOpen}
-                            visibleColumns={visibleColumnSet}
-                            selectable
-                            isSelected={selectedKeys.has(getProspectRecordId(item.prospect))}
-                            onSelectChange={handleRowSelectChange}
-                            isFavorite={favoriteKeys?.has(`prospect:${getProspectRecordId(item.prospect)}`)}
-                            onToggleFavorite={onToggleFavorite ? handleRowToggleFavorite : undefined}
-                          />
-                        ) : (
-                          <LockedProspectTeaserRow
-                            key={item.teaser.id}
-                            teaser={item.teaser}
-                            remainingCount={lockedTeaserCountsByAccount.get(item.teaser.account_global_legal_name) ?? 0}
-                            visibleColumns={visibleColumnSet}
-                            selectable
-                          />
-                        )
-                      )}
+                      {server?.loading ? (
+                        <TableSkeletonRows columns={1 + (["avatar", "name", "location", "title", "department"] as const).filter(isColumnVisible).length} />
+                      ) : pageProspects.map((prospect) => (
+                        <ProspectRow
+                          key={getProspectRecordId(prospect)}
+                          prospect={prospect}
+                          onOpen={handleRowOpen}
+                          visibleColumns={visibleColumnSet}
+                          selectable
+                          isSelected={selectedKeys.has(getProspectRecordId(prospect))}
+                          onSelectChange={handleRowSelectChange}
+                          isFavorite={favoriteKeys?.has(`prospect:${getProspectRecordId(prospect)}`)}
+                          onToggleFavorite={onToggleFavorite ? handleRowToggleFavorite : undefined}
+                        />
+                      ))}
                     </TableBody>
                   </Table>
                 ) : (
                   <div className="flex flex-col">
                     <div className="flex items-center gap-2 px-6 py-3 border-b bg-muted/20">
                       <span className="text-xs font-medium text-muted-foreground">Sort</span>
-                      <button
+                      <Button
                         type="button"
+                        variant="outline"
+                        size="sm"
                         onClick={() => handleSort("name")}
-                        className="inline-flex items-center justify-center rounded-md border border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground hover:border-accent-foreground/20 shadow-sm transition-colors h-7 w-7"
+                        className="h-8 w-8 px-0"
                         aria-label="Sort by prospect name"
+                        aria-pressed={sort.key === "name" && sort.direction !== null}
                       >
                         {sort.key !== "name" || sort.direction === null ? (
                           <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
                         ) : sort.direction === "asc" ? (
-                          <ArrowUpAZ className="h-3.5 w-3.5 text-muted-foreground" />
+                          <ArrowUpAZ className="h-3.5 w-3.5 text-primary" />
                         ) : (
-                          <ArrowDownAZ className="h-3.5 w-3.5 text-muted-foreground" />
+                          <ArrowDownAZ className="h-3.5 w-3.5 text-primary" />
                         )}
-                      </button>
+                      </Button>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
-                      {getPaginatedData(gridItems, currentPage, itemsPerPage).map((item) =>
-                        item.type === "visible" ? (
-                          <ProspectGridCard
-                            key={getProspectRecordId(item.prospect)}
-                            prospect={item.prospect}
-                            onClick={() => handleProspectClick(item.prospect, "grid_card")}
-                          />
-                        ) : (
-                          <LockedProspectTeaserCard
-                            key={item.teaser.id}
-                            teaser={item.teaser}
-                            remainingCount={lockedTeaserCountsByAccount.get(item.teaser.account_global_legal_name) ?? 0}
-                          />
-                        )
-                      )}
+                      {server?.loading ? <GridSkeletonCards /> : pageProspects.map((prospect) => (
+                        <ProspectGridCard
+                          key={getProspectRecordId(prospect)}
+                          prospect={prospect}
+                          onClick={() => handleProspectClick(prospect, "grid_card")}
+                        />
+                      ))}
                     </div>
                   </div>
                 )}
               </div>
-                  {(dataLayout === "grid" ? gridItems.length : tableItems.length) > 0 && (
+                  {(server ? server.total : sortedProspects.length) > 0 && (
                     <PaginationControls
                       currentPage={currentPage}
-                      totalItems={dataLayout === "grid" ? gridItems.length : tableItems.length}
+                      totalItems={server ? server.total : sortedProspects.length}
                       itemsPerPage={itemsPerPage}
                       onPageChange={setCurrentPage}
-                      dataLength={dataLayout === "grid" ? gridItems.length : tableItems.length}
+                      dataLength={server ? server.total : sortedProspects.length}
                     />
                   )}
             </CardContent>
@@ -544,17 +539,18 @@ export function ProspectsTab({
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         onAccountOpen={handleAccountOpen}
+        fetchRelated={Boolean(server)}
       />
 
       <AccountDetailsDialog
         account={selectedAccount}
         centers={centers}
         prospects={allProspects}
-        lockedProspectTeasers={lockedProspectTeasers}
         services={services}
         tech={tech}
         open={isAccountDialogOpen}
         onOpenChange={setIsAccountDialogOpen}
+        fetchRelated={Boolean(server)}
       />
 
       <SelectionActionBar

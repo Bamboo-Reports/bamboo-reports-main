@@ -5,9 +5,6 @@
  * barrel so client code cannot accidentally bypass authenticated API routes.
  */
 export {
-  getAccountFinancialInfo,
-} from "@/app/actions/financial"
-export {
   getUnreadCount,
   getUnreadSummaries,
   getUnreadRecordSummaries,

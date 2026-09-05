@@ -4,10 +4,9 @@ import { useState } from "react"
 import Image from "next/image"
 import { Building2 } from "lucide-react"
 import { useTheme } from "next-themes"
-import { getLogoDevPublicKey } from "@/lib/config/environment"
+import { getBrandfetchClientId } from "@/lib/config/environment"
 import { cn } from "@/lib/utils"
 
-type LogoFormat = "jpg" | "png" | "webp"
 type LogoTheme = "light" | "dark" | "auto"
 type LogoFallbackMode = "monogram" | "icon"
 
@@ -17,7 +16,6 @@ interface CompanyLogoProps {
   size?: "sm" | "md" | "lg" | "xl"
   className?: string
   theme?: LogoTheme
-  format?: LogoFormat
   fallbackMode?: LogoFallbackMode
   retina?: boolean
   priority?: boolean
@@ -30,7 +28,7 @@ const sizeMap = {
   xl: { container: "h-24 w-24", icon: "h-12 w-12", img: 150 },
 }
 
-const LOGO_DEV_PUBLIC_KEY = getLogoDevPublicKey()
+const BRANDFETCH_CLIENT_ID = getBrandfetchClientId()
 
 export function CompanyLogo({
   domain,
@@ -38,7 +36,6 @@ export function CompanyLogo({
   size = "md",
   className,
   theme = "auto",
-  format,
   fallbackMode = "monogram",
   retina = true,
   priority = false,
@@ -82,8 +79,6 @@ export function CompanyLogo({
   const companyMonogram = companyName.trim().charAt(0).toUpperCase() || "?"
   const effectiveTheme: LogoTheme =
     theme === "auto" ? (resolvedTheme === "dark" ? "dark" : resolvedTheme === "light" ? "light" : "auto") : theme
-  const effectiveFormat: LogoFormat =
-    format ?? (effectiveTheme === "auto" ? "webp" : "png")
 
   const renderFallback = () => (
     <div
@@ -105,21 +100,21 @@ export function CompanyLogo({
     </div>
   )
 
-  if (!cleanDomain || !LOGO_DEV_PUBLIC_KEY || imageError) {
+  if (!cleanDomain || !BRANDFETCH_CLIENT_ID || imageError) {
     return renderFallback()
   }
 
-  const logoUrl = new URL(`https://img.logo.dev/${cleanDomain}`)
-  logoUrl.searchParams.set("token", LOGO_DEV_PUBLIC_KEY)
-  logoUrl.searchParams.set("size", String(sizeConfig.img))
-  logoUrl.searchParams.set("format", effectiveFormat)
-  logoUrl.searchParams.set("fallback", "404")
+  // Brandfetch Logo API (https://docs.brandfetch.com/logo-api/overview):
+  // options are path segments. fallback/404 makes missing logos error so the
+  // onError handler can render the monogram instead of a placeholder image.
+  const imgSize = retina ? sizeConfig.img * 2 : sizeConfig.img
+  const segments = [`domain/${cleanDomain}`, `w/${imgSize}`, `h/${imgSize}`]
   if (effectiveTheme !== "auto") {
-    logoUrl.searchParams.set("theme", effectiveTheme)
+    segments.push(`theme/${effectiveTheme}`)
   }
-  if (retina) {
-    logoUrl.searchParams.set("retina", "true")
-  }
+  segments.push("fallback/404", "type/icon.png")
+  const logoUrl = new URL(`https://cdn.brandfetch.io/${segments.join("/")}`)
+  logoUrl.searchParams.set("c", BRANDFETCH_CLIENT_ID)
 
   return (
     <div
@@ -141,6 +136,10 @@ export function CompanyLogo({
         src={logoUrl.toString()}
         alt={`${companyName} logo`}
         fill
+        // Brandfetch already serves exact-size WebP, and its bot protection
+        // blocks the Next image optimizer's server-side fetch. Load directly
+        // in the browser instead.
+        unoptimized
         className={cn(
           "object-contain transition-opacity duration-300",
           imageLoaded ? "opacity-100" : "opacity-0"

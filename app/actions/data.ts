@@ -1,6 +1,5 @@
-import type { Account, Alias, Center, Function, Service, Tech, Prospect, Ticker, LockedProspectTeaser } from "@/lib/types"
-import { getProspectsPerAccountLimit, isSectionEnabled } from "@/lib/config/dashboard-access"
-import { partitionProspectsByAccess } from "@/lib/dashboard/prospect-access"
+import type { Account, Alias, Center, Function, Service, Tech, Prospect, Ticker } from "@/lib/types"
+import { isSectionEnabled } from "@/lib/config/dashboard-access"
 import { mergeTickersIntoAccounts } from "@/lib/dashboard/ticker-merge"
 import { getPrismaOrThrow, queryWithRetry } from "@/lib/db/prisma"
 import { createLogger } from "@/lib/logger"
@@ -337,7 +336,6 @@ export type AllDataResult = {
   tech: Tech[]
   prospects: Prospect[]
   aliases: Alias[]
-  lockedProspectTeasers: LockedProspectTeaser[]
   summary: DashboardSummaryMetrics
   error: string | null
 }
@@ -360,7 +358,6 @@ export async function getDashboardData(): Promise<AllDataResult> {
         tech: [],
         prospects: [],
         aliases: [],
-        lockedProspectTeasers: [],
         summary: { ...EMPTY_SUMMARY_METRICS },
         error: "Database configuration missing",
       }
@@ -378,7 +375,6 @@ export async function getDashboardData(): Promise<AllDataResult> {
         tech: [],
         prospects: [],
         aliases: [],
-        lockedProspectTeasers: [],
         summary: { ...EMPTY_SUMMARY_METRICS },
         error: "Database connection failed",
       }
@@ -387,9 +383,8 @@ export async function getDashboardData(): Promise<AllDataResult> {
     const accountsEnabled = isSectionEnabled("accounts")
     const centersEnabled = isSectionEnabled("centers")
     const prospectsEnabled = isSectionEnabled("prospects")
-    const prospectsPerAccountLimit = getProspectsPerAccountLimit()
 
-    const [rawAccounts, centers, functions, services, tech, rawProspects, aliases, tickers, summary] = await Promise.all([
+    const [rawAccounts, centers, functions, services, tech, prospects, aliases, tickers, summary] = await Promise.all([
       accountsEnabled ? getDashboardAccounts() : Promise.resolve([]),
       centersEnabled ? getDashboardCenters() : Promise.resolve([]),
       centersEnabled ? getDashboardFunctions() : Promise.resolve([]),
@@ -403,22 +398,17 @@ export async function getDashboardData(): Promise<AllDataResult> {
 
     const accounts = mergeTickersIntoAccounts(rawAccounts, tickers)
 
-    const { visibleProspects, lockedProspectTeasers } = partitionProspectsByAccess(rawProspects, prospectsPerAccountLimit)
-
     logger.info("dashboard_data_loaded", {
       duration_ms: Date.now() - startedAt,
       accounts_enabled: accountsEnabled,
       centers_enabled: centersEnabled,
       prospects_enabled: prospectsEnabled,
-      prospects_per_account_limit: prospectsPerAccountLimit,
       accounts_count: accounts.length,
       centers_count: centers.length,
       functions_count: functions.length,
       services_count: services.length,
       tech_count: tech.length,
-      raw_prospects_count: rawProspects.length,
-      visible_prospects_count: visibleProspects.length,
-      locked_prospect_teasers_count: lockedProspectTeasers.length,
+      prospects_count: prospects.length,
       aliases_count: aliases.length,
     })
 
@@ -428,9 +418,8 @@ export async function getDashboardData(): Promise<AllDataResult> {
       functions,
       services,
       tech,
-      prospects: visibleProspects,
+      prospects,
       aliases,
-      lockedProspectTeasers,
       summary,
       error: null,
     } satisfies AllDataResult
@@ -440,7 +429,7 @@ export async function getDashboardData(): Promise<AllDataResult> {
       error,
     })
     return {
-      accounts: [], centers: [], functions: [], services: [], tech: [], prospects: [], aliases: [], lockedProspectTeasers: [],
+      accounts: [], centers: [], functions: [], services: [], tech: [], prospects: [], aliases: [],
       summary: { ...EMPTY_SUMMARY_METRICS },
       error: error instanceof Error ? error.message : "Unknown database error",
     }

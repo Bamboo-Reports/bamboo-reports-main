@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Briefcase, Building, Clock, UserCheck, Users } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { getSectionUnavailableMessage, isSectionEnabled } from '@/lib/config/dashboard-access'
 import { cn } from '@/lib/utils'
 
@@ -113,6 +114,8 @@ interface SummaryCardsProps {
   totalHeadcount: number
   activeView: "accounts" | "centers" | "prospects"
   onSelect: (view: "accounts" | "centers" | "prospects") => void
+  /** A newer filter state is loading; the shown numbers are the previous state's. */
+  updating?: boolean
 }
 
 function getCardStatusLabel(procured: boolean): string {
@@ -132,6 +135,7 @@ export const SummaryCards = React.memo(function SummaryCards({
   totalHeadcount,
   activeView,
   onSelect,
+  updating = false,
 }: SummaryCardsProps): React.JSX.Element {
   const accountsEnabled = isSectionEnabled("accounts")
   const centersEnabled = isSectionEnabled("centers")
@@ -168,7 +172,6 @@ export const SummaryCards = React.memo(function SummaryCards({
       title: 'Accounts',
       value: filteredAccountsCount,
       total: totalAccountsCount,
-      colorVar: '--chart-1',
       icon: Building,
       iconClassName: 'text-primary',
       interactive: accountsEnabled,
@@ -177,28 +180,26 @@ export const SummaryCards = React.memo(function SummaryCards({
     },
     {
       id: 'centers' as const,
-      title: 'Centers',
+      title: 'Centres',
       value: filteredCentersCount,
       total: totalCentersCount,
-      colorVar: '--chart-2',
       icon: Briefcase,
-      iconClassName: 'text-[hsl(var(--chart-2))]',
+      iconClassName: 'text-primary',
       interactive: centersEnabled,
       procured: centersEnabled,
       message: centersEnabled ? null : getSectionUnavailableMessage("centers"),
     },
     {
       id: 'upcoming-centers' as const,
-      title: 'Upcoming Centers',
+      title: 'Upcoming Centres',
       value: filteredUpcomingCentersCount,
       total: totalUpcomingCentersCount,
-      colorVar: '--chart-5',
       icon: Clock,
-      iconClassName: 'text-[hsl(var(--chart-5))]',
+      iconClassName: 'text-primary',
       interactive: false,
       procured: centersEnabled,
       message: centersEnabled
-        ? "Upcoming Centers is an overview stat. Only Accounts, Centers, and Prospects open as views."
+        ? "Upcoming Centres is an overview stat. Only Accounts, Centres, and Prospects open as views."
         : getSectionUnavailableMessage("centers"),
     },
     {
@@ -206,9 +207,8 @@ export const SummaryCards = React.memo(function SummaryCards({
       title: 'Prospects',
       value: filteredProspectsCount,
       total: totalProspectsCount,
-      colorVar: '--chart-3',
       icon: Users,
-      iconClassName: 'text-[hsl(var(--chart-3))]',
+      iconClassName: 'text-primary',
       interactive: prospectsEnabled,
       procured: prospectsEnabled,
       message: prospectsEnabled ? null : getSectionUnavailableMessage("prospects"),
@@ -218,13 +218,12 @@ export const SummaryCards = React.memo(function SummaryCards({
       title: 'Headcount',
       value: filteredHeadcount,
       total: totalHeadcount,
-      colorVar: '--chart-4',
       icon: UserCheck,
-      iconClassName: 'text-[hsl(var(--chart-4))]',
+      iconClassName: 'text-primary',
       interactive: false,
       procured: centersEnabled,
       message: centersEnabled
-        ? "Headcount is an overview stat. Only Accounts, Centers, and Prospects open as views."
+        ? "Headcount is an overview stat. Only Accounts, Centres, and Prospects open as views."
         : getSectionUnavailableMessage("centers"),
     },
   ]
@@ -255,7 +254,7 @@ export const SummaryCards = React.memo(function SummaryCards({
               }
             } : undefined}
             className={cn(
-              'relative overflow-hidden border bg-gradient-to-br from-card via-card to-secondary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-300 ease-out animate-stagger',
+              'relative overflow-hidden border bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-300 ease-out animate-stagger',
               card.interactive && 'cursor-pointer select-none',
               !card.interactive && card.message && 'cursor-help',
               isActive
@@ -265,17 +264,6 @@ export const SummaryCards = React.memo(function SummaryCards({
               !card.interactive && 'opacity-80'
             )}
           >
-            <div
-              className="pointer-events-none absolute inset-0 opacity-90"
-              style={{
-                background: `
-                  radial-gradient(circle at 18% 20%, hsl(var(${card.colorVar}) / 0.2), transparent 42%),
-                  radial-gradient(circle at 82% 0%, hsl(var(${card.colorVar}) / 0.14), transparent 36%),
-                  linear-gradient(125deg, hsl(var(${card.colorVar}) / 0.08), transparent 55%)
-                `,
-              }}
-              aria-hidden="true"
-            />
             <div
               className="pointer-events-none absolute inset-px rounded-[calc(var(--radius)-2px)] border border-white/40 dark:border-white/10 opacity-60"
               aria-hidden="true"
@@ -287,16 +275,35 @@ export const SummaryCards = React.memo(function SummaryCards({
               </CardTitle>
             </CardHeader>
             <CardContent className="relative flex flex-wrap items-end justify-between gap-2 px-4 pt-0 pb-3.5">
-              <div className="min-w-0">
-                <AnimatedNumber
-                  value={card.value}
-                  compact={compact}
-                  className="text-sidebar-foreground"
-                />
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {getCardStatusLabel(card.procured)}
-                </p>
-              </div>
+              {updating ? (
+                // Invisible copies of the loaded typography establish the
+                // exact same line boxes (rendered line heights differ from the
+                // theoretical font-size * leading), with skeletons overlaid,
+                // so swapping states never shifts the content below.
+                <div className="min-w-0" aria-label="Loading count">
+                  <div className="relative">
+                    <span className="invisible inline-flex items-baseline gap-1 text-2xl lg:text-3xl font-semibold leading-tight">
+                      0
+                    </span>
+                    <Skeleton className="absolute inset-y-0.5 left-0 w-20" />
+                  </div>
+                  <div className="invisible relative mt-0.5 text-xs">
+                    <Skeleton className="visible absolute inset-y-0.5 left-0 w-24" />
+                    &nbsp;
+                  </div>
+                </div>
+              ) : (
+                <div className="min-w-0">
+                  <AnimatedNumber
+                    value={card.value}
+                    compact={compact}
+                    className="text-sidebar-foreground"
+                  />
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {getCardStatusLabel(card.procured)}
+                  </p>
+                </div>
+              )}
               <span className="inline-flex items-center rounded-full border border-border/60 bg-secondary/70 px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground backdrop-blur-sm whitespace-nowrap">
                 {compact ? formatCompactNumber(card.total) : card.total.toLocaleString()} total
               </span>

@@ -7,7 +7,6 @@ import {
   getAccessibleDefaultSection,
   getDatasetUnavailableMessage,
   getEnabledSections,
-  getProspectsPerAccountLimit,
   getSectionUnavailableMessage,
   isDatasetEnabled,
   isSectionDisabled,
@@ -71,29 +70,6 @@ describe("dashboard access config", () => {
     })
   })
 
-  describe("limits", () => {
-    it("returns null if limit is null", () => {
-      DASHBOARD_ACCESS_CONFIG.limits.prospectsPerAccount = null
-      expect(getProspectsPerAccountLimit()).toBeNull()
-    })
-
-    it("returns null if limit is not finite", () => {
-      DASHBOARD_ACCESS_CONFIG.limits.prospectsPerAccount = Infinity as any
-      expect(getProspectsPerAccountLimit()).toBeNull()
-
-      DASHBOARD_ACCESS_CONFIG.limits.prospectsPerAccount = NaN as any
-      expect(getProspectsPerAccountLimit()).toBeNull()
-    })
-
-    it("returns floored positive integer", () => {
-      DASHBOARD_ACCESS_CONFIG.limits.prospectsPerAccount = 5.7
-      expect(getProspectsPerAccountLimit()).toBe(5)
-
-      DASHBOARD_ACCESS_CONFIG.limits.prospectsPerAccount = -5
-      expect(getProspectsPerAccountLimit()).toBe(0)
-    })
-  })
-
   describe("view access", () => {
     it("canAccessAccountsMapView maps to centers section", () => {
       DASHBOARD_ACCESS_CONFIG.sections.centers = "enabled"
@@ -106,7 +82,7 @@ describe("dashboard access config", () => {
 
   describe("messages and assertions", () => {
     it("provides unavailability messages", () => {
-      expect(getSectionUnavailableMessage("centers")).toBe("Centers is Not Procured.")
+      expect(getSectionUnavailableMessage("centers")).toBe("Centres is Not Procured.")
       expect(getDatasetUnavailableMessage("services")).toBe("Services export is Not Procured.")
     })
 
@@ -115,7 +91,7 @@ describe("dashboard access config", () => {
       expect(() => assertSectionEnabled("centers")).not.toThrow()
 
       DASHBOARD_ACCESS_CONFIG.sections.centers = "disabled"
-      expect(() => assertSectionEnabled("centers")).toThrow("Centers is Not Procured.")
+      expect(() => assertSectionEnabled("centers")).toThrow("Centres is Not Procured.")
     })
 
     it("asserts dataset is enabled", () => {

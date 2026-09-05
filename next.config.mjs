@@ -9,7 +9,7 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "img.logo.dev",
+        hostname: "cdn.brandfetch.io",
       },
     ],
   },

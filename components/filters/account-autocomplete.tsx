@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback, useId } from 
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { X, Plus, Minus } from "lucide-react"
+import { X, Plus, Minus, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
@@ -16,6 +16,8 @@ import {
 } from "@/lib/analytics/tracking"
 import type { Alias, FilterValue } from "@/lib/types"
 import { buildAliasMap, findAliasMatch, type AliasMatch } from "@/lib/search/alias-utils"
+import { fetchAccountAutocomplete } from "@/lib/dashboard/api-client"
+import { devError } from "@/lib/utils/dev-log"
 
 interface AccountAutocompleteProps {
   accountNames: string[]
@@ -25,6 +27,8 @@ interface AccountAutocompleteProps {
   trackingKey?: string
   aliases?: Alias[]
   accountVisibilityByName?: Record<string, AccountVisibilityInfo>
+  /** Server mode (#249): fetch suggestions from /api/accounts/autocomplete instead of filtering accountNames. */
+  serverSuggest?: boolean
 }
 
 interface AccountSuggestion {
@@ -46,6 +50,7 @@ export function AccountAutocomplete({
   trackingKey,
   aliases,
   accountVisibilityByName,
+  serverSuggest = false,
 }: AccountAutocompleteProps) {
   const [inputValue, setInputValue] = useState("")
   const [debouncedValue, setDebouncedValue] = useState("")
@@ -73,9 +78,50 @@ export function AccountAutocomplete({
 
   const aliasMap = useMemo(() => buildAliasMap(aliases ?? []), [aliases])
 
+  // Server mode: suggestions come from the autocomplete endpoint.
+  const [serverSuggestions, setServerSuggestions] = useState<AccountSuggestion[]>([])
+  // True from keystroke until the lookup for it resolves, so the dropdown can
+  // say "Searching" instead of a premature "No accounts found".
+  const [isFetching, setIsFetching] = useState(false)
+  const serverRequestRef = useRef(0)
+  useEffect(() => {
+    if (!serverSuggest) return
+    setIsFetching(inputValue.trim().length >= 2)
+  }, [serverSuggest, inputValue])
+  useEffect(() => {
+    if (!serverSuggest) return
+    const term = debouncedValue.toLowerCase().trim()
+    const requestId = ++serverRequestRef.current
+    if (term.length < 2) {
+      setServerSuggestions([])
+      setIsFetching(false)
+      return
+    }
+    fetchAccountAutocomplete(term)
+      .then((res) => {
+        if (serverRequestRef.current !== requestId) return
+        setIsFetching(false)
+        setServerSuggestions(
+          res.suggestions.map((s) => ({
+            name: s.value,
+            matchedAlias: (s.matchedAlias as AliasMatch | null | undefined) ?? null,
+            visibility: s.visibility
+              ? { visibility: (s.visibility.visibility as "include" | "exclude" | null) ?? null, note: s.visibility.note }
+              : null,
+          }))
+        )
+      })
+      .catch((err) => {
+        if (serverRequestRef.current !== requestId) return
+        devError("account autocomplete failed:", err)
+        setServerSuggestions([])
+        setIsFetching(false)
+      })
+  }, [serverSuggest, debouncedValue])
+
   // Filter suggestions based on input with smart matching
-  const suggestions = useMemo<AccountSuggestion[]>(() => {
-    if (!debouncedValue.trim()) return []
+  const clientSuggestions = useMemo<AccountSuggestion[]>(() => {
+    if (serverSuggest || !debouncedValue.trim()) return []
 
     const searchTerm = debouncedValue.toLowerCase().trim()
     const alreadySelected = new Set(selectedAccounts.map(s => s.value.toLowerCase()))
@@ -102,7 +148,13 @@ export function AccountAutocomplete({
     }
 
     return [...startsWithMatches, ...containsMatches, ...aliasMatches].slice(0, 50)
-  }, [debouncedValue, uniqueAccountNames, selectedAccounts, aliasMap, accountVisibilityByName])
+  }, [serverSuggest, debouncedValue, uniqueAccountNames, selectedAccounts, aliasMap, accountVisibilityByName])
+
+  const suggestions = useMemo<AccountSuggestion[]>(() => {
+    if (!serverSuggest) return clientSuggestions
+    const alreadySelected = new Set(selectedAccounts.map((s) => s.value.toLowerCase()))
+    return serverSuggestions.filter((s) => !alreadySelected.has(s.name.toLowerCase()))
+  }, [serverSuggest, clientSuggestions, serverSuggestions, selectedAccounts])
   const isSuggestionsOpen = isOpen && suggestions.length > 0
   const listboxId = `${comboboxId}-listbox`
   const activeOptionId =
@@ -436,15 +488,22 @@ export function AccountAutocomplete({
           </div>
         )}
 
-        {/* No results message */}
-        {isOpen && debouncedValue.trim() && suggestions.length === 0 && (
+        {/* Searching / no results message */}
+        {isOpen && (isFetching ? inputValue : debouncedValue).trim() && suggestions.length === 0 && (
           <div
             ref={dropdownRef}
             className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg p-3 text-sm text-muted-foreground"
             role="status"
             aria-live="polite"
           >
-            No accounts found matching &quot;{debouncedValue}&quot;
+            {isFetching ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Searching accounts…
+              </span>
+            ) : (
+              <>No accounts found matching &quot;{debouncedValue}&quot;</>
+            )}
           </div>
         )}
       </div>

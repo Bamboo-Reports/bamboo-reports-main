@@ -35,7 +35,7 @@ export const PIE_CHART_COLORS = [
 /**
  * Calculate chart data from accounts
  */
-export const calculateChartData = <T>(items: T[], field: keyof T): ChartData[] => {
+export const calculateChartData = <T>(items: T[], field: keyof T, limit = 10): ChartData[] => {
   const counts = new Map<string, number>()
 
   items.forEach((item) => {
@@ -46,13 +46,13 @@ export const calculateChartData = <T>(items: T[], field: keyof T): ChartData[] =
   return Array.from(counts.entries())
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value)
-    .slice(0, 10) // Top 10 for better readability
+    .slice(0, limit) // Top 10 by default for better readability
 }
 
 /**
  * Calculate chart data from centers
  */
-export const calculateCenterChartData = (centers: Center[], field: keyof Center): ChartData[] => {
+export const calculateCenterChartData = (centers: Center[], field: keyof Center, limit = 10): ChartData[] => {
   const counts = new Map<string, number>()
 
   centers.forEach((center) => {
@@ -63,7 +63,7 @@ export const calculateCenterChartData = (centers: Center[], field: keyof Center)
   return Array.from(counts.entries())
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value)
-    .slice(0, 10) // Top 10 for better readability
+    .slice(0, limit) // Top 10 by default for better readability
 }
 
 /**
@@ -99,7 +99,11 @@ export const calculateCityChartData = (centers: Center[]): ChartData[] => {
 /**
  * Calculate function chart data from centers
  */
-export const calculateFunctionChartData = (functions: Function[], centerKeys: string[]): ChartData[] => {
+export const calculateFunctionChartData = (
+  functions: Function[],
+  centerKeys: string[],
+  limit = 10
+): ChartData[] => {
   const counts = new Map<string, number>()
   const centerKeySet = new Set(centerKeys)
 
@@ -113,5 +117,5 @@ export const calculateFunctionChartData = (functions: Function[], centerKeys: st
   return Array.from(counts.entries())
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value)
-    .slice(0, 10) // Top 10 for better readability
+    .slice(0, limit) // Top 10 by default for better readability
 }

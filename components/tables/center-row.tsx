@@ -44,7 +44,7 @@ export const CenterRow = memo(({ center, onOpen, visibleColumns, selectable, isS
             }
           }}
           tabIndex={0}
-          aria-label={`View center details for ${center.center_name || "center"}`}
+          aria-label={`View centre details for ${center.center_name || "center"}`}
         >
           {selectable && (
           <TableCell
@@ -117,7 +117,7 @@ export const CenterRow = memo(({ center, onOpen, visibleColumns, selectable, isS
         {onToggleFavorite && (
           <ContextMenuItem onClick={() => onToggleFavorite(center)}>
             {isFavorite ? <StarOff className="h-4 w-4" /> : <Star className="h-4 w-4" />}
-            {isFavorite ? "Remove from Favorites" : "Add to Favorites"}
+            {isFavorite ? "Remove from Favourites" : "Add to Favourites"}
           </ContextMenuItem>
         )}
         {center.center_website && (

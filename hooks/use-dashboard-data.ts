@@ -6,7 +6,7 @@ import { isSectionEnabled } from "@/lib/config/dashboard-access"
 import { countsTowardHeadcount } from "@/lib/dashboard/headcount"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import type { DashboardSummaryMetrics } from "@/app/actions/data"
-import type { Account, Alias, Center, Function, Service, Tech, Prospect, LockedProspectTeaser } from "@/lib/types"
+import type { Account, Alias, Center, Function, Service, Tech, Prospect } from "@/lib/types"
 
 interface UseDashboardDataOptions {
   enabled: boolean
@@ -20,7 +20,6 @@ interface AllDataResult {
   tech: unknown[]
   prospects: unknown[]
   aliases?: unknown[]
-  lockedProspectTeasers: unknown[]
   summary?: DashboardSummaryMetrics
   error?: string
 }
@@ -36,7 +35,6 @@ export function useDashboardData({ enabled }: UseDashboardDataOptions) {
   const [tech, setTech] = useState<Tech[]>([])
   const [prospects, setProspects] = useState<Prospect[]>([])
   const [aliases, setAliases] = useState<Alias[]>([])
-  const [lockedProspectTeasers, setLockedProspectTeasers] = useState<LockedProspectTeaser[]>([])
   const [summary, setSummary] = useState<DashboardSummaryMetrics>({
     totalAccountsCount: 0,
     totalAccountsCountFull: 0,
@@ -66,7 +64,6 @@ export function useDashboardData({ enabled }: UseDashboardDataOptions) {
       setTech([])
       setProspects([])
       setAliases([])
-      setLockedProspectTeasers([])
       setSummary({
         totalAccountsCount: 0,
         totalAccountsCountFull: 0,
@@ -125,7 +122,6 @@ export function useDashboardData({ enabled }: UseDashboardDataOptions) {
       const techData = Array.isArray(data.tech) ? data.tech : []
       const prospectsData = Array.isArray(data.prospects) ? data.prospects : []
       const aliasesData = Array.isArray(data.aliases) ? data.aliases : []
-      const lockedProspectTeasersData = Array.isArray(data.lockedProspectTeasers) ? data.lockedProspectTeasers : []
       const fallbackCentersData = centersData as Center[]
       const accountsList = accountsData as Account[]
       const excludedAccountNamesFallback = new Set(
@@ -172,11 +168,10 @@ export function useDashboardData({ enabled }: UseDashboardDataOptions) {
       setTech(techData as Tech[])
       setProspects(prospectsData as Prospect[])
       setAliases(aliasesData as Alias[])
-      setLockedProspectTeasers(lockedProspectTeasersData as LockedProspectTeaser[])
       setSummary(summaryData)
 
       setConnectionStatus(
-        `Successfully loaded: ${accountsData.length} accounts, ${centersData.length} centers, ${functionsData.length} functions, ${servicesData.length} services, ${techData.length} tech, ${prospectsData.length} prospects`
+        `Successfully loaded: ${accountsData.length} accounts, ${centersData.length} centres, ${functionsData.length} functions, ${servicesData.length} services, ${techData.length} tech, ${prospectsData.length} prospects`
       )
       captureEvent(ANALYTICS_EVENTS.DATA_LOAD_SUCCEEDED, {
         accounts_count: accountsData.length,
@@ -215,7 +210,6 @@ export function useDashboardData({ enabled }: UseDashboardDataOptions) {
     tech,
     prospects,
     aliases,
-    lockedProspectTeasers,
     summary,
     loading,
     error,

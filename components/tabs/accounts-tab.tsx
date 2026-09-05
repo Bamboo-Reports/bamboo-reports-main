@@ -1,10 +1,13 @@
 "use client"
 
 import React, { useEffect, useRef, useState } from "react"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TabsContent } from "@/components/ui/tabs"
-import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Skeleton } from "@/components/ui/skeleton"
+import { cn } from "@/lib/utils"
 import {
   ArrowDownAZ,
   ArrowUpAZ,
@@ -21,7 +24,10 @@ import { SelectionActionBar } from "@/components/tables/selection-action-bar"
 import { useTableRowSelection } from "@/hooks/use-table-row-selection"
 import type { FavoriteInput } from "@/hooks/use-favorites"
 import { AccountGridCard } from "@/components/cards/account-grid-card"
-import { PieChartCard } from "@/components/charts/pie-chart-card"
+import {
+  PieChartCard,
+  type PieChartLabelDisplay,
+} from "@/components/charts/pie-chart-card"
 import { EmptyState } from "@/components/states/empty-state"
 import { AccountDetailsDialog } from "@/components/dialogs/account-details-tabbed-dialog"
 import { CentersMap } from "@/components/maps/centers-map"
@@ -36,13 +42,23 @@ import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { canAccessAccountsMapView } from "@/lib/config/dashboard-access"
 import { getPaginatedData } from "@/lib/utils/helpers"
-import type { Account, Center, Prospect, Service, Function, Tech, LockedProspectTeaser } from "@/lib/types"
+import type { CityAggregate, StateAggregate } from "@/lib/dashboard/api-client"
+import type { Account, Center, Prospect, Service, Function, Tech } from "@/lib/types"
+
+/**
+ * Server mode (#249): rows arrive pre-paginated/sorted from the query
+ * endpoints; the tab reports sort changes upward and renders server totals.
+ */
+export interface TabServerProps {
+  total: number
+  loading?: boolean
+  onSortChange: (key: string, direction: "asc" | "desc" | null) => void
+}
 
 interface AccountsTabProps {
   accounts: Account[]
   centers: Center[]
   prospects: Prospect[]
-  lockedProspectTeasers: LockedProspectTeaser[]
   services: Service[]
   tech: Tech[]
   functions: Function[]
@@ -52,6 +68,8 @@ interface AccountsTabProps {
     revenueRangeData: Array<{ name: string; value: number; fill?: string }>
     employeesRangeData: Array<{ name: string; value: number; fill?: string }>
   }
+  chartLabelDisplay: PieChartLabelDisplay
+  onChartLabelDisplayChange: (display: PieChartLabelDisplay) => void
   accountsView: "chart" | "data" | "map"
   setAccountsView: (view: "chart" | "data" | "map") => void
   currentPage: number
@@ -63,6 +81,80 @@ interface AccountsTabProps {
   onToggleFavorite?: (item: FavoriteInput) => void
   onFavoriteMany?: (items: FavoriteInput[]) => void
   onUnfavoriteMany?: (items: FavoriteInput[]) => void
+  server?: TabServerProps | null
+  mapData?: { cities: CityAggregate[]; states: StateAggregate[] } | null
+  chartsLoading?: boolean
+  mapLoading?: boolean
+}
+
+/** Placeholder rows while a page loads. Mirrors real row structure (logo plus two text lines in the name column) so row heights match and the table does not jump when data lands. */
+export function TableSkeletonRows({ rows = 8, columns }: { rows?: number; columns: number }) {
+  return (
+    <>
+      {Array.from({ length: rows }, (_, i) => (
+        <TableRow key={`skeleton-${i}`}>
+          {Array.from({ length: columns }, (_, j) => (
+            <TableCell key={j}>
+              {j === 0 ? (
+                <Skeleton className="h-4 w-4" />
+              ) : j === 1 ? (
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-8 w-8 shrink-0 rounded-md" />
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    <Skeleton className="h-3.5 w-3/4" />
+                    <Skeleton className="h-3 w-1/2" />
+                  </div>
+                </div>
+              ) : (
+                <Skeleton className="h-4 w-3/4" />
+              )}
+            </TableCell>
+          ))}
+        </TableRow>
+      ))}
+    </>
+  )
+}
+
+/** Placeholder cards for the grid layout. Mirrors real card structure (header with logo, stat lines, action button) so card heights match and the grid does not jump when data lands. */
+export function GridSkeletonCards({ cards = 6 }: { cards?: number }) {
+  return (
+    <>
+      {Array.from({ length: cards }, (_, i) => (
+        <div key={`skeleton-card-${i}`} className="rounded-lg border bg-card p-4 flex flex-col gap-4">
+          <div className="flex items-start gap-3">
+            <Skeleton className="h-10 w-10 shrink-0 rounded-md" />
+            <div className="min-w-0 flex-1 space-y-2 py-0.5">
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-3.5 w-1/2" />
+            </div>
+          </div>
+          <div className="mt-auto flex flex-col gap-4">
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between gap-3">
+                <Skeleton className="h-3.5 w-16" />
+                <Skeleton className="h-3.5 w-24" />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <Skeleton className="h-3.5 w-16" />
+                <Skeleton className="h-3.5 w-24" />
+              </div>
+            </div>
+            <Skeleton className="h-8 w-full rounded-md" />
+          </div>
+        </div>
+      ))}
+    </>
+  )
+}
+
+/** A small floating pill shown over maps while fresh aggregates load. */
+export function MapUpdatingPill() {
+  return (
+    <div className="pointer-events-none absolute left-1/2 top-4 z-20 -translate-x-1/2 rounded-full border border-border/70 bg-background/90 px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur animate-pulse">
+      Updating map
+    </div>
+  )
 }
 
 // Module-level so the references are stable across renders (passed to memo'd rows).
@@ -81,10 +173,11 @@ export function AccountsTab({
   accounts,
   centers,
   prospects,
-  lockedProspectTeasers,
   services,
   tech,
   accountChartData,
+  chartLabelDisplay,
+  onChartLabelDisplayChange,
   accountsView,
   setAccountsView,
   currentPage,
@@ -96,6 +189,10 @@ export function AccountsTab({
   onToggleFavorite,
   onFavoriteMany,
   onUnfavoriteMany,
+  server,
+  mapData,
+  chartsLoading = false,
+  mapLoading = false,
 }: AccountsTabProps) {
   const allowMapView = canAccessAccountsMapView()
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null)
@@ -189,6 +286,7 @@ export function AccountsTab({
       sort_key: key,
       sort_direction: nextDirection ?? "none",
     })
+    server?.onSortChange(key, nextDirection)
     setCurrentPage(1)
   }
 
@@ -235,7 +333,8 @@ export function AccountsTab({
 
 
   const sortedAccounts = React.useMemo(() => {
-    if (!sort.direction) return accounts
+    // Server mode: rows arrive already sorted and paginated.
+    if (server || !sort.direction) return accounts
 
     const compare = (a: string | undefined | null, b: string | undefined | null) =>
       (a || "").localeCompare(b || "", undefined, { sensitivity: "base" })
@@ -255,11 +354,11 @@ export function AccountsTab({
 
     const sorted = [...accounts].sort((a, b) => compare(getValue(a), getValue(b)))
     return sort.direction === "asc" ? sorted : sorted.reverse()
-  }, [accounts, sort])
+  }, [accounts, sort, server])
 
   const pageAccounts = React.useMemo(
-    () => getPaginatedData(sortedAccounts, currentPage, itemsPerPage),
-    [sortedAccounts, currentPage, itemsPerPage]
+    () => (server ? sortedAccounts : getPaginatedData(sortedAccounts, currentPage, itemsPerPage)),
+    [server, sortedAccounts, currentPage, itemsPerPage]
   )
   const {
     selected: selectedNames,
@@ -273,7 +372,7 @@ export function AccountsTab({
     handleRowSelectChange,
     handleRowToggleFavorite,
   } = useTableRowSelection({
-    items: accounts,
+    items: server ? pageAccounts : accounts,
     pageItems: pageAccounts,
     getKey: getAccountKey,
     favoritePrefix: "account",
@@ -288,7 +387,7 @@ export function AccountsTab({
     [handleAccountClick]
   )
 
-  if (accounts.length === 0) {
+  if (server ? server.total === 0 && !server.loading : accounts.length === 0) {
     return (
       <TabsContent value="accounts">
         <EmptyState type="no-results" />
@@ -300,7 +399,7 @@ export function AccountsTab({
     <TabsContent value="accounts">
       {/* Header with View Toggle */}
       <div className="flex items-center gap-2 mb-4">
-        <PieChartIcon className="h-5 w-5 text-[hsl(var(--chart-1))]" />
+        <PieChartIcon className="h-5 w-5 text-primary" />
         <h2 className="text-lg font-semibold text-foreground">Account Analytics</h2>
         <ViewSwitcher
           data-tour="view-switcher"
@@ -309,25 +408,25 @@ export function AccountsTab({
           options={[
             {
               value: "chart",
-              label: <span className="text-[hsl(var(--chart-1))]">Charts</span>,
+              label: "Charts",
               icon: (
-                <PieChartIcon className="h-4 w-4 text-[hsl(var(--chart-1))]" />
+                <PieChartIcon className="h-4 w-4" />
               ),
             },
             ...(allowMapView
               ? [{
                   value: "map",
-                  label: <span className="text-[hsl(var(--chart-4))]">Map</span>,
+                  label: "Map",
                   icon: (
-                    <MapIcon className="h-4 w-4 text-[hsl(var(--chart-4))]" />
+                    <MapIcon className="h-4 w-4" />
                   ),
                 }]
               : []),
             {
               value: "data",
-              label: <span className="text-[hsl(var(--chart-2))]">Data</span>,
+              label: "Data",
               icon: (
-                <TableIcon className="h-4 w-4 text-[hsl(var(--chart-2))]" />
+                <TableIcon className="h-4 w-4" />
               ),
             },
           ]}
@@ -344,24 +443,36 @@ export function AccountsTab({
               data={accountChartData.regionData}
               countLabel="Total Accounts"
               showBigPercentage
+              labelDisplay={chartLabelDisplay}
+              onLabelDisplayChange={onChartLabelDisplayChange}
+              loading={chartsLoading}
             />
             <PieChartCard
               title="Industry"
               data={accountChartData.primaryNatureData}
               countLabel="Total Accounts"
               showBigPercentage
+              labelDisplay={chartLabelDisplay}
+              onLabelDisplayChange={onChartLabelDisplayChange}
+              loading={chartsLoading}
             />
             <PieChartCard
               title="Revenue Range"
               data={accountChartData.revenueRangeData}
               countLabel="Total Accounts"
               showBigPercentage
+              labelDisplay={chartLabelDisplay}
+              onLabelDisplayChange={onChartLabelDisplayChange}
+              loading={chartsLoading}
             />
             <PieChartCard
               title="GCC Aggregate Headcount (India)"
               data={accountChartData.employeesRangeData}
               countLabel="Total Accounts"
               showBigPercentage
+              labelDisplay={chartLabelDisplay}
+              onLabelDisplayChange={onChartLabelDisplayChange}
+              loading={chartsLoading}
             />
           </div>
         </div>
@@ -379,25 +490,26 @@ export function AccountsTab({
                 options={[
                   {
                     value: "city",
-                    label: <span className="text-[hsl(var(--chart-4))]">City</span>,
-                    icon: <MapPin className="h-4 w-4 text-[hsl(var(--chart-4))]" />,
+                    label: "City",
+                    icon: <MapPin className="h-4 w-4" />,
                   },
                   {
                     value: "state",
-                    label: <span className="text-[hsl(var(--chart-3))]">State</span>,
-                    icon: <Layers className="h-4 w-4 text-[hsl(var(--chart-3))]" />,
+                    label: "State",
+                    icon: <Layers className="h-4 w-4" />,
                   },
                 ]}
                 className="ml-auto"
               />
             </div>
           </CardHeader>
-          <CardContent className="p-0 flex flex-col flex-1 overflow-hidden">
+          <CardContent className="relative p-0 flex flex-col flex-1 overflow-hidden">
+            {mapLoading && <MapUpdatingPill />}
             <MapErrorBoundary>
               {mapMode === "city" ? (
-                <CentersMap centers={centers} heightClass="h-full" />
+                <CentersMap centers={centers} cities={mapData?.cities} heightClass="h-full" />
               ) : (
-                <CentersChoroplethMap centers={centers} heightClass="h-full" />
+                <CentersChoroplethMap centers={centers} states={mapData?.states} heightClass="h-full" />
               )}
             </MapErrorBoundary>
           </CardContent>
@@ -425,16 +537,16 @@ export function AccountsTab({
                   options={[
                     {
                       value: "table",
-                      label: <span className="text-[hsl(var(--chart-2))]">Table</span>,
+                      label: "Table",
                       icon: (
-                        <TableIcon className="h-4 w-4 text-[hsl(var(--chart-2))]" />
+                        <TableIcon className="h-4 w-4" />
                       ),
                     },
                     {
                       value: "grid",
-                      label: <span className="text-[hsl(var(--chart-3))]">Grid</span>,
+                      label: "Grid",
                       icon: (
-                        <LayoutGrid className="h-4 w-4 text-[hsl(var(--chart-3))]" />
+                        <LayoutGrid className="h-4 w-4" />
                       ),
                     },
                   ]}
@@ -478,7 +590,9 @@ export function AccountsTab({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {pageAccounts.map(
+                    {server?.loading ? (
+                      <TableSkeletonRows columns={1 + (["name", "industry", "revenue", "employees"] as const).filter(isColumnVisible).length} />
+                    ) : pageAccounts.map(
                       (account) => (
                         <AccountRow
                           key={account.account_global_legal_name}
@@ -499,23 +613,26 @@ export function AccountsTab({
                   <div className="flex flex-col">
                     <div className="flex items-center gap-2 px-6 py-3 border-b bg-muted/20">
                       <span className="text-xs font-medium text-muted-foreground">Sort</span>
-                      <button
+                      <Button
                         type="button"
+                        variant="outline"
+                        size="sm"
                         onClick={() => handleSort("name")}
-                        className="inline-flex items-center justify-center rounded-md border border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground hover:border-accent-foreground/20 shadow-sm transition-colors h-7 w-7"
+                        className="h-8 w-8 px-0"
                         aria-label="Sort by account name"
+                        aria-pressed={sort.key === "name" && sort.direction !== null}
                       >
                         {sort.key !== "name" || sort.direction === null ? (
                           <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
                         ) : sort.direction === "asc" ? (
-                          <ArrowUpAZ className="h-3.5 w-3.5 text-muted-foreground" />
+                          <ArrowUpAZ className="h-3.5 w-3.5 text-primary" />
                         ) : (
-                          <ArrowDownAZ className="h-3.5 w-3.5 text-muted-foreground" />
+                          <ArrowDownAZ className="h-3.5 w-3.5 text-primary" />
                         )}
-                      </button>
+                      </Button>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
-                      {getPaginatedData(sortedAccounts, currentPage, itemsPerPage).map(
+                      {server?.loading ? <GridSkeletonCards /> : pageAccounts.map(
                         (account) => (
                         <AccountGridCard
                           key={account.account_global_legal_name}
@@ -528,13 +645,13 @@ export function AccountsTab({
                 </div>
               )}
             </div>
-            {accounts.length > 0 && (
+            {(server ? server.total : accounts.length) > 0 && (
               <PaginationControls
                 currentPage={currentPage}
-                totalItems={accounts.length}
+                totalItems={server ? server.total : accounts.length}
                 itemsPerPage={itemsPerPage}
                 onPageChange={setCurrentPage}
-                dataLength={accounts.length}
+                dataLength={server ? server.total : accounts.length}
               />
             )}
           </CardContent>
@@ -564,11 +681,11 @@ export function AccountsTab({
         account={selectedAccount}
         centers={centers}
         prospects={prospects}
-        lockedProspectTeasers={lockedProspectTeasers}
         services={services}
         tech={tech}
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
+        fetchRelated={Boolean(server)}
       />
     </TabsContent>
   )

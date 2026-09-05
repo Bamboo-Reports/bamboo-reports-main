@@ -56,6 +56,8 @@ export const ANALYTICS_EVENTS = {
   EXPORT_STARTED: "export_started",
   EXPORT_COMPLETED: "export_completed",
   EXPORT_FAILED: "export_failed",
+  SUMMARY_REPORT_DOWNLOADED: "summary_report_downloaded",
+  SUMMARY_REPORT_FAILED: "summary_report_failed",
   EMPTY_STATE_SHOWN: "empty_state_shown",
   NO_RESULTS_AFTER_FILTER: "no_results_after_filter",
   ERROR_STATE_SHOWN: "error_state_shown",

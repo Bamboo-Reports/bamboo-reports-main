@@ -178,18 +178,6 @@ export interface Ticker {
   notes?: string | null
 }
 
-export interface LockedProspectTeaser {
-  id: string
-  locked: true
-  account_global_legal_name: string
-  prospect_department: string | null
-  prospect_level: string | null
-  prospect_city: string | null
-  prospect_state: string | null
-  prospect_country: string | null
-  head_type?: string | null
-}
-
 export interface Profile {
   id: string
   user_id: string
@@ -198,7 +186,6 @@ export interface Profile {
   email: string
   phone: string | null
   role?: UserRole | null
-  credits_remaining?: number | null
 }
 
 export interface FilterValue {

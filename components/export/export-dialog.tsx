@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button"
 import { devError } from "@/lib/utils/dev-log"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
-import { Building2, Briefcase, Users, Sparkles, CheckCircle2, Download } from "lucide-react"
+import { Building, Briefcase, Users, Sparkles, CheckCircle2, Download } from "lucide-react"
 import type { ExportDatasetKey } from "@/lib/utils/export-helpers"
 import {
   requestServerExport,
@@ -47,8 +47,16 @@ interface ExportDialogProps {
   prospectKeys?: string[] | null
   /** Prospect composite row ids for selected prospects that do not have ps_unique_key. */
   keylessProspectIds?: string[] | null
-  /** Locked prospect teasers matching the current export scope. */
-  lockedProspectsCount?: number
+  /**
+   * Export-by-filter (#249): dashboard filter state sent to the server, which
+   * builds the export through the filter engine (key lists are ignored).
+   */
+  filters?: unknown
+  /**
+   * Server-mode row counts per dataset (the client no longer holds the
+   * filtered arrays). Used instead of data[key].length for display/enablement.
+   */
+  rowCounts?: Partial<Record<ExportDatasetKey, number>> | null
   /** When set, restricts the dialog to these datasets (e.g. a single-sheet selection export). */
   allowedDatasets?: ExportDatasetKey[]
   /** Compact single-dataset layout for selection exports (no dataset picker). */
@@ -60,36 +68,36 @@ const DATASET_META: Array<{
   key: ExportDatasetKey
   label: string
   description: string
-  icon: typeof Building2
+  icon: typeof Building
   accent: string
 }> = [
   {
     key: "accounts",
     label: "Accounts",
     description: "Legal names, HQ details, revenue ranges",
-    icon: Building2,
-    accent: "text-[hsl(var(--chart-1))]",
+    icon: Building,
+    accent: "text-primary",
   },
   {
     key: "centers",
-    label: "Centers",
+    label: "Centres",
     description: "Locations, type, employees, status",
     icon: Briefcase,
-    accent: "text-[hsl(var(--chart-2))]",
+    accent: "text-primary",
   },
   {
     key: "services",
     label: "Services",
     description: "Service lines, focus, software stack",
     icon: Sparkles,
-    accent: "text-[hsl(var(--chart-4))]",
+    accent: "text-primary",
   },
   {
     key: "prospects",
     label: "Prospects",
     description: "Decision makers, titles, departments",
     icon: Users,
-    accent: "text-[hsl(var(--chart-3))]",
+    accent: "text-primary",
   },
 ]
 
@@ -103,11 +111,13 @@ export function ExportDialog({
   centerKeys,
   prospectKeys,
   keylessProspectIds,
-  lockedProspectsCount = 0,
+  filters,
+  rowCounts,
   allowedDatasets,
   compact = false,
   onExportCompleted,
 }: ExportDialogProps) {
+  const countOf = (key: ExportDatasetKey) => rowCounts?.[key] ?? data[key].length
   const [selection, setSelection] = useState<Record<ExportDatasetKey, boolean>>({
     accounts: true,
     centers: true,
@@ -187,10 +197,10 @@ export function ExportDialog({
 
     const allow = (key: ExportDatasetKey) => !allowedDatasets || allowedDatasets.includes(key)
     const initialSelection = {
-      accounts: allow("accounts") && isDatasetEnabled("accounts") && data.accounts.length > 0,
-      centers: allow("centers") && isDatasetEnabled("centers") && data.centers.length > 0,
-      services: allow("services") && isDatasetEnabled("services") && data.services.length > 0,
-      prospects: allow("prospects") && isDatasetEnabled("prospects") && data.prospects.length > 0,
+      accounts: allow("accounts") && isDatasetEnabled("accounts") && countOf("accounts") > 0,
+      centers: allow("centers") && isDatasetEnabled("centers") && countOf("centers") > 0,
+      services: allow("services") && isDatasetEnabled("services") && countOf("services") > 0,
+      prospects: allow("prospects") && isDatasetEnabled("prospects") && countOf("prospects") > 0,
     }
     setSelection(initialSelection)
     setIsExporting(false)
@@ -205,15 +215,15 @@ export function ExportDialog({
 
     captureEvent(ANALYTICS_EVENTS.EXPORT_DIALOG_OPENED, {
       is_filtered: isFiltered,
-      row_count_accounts: data.accounts.length,
-      row_count_centers: data.centers.length,
-      row_count_services: data.services.length,
-      row_count_prospects: data.prospects.length,
-      row_count_locked_prospects: lockedProspectsCount,
+      row_count_accounts: countOf("accounts"),
+      row_count_centers: countOf("centers"),
+      row_count_services: countOf("services"),
+      row_count_prospects: countOf("prospects"),
       selected_datasets: initiallySelectedDatasets,
       selected_dataset_count: initiallySelectedDatasets.length,
     })
-  }, [open, data, isFiltered, lockedProspectsCount, allowedDatasets])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, data, rowCounts, isFiltered, allowedDatasets])
 
   const totalSelected = useMemo(
     () => Object.values(selection).filter(Boolean).length,
@@ -221,18 +231,20 @@ export function ExportDialog({
   )
   const selectedRowCount = useMemo(
     () => (Object.keys(selection) as ExportDatasetKey[]).reduce(
-      (total, key) => total + (selection[key] ? data[key].length : 0),
+      (total, key) => total + (selection[key] ? countOf(key) : 0),
       0
     ),
-    [selection, data]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [selection, data, rowCounts]
   )
   const readinessItems = useMemo(
     () => visibleDatasetMeta.map((item) => ({
       ...item,
-      count: selection[item.key] ? data[item.key].length : 0,
+      count: selection[item.key] ? countOf(item.key) : 0,
       selected: selection[item.key],
     })),
-    [selection, data, visibleDatasetMeta]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [selection, data, rowCounts, visibleDatasetMeta]
   )
 
   const handleToggle = (key: ExportDatasetKey) => {
@@ -282,11 +294,10 @@ export function ExportDialog({
       selected_datasets: selectedDatasets,
       selected_dataset_count: selectedDatasets.length,
       is_filtered: isFiltered,
-      row_count_accounts: selection.accounts ? data.accounts.length : 0,
-      row_count_centers: selection.centers ? data.centers.length : 0,
-      row_count_services: selection.services ? data.services.length : 0,
-      row_count_prospects: selection.prospects ? data.prospects.length : 0,
-      row_count_locked_prospects: selection.prospects ? lockedProspectsCount : 0,
+      row_count_accounts: selection.accounts ? countOf("accounts") : 0,
+      row_count_centers: selection.centers ? countOf("centers") : 0,
+      row_count_services: selection.services ? countOf("services") : 0,
+      row_count_prospects: selection.prospects ? countOf("prospects") : 0,
     })
 
     // Fake but plausible progress ramp while the server is working. The
@@ -322,6 +333,7 @@ export function ExportDialog({
         centerKeys: isFiltered ? centerKeys ?? null : null,
         prospectKeys: isFiltered ? prospectKeys ?? null : null,
         keylessProspectIds: isFiltered ? keylessProspectIds ?? null : null,
+        filters: filters ?? null,
         isFiltered,
         filtersApplied: filtersSnapshot ?? null,
       })
@@ -366,7 +378,6 @@ export function ExportDialog({
         row_count_centers: selection.centers ? data.centers.length : 0,
         row_count_services: selection.services ? data.services.length : 0,
         row_count_prospects: selection.prospects ? data.prospects.length : 0,
-        row_count_locked_prospects: selection.prospects ? lockedProspectsCount : 0,
         stage: toTrackedStringArray([stage])[0] ?? null,
         has_error: Boolean(error),
       })
@@ -511,11 +522,6 @@ export function ExportDialog({
                   {selectedRowCount.toLocaleString()} rows will be included in this export.
                 </p>
               </div>
-              {selection.prospects && lockedProspectsCount > 0 ? (
-                <Badge variant="outline" className="w-fit border-amber-500/30 bg-amber-500/10 text-[11px] text-amber-700 dark:text-amber-300">
-                  {lockedProspectsCount.toLocaleString()} locked prospects excluded
-                </Badge>
-              ) : null}
             </div>
             <div className="mt-3 grid gap-2 sm:grid-cols-4">
               {readinessItems.map((item) => {

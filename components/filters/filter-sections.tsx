@@ -25,6 +25,7 @@ interface AccountFilterSectionProps extends FilterSectionBaseProps {
   accountNames: string[]
   accountVisibilityByName?: Record<string, AccountVisibilityInfo>
   aliases?: Alias[]
+  serverMode?: boolean
   revenueRange: { min: number; max: number }
   yearsInIndiaRange: { min: number; max: number }
   handleMinRevenueChange: (value: string) => void
@@ -55,6 +56,7 @@ export function AccountFiltersSection({
   accountNames,
   accountVisibilityByName,
   aliases,
+  serverMode,
   revenueRange,
   yearsInIndiaRange,
   handleMinRevenueChange,
@@ -82,6 +84,7 @@ export function AccountFiltersSection({
               accountNames={accountNames}
               accountVisibilityByName={accountVisibilityByName}
               aliases={aliases}
+              serverSuggest={serverMode}
               selectedAccounts={pendingFilters.accountGlobalLegalNameKeywords}
               onChange={(keywords) => setPendingFilters((prev) => ({ ...prev, accountGlobalLegalNameKeywords: keywords }))}
               placeholder="Type to search account names..."
@@ -188,7 +191,7 @@ export function AccountFiltersSection({
                 setPendingFilters((prev) => ({ ...prev, accountCenterEmployeesRangeValues: selected }))
                 setActiveFilter("accountCenterEmployeesRangeValues")
               }}
-              placeholder="Select center employees..."
+              placeholder="Select headcount range..."
               isApplying={isApplying && activeFilter === "accountCenterEmployeesRangeValues"}
             />
           </div>
@@ -389,7 +392,7 @@ export function AccountFiltersSection({
                 setPendingFilters((prev) => ({ ...prev, accountHqIndustryValues: selected }))
                 setActiveFilter("accountHqIndustryValues")
               }}
-              placeholder="Select industries..."
+              placeholder="Select sub industries..."
               isApplying={isApplying && activeFilter === "accountHqIndustryValues"}
             />
           </div>
@@ -405,7 +408,7 @@ export function AccountFiltersSection({
                 setPendingFilters((prev) => ({ ...prev, accountPrimaryNatureValues: selected }))
                 setActiveFilter("accountPrimaryNatureValues")
               }}
-              placeholder="Select nature..."
+              placeholder="Select segments..."
               isApplying={isApplying && activeFilter === "accountPrimaryNatureValues"}
             />
           </div>
@@ -520,7 +523,7 @@ export function CenterFiltersSection({
           )}
           {isFilterEnabled("centerTypeValues") && (
           <div className="space-y-2">
-            <Label className="text-xs font-medium">Center Type</Label>
+            <Label className="text-xs font-medium">Centre Type</Label>
             <EnhancedMultiSelect
               options={availableOptions.centerTypeValues}
               selected={pendingFilters.centerTypeValues}
@@ -545,7 +548,7 @@ export function CenterFiltersSection({
                 setPendingFilters((prev) => ({ ...prev, functionNameValues: selected }))
                 setActiveFilter("functionNameValues")
               }}
-              placeholder="Select functions..."
+              placeholder="Select services..."
               isApplying={isApplying && activeFilter === "functionNameValues"}
             />
           </div>
@@ -657,7 +660,7 @@ export function CenterFiltersSection({
 
           {isFilterEnabled("centerEmployeesRangeValues") && (
           <div className="space-y-2">
-            <Label className="text-xs font-medium">Center Headcount</Label>
+            <Label className="text-xs font-medium">Centre Headcount</Label>
             <EnhancedMultiSelect
               options={availableOptions.centerEmployeesRangeValues}
               selected={pendingFilters.centerEmployeesRangeValues}
@@ -666,7 +669,7 @@ export function CenterFiltersSection({
                 setPendingFilters((prev) => ({ ...prev, centerEmployeesRangeValues: selected }))
                 setActiveFilter("centerEmployeesRangeValues")
               }}
-              placeholder="Select employees range..."
+              placeholder="Select headcount range..."
               isApplying={isApplying && activeFilter === "centerEmployeesRangeValues"}
             />
           </div>
@@ -723,7 +726,7 @@ export function CenterFiltersSection({
 
           {canShowMoreCenterFilters && showMoreCenterFilters && isFilterEnabled("centerFocusValues") && (
           <div className="space-y-2">
-            <Label className="text-xs font-medium">Center Focus</Label>
+            <Label className="text-xs font-medium">Centre Focus</Label>
             <EnhancedMultiSelect
               options={availableOptions.centerFocusValues}
               selected={pendingFilters.centerFocusValues}

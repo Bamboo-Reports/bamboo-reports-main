@@ -31,7 +31,6 @@ describe("dashboard API route", () => {
       tech: [],
       prospects: [],
       aliases: [],
-      lockedProspectTeasers: [],
       error: null,
     })
     await POST(new Request("https://example.com/api/dashboard", {
@@ -102,7 +101,6 @@ describe("dashboard API route", () => {
       tech: [],
       prospects: [],
       aliases: [],
-      lockedProspectTeasers: [],
       error: null,
     })
 

@@ -35,11 +35,14 @@ interface FiltersSidebarProps {
   accountNames: string[]
   accountVisibilityByName?: Record<string, AccountVisibilityInfo>
   aliases?: Alias[]
+  serverMode?: boolean
 
   setPendingFilters: React.Dispatch<React.SetStateAction<Filters>>
   resetFilters: () => void
   handleExportAll: () => void
   canExport: boolean
+  handleGenerateReport?: () => void
+  isGeneratingReport?: boolean
   handleMinRevenueChange: (value: string) => void
   handleMaxRevenueChange: (value: string) => void
   handleRevenueRangeChange: (value: [number, number]) => void
@@ -68,10 +71,13 @@ export function FiltersSidebar({
   accountNames,
   accountVisibilityByName,
   aliases,
+  serverMode,
   setPendingFilters,
   resetFilters,
   handleExportAll,
   canExport,
+  handleGenerateReport,
+  isGeneratingReport,
   handleMinRevenueChange,
   handleMaxRevenueChange,
   handleRevenueRangeChange,
@@ -171,8 +177,8 @@ export function FiltersSidebar({
           </div>
           {[
             { icon: Building, label: 'Account Attributes', section: 'accounts', iconClass: 'text-primary' },
-            { icon: Briefcase, label: 'Center Attributes', section: 'centers', iconClass: 'text-[hsl(var(--chart-2))]' },
-            { icon: Users, label: 'Prospect Attributes', section: 'prospects', iconClass: 'text-[hsl(var(--chart-3))]' },
+            { icon: Briefcase, label: 'Centre Attributes', section: 'centers', iconClass: 'text-primary' },
+            { icon: Users, label: 'Prospect Attributes', section: 'prospects', iconClass: 'text-primary' },
           ].filter(({ section }) => isSectionVisible(section)).map(({ icon: Icon, label, section, iconClass }) => (
             <Button
               key={label}
@@ -233,6 +239,8 @@ export function FiltersSidebar({
               onExport={handleExportAll}
               canExport={canExport}
               exportBlockedMessage="You are not allowed to export data. Please contact an admin."
+              onGenerateReport={handleGenerateReport}
+              isGeneratingReport={isGeneratingReport}
             />
           </div>
         </div>
@@ -297,6 +305,7 @@ export function FiltersSidebar({
                 accountNames={accountNames}
                 accountVisibilityByName={accountVisibilityByName}
                 aliases={aliases}
+                serverMode={serverMode}
                 revenueRange={revenueRange}
                 yearsInIndiaRange={yearsInIndiaRange}
                 handleMinRevenueChange={handleMinRevenueChange}
@@ -321,9 +330,9 @@ export function FiltersSidebar({
             <AccordionTrigger className="py-3 text-sm font-semibold hover:no-underline">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-5 w-5 shrink-0 items-center justify-center">
-                  <Briefcase className="h-4 w-4 text-[hsl(var(--chart-2))]" />
+                  <Briefcase className="h-4 w-4 text-primary" />
                 </div>
-                <span className="uppercase tracking-wider text-[12px]">Center Attributes</span>
+                <span className="uppercase tracking-wider text-[12px]">Centre Attributes</span>
               </div>
             </AccordionTrigger>
             <AccordionContent className="pb-3 pt-1">
@@ -354,7 +363,7 @@ export function FiltersSidebar({
             <AccordionTrigger className="py-3 text-sm font-semibold hover:no-underline">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-5 w-5 shrink-0 items-center justify-center">
-                  <Users className="h-4 w-4 text-[hsl(var(--chart-3))]" />
+                  <Users className="h-4 w-4 text-primary" />
                 </div>
                 <span className="uppercase tracking-wider text-[12px]">Prospect Attributes</span>
               </div>

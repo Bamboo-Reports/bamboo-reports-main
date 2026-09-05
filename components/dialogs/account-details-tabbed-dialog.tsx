@@ -24,21 +24,22 @@ import {
   Calendar,
   Package,
   Building,
-  UserCircle,
+  Briefcase,
   Globe,
   Linkedin,
 } from "lucide-react"
 import { formatRevenueInMillions, parseRevenue } from "@/lib/utils/helpers"
-import type { Account, AccountFinancialInfo, Center, Prospect, Service, Tech, LockedProspectTeaser } from "@/lib/types"
+import type { Account, AccountFinancialInfo, Center, Prospect, Service, Tech } from "@/lib/types"
 import { CompanyLogo } from "@/components/ui/company-logo"
 import { CenterDetailsDialog } from "./center-details-dialog"
 import { ProspectDetailsDialog } from "./prospect-details-dialog"
 import { CenterGridCard } from "@/components/cards/center-grid-card"
 import { ProspectGridCard } from "@/components/cards/prospect-grid-card"
-import { LockedProspectTeaserCard } from "@/components/prospects/locked-prospect-teaser-section"
 import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
 import { TechTreemap } from "@/components/charts/tech-treemap"
-import { getAccountFinancialInfo } from "@/app/actions/financial"
+import { requestAccountFinancialInfo } from "@/lib/finance/request-client"
+import { fetchAccountRelated, type AccountRelatedResponse } from "@/lib/dashboard/api-client"
 import { isSectionEnabled } from "@/lib/config/dashboard-access"
 import { PaginationControls } from "@/components/ui/pagination-controls"
 import {
@@ -48,7 +49,6 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart"
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
-import { AccountAISummary } from "@/components/ai/account-ai-summary"
 
 function formatCompactNumber(value: number | null): string | null {
   if (value === null) return null
@@ -186,25 +186,52 @@ interface AccountDetailsDialogProps {
   account: Account | null
   centers: Center[]
   prospects: Prospect[]
-  lockedProspectTeasers: LockedProspectTeaser[]
   services: Service[]
   tech: Tech[]
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** Server mode (#249): load the account's related data from /api/accounts/[name]/related instead of the array props. */
+  fetchRelated?: boolean
 }
 
 export function AccountDetailsDialog({
   account,
-  centers,
-  prospects,
-  lockedProspectTeasers,
-  services,
-  tech,
+  centers: centersProp,
+  prospects: prospectsProp,
+  services: servicesProp,
+  tech: techProp,
   open,
   onOpenChange,
+  fetchRelated = false,
 }: AccountDetailsDialogProps) {
   const canViewCenters = isSectionEnabled("centers")
   const canViewProspects = isSectionEnabled("prospects")
+
+  const [related, setRelated] = useState<AccountRelatedResponse | null>(null)
+  const relatedName = fetchRelated && open ? (account?.account_global_legal_name ?? "") : ""
+  useEffect(() => {
+    if (!relatedName) {
+      setRelated(null)
+      return
+    }
+    let cancelled = false
+    fetchAccountRelated(relatedName)
+      .then((res) => {
+        if (!cancelled) setRelated(res)
+      })
+      .catch(() => {
+        if (!cancelled) setRelated(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [relatedName])
+
+  const relatedLoading = fetchRelated && open && !!account && related === null
+  const centers = fetchRelated ? (related?.centers ?? []) : centersProp
+  const prospects = fetchRelated ? (related?.prospects ?? []) : prospectsProp
+  const services = fetchRelated ? (related?.services ?? []) : servicesProp
+  const tech = fetchRelated ? (related?.tech ?? []) : techProp
   const [activeTab, setActiveTab] = useState("info")
   const [selectedCenter, setSelectedCenter] = useState<Center | null>(null)
   const [isCenterDialogOpen, setIsCenterDialogOpen] = useState(false)
@@ -243,12 +270,6 @@ export function AccountDetailsDialog({
           })
       : [],
     [account, canViewProspects, prospects]
-  )
-  const accountLockedProspectTeasers = React.useMemo(
-    () => account && canViewProspects
-      ? lockedProspectTeasers.filter((teaser) => teaser.account_global_legal_name === account.account_global_legal_name)
-      : [],
-    [account, canViewProspects, lockedProspectTeasers]
   )
   const accountTech = React.useMemo(
     () => account
@@ -349,7 +370,6 @@ export function AccountDetailsDialog({
     () => filteredProspects.slice((prospectPage - 1) * ITEMS_PER_PAGE, prospectPage * ITEMS_PER_PAGE),
     [filteredProspects, prospectPage, ITEMS_PER_PAGE],
   )
-  const lockedTeaserCountForAccount = accountLockedProspectTeasers.length
 
   const toggleInSet = (setter: React.Dispatch<React.SetStateAction<Set<string>>>, value: string) => {
     setter((prev) => {
@@ -396,7 +416,7 @@ export function AccountDetailsDialog({
       setFinancialLoading(true)
       setFinancialError(null)
 
-      const response = await getAccountFinancialInfo(ticker)
+      const response = await requestAccountFinancialInfo(ticker)
       if (cancelled) return
 
       if (response.success && response.data) {
@@ -471,23 +491,33 @@ export function AccountDetailsDialog({
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
-            <TabsList className={`grid w-full ${accountCenters.length > 0 && (accountProspects.length > 0 || accountLockedProspectTeasers.length > 0) ? "grid-cols-3" : accountCenters.length > 0 || accountProspects.length > 0 || accountLockedProspectTeasers.length > 0 ? "grid-cols-2" : "grid-cols-1"}`}>
+            <TabsList className={`grid w-full ${relatedLoading ? `grid-cols-${1 + (canViewCenters ? 1 : 0) + (canViewProspects ? 1 : 0)}` : accountCenters.length > 0 && accountProspects.length > 0 ? "grid-cols-3" : accountCenters.length > 0 || accountProspects.length > 0 ? "grid-cols-2" : "grid-cols-1"}`}>
               <TabsTrigger value="info" className="flex items-center gap-2">
-                <Building2 className="h-4 w-4" />
+                <Building className="h-4 w-4" />
                 Account Info
               </TabsTrigger>
+              {relatedLoading && canViewCenters && (
+                <div className="flex items-center justify-center px-3">
+                  <Skeleton className="h-5 w-24" />
+                </div>
+              )}
+              {relatedLoading && canViewProspects && (
+                <div className="flex items-center justify-center px-3">
+                  <Skeleton className="h-5 w-24" />
+                </div>
+              )}
               {accountCenters.length > 0 && (
               <TabsTrigger value="centers" className="flex items-center gap-2">
-                <Building className="h-4 w-4" />
-                Centers
+                <Briefcase className="h-4 w-4" />
+                Centres
                 <Badge variant="secondary" className="ml-1">
                   {accountCenters.length}
                 </Badge>
               </TabsTrigger>
               )}
-              {(accountProspects.length > 0 || accountLockedProspectTeasers.length > 0) && (
+              {accountProspects.length > 0 && (
               <TabsTrigger value="prospects" className="flex items-center gap-2">
-                <UserCircle className="h-4 w-4" />
+                <Users className="h-4 w-4" />
                 Prospects
                 <Badge variant="secondary" className="ml-1">
                   {accountProspects.length}
@@ -498,8 +528,6 @@ export function AccountDetailsDialog({
 
             {/* Account Info Tab */}
             <TabsContent value="info" className="space-y-8 mt-4">
-              <AccountAISummary accountName={account.account_global_legal_name} />
-
               {/* Company Snapshot */}
               <section className="rounded-xl border border-border/60 bg-background/40 backdrop-blur-sm p-5 lg:p-6 dark:bg-white/5 dark:border-white/10">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -635,9 +663,9 @@ export function AccountDetailsDialog({
                 <section className="space-y-4">
                   <SectionHeader title="India Presence" />
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <KPITile icon={Calendar} label="First Center" value={account.account_first_center_year} />
+                    <KPITile icon={Calendar} label="First Centre" value={account.account_first_center_year} />
                     <KPITile icon={Calendar} label="Years in India" value={account.years_in_india} />
-                    <KPITile icon={Users} label="Center Employees" value={account.account_center_employees} />
+                    <KPITile icon={Users} label="Centre Employees" value={account.account_center_employees} />
                     <KPITile icon={Users} label="GCC Aggregate Headcount (India)" value={account.account_center_employees_range} />
                     <KPITile icon={MapPin} label="Primary City" value={account.account_primary_city} />
                     <KPITile icon={Building2} label="Hub Structure" value={account.account_hub_structure} />
@@ -647,7 +675,7 @@ export function AccountDetailsDialog({
                       <div className="flex h-full flex-col">
                         <div className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-muted-foreground border-b border-border/40">
                           <MapPin className="h-4 w-4" />
-                          Centers Map
+                          Centres Map
                         </div>
                         <div className="flex-1 min-h-0">
                           <CentersMap centers={accountCenters} heightClass="h-full" showAccountsCount={false} />
@@ -659,7 +687,13 @@ export function AccountDetailsDialog({
               )}
 
               {/* Technology Stack */}
-              {accountTech.length > 0 && (
+              {relatedLoading && (
+                <section className="space-y-4">
+                  <SectionHeader title="Technology Stack" />
+                  <Skeleton className="h-[360px] w-full rounded-lg" />
+                </section>
+              )}
+              {!relatedLoading && accountTech.length > 0 && (
                 <section className="space-y-4">
                   <SectionHeader title="Technology Stack" />
                   <div className="rounded-lg border border-border/60 bg-background/40 backdrop-blur-sm shadow-sm overflow-hidden h-[360px] lg:h-[420px] dark:bg-white/5 dark:border-white/10">
@@ -674,7 +708,7 @@ export function AccountDetailsDialog({
             <TabsContent value="centers" className="mt-4 space-y-4">
                 <div className="space-y-2">
                   <QuickFilterGroup
-                    label="Center Type"
+                    label="Centre Type"
                     options={centerTypeOptions}
                     selected={centerTypeFilter}
                     onToggle={(v) => toggleInSet(setCenterTypeFilter, v)}
@@ -714,7 +748,7 @@ export function AccountDetailsDialog({
             )}
 
             {/* Prospects Tab */}
-            {(accountProspects.length > 0 || accountLockedProspectTeasers.length > 0) && (
+            {accountProspects.length > 0 && (
             <TabsContent value="prospects" className="mt-4 space-y-4">
                 <div className="space-y-2">
                   <QuickFilterGroup
@@ -749,14 +783,6 @@ export function AccountDetailsDialog({
                           onClick={() => handleProspectClick(prospect)}
                         />
                       ))}
-                      {prospectPage === Math.ceil(filteredProspects.length / ITEMS_PER_PAGE) && accountLockedProspectTeasers.map((teaser) => (
-                        <LockedProspectTeaserCard
-                          key={teaser.id}
-                          teaser={teaser}
-                          remainingCount={lockedTeaserCountForAccount}
-                          accountContext={account.account_global_legal_name}
-                        />
-                      ))}
                     </div>
                     <PaginationControls
                       currentPage={prospectPage}
@@ -765,17 +791,6 @@ export function AccountDetailsDialog({
                       onPageChange={setProspectPage}
                       dataLength={filteredProspects.length}
                     />
-                  </div>
-                ) : accountLockedProspectTeasers.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {accountLockedProspectTeasers.map((teaser) => (
-                      <LockedProspectTeaserCard
-                        key={teaser.id}
-                        teaser={teaser}
-                        remainingCount={lockedTeaserCountForAccount}
-                        accountContext={account.account_global_legal_name}
-                      />
-                    ))}
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground py-6 text-center">No prospects match the selected filters.</p>

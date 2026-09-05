@@ -11,7 +11,6 @@ This guide is for developers maintaining or extending the Bamboo Reports applica
 - npm (v9+)
 - Access to the Neon DB connection string
 - Access to the Supabase project credentials
-- MapTiler API key
 
 ### Local Environment
 
@@ -33,20 +32,19 @@ This guide is for developers maintaining or extending the Bamboo Reports applica
     - `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL
     - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase public key
     - `SUPABASE_SERVICE_ROLE_KEY` — Server-only secret for the export audit log and Storage archive (see [User Exports](backend/user-exports.md))
-    - `NEXT_PUBLIC_MAPTILER_KEY` — MapTiler API key
 
     Optional variables:
     - `DIRECT_URL` — Direct Neon connection string for Prisma CLI commands
-    - `DASHBOARD_CACHE_TTL_MS` — Dashboard API SWR cache TTL override, default 1 hour
+    - `DASHBOARD_CACHE_TTL_MS` — Response cache TTL override (code default 10 min; 8 days recommended since the ETL purges the cache weekly)
     - `EXPORT_RATE_LIMIT_PER_HOUR` — Max exports per user per rolling hour, default 20
+    - `DATA_RATE_LIMIT_PER_MIN` — Max requests per user per minute on data endpoints, default 60
+    - `NEXT_PUBLIC_DASHBOARD_SERVER_MODE` — Set to `1` to use the server-backed dashboard data path (see [Server-Mode Dashboard](backend/server-dashboard-mode.md))
+    - `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` — Optional Redis L2 for the response cache (see [Caching and Rate Limiting](backend/caching-and-rate-limiting.md))
     - `NEXT_PUBLIC_POSTHOG_KEY` / `NEXT_PUBLIC_POSTHOG_HOST` — Analytics
-    - `NEXT_PUBLIC_LOGO_DEV_KEY` — Company logos
+    - `NEXT_PUBLIC_BRANDFETCH_CLIENT_ID` — Company logos (Brandfetch)
     - `NEXT_PUBLIC_NOTIFICATIONS_ENABLED` — Set to `enabled` to activate notifications
     - `NEXT_PUBLIC_MAINTENANCE_MODE`: set to `true` to show a maintenance page instead of the dashboard
     - `NEXT_PUBLIC_ENVIRONMENT_LABEL` — Set to `DEV` or `PROD` for environment badge
-    - `NEXT_PUBLIC_MAPTILER_STATE_STYLE_ID` / `NEXT_PUBLIC_MAPTILER_CITY_STYLE_ID` — Custom map styles
-    - `NEXT_PUBLIC_MAP_VIEWPOINT_ISO2` — Geopolitical boundary viewpoint (e.g., `IN`)
-    - `AI_ACCOUNT_SUMMARY_ENABLED` / `AI_ACCOUNT_SUMMARY_MODEL` / `OPENROUTER_API_KEY` — AI account summary feature (see [AI Account Summaries](backend/ai-account-summaries.md))
 
 3. **Run Development Server:**
     ```bash
@@ -98,6 +96,9 @@ To add a new filter (e.g., "Founded Year") to the sidebar:
 5. **Update Saved Filters (if applicable):**
     If users should be able to save this filter, ensure the key is included in the filter serialization logic in `components/saved-filters-manager.tsx`.
 
+6. **Update the server-side SQL translation:**
+    Server mode translates filters to SQL in `lib/dashboard/filtering-sql.ts`. Every new filter must be implemented there too, and covered by the parity suite (`tests/unit/filtering-sql-parity.test.ts`) so the client and server engines stay equivalent. See [Server-Mode Dashboard](backend/server-dashboard-mode.md).
+
 ### 2.2 Adjusting Deployment Access or Premium Filters
 
 Prefer config changes over dashboard forks for client-specific packaging.
@@ -105,8 +106,6 @@ Prefer config changes over dashboard forks for client-specific packaging.
 1. **Top-level section access:**
     Edit `lib/config/dashboard-access.ts`.
     - Use this to enable or disable `accounts`, `centers`, and `prospects`.
-    - Use `limits.prospectsPerAccount` to package only the first `N` prospects per account for a deployment. `null` means unlimited.
-    - When the prospect limit is set, the UI keeps the remaining contacts as locked teaser cards/rows. Those teaser records are display-only and are excluded from search, exports, and real contact dialogs.
 
 2. **Filter availability and premium reveal:**
     Edit `lib/config/filters.ts`.
@@ -115,7 +114,6 @@ Prefer config changes over dashboard forks for client-specific packaging.
 
 3. **Saved-filter behavior:**
     Disabled section filters and premium-disabled filters are sanitized out at load/runtime, so these changes do not require saved-filter migrations.
-    Prospect packaging limits are also runtime-only; no saved-filter migration is required because the limit is applied to the accessible prospects dataset before filtering, search, dialogs, and exports.
 
 ### 2.3 Adding a New Chart
 
@@ -246,10 +244,10 @@ If UI alignment needs tuning:
 | **Styles missing** | `globals.css` | Ensure Tailwind directives are present and `tailwind.config.ts` includes content paths for `app/` and `components/`. |
 | **Auth redirect loop** | Supabase config | Verify `NEXT_PUBLIC_SUPABASE_URL` and `ANON_KEY`. Check `useAuthGuard` hook behavior. |
 | **Slow queries** | `app/actions/data.ts` | Ensure SQL queries have appropriate indexes in Neon. Use `EXPLAIN ANALYZE` in Neon console. |
-| **Map not rendering** | MapTiler key | Verify `NEXT_PUBLIC_MAPTILER_KEY` is set and active. Check browser console for tile fetch errors. |
+| **Map not rendering** | Basemap or local boundary request | Check browser requests to `basemaps.cartocdn.com` and confirm `public/data/admin-1.geojson` is available. |
 | **Notifications not appearing** | Feature flag | Set `NEXT_PUBLIC_NOTIFICATIONS_ENABLED=enabled` in `.env.local`. Restart dev server. |
-| **Choropleth seams** | Map style | Disable disputed boundary layers in your MapTiler style. See `documentation/frontend/map-disputed-boundaries.md`. |
+| **Unexpected map boundaries** | Basemap boundary layers remain visible | Verify `hideBasemapBoundaries` runs after map load and the local boundary overlay loads. See `documentation/frontend/map-disputed-boundaries.md`. |
 | **Export button disabled** | User role | Only `admin` role can export. Update the `role` column in `public.profiles`. |
 | **PostHog events missing** | Environment variables | Verify `NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_POSTHOG_HOST` are set. Check that `providers.tsx` is wrapping the app. |
-| **Company logos not loading** | Logo.dev key | Set `NEXT_PUBLIC_LOGO_DEV_KEY`. If the company isn't in Logo.dev's index, the fallback icon is expected. |
+| **Company logos not loading** | Brandfetch client ID | Set `NEXT_PUBLIC_BRANDFETCH_CLIENT_ID`. If Brandfetch has no logo for the domain, the monogram fallback is expected. |
 | **Financial data missing** | Yahoo Finance | The Yahoo Finance API can be rate-limited. Check server action logs for errors. |

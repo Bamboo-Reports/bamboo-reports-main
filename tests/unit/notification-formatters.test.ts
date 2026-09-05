@@ -15,7 +15,7 @@ describe("notification formatters", () => {
 
     it("returns singular label for count === 1", () => {
       expect(formatTableLabel("accounts", 1)).toBe("Account")
-      expect(formatTableLabel("centers", 1)).toBe("Center")
+      expect(formatTableLabel("centers", 1)).toBe("Centre")
     })
 
     it("falls back to normalized string if not found in map", () => {
@@ -38,7 +38,7 @@ describe("notification formatters", () => {
     it("formats 'updated' changes", () => {
       expect(
         formatSummaryTitle({ table_name: "centers", change_type: "updated", record_count: 3 })
-      ).toBe("3 Centers updated")
+      ).toBe("3 Centres updated")
       
       expect(
         formatSummaryTitle({ table_name: "accounts", change_type: "updated", record_count: 1 })

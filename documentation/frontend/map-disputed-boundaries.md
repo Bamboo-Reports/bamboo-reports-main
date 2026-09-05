@@ -1,103 +1,31 @@
-# Map Disputed Boundaries (State Choropleth)
+# Map Boundaries
 
-This document explains how disputed administrative regions are handled in the state choropleth map and how to configure it.
+This document explains how administrative boundaries are rendered in the city and state map views.
 
-## Scope
+## Sources
 
-- Component: `components/maps/centers-choropleth-map.tsx`
-- Source tiles: MapTiler Countries vector tiles (`source-layer="administrative"`)
-- Applies only to the state choropleth view (not city point map)
+- Renderer: MapLibre GL through `@vis.gl/react-maplibre`
+- Basemap: keyless Carto Positron vector style
+- Administrative boundaries: `public/data/admin-1.geojson`
+- Components: `components/maps/centers-map.tsx` and `components/maps/centers-choropleth-map.tsx`
 
-## Why this exists
-
-MapTiler border styling and map worldview can be controlled at style level, but the choropleth overlay is data-driven and keyed by tile feature properties (`level_0|name`).  
-For disputed regions, feature ownership and labels can differ from expected business viewpoint, which can cause:
-
-- Missing fill for disputed polygons
-- Duplicate-looking region labels/tooltips
-- Internal seam lines between aliased polygons
-
-## Environment flag
-
-Use `NEXT_PUBLIC_MAP_VIEWPOINT_ISO2` in `.env.local`:
-
-```env
-NEXT_PUBLIC_MAP_VIEWPOINT_ISO2=IN
-```
-
-Current supported mode:
-
-- `IN`: Enables India-specific alias rules for disputed Kashmir-area polygons.
-
-If unset, alias behavior is disabled and raw tile ownership/labels are used.
-
-## Current alias rules (`IN`)
-
-The implementation aliases these feature keys:
-
-- `PK|azad kashmir`
-- `PK|azad jammu and kashmir`
-- `PK|gilgit-baltistan`
-- `PK|gilgit baltistan`
-
-to the aggregate key:
-
-- `IN|jammu and kashmir`
-
-Tooltip display is normalized to:
-
-- State: `Jammu and Kashmir`
-- Country: `India`
+No map API key or map-specific environment variable is required.
 
 ## Rendering behavior
 
-### Data layer
+The Carto basemap includes OpenStreetMap boundary layers. After each map loads, `hideBasemapBoundaries` hides layers whose source layer is `boundary`. This prevents the basemap's de-facto international borders from competing with the application boundary overlay.
 
-- Build base aggregates from centers (`count`, distinct accounts, headcount).
-- Build render aggregates by applying alias rules for the active viewpoint.
-- Feed `match`/`step` expressions from render aggregates.
+Both map views then load `/data/admin-1.geojson`:
 
-### Hover grouping
+- The city view draws the administrative outlines beneath its center markers.
+- The choropleth view uses the polygons for state fills, hover behavior, outlines, and tooltips.
 
-Hover always groups by logical aggregate region key, so hovering either side of the merged disputed area highlights the full merged region consistently.
+The choropleth matches center data to features using normalized `center_country_iso2` and `center_state` values.
 
-### Seam suppression
+## Troubleshooting
 
-To reduce internal borders between merged polygons:
+If the basemap does not load, inspect browser requests to `basemaps.cartocdn.com`.
 
-- Fill outline is forced to the same color as fill (`fill-outline-color` = fill expression).
-- Fill anti-aliasing is disabled for base and hover fill layers.
-- Outline line layer excludes all merged-region member keys.
-- Hover uses a fill layer (not line layer) with transparent outline.
+If administrative polygons do not load, confirm `public/data/admin-1.geojson` exists and is served at `/data/admin-1.geojson`.
 
-## Known limitation
-
-Aliasing does not physically merge geometries.  
-If a line still appears, it is usually from base style boundary layers (MapTiler style), not choropleth overlay layers.
-
-## MapTiler style recommendations
-
-In your MapTiler state style:
-
-1. Duplicate the style.
-2. Disable or reduce visibility for disputed/boundary line layers (for example names containing `disputed`, `boundary`, `admin`, `country_border`).
-3. Publish and set `NEXT_PUBLIC_MAPTILER_STATE_STYLE_ID` to the new style ID.
-
-## Extending rules
-
-Edit `DISPUTED_ALIAS_RULES_BY_VIEWPOINT` in `components/maps/centers-choropleth-map.tsx`:
-
-- Add new ISO viewpoint keys (for example `US`, `CN`, etc.).
-- Add `featureIso2` + `featureStateNames` mappings.
-- Set `aggregateIso2` + `aggregateState` target.
-- Set normalized tooltip labels via `displayCountry` and `displayState`.
-
-## Verification checklist
-
-1. Set env values in `.env.local`.
-2. Restart `npm run dev`.
-3. Hard refresh browser (to bypass style/data cache).
-4. In state map mode, hover both sides of disputed area and confirm:
-   - Same tooltip region identity
-   - Same metrics
-   - No internal choropleth outline seam from overlay layers
+If conflicting borders appear, confirm `hideBasemapBoundaries` runs from each map's load handler and that the Carto style still identifies its border layers with `source-layer: boundary`.

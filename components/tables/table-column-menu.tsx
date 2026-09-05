@@ -34,8 +34,8 @@ export function TableColumnMenu<ColumnKey extends string>({
           variant="outline"
           size="sm"
           className="h-10 w-10 rounded-xl px-0"
-          aria-label="Customize table columns"
-          title="Customize table columns"
+          aria-label="Customise table columns"
+          title="Customise table columns"
         >
           <Settings2 className="h-3.5 w-3.5" />
         </Button>

@@ -28,6 +28,8 @@ import { CompanyLogo } from "@/components/ui/company-logo"
 import { DialogBreadcrumb } from "@/components/ui/dialog-breadcrumb"
 import { TechTreemap } from "@/components/charts/tech-treemap"
 import { formatCenterLocation } from "@/lib/utils/helpers"
+import { fetchCenterDetail } from "@/lib/dashboard/api-client"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface CenterDetailsDialogProps {
   center: Center | null
@@ -36,6 +38,8 @@ interface CenterDetailsDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onAccountOpen?: (accountName: string) => void
+  /** Server mode (#249): load the center's services/tech from /api/centers/[key] instead of the array props. */
+  fetchDetail?: boolean
 }
 
 
@@ -88,14 +92,38 @@ function SectionHeader({ title, children }: { title: string; children?: React.Re
 
 export function CenterDetailsDialog({
   center,
-  services,
-  tech,
+  services: servicesProp,
+  tech: techProp,
   open,
   onOpenChange,
   onAccountOpen,
+  fetchDetail = false,
 }: CenterDetailsDialogProps) {
+  const [detail, setDetail] = React.useState<{ services: Service[]; tech: Tech[] } | null>(null)
+  const detailKey = fetchDetail && open ? (center?.cn_unique_key ?? "") : ""
+  React.useEffect(() => {
+    if (!detailKey) {
+      setDetail(null)
+      return
+    }
+    let cancelled = false
+    fetchCenterDetail(detailKey)
+      .then((res) => {
+        if (!cancelled) setDetail({ services: res.services, tech: res.tech })
+      })
+      .catch(() => {
+        if (!cancelled) setDetail(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [detailKey])
 
   if (!center) return null
+
+  const detailLoading = fetchDetail && open && detail === null
+  const services = fetchDetail ? (detail?.services ?? []) : servicesProp
+  const tech = fetchDetail ? (detail?.tech ?? []) : techProp
 
   const centerServices = services.find(
     (service) => service.cn_unique_key === center.cn_unique_key,
@@ -156,12 +184,12 @@ export function CenterDetailsDialog({
           <DialogBreadcrumb
             items={[
               { label: center.account_global_legal_name, onClick: () => onOpenChange(false) },
-              { label: "Centers", onClick: () => onOpenChange(false) },
+              { label: "Centres", onClick: () => onOpenChange(false) },
               { label: center.center_name ?? "" },
             ]}
           />
           <DialogDescription className="sr-only">
-            Center profile details, services, technology usage, location, and related account information.
+            Centre profile details, services, technology usage, location, and related account information.
           </DialogDescription>
           <DialogTitle className="flex items-center gap-3 text-2xl font-bold">
             <CompanyLogo
@@ -285,8 +313,8 @@ export function CenterDetailsDialog({
               </div>
               <div className="lg:border-l lg:border-border/50 lg:pl-6">
                 <MetaRow label="Status" value={statusShortLabel(center.center_status ?? "")} />
-                <MetaRow label="Center Type" value={center.center_type} />
-                <MetaRow label="Center Focus" value={center.center_focus} />
+                <MetaRow label="Centre Type" value={center.center_type} />
+                <MetaRow label="Centre Focus" value={center.center_focus} />
                 <MetaRow label="Micro Location" value={center.center_micro_location} />
                 <MetaRow label="Location" value={centerLocation} />
                 <MetaRow label="Country" value={center.center_country?.trim().toUpperCase() === "TBA" || centerLocation === "India" ? null : center.center_country} />
@@ -329,7 +357,17 @@ export function CenterDetailsDialog({
           </section>
 
           {/* Services Offered */}
-          {centerServices && serviceCategories.length > 0 ? (
+          {detailLoading && (
+            <section className="space-y-4">
+              <SectionHeader title="Services Offered" />
+              <div className="space-y-2">
+                <Skeleton className="h-10 w-full rounded-lg" />
+                <Skeleton className="h-10 w-full rounded-lg" />
+                <Skeleton className="h-10 w-2/3 rounded-lg" />
+              </div>
+            </section>
+          )}
+          {!detailLoading && centerServices && serviceCategories.length > 0 ? (
             <section className="space-y-4">
               <SectionHeader title="Services Offered" />
               <div className="divide-y divide-border/30 rounded-lg border border-border/50 dark:border-white/10 overflow-hidden">
@@ -356,7 +394,13 @@ export function CenterDetailsDialog({
           ) : null}
 
           {/* Technology Stack */}
-          {centerTech.length > 0 ? (
+          {detailLoading && (
+            <section className="space-y-4">
+              <SectionHeader title="Technology Stack" />
+              <Skeleton className="h-[360px] w-full rounded-lg" />
+            </section>
+          )}
+          {!detailLoading && centerTech.length > 0 ? (
             <section className="space-y-4">
               <SectionHeader title="Technology Stack" />
               <div className="rounded-lg border border-border/60 bg-background/40 backdrop-blur-sm shadow-sm overflow-hidden h-[360px] lg:h-[420px] dark:bg-white/5 dark:border-white/10">

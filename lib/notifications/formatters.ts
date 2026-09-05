@@ -1,6 +1,6 @@
 const TABLE_LABELS: Record<string, string> = {
   accounts: "Accounts",
-  centers: "Centers",
+  centers: "Centres",
   prospects: "Prospects",
   alias: "Aliases",
   ticker: "Tickers",
@@ -8,7 +8,7 @@ const TABLE_LABELS: Record<string, string> = {
 
 const TABLE_LABELS_SINGULAR: Record<string, string> = {
   accounts: "Account",
-  centers: "Center",
+  centers: "Centre",
   prospects: "Prospect",
   alias: "Alias",
   ticker: "Ticker",

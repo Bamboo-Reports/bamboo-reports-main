@@ -41,7 +41,7 @@ export function getDashboardTourSteps(options: { hasMapView: boolean; isSidebarC
     popover: {
       title: "Your Dashboard at a Glance",
       description:
-        "These cards show total Accounts, Centers, Prospects, and Headcount. Click any card to jump to that section. Filtered counts update in real time.",
+        "These cards show total Accounts, Centres, Prospects, and Headcount. Click any card to jump to that section. Filtered counts update in real time.",
       side: "bottom",
       align: "center",
     },
@@ -51,7 +51,7 @@ export function getDashboardTourSteps(options: { hasMapView: boolean; isSidebarC
     popover: {
       title: "Switch Between Sections",
       description:
-        "Navigate between Accounts, Centers, and Prospects. Each section has its own charts, tables, and maps.",
+        "Navigate between Accounts, Centres, and Prospects. Each section has its own charts, tables, and maps.",
       side: "bottom",
       align: "start",
     },

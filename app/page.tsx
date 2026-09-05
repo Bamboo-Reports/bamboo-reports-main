@@ -14,20 +14,35 @@ import { GlobalSearch } from "@/components/search/global-search"
 import { AccountDetailsDialog } from "@/components/dialogs/account-details-tabbed-dialog"
 import { CenterDetailsDialog } from "@/components/dialogs/center-details-dialog"
 import { ProspectDetailsDialog } from "@/components/dialogs/prospect-details-dialog"
+import type { PieChartLabelDisplay } from "@/components/charts/pie-chart-card"
 import { ErrorState } from "@/components/states/error-state"
 import { LoadingState } from "@/components/states/loading-state"
 import { AccountsTab, CentersTab } from "@/components/tabs"
 import { ProspectsTab } from "@/components/tabs/prospects-tab"
 import { SummaryCards } from "@/components/dashboard/summary-cards"
+import { TopProgressBar } from "@/components/ui/top-progress-bar"
 import { Tabs } from "@/components/ui/tabs"
 import { useAuthGuard } from "@/hooks/use-auth-guard"
 import { useDashboardData } from "@/hooks/use-dashboard-data"
 import { useDashboardFilters } from "@/hooks/use-dashboard-filters"
+import { useServerDashboardData, normalizeFiltersForServer } from "@/hooks/use-server-dashboard-data"
+import { isServerDashboardEnabled } from "@/lib/config/server-dashboard"
+import {
+  fetchAccountRelated,
+  fetchCenterDetail,
+  fetchDashboardChartsFull,
+  fetchDashboardSummary,
+  fetchProspectById,
+  type EntitySort,
+  type FacetRanges,
+} from "@/lib/dashboard/api-client"
 import { useGlobalSearch } from "@/hooks/use-global-search"
 import { useRecentItems } from "@/hooks/use-recent-items"
 import { useFavorites, type FavoriteItem, type FavoriteInput } from "@/hooks/use-favorites"
 import { getProspectRecordId } from "@/lib/dashboard/prospect-id"
 import { countsTowardHeadcount } from "@/lib/dashboard/headcount"
+import { buildSummaryReport } from "@/lib/reports/summary-report"
+import { getReportChartData } from "@/lib/dashboard/charts"
 import {
   captureEvent,
   ensureAnalyticsSession,
@@ -35,6 +50,7 @@ import {
   setAnalyticsContext,
 } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
+import { devError } from "@/lib/utils/dev-log"
 import { buildTrackedFiltersSnapshot } from "@/lib/analytics/tracking"
 import { canExportData } from "@/lib/auth/roles"
 import {
@@ -52,7 +68,30 @@ import type { AccountVisibilityInfo } from "@/components/filters/account-autocom
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "br-dashboard-sidebar-collapsed"
 
+// Tab sort keys -> whitelisted server sort columns per entity (#249).
+const SERVER_SORT_COLUMNS: Record<"accounts" | "centers" | "prospects", Record<string, string>> = {
+  accounts: {
+    name: "account_global_legal_name",
+    industry: "account_hq_industry",
+    revenue: "account_hq_revenue_range",
+    employees: "account_center_employees_range",
+  },
+  centers: {
+    name: "center_name",
+    location: "center_city",
+    type: "center_type",
+    employees: "center_employees_range",
+  },
+  prospects: {
+    name: "prospect_full_name",
+    location: "prospect_city",
+    title: "prospect_title",
+    department: "prospect_department",
+  },
+}
+
 function DashboardContent(): React.JSX.Element | null {
+  const serverMode = isServerDashboardEnabled()
   const accountsEnabled = isSectionEnabled("accounts")
   const centersEnabled = isSectionEnabled("centers")
   const prospectsEnabled = isSectionEnabled("prospects")
@@ -68,13 +107,16 @@ function DashboardContent(): React.JSX.Element | null {
     tech,
     prospects,
     aliases,
-    lockedProspectTeasers,
     summary,
     loading,
     error,
     connectionStatus,
     loadData,
-  } = useDashboardData({ enabled: authReady && !!userId })
+  } = useDashboardData({ enabled: authReady && !!userId && !serverMode })
+
+  // Server mode: base slider ranges come from the facets endpoint (set once
+  // it responds); the filters hook skips its data-derived range mechanics.
+  const [serverRanges, setServerRanges] = useState<FacetRanges | null>(null)
 
   const {
     filters,
@@ -109,6 +151,7 @@ function DashboardContent(): React.JSX.Element | null {
     services,
     prospects,
     tech,
+    serverRanges: serverMode ? serverRanges : null,
   })
 
   const [accountsPage, setAccountsPage] = useState(1)
@@ -118,8 +161,123 @@ function DashboardContent(): React.JSX.Element | null {
   const [accountsView, setAccountsView] = useState<"chart" | "data" | "map">(accountsMapEnabled ? "map" : "chart")
   const [centersView, setCentersView] = useState<"chart" | "data" | "map">("map")
   const [prospectsView, setProspectsView] = useState<"chart" | "data">("chart")
+  const [chartLabelDisplay, setChartLabelDisplay] = useState<PieChartLabelDisplay>({
+    showCategoryLabels: true,
+    showPercentages: true,
+  })
   const [activeSection, setActiveSection] = useState<"accounts" | "centers" | "prospects">(defaultSection)
+
+  // Server mode: per-entity sort state (the tabs report sort changes here).
+  const [accountsSort, setAccountsSort] = useState<EntitySort | null>(null)
+  const [centersSort, setCentersSort] = useState<EntitySort | null>(null)
+  const [prospectsSort, setProspectsSort] = useState<EntitySort | null>(null)
+
+  // What is visible right now, so charts/map/rows fetch lazily (#249 perf).
+  const activeView =
+    activeSection === "accounts" ? accountsView : activeSection === "centers" ? centersView : prospectsView
+  const dashboardViews = useMemo(
+    () => ({
+      needCharts: activeView === "chart",
+      needMap: activeView === "map",
+      activeEntity: activeSection,
+    }),
+    [activeView, activeSection]
+  )
+
+  const serverData = useServerDashboardData({
+    enabled: serverMode && authReady && !!userId,
+    filters,
+    pages: { accounts: accountsPage, centers: centersPage, prospects: prospectsPage },
+    sorts: { accounts: accountsSort, centers: centersSort, prospects: prospectsSort },
+    pageSize: itemsPerPage,
+    views: dashboardViews,
+  })
+
+  // Facets come back with every filter change, but the base ranges are global
+  // (not filtered), so only adopt a new object when the values differ. The
+  // filters hook keys its base-range sync on identity; a fresh object per
+  // response would rewrite the applied ranges after every fetch, which both
+  // drops a saved filter's narrowed range and triggers a second round trip.
+  useEffect(() => {
+    const ranges = serverData.facets?.ranges
+    if (!ranges) return
+    setServerRanges((prev) => (prev && JSON.stringify(prev) === JSON.stringify(ranges) ? prev : ranges))
+  }, [serverData.facets])
+
+  const makeSortHandler = useCallback(
+    (entity: "accounts" | "centers" | "prospects", set: (s: EntitySort | null) => void) =>
+      (key: string, direction: "asc" | "desc" | null) => {
+        const column = SERVER_SORT_COLUMNS[entity][key]
+        set(direction && column ? { column, direction } : null)
+      },
+    []
+  )
+  const accountsServerProps = useMemo(
+    () =>
+      serverMode
+        ? {
+            total: serverData.entityPages.accounts?.total ?? 0,
+            loading: serverData.entityPages.accounts === null || serverData.pending.accounts,
+            onSortChange: makeSortHandler("accounts", setAccountsSort),
+          }
+        : null,
+    [serverMode, serverData.entityPages.accounts, serverData.pending.accounts, makeSortHandler]
+  )
+  const centersServerProps = useMemo(
+    () =>
+      serverMode
+        ? {
+            total: serverData.entityPages.centers?.total ?? 0,
+            loading: serverData.entityPages.centers === null || serverData.pending.centers,
+            onSortChange: makeSortHandler("centers", setCentersSort),
+          }
+        : null,
+    [serverMode, serverData.entityPages.centers, serverData.pending.centers, makeSortHandler]
+  )
+  const prospectsServerProps = useMemo(
+    () =>
+      serverMode
+        ? {
+            total: serverData.entityPages.prospects?.total ?? 0,
+            loading: serverData.entityPages.prospects === null || serverData.pending.prospects,
+            onSortChange: makeSortHandler("prospects", setProspectsSort),
+          }
+        : null,
+    [serverMode, serverData.entityPages.prospects, serverData.pending.prospects, makeSortHandler]
+  )
+  const serverMapData = useMemo(
+    () =>
+      serverMode && serverData.map
+        ? { cities: serverData.map.cities, states: serverData.map.states, scaleStates: serverData.scaleStates }
+        : null,
+    [serverMode, serverData.map, serverData.scaleStates]
+  )
+
+  // Effective per-view data: server pages or the client filter engine output.
+  const viewAccounts = serverMode ? (serverData.entityPages.accounts?.rows ?? []) : filteredData.filteredAccounts
+  const viewCenters = serverMode ? (serverData.entityPages.centers?.rows ?? []) : filteredData.filteredCenters
+  const viewProspects = serverMode ? (serverData.entityPages.prospects?.rows ?? []) : filteredData.filteredProspects
+  const filteredCounts = useMemo(
+    () =>
+      serverMode
+        ? {
+            accounts: serverData.summary?.filtered.accounts ?? 0,
+            centers: serverData.summary?.filtered.centers ?? 0,
+            prospects: serverData.summary?.filtered.prospects ?? 0,
+          }
+        : {
+            accounts: filteredData.filteredAccounts.length,
+            centers: filteredData.filteredCenters.length,
+            prospects: filteredData.filteredProspects.length,
+          },
+    [serverMode, serverData.summary, filteredData]
+  )
+  const viewAvailableOptions = serverMode ? (serverData.facets?.options ?? availableOptions) : availableOptions
+  const viewAccountChartData = serverMode ? (serverData.charts?.account ?? accountChartData) : accountChartData
+  const viewCenterChartData = serverMode ? (serverData.charts?.center ?? centerChartData) : centerChartData
+  const viewProspectChartData = serverMode ? (serverData.charts?.prospect ?? prospectChartData) : prospectChartData
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false)
   const [exportScope, setExportScope] = useState<
     | { dataset: "accounts"; accountNames: string[] }
     | { dataset: "centers"; centerKeys: string[] }
@@ -151,6 +309,7 @@ function DashboardContent(): React.JSX.Element | null {
     query: searchQuery,
     setQuery: setSearchQuery,
     results: searchResults,
+    isSearching,
     isOpen: isSearchOpen,
     setIsOpen: setIsSearchOpen,
     handleOpen: handleSearchOpen,
@@ -160,6 +319,7 @@ function DashboardContent(): React.JSX.Element | null {
     centers: centersEnabled ? centers : [],
     prospects: prospectsEnabled ? prospects : [],
     aliases: accountsEnabled ? aliases : [],
+    serverMode,
   })
 
   const {
@@ -210,16 +370,6 @@ function DashboardContent(): React.JSX.Element | null {
   const previousSidebarCollapsedRef = useRef<boolean | null>(null)
 
   const activeFiltersCount = getTotalActiveFilters()
-  const filteredLockedProspectTeasers = useMemo(() => {
-    const visibleAccountNames = new Set(
-      filteredData.filteredAccounts
-        .map((account) => account.account_global_legal_name)
-        .filter((name): name is string => Boolean(name))
-    )
-
-    return lockedProspectTeasers.filter((teaser) => visibleAccountNames.has(teaser.account_global_legal_name))
-  }, [filteredData.filteredAccounts, lockedProspectTeasers])
-
   const currentScreenView = useMemo(() => {
     if (activeSection === "accounts") {
       return accountsView
@@ -279,9 +429,9 @@ function DashboardContent(): React.JSX.Element | null {
       screen: activeSection,
       screen_view: currentScreenView,
       active_filters_count: activeFiltersCount,
-      filtered_accounts_count: filteredData.filteredAccounts.length,
-      filtered_centers_count: filteredData.filteredCenters.length,
-      filtered_prospects_count: filteredData.filteredProspects.length,
+      filtered_accounts_count: filteredCounts.accounts,
+      filtered_centers_count: filteredCounts.centers,
+      filtered_prospects_count: filteredCounts.prospects,
       is_filtered: activeFiltersCount > 0,
     })
   }, [
@@ -291,9 +441,7 @@ function DashboardContent(): React.JSX.Element | null {
     accountsEnabled,
     centersEnabled,
     prospectsEnabled,
-    filteredData.filteredAccounts.length,
-    filteredData.filteredCenters.length,
-    filteredData.filteredProspects.length,
+    filteredCounts,
   ])
 
   const captureCurrentScreenTime = useCallback(
@@ -426,9 +574,9 @@ function DashboardContent(): React.JSX.Element | null {
 
   useEffect(() => {
     const totalVisible =
-      (accountsEnabled ? filteredData.filteredAccounts.length : 0) +
-      (centersEnabled ? filteredData.filteredCenters.length : 0) +
-      (prospectsEnabled ? filteredData.filteredProspects.length : 0)
+      (accountsEnabled ? filteredCounts.accounts : 0) +
+      (centersEnabled ? filteredCounts.centers : 0) +
+      (prospectsEnabled ? filteredCounts.prospects : 0)
     const signature = `${activeFiltersCount}:${totalVisible}`
 
     if (activeFiltersCount > 0 && totalVisible === 0 && noResultsSignatureRef.current !== signature) {
@@ -454,9 +602,7 @@ function DashboardContent(): React.JSX.Element | null {
     accountsEnabled,
     centersEnabled,
     prospectsEnabled,
-    filteredData.filteredAccounts.length,
-    filteredData.filteredCenters.length,
-    filteredData.filteredProspects.length,
+    filteredCounts,
     activeSection,
     currentScreenView,
     filters,
@@ -468,15 +614,19 @@ function DashboardContent(): React.JSX.Element | null {
     centerIncYearRange.max,
   ])
 
+  const pageLoading = serverMode ? serverData.initialLoading : loading
+  const pageError = serverMode ? (serverData.summary ? null : serverData.error) : error
+  const pageConnectionStatus = serverMode ? "Loading data from database..." : connectionStatus
+
   useEffect(() => {
-    if (!error) {
+    if (!pageError) {
       return
     }
 
     captureEvent(ANALYTICS_EVENTS.ERROR_STATE_SHOWN, {
-      error_message: error,
+      error_message: pageError,
     })
-  }, [error])
+  }, [pageError])
 
   useEffect(() => {
     if (currentScreenRef.current === activeSection) {
@@ -554,7 +704,7 @@ function DashboardContent(): React.JSX.Element | null {
     previousPageRef.current[activeSection] = activePage
   }, [activePage, itemsPerPage, activeSection])
 
-  const dataLoaded = !loading && !error
+  const dataLoaded = !pageLoading && !pageError
 
   const hasMapView =
     (activeSection === "accounts" && accountsMapEnabled && accountsView === "map") ||
@@ -567,24 +717,45 @@ function DashboardContent(): React.JSX.Element | null {
     }
 
     captureEvent(ANALYTICS_EVENTS.DASHBOARD_LOADED, {
-      total_accounts_count: accounts.length,
-      total_centers_count: centers.length,
+      total_accounts_count: serverMode ? (serverData.summary?.full.accounts ?? 0) : accounts.length,
+      total_centers_count: serverMode ? (serverData.summary?.full.centers ?? 0) : centers.length,
       total_services_count: services.length,
-      total_prospects_count: prospects.length,
+      total_prospects_count: serverMode ? (serverData.summary?.full.prospects ?? 0) : prospects.length,
     })
 
     hasTrackedDashboardLoadRef.current = true
-  }, [dataLoaded, accounts.length, centers.length, services.length, prospects.length])
+  }, [dataLoaded, serverMode, serverData.summary, accounts.length, centers.length, services.length, prospects.length])
+
+  // A refresh keeps the current filters, so when the warehouse data is
+  // unchanged the re-render is pixel-identical. The spinner plus a completion
+  // toast are the only signals that the click did anything.
+  const refreshing = serverMode ? serverData.isRefreshing : loading
+  const refreshRequestedRef = useRef(false)
 
   const handleRefresh = useCallback(() => {
     captureEvent(ANALYTICS_EVENTS.DATA_REFRESH_CLICKED)
+    refreshRequestedRef.current = true
+    if (serverMode) {
+      serverData.reload()
+      return
+    }
     loadData(true)
-  }, [loadData])
+  }, [serverMode, serverData, loadData])
+
+  useEffect(() => {
+    if (refreshing || !refreshRequestedRef.current) return
+    refreshRequestedRef.current = false
+    toast.success('Data refreshed')
+  }, [refreshing])
 
   const handleErrorRetry = useCallback(() => {
     captureEvent(ANALYTICS_EVENTS.ERROR_RETRY_CLICKED)
+    if (serverMode) {
+      serverData.reload()
+      return
+    }
     loadData()
-  }, [loadData])
+  }, [serverMode, serverData, loadData])
 
   // Cancel any pending deferred scope clear so a freshly opened export can't be
   // reset by a timer scheduled when the previous dialog closed.
@@ -627,6 +798,136 @@ function DashboardContent(): React.JSX.Element | null {
     [canExport, cancelPendingScopeClear]
   )
 
+  const summaryCounts = useMemo(() => {
+    if (serverMode) {
+      const filtered = serverData.summary?.filtered
+      const full = serverData.summary?.full
+      return {
+        filteredAccountsCount: filtered?.accounts ?? 0,
+        totalAccountsCount: full?.accounts ?? 0,
+        filteredCentersCount: filtered?.centers ?? 0,
+        totalCentersCount: full?.centers ?? 0,
+        filteredUpcomingCentersCount: filtered?.upcomingCenters ?? 0,
+        totalUpcomingCentersCount: full?.upcomingCenters ?? 0,
+        filteredProspectsCount: filtered?.prospects ?? 0,
+        totalProspectsCount: full?.prospects ?? 0,
+        filteredHeadcount: filtered?.headcount ?? 0,
+        totalHeadcount: full?.headcount ?? 0,
+      }
+    }
+    return {
+      filteredAccountsCount: filteredData.filteredAccounts.length,
+      totalAccountsCount: summary.totalAccountsCountFull,
+      filteredCentersCount: filteredData.filteredCenters.length,
+      totalCentersCount: summary.totalCentersCountFull,
+      filteredUpcomingCentersCount: filteredData.filteredCenters.filter((c) => c.center_status === "Upcoming").length,
+      totalUpcomingCentersCount: summary.totalUpcomingCentersCountFull,
+      filteredProspectsCount: filteredData.filteredProspects.length,
+      totalProspectsCount: summary.totalProspectsCountFull,
+      filteredHeadcount: filteredData.filteredCenters.reduce(
+        (sum, c) => sum + (countsTowardHeadcount(c.center_type) ? (c.center_employees ?? 0) : 0),
+        0
+      ),
+      totalHeadcount: summary.totalHeadcountFull,
+    }
+  }, [serverMode, serverData.summary, filteredData, summary])
+
+  const handleGenerateReport = useCallback(async () => {
+    if (isGeneratingReport) return
+    setIsGeneratingReport(true)
+    try {
+      // Server mode: fetch counts and every chart bucket for the applied
+      // filters directly. The dashboard state may still be catching up (the
+      // fetch is debounced) and its chart payload is capped (top 10, city
+      // "Others"). Both requests use the same canonical wire filters as the
+      // dashboard so the figures match the cards and hit the same cache.
+      // Client mode counts locally.
+      let counts = summaryCounts
+      let charts
+      if (serverMode) {
+        const wireFilters = normalizeFiltersForServer(filters, serverRanges)
+        const [summaryRes, chartsRes] = await Promise.all([
+          fetchDashboardSummary(wireFilters),
+          fetchDashboardChartsFull(wireFilters),
+        ])
+        counts = {
+          filteredAccountsCount: summaryRes.filtered.accounts,
+          totalAccountsCount: summaryRes.full.accounts,
+          filteredCentersCount: summaryRes.filtered.centers,
+          totalCentersCount: summaryRes.full.centers,
+          filteredUpcomingCentersCount: summaryRes.filtered.upcomingCenters,
+          totalUpcomingCentersCount: summaryRes.full.upcomingCenters,
+          filteredProspectsCount: summaryRes.filtered.prospects,
+          totalProspectsCount: summaryRes.full.prospects,
+          filteredHeadcount: summaryRes.filtered.headcount,
+          totalHeadcount: summaryRes.full.headcount,
+        }
+        charts = {
+          accounts: chartsRes.account,
+          centers: chartsRes.center,
+          prospects: { departmentData: chartsRes.prospect.departmentData, levelData: chartsRes.prospect.levelData },
+        }
+      } else {
+        charts = getReportChartData({
+          accounts: filteredData.filteredAccounts,
+          centers: filteredData.filteredCenters,
+          functions: filteredData.filteredFunctions,
+          prospects: filteredData.filteredProspects,
+        })
+      }
+      const model = buildSummaryReport({
+        filters,
+        counts,
+        baselineRanges: {
+          revenue: revenueRange,
+          yearsInIndia: yearsInIndiaRange,
+          centerIncYear: centerIncYearRange,
+        },
+        enabledSections: {
+          accounts: accountsEnabled,
+          centers: centersEnabled,
+          prospects: prospectsEnabled,
+        },
+        activeView: activeSection,
+        activeFilterCount: activeFiltersCount,
+        charts,
+        generatedBy: userEmail ?? undefined,
+      })
+      const { downloadSummaryReportPdf } = await import("@/lib/reports/summary-report-pdf")
+      await downloadSummaryReportPdf(model)
+      toast.success("Summary PDF downloaded.")
+      captureEvent(ANALYTICS_EVENTS.SUMMARY_REPORT_DOWNLOADED, {
+        active_filters_count: activeFiltersCount,
+        active_view: activeSection,
+        metrics_count: model.metrics.length,
+      })
+    } catch (error) {
+      devError("Summary report failed", error)
+      toast.error("Could not generate the summary PDF. Please try again.")
+      captureEvent(ANALYTICS_EVENTS.SUMMARY_REPORT_FAILED, {
+        active_filters_count: activeFiltersCount,
+      })
+    } finally {
+      setIsGeneratingReport(false)
+    }
+  }, [
+    isGeneratingReport,
+    filters,
+    summaryCounts,
+    revenueRange,
+    yearsInIndiaRange,
+    centerIncYearRange,
+    accountsEnabled,
+    centersEnabled,
+    prospectsEnabled,
+    activeSection,
+    activeFiltersCount,
+    filteredData,
+    serverMode,
+    serverRanges,
+    userEmail,
+  ])
+
   const handleExportDialogOpenChange = useCallback((open: boolean) => {
     setExportDialogOpen(open)
     if (!open) {
@@ -646,6 +947,28 @@ function DashboardContent(): React.JSX.Element | null {
     const { filteredAccounts, filteredCenters, filteredServices, filteredProspects } = filteredData
 
     if (!exportScope) {
+      // Server mode (#249 Phase 4): the client no longer holds the filtered
+      // arrays; the server builds the export from the filter state, and the
+      // dialog displays counts from the summary endpoint.
+      if (serverMode) {
+        return {
+          data: { accounts: [], centers: [], services: [], prospects: [] },
+          isFiltered: activeFiltersCount > 0,
+          filtersSnapshot: filters,
+          accountNames: null as string[] | null,
+          centerKeys: null as string[] | null,
+          prospectKeys: undefined as string[] | undefined,
+          keylessProspectIds: undefined as string[] | undefined,
+          allowedDatasets: undefined as ExportDatasetKey[] | undefined,
+          filters: filters as unknown,
+          rowCounts: {
+            accounts: serverData.summary?.filtered.accounts ?? 0,
+            centers: serverData.summary?.filtered.centers ?? 0,
+            services: serverData.summary?.filtered.services ?? 0,
+            prospects: serverData.summary?.filtered.prospects ?? 0,
+          } as Partial<Record<ExportDatasetKey, number>> | undefined,
+        }
+      }
       return {
         data: {
           accounts: filteredAccounts,
@@ -672,19 +995,23 @@ function DashboardContent(): React.JSX.Element | null {
         prospectKeys: undefined as string[] | undefined,
         keylessProspectIds: undefined as string[] | undefined,
         allowedDatasets: undefined as ExportDatasetKey[] | undefined,
+        filters: undefined as unknown,
+        rowCounts: undefined as Partial<Record<ExportDatasetKey, number>> | undefined,
       }
     }
 
     // A row selection exports only the selected entity's sheet, never the
-    // related datasets. The dialog is locked to that single dataset.
+    // related datasets. The dialog is locked to that single dataset. In server
+    // mode the filtered arrays are empty, so the payload targets the selected
+    // keys directly and the dialog shows selection-sized counts.
     const emptyData = { accounts: [], centers: [], services: [], prospects: [] }
     const snapshot = { ...(filters as object), selection: exportScope }
 
     if (exportScope.dataset === "centers") {
       const keySet = new Set(exportScope.centerKeys)
-      const scopedCenters = filteredCenters.filter(
-        (c) => c.cn_unique_key && keySet.has(c.cn_unique_key)
-      )
+      const scopedCenters = serverMode
+        ? []
+        : filteredCenters.filter((c) => c.cn_unique_key && keySet.has(c.cn_unique_key))
       return {
         data: { ...emptyData, centers: scopedCenters },
         isFiltered: true,
@@ -694,10 +1021,31 @@ function DashboardContent(): React.JSX.Element | null {
         prospectKeys: undefined as string[] | undefined,
         keylessProspectIds: undefined as string[] | undefined,
         allowedDatasets: ["centers"] as ExportDatasetKey[],
+        filters: undefined as unknown,
+        rowCounts: (serverMode
+          ? { centers: exportScope.centerKeys.length }
+          : undefined) as Partial<Record<ExportDatasetKey, number>> | undefined,
       }
     }
 
     if (exportScope.dataset === "prospects") {
+      if (serverMode) {
+        // Selected record ids are ps_unique_key when the row has one; keyless
+        // rows use the "account::name::discriminator" composite id (see
+        // getProspectRecordId), which the server matches directly.
+        return {
+          data: emptyData,
+          isFiltered: true,
+          filtersSnapshot: snapshot,
+          accountNames: [],
+          centerKeys: [],
+          prospectKeys: exportScope.prospectIds.filter((id) => !id.includes("::")),
+          keylessProspectIds: exportScope.prospectIds.filter((id) => id.includes("::")),
+          allowedDatasets: ["prospects"] as ExportDatasetKey[],
+          filters: undefined as unknown,
+          rowCounts: { prospects: exportScope.prospectIds.length } as Partial<Record<ExportDatasetKey, number>> | undefined,
+        }
+      }
       // Match the exact prospects the user selected (by stable record id), then
       // target them server-side via ps_unique_key. Selected prospects without a
       // key fall back to their account so they are still included.
@@ -734,13 +1082,17 @@ function DashboardContent(): React.JSX.Element | null {
         prospectKeys,
         keylessProspectIds,
         allowedDatasets: ["prospects"] as ExportDatasetKey[],
+        filters: undefined as unknown,
+        rowCounts: undefined as Partial<Record<ExportDatasetKey, number>> | undefined,
       }
     }
 
     const nameSet = new Set(exportScope.accountNames)
-    const scopedAccounts = filteredAccounts.filter(
-      (a) => a.account_global_legal_name && nameSet.has(a.account_global_legal_name)
-    )
+    const scopedAccounts = serverMode
+      ? []
+      : filteredAccounts.filter(
+          (a) => a.account_global_legal_name && nameSet.has(a.account_global_legal_name)
+        )
     return {
       data: { ...emptyData, accounts: scopedAccounts },
       isFiltered: true,
@@ -750,8 +1102,12 @@ function DashboardContent(): React.JSX.Element | null {
       prospectKeys: undefined as string[] | undefined,
       keylessProspectIds: undefined as string[] | undefined,
       allowedDatasets: ["accounts"] as ExportDatasetKey[],
+      filters: undefined as unknown,
+      rowCounts: (serverMode
+        ? { accounts: exportScope.accountNames.length }
+        : undefined) as Partial<Record<ExportDatasetKey, number>> | undefined,
     }
-  }, [exportScope, filteredData, filters, activeFiltersCount])
+  }, [exportScope, filteredData, filters, activeFiltersCount, serverMode, serverData.summary])
 
   const handleExportCompleted = useCallback(() => {
     exportCountRef.current += 1
@@ -786,6 +1142,13 @@ function DashboardContent(): React.JSX.Element | null {
         query: searchQuery,
       })
 
+      // Server results without a hydrated row (e.g. keyless prospects) cannot
+      // open a detail dialog.
+      if (!result.data) {
+        toast.info("This record is not available right now.")
+        return
+      }
+
       if (result.type === "account") {
         setSearchSelectedAccount(result.data as Account)
         setSearchAccountDialogOpen(true)
@@ -807,7 +1170,7 @@ function DashboardContent(): React.JSX.Element | null {
         result_type: item.type,
       })
 
-      // Find the record in current data and open dialog
+      // Find the record in current data (or fetch it in server mode) and open dialog
       if (item.type === "account") {
         if (!accountsEnabled) {
           toast.info(getSectionUnavailableMessage("accounts"))
@@ -817,6 +1180,14 @@ function DashboardContent(): React.JSX.Element | null {
         if (account) {
           setSearchSelectedAccount(account)
           setSearchAccountDialogOpen(true)
+        } else if (serverMode) {
+          fetchAccountRelated(item.id)
+            .then((res) => {
+              if (!res.account) return
+              setSearchSelectedAccount(res.account)
+              setSearchAccountDialogOpen(true)
+            })
+            .catch(() => toast.info("This account is not available right now."))
         }
       } else if (item.type === "center") {
         if (!centersEnabled) {
@@ -827,6 +1198,13 @@ function DashboardContent(): React.JSX.Element | null {
         if (center) {
           setSearchSelectedCenter(center)
           setSearchCenterDialogOpen(true)
+        } else if (serverMode) {
+          fetchCenterDetail(item.id)
+            .then((res) => {
+              setSearchSelectedCenter(res.center)
+              setSearchCenterDialogOpen(true)
+            })
+            .catch(() => toast.info("This centre is not available right now."))
         }
       } else if (item.type === "prospect") {
         if (!prospectsEnabled) {
@@ -839,10 +1217,17 @@ function DashboardContent(): React.JSX.Element | null {
         if (prospect) {
           setSearchSelectedProspect(prospect)
           setSearchProspectDialogOpen(true)
+        } else if (serverMode) {
+          fetchProspectById(item.id)
+            .then((res) => {
+              setSearchSelectedProspect(res.prospect)
+              setSearchProspectDialogOpen(true)
+            })
+            .catch(() => toast.info("This prospect is not available right now."))
         }
       }
     },
-    [handleSearchClose, accounts, centers, prospects, accountsEnabled, centersEnabled, prospectsEnabled]
+    [handleSearchClose, serverMode, accounts, centers, prospects, accountsEnabled, centersEnabled, prospectsEnabled]
   )
 
   const handleSearchRecentSearchSelect = useCallback(
@@ -863,10 +1248,10 @@ function DashboardContent(): React.JSX.Element | null {
       // null means a toggle for this item is already in flight; ignore it.
       if (!result) return
       if (!result.ok) {
-        toast.error("Could not update favorites. Please try again.")
+        toast.error("Could not update favourites. Please try again.")
         return
       }
-      toast.success(result.added ? "Added to favorites" : "Removed from favorites")
+      toast.success(result.added ? "Added to favourites" : "Removed from favourites")
     },
     [toggleFavorite]
   )
@@ -876,10 +1261,10 @@ function DashboardContent(): React.JSX.Element | null {
       if (items.length === 0) return
       const ok = await addFavorites(items)
       if (!ok) {
-        toast.error("Could not add to favorites. Please try again.")
+        toast.error("Could not add to favourites. Please try again.")
         return
       }
-      toast.success(`Added ${items.length} ${items.length === 1 ? "item" : "items"} to favorites`)
+      toast.success(`Added ${items.length} ${items.length === 1 ? "item" : "items"} to favourites`)
     },
     [addFavorites]
   )
@@ -887,7 +1272,7 @@ function DashboardContent(): React.JSX.Element | null {
   const handleRemoveFavorite = useCallback(
     async (item: FavoriteItem) => {
       const ok = await removeFavorite(item.entity_type, item.entity_id)
-      toast[ok ? "success" : "error"](ok ? "Removed from favorites" : "Could not remove favorite. Please try again.")
+      toast[ok ? "success" : "error"](ok ? "Removed from favourites" : "Could not remove favourite. Please try again.")
     },
     [removeFavorite]
   )
@@ -897,17 +1282,17 @@ function DashboardContent(): React.JSX.Element | null {
       if (items.length === 0) return
       const ok = await removeFavorites(items)
       if (!ok) {
-        toast.error("Could not remove from favorites. Please try again.")
+        toast.error("Could not remove from favourites. Please try again.")
         return
       }
-      toast.success(`Removed ${items.length} ${items.length === 1 ? "item" : "items"} from favorites`)
+      toast.success(`Removed ${items.length} ${items.length === 1 ? "item" : "items"} from favourites`)
     },
     [removeFavorites]
   )
 
   const handleClearFavorites = useCallback(async () => {
     const ok = await clearFavorites()
-    toast[ok ? "success" : "error"](ok ? "Cleared all favorites" : "Could not clear favorites. Please try again.")
+    toast[ok ? "success" : "error"](ok ? "Cleared all favourites" : "Could not clear favourites. Please try again.")
   }, [clearFavorites])
 
   const handleOpenFavorite = useCallback(
@@ -915,22 +1300,50 @@ function DashboardContent(): React.JSX.Element | null {
       setFavoritesDialogOpen(false)
       if (item.entity_type === "account") {
         const account = accounts.find((a) => a.account_global_legal_name === item.entity_id)
-        if (!account) return toast.info("This account is not available in the current dataset.")
-        setSearchSelectedAccount(account)
-        setSearchAccountDialogOpen(true)
+        if (account) {
+          setSearchSelectedAccount(account)
+          setSearchAccountDialogOpen(true)
+          return
+        }
+        if (!serverMode) return toast.info("This account is not available in the current dataset.")
+        fetchAccountRelated(item.entity_id)
+          .then((res) => {
+            if (!res.account) return toast.info("This account is not available in the current dataset.")
+            setSearchSelectedAccount(res.account)
+            setSearchAccountDialogOpen(true)
+          })
+          .catch(() => toast.info("This account is not available in the current dataset."))
       } else if (item.entity_type === "center") {
         const center = centers.find((c) => c.cn_unique_key === item.entity_id)
-        if (!center) return toast.info("This center is not available in the current dataset.")
-        setSearchSelectedCenter(center)
-        setSearchCenterDialogOpen(true)
+        if (center) {
+          setSearchSelectedCenter(center)
+          setSearchCenterDialogOpen(true)
+          return
+        }
+        if (!serverMode) return toast.info("This centre is not available in the current dataset.")
+        fetchCenterDetail(item.entity_id)
+          .then((res) => {
+            setSearchSelectedCenter(res.center)
+            setSearchCenterDialogOpen(true)
+          })
+          .catch(() => toast.info("This centre is not available in the current dataset."))
       } else {
         const prospect = prospects.find((p) => getProspectRecordId(p) === item.entity_id)
-        if (!prospect) return toast.info("This prospect is not available in the current dataset.")
-        setSearchSelectedProspect(prospect)
-        setSearchProspectDialogOpen(true)
+        if (prospect) {
+          setSearchSelectedProspect(prospect)
+          setSearchProspectDialogOpen(true)
+          return
+        }
+        if (!serverMode) return toast.info("This prospect is not available in the current dataset.")
+        fetchProspectById(item.entity_id)
+          .then((res) => {
+            setSearchSelectedProspect(res.prospect)
+            setSearchProspectDialogOpen(true)
+          })
+          .catch(() => toast.info("This prospect is not available in the current dataset."))
       }
     },
-    [accounts, centers, prospects]
+    [serverMode, accounts, centers, prospects]
   )
 
   const handleSearchActionSelect = useCallback(
@@ -949,14 +1362,15 @@ function DashboardContent(): React.JSX.Element | null {
           handleSectionSelect("prospects")
           break
         case "refresh":
-          loadData()
+          if (serverMode) serverData.reload()
+          else loadData()
           break
         case "toggle-theme":
           setTheme(resolvedTheme === "dark" ? "light" : "dark")
           break
       }
     },
-    [handleSearchClose, handleSectionSelect, loadData, setTheme, resolvedTheme]
+    [handleSearchClose, handleSectionSelect, serverMode, serverData, loadData, setTheme, resolvedTheme]
   )
 
   useEffect(() => {
@@ -984,14 +1398,14 @@ function DashboardContent(): React.JSX.Element | null {
     return null
   }
 
-  if (loading) {
-    return <LoadingState connectionStatus={connectionStatus} />
+  if (pageLoading) {
+    return <LoadingState connectionStatus={pageConnectionStatus} />
   }
 
-  if (error) {
+  if (pageError) {
     return (
       <ErrorState
-        error={error}
+        error={pageError}
         onRetry={handleErrorRetry}
       />
     )
@@ -999,13 +1413,22 @@ function DashboardContent(): React.JSX.Element | null {
 
   return (
     <div className="h-screen bg-[radial-gradient(circle_at_top_right,_hsl(var(--primary)/0.14),_transparent_36%),radial-gradient(circle_at_0%_45%,_hsl(var(--chart-3)/0.10),_transparent_34%),hsl(var(--background))] flex flex-col overflow-hidden">
+      <TopProgressBar
+        active={
+          serverMode &&
+          (serverData.pending.core ||
+            serverData.pending[activeSection] ||
+            (dashboardViews.needCharts && serverData.pending.charts) ||
+            (dashboardViews.needMap && serverData.pending.map))
+        }
+      />
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-foreground focus:shadow"
       >
         Skip to main content
       </a>
-      <Header onRefresh={handleRefresh} onStartTour={startTour} onOpenSearch={handleSearchOpen} onOpenExports={() => setExportsDialogOpen(true)} onOpenHistory={() => setHistoryDialogOpen(true)} onOpenFavorites={handleOpenFavorites} />
+      <Header onRefresh={handleRefresh} refreshing={refreshing} onStartTour={startTour} onOpenSearch={handleSearchOpen} onOpenExports={() => setExportsDialogOpen(true)} onOpenHistory={() => setHistoryDialogOpen(true)} onOpenFavorites={handleOpenFavorites} />
       <ExportsDialog open={exportsDialogOpen} onOpenChange={setExportsDialogOpen} />
       <FavoritesDialog
         open={favoritesDialogOpen}
@@ -1029,6 +1452,7 @@ function DashboardContent(): React.JSX.Element | null {
         query={searchQuery}
         onQueryChange={setSearchQuery}
         results={searchResults}
+        isSearching={isSearching}
         recentItems={recentItems}
         recentSearches={recentSearches}
         onSelectResult={handleSearchResultSelect}
@@ -1043,11 +1467,11 @@ function DashboardContent(): React.JSX.Element | null {
           account={searchSelectedAccount}
           centers={centers}
           prospects={prospects}
-          lockedProspectTeasers={lockedProspectTeasers}
           services={services}
           tech={tech}
           open={searchAccountDialogOpen}
           onOpenChange={setSearchAccountDialogOpen}
+          fetchRelated={serverMode}
         />
       )}
       {centersEnabled && (
@@ -1057,12 +1481,19 @@ function DashboardContent(): React.JSX.Element | null {
           tech={tech}
           open={searchCenterDialogOpen}
           onOpenChange={setSearchCenterDialogOpen}
+          fetchDetail={serverMode}
           onAccountOpen={(accountName) => {
+            const openAccount = (account: Account) => {
+              setSearchCenterDialogOpen(false)
+              setSearchSelectedAccount(account)
+              setSearchAccountDialogOpen(true)
+            }
             const account = accounts.find((item) => item.account_global_legal_name === accountName)
-            if (!account) return
-            setSearchCenterDialogOpen(false)
-            setSearchSelectedAccount(account)
-            setSearchAccountDialogOpen(true)
+            if (account) return openAccount(account)
+            if (!serverMode) return
+            fetchAccountRelated(accountName)
+              .then((res) => res.account && openAccount(res.account))
+              .catch(() => toast.info("This account is not available right now."))
           }}
         />
       )}
@@ -1072,12 +1503,19 @@ function DashboardContent(): React.JSX.Element | null {
           allProspects={prospects}
           open={searchProspectDialogOpen}
           onOpenChange={setSearchProspectDialogOpen}
+          fetchRelated={serverMode}
           onAccountOpen={(accountName) => {
+            const openAccount = (account: Account) => {
+              setSearchProspectDialogOpen(false)
+              setSearchSelectedAccount(account)
+              setSearchAccountDialogOpen(true)
+            }
             const account = accounts.find((item) => item.account_global_legal_name === accountName)
-            if (!account) return
-            setSearchProspectDialogOpen(false)
-            setSearchSelectedAccount(account)
-            setSearchAccountDialogOpen(true)
+            if (account) return openAccount(account)
+            if (!serverMode) return
+            fetchAccountRelated(accountName)
+              .then((res) => res.account && openAccount(res.account))
+              .catch(() => toast.info("This account is not available right now."))
           }}
         />
       )}
@@ -1093,11 +1531,12 @@ function DashboardContent(): React.JSX.Element | null {
             data={exportPayload.data}
             isFiltered={exportPayload.isFiltered}
             filtersSnapshot={exportPayload.filtersSnapshot}
-            lockedProspectsCount={filteredLockedProspectTeasers.length}
             accountNames={exportPayload.accountNames}
             centerKeys={exportPayload.centerKeys}
             prospectKeys={exportPayload.prospectKeys}
             keylessProspectIds={exportPayload.keylessProspectIds}
+            filters={exportPayload.filters}
+            rowCounts={exportPayload.rowCounts}
             allowedDatasets={exportPayload.allowedDatasets}
             compact={Boolean(exportPayload.allowedDatasets)}
             onExportCompleted={handleExportCompleted}
@@ -1105,7 +1544,8 @@ function DashboardContent(): React.JSX.Element | null {
           <FiltersSidebar
             filters={filters}
             pendingFilters={pendingFilters}
-            availableOptions={availableOptions}
+            availableOptions={viewAvailableOptions}
+            serverMode={serverMode}
             isApplying={isApplying}
             isCollapsed={isSidebarCollapsed}
             onToggleCollapse={handleToggleSidebar}
@@ -1119,6 +1559,8 @@ function DashboardContent(): React.JSX.Element | null {
             resetFilters={resetFilters}
             handleExportAll={handleExportAll}
             canExport={canExport}
+            handleGenerateReport={handleGenerateReport}
+            isGeneratingReport={isGeneratingReport}
             handleMinRevenueChange={handleMinRevenueChange}
             handleMaxRevenueChange={handleMaxRevenueChange}
             handleRevenueRangeChange={handleRevenueRangeChange}
@@ -1137,31 +1579,28 @@ function DashboardContent(): React.JSX.Element | null {
             <div className="flex-1 overflow-y-auto scrollbar-gutter-stable">
               <div className="px-6 pt-[var(--dashboard-content-top-gap)] pb-[var(--dashboard-content-bottom-gap)]">
                 <SummaryCards
-                  filteredAccountsCount={filteredData.filteredAccounts.length}
-                  totalAccountsCount={summary.totalAccountsCountFull}
-                  filteredCentersCount={filteredData.filteredCenters.length}
-                  totalCentersCount={summary.totalCentersCountFull}
-                  filteredUpcomingCentersCount={filteredData.filteredCenters.filter((c) => c.center_status === "Upcoming").length}
-                  totalUpcomingCentersCount={summary.totalUpcomingCentersCountFull}
-                  filteredProspectsCount={filteredData.filteredProspects.length}
-                  totalProspectsCount={summary.totalProspectsCountFull}
-                  filteredHeadcount={filteredData.filteredCenters.reduce((sum, c) => sum + (countsTowardHeadcount(c.center_type) ? (c.center_employees ?? 0) : 0), 0)}
-                  totalHeadcount={summary.totalHeadcountFull}
+                  {...summaryCounts}
                   activeView={activeSection}
                   onSelect={handleSectionSelect}
+                  updating={serverMode && serverData.pending.summary}
                 />
 
                 <Tabs value={activeSection} className="space-y-4" data-tour="tab-navigation">
                   {accountsEnabled && (
                     <AccountsTab
-                      accounts={filteredData.filteredAccounts}
+                      accounts={viewAccounts}
                       centers={filteredData.filteredCenters}
                       prospects={filteredData.filteredProspects}
-                      lockedProspectTeasers={filteredLockedProspectTeasers}
                       services={filteredData.filteredServices}
                       tech={tech}
                       functions={functions}
-                      accountChartData={accountChartData}
+                      server={accountsServerProps}
+                      mapData={serverMapData}
+                      chartsLoading={serverMode && serverData.pending.charts}
+                      mapLoading={serverMode && serverData.pending.map}
+                      accountChartData={viewAccountChartData}
+                      chartLabelDisplay={chartLabelDisplay}
+                      onChartLabelDisplayChange={setChartLabelDisplay}
                       accountsView={accountsView}
                       setAccountsView={setAccountsView}
                       currentPage={accountsPage}
@@ -1179,14 +1618,19 @@ function DashboardContent(): React.JSX.Element | null {
                   {centersEnabled && (
                     <CentersTab
                       accounts={filteredData.filteredAccounts}
-                      centers={filteredData.filteredCenters}
+                      centers={viewCenters}
                       allCenters={centers}
                       prospects={filteredData.filteredProspects}
-                      lockedProspectTeasers={filteredLockedProspectTeasers}
                       functions={functions}
                       services={filteredData.filteredServices}
                       tech={tech}
-                      centerChartData={centerChartData}
+                      server={centersServerProps}
+                      mapData={serverMapData}
+                      chartsLoading={serverMode && serverData.pending.charts}
+                      mapLoading={serverMode && serverData.pending.map}
+                      centerChartData={viewCenterChartData}
+                      chartLabelDisplay={chartLabelDisplay}
+                      onChartLabelDisplayChange={setChartLabelDisplay}
                       centersView={centersView}
                       setCentersView={setCentersView}
                       currentPage={centersPage}
@@ -1205,12 +1649,15 @@ function DashboardContent(): React.JSX.Element | null {
                     <ProspectsTab
                       accounts={filteredData.filteredAccounts}
                       centers={filteredData.filteredCenters}
-                      prospects={filteredData.filteredProspects}
+                      prospects={viewProspects}
                       allProspects={prospects}
-                      lockedProspectTeasers={filteredLockedProspectTeasers}
                       services={filteredData.filteredServices}
                       tech={tech}
-                      prospectChartData={prospectChartData}
+                      server={prospectsServerProps}
+                      chartsLoading={serverMode && serverData.pending.charts}
+                      prospectChartData={viewProspectChartData}
+                      chartLabelDisplay={chartLabelDisplay}
+                      onChartLabelDisplayChange={setChartLabelDisplay}
                       prospectsView={prospectsView}
                       setProspectsView={setProspectsView}
                       currentPage={prospectsPage}

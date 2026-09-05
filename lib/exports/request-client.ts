@@ -7,6 +7,8 @@ export type ServerExportRequest = {
   centerKeys: string[] | null
   prospectKeys: string[] | null
   keylessProspectIds?: string[] | null
+  /** Export-by-filter (#249): dashboard filter state; takes precedence over the key lists server-side. */
+  filters?: unknown
   isFiltered: boolean
   filtersApplied: unknown
 }
@@ -57,6 +59,7 @@ export async function requestServerExport(
       centerKeys: input.centerKeys,
       prospectKeys: input.prospectKeys,
       keylessProspectIds: input.keylessProspectIds ?? null,
+      filters: input.filters ?? null,
       isFiltered: input.isFiltered,
       filtersApplied: input.filtersApplied,
       clientPublicIp: publicIp,

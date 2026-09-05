@@ -28,9 +28,9 @@
 
 **Fix:**
 
-- Scope the response to the caller's entitlement **on the server**. Pass the resolved user/plan into `getDashboardData(access)` and project columns and rows accordingly (the pattern already exists in `partitionProspectsByAccess` and `lib/config/dashboard-access.ts`; make it per-user instead of global config).  
+- Scope the response to the caller's entitlement **on the server**. Pass the resolved user/plan into `getDashboardData(access)` and project columns and rows accordingly. `lib/config/dashboard-access.ts` gates whole sections (accounts/centers/prospects) as global deployment config; the work is to resolve entitlement per user and apply it to columns and rows, not just to section visibility.  
 - Drop `account_visibility = 'exclude'` rows from the returned arrays, not just from counts.  
-- Never send contact PII (name/email/LinkedIn/title) to a token that is not entitled; default to the teaser shape.  
+- Never send contact PII (name/email/LinkedIn/title) to a token that is not entitled. Omit those columns from the server-side projection rather than filtering them client-side.  
 - Replace the single global mega-payload with **filtered, paginated, projected per-entity endpoints** (`/api/accounts?filters&page`, `/api/accounts/:id/centers`, etc.). The current design downloads the whole DB to the browser; pagination plus projection removes the bulk-download vector at the root. The global in-memory cache is incompatible with per-user entitlement and should be reworked (cache a free-base and a full variant, or cache per-entity query results).
 
 ---
@@ -84,9 +84,9 @@
 ## Other notes for the team
 
 - **Auth posture is otherwise sound:** `/api/dashboard` returns 401 without a token; there is no anonymous data access.  
-- **AI summary** (`/api/accounts/ai-summary`) is reachable by viewers and operates per-account (expects an account in the body). Low bulk-leak risk, but confirm it returns only the intended summary and cannot be coerced into returning raw underlying rows.  
 - **`/api/accounts` GET** returns 404 (no bulk GET handler), so it is not an extraction vector today.  
-- **Client holds a Supabase JWT \+ publishable key**, which is normal, but it means RLS is the sole protection on every exposed table. Treat RLS as a first-class control and add it to your test suite.
+- **Client holds a Supabase JWT \+ publishable key**, which is normal, but it means RLS is the sole protection on every exposed table. Treat RLS as a first-class control and add it to your test suite.  
+- **The deployment-level per-account prospect cap has been removed.** `limits.prospectsPerAccount`, `partitionProspectsByAccess`, and the locked teaser UI are gone; earlier drafts of this audit cited them as a starting point for entitlement scoping. They were global deployment config rather than per-user controls, so they never addressed issue \#1 anyway. Any fix has to resolve entitlement from the caller and apply it in the SQL projection.
 
 ---
 

@@ -9,9 +9,6 @@ export function getEnvironmentLabel(): string | null {
   return label ? label.toUpperCase() : null
 }
 
-export function getLogoDevPublicKey(): string | null {
-  return (
-    normalizeEnvValue(process.env.NEXT_PUBLIC_LOGO_DEV_KEY) ??
-    normalizeEnvValue(process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN)
-  )
+export function getBrandfetchClientId(): string | null {
+  return normalizeEnvValue(process.env.NEXT_PUBLIC_BRANDFETCH_CLIENT_ID)
 }
