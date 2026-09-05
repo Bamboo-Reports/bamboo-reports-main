@@ -188,7 +188,7 @@ For a comprehensive breakdown of every technology used in this project, see the 
 ```
 bamboo-reports-nextjs/
 ├── app/                            # Next.js App Router
-│   ├── (auth)/                     # Auth route group (signin, signup)
+│   ├── (auth)/                     # Auth route group (signin, signup, forgot-password, reset-password)
 │   ├── actions/                    # Modular Server Actions
 │   │   ├── data.ts                 # Core data fetching (accounts, centers, etc.)
 │   │   ├── saved-filters.ts        # Saved filter CRUD operations
@@ -204,12 +204,15 @@ bamboo-reports-nextjs/
 │   │   ├── financials/             # Authed, rate-limited Yahoo Finance proxy
 │   │   └── exports/                # Export generation, listing, and re-download
 │   ├── actions.ts                  # Central server action re-exports
-│   ├── layout.tsx                  # Root layout with providers
+│   ├── global-error.tsx            # Last-resort error boundary (brand frame, light theme)
+│   ├── layout.tsx                  # Root layout with providers (renders the maintenance page when flagged)
+│   ├── not-found.tsx               # 404 page
 │   ├── page.tsx                    # Main dashboard entry point
 │   └── providers.tsx               # Analytics providers (PostHog)
 │
 ├── components/                     # React Components
-│   ├── auth/                       # Authentication UI (signin/signup forms)
+│   ├── auth/                       # AuthShell: card frame shared by the (auth) pages
+│   ├── brand/                      # BrandMark (animated logo) and BrandPage (standalone screen frame)
 │   ├── cards/                      # Card component variants
 │   ├── charts/                     # Recharts + Highcharts visualizations
 │   ├── dashboard/                  # Summary cards and hero stats
@@ -222,10 +225,11 @@ bamboo-reports-nextjs/
 │   ├── maps/                       # MapLibre cluster + choropleth maps
 │   ├── notifications/              # Notification bell dropdown
 │   ├── search/                     # Global search with alias-aware matching
-│   ├── states/                     # Loading and error state components
+│   ├── states/                     # Full-page loading skeleton, load error, empty states
 │   ├── tables/                     # Data grid row components
 │   ├── tabs/                       # Tab views (Accounts, Centers, etc.)
-│   └── ui/                         # Shared design system (shadcn/ui)
+│   ├── ui/                         # Shared design system (shadcn/ui) + skeleton primitives (data-skeletons.tsx)
+│   └── maintenance-page.tsx        # Maintenance mode screen (NEXT_PUBLIC_MAINTENANCE_MODE)
 │
 ├── hooks/                          # Custom React Hooks
 │   ├── use-auth-guard.ts           # Authentication guard
@@ -304,7 +308,8 @@ bamboo-reports-nextjs/
 │       ├── ui-column-mapping.md         # UI label to database column mapping
 │       ├── filter-column-ui-label-map.json  # Machine-readable UI label to column map
 │       ├── logo-integration.md          # Brandfetch logo integration guide
-│       └── map-disputed-boundaries.md   # Choropleth boundary handling
+│       ├── map-disputed-boundaries.md   # Choropleth boundary handling
+│       └── standalone-screens.md        # Auth/error/404/maintenance frame, loading skeleton conventions
 │
 ├── scripts/                        # Standalone scripts (load benchmark, work summary report)
 ├── tests/                          # Vitest test suite (unit, integration, and API route tests)
@@ -413,7 +418,8 @@ Typical use cases:
 The app delegates identity management to **Supabase Auth**.
 
 - **Sign Up/Login:** Standard Email/Password flow.
-- **Session Persistence:** Handled via HTTP-only cookies (Next.js server-side).
+- **Session Persistence:** Browser-side via `@supabase/supabase-js`. "Remember me" keeps the session in `localStorage`; unchecked, it lives in `sessionStorage` and ends with the tab. API routes receive the access token as a Bearer header and verify it server-side (see RBAC & Auth Guards).
+- **Auth Screens:** Sign in, sign up, forgot password and reset password share one card frame (`components/auth/auth-shell.tsx`) built on the brand frame described in [Standalone Screens](documentation/frontend/standalone-screens.md).
 - **Role-Based Access Control:**
   - `viewer` — Read-only access to the dashboard.
   - `admin` — Read access plus data export capabilities.
@@ -512,6 +518,8 @@ Subsequent pushes to the `main` branch trigger automatic deployments.
 | **Export fails with "Failed to archive export"** | `user-exports` Storage bucket missing | Create a **private** bucket named exactly `user-exports` in the Supabase dashboard. |
 | **Export fails with "Failed to record export: relation 'public.user_exports' does not exist"** | Schema SQL not run | Execute `documentation/backend/sql/user-exports-schema.sql` against your Supabase project. |
 | **"My exports" dialog is empty after a successful export** | Dev-server module cache | Hard-refresh the page; restart `next dev`. |
+| **"The dashboard could not load" screen** | Summary request failed (Neon asleep, network, bad `DATABASE_URL`) | The alert on that screen shows the raw server message. Retry, then check the Neon instance and `DATABASE_URL`. |
+| **Skeleton and loaded layout do not line up** | Shell changed without updating the skeleton | Update `components/states/loading-state.tsx` or the relevant `data-skeletons.tsx` primitive to the new geometry. See [Standalone Screens](documentation/frontend/standalone-screens.md). |
 
 ---
 
@@ -543,6 +551,7 @@ Detailed documentation for specific subsystems lives in the `documentation/` fol
 | [**Logo Integration**](documentation/frontend/logo-integration.md) | Setup and usage guide for the Brandfetch logo integration |
 | [**Scripts & Tooling**](documentation/scripts-and-tooling.md) | Standalone dev scripts: load benchmark and git-history work summary |
 | [**Map Boundaries**](documentation/frontend/map-disputed-boundaries.md) | Carto basemap and local Survey of India boundary behavior |
+| [**Standalone Screens**](documentation/frontend/standalone-screens.md) | Brand frame for auth, error, 404 and maintenance screens; full-page loading skeleton; skeleton conventions |
 
 ---
 

@@ -177,19 +177,19 @@ You can also run the same SQL from: `sql/profiles-role-migration.sql`.
 ## 3. Integration Logic
 
 ### 3.1 Client-Side (Next.js)
-The application uses `@supabase/auth-helpers-nextjs` or `@supabase/ssr` (depending on the version) to handle sessions.
+The application uses `@supabase/supabase-js` directly (`lib/supabase/client.ts`); it does not use the SSR or auth-helpers packages.
 
-- **Authentication Flow:** Users sign in via Supabase Auth.
-- **Session Management:** The client receives a JWT.
+- **Authentication Flow:** Users sign in with email and password on `/signin`. Sign-up, forgot-password and reset-password pages live alongside it under `app/(auth)/`, all framed by `components/auth/auth-shell.tsx`.
+- **Session Management:** The client receives a JWT and keeps it in `localStorage` when "Remember me" is checked, otherwise in `sessionStorage` so the session ends with the tab (`setSupabaseAuthStoragePreference`).
 - **Profile Fetching:**
     - On load, the app can fetch the user's profile using `supabase.from('profiles').select('*').single()`.
     - Because of RLS, this query requires no `where` clause security-wise, but `eq('user_id', user.id)` is good practice.
     - Use `profile.role` for UI hints only. Server endpoints must re-check role permissions before protected operations such as exports.
 
 ### 3.2 Server-Side (Actions/API)
-When accessing data server-side (e.g., in `app/actions.ts` or API routes):
-1.  Verify the session using `supabase.auth.getSession()`.
-2.  Use the `user.id` from the session to perform operations on the `profiles` table.
+Route handlers do not see a cookie session. The browser sends the access token as `Authorization: Bearer <token>`, and the handler verifies it:
+1.  `extractBearerToken()` and `resolveAuthenticatedUserId()` from `lib/auth/server.ts` turn the header into a trusted `user.id` (validated with `supabase.auth.getUser(token)`, cached for 60 seconds).
+2.  Use that `user.id` for `profiles` lookups and role checks. See [RBAC & Auth Guards](rbac-and-auth-guards.md).
 
 ---
 

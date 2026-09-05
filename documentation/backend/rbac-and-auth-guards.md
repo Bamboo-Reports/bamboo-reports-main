@@ -51,7 +51,7 @@ Route handlers that need to know who's calling (for example, the exports and ser
 
 ## 4. Sign-in / Sign-up Validation: `lib/validators/auth.ts`
 
-Zod schemas used by the auth forms (`components/auth/*`) and any server-side re-validation:
+Zod schemas used by the auth forms (`app/(auth)/*/page.tsx`, framed by `components/auth/auth-shell.tsx`) and any server-side re-validation:
 
 | Schema | Fields | Notes |
 |--------|--------|-------|
@@ -80,6 +80,7 @@ The rule for new admin-only features: enforce the check in the route handler or 
 | `lib/auth/server.ts` | Bearer token extraction and Supabase token verification for route handlers |
 | `hooks/use-auth-guard.ts` | Client-side session/role guard used by protected pages |
 | `lib/validators/auth.ts` | Zod schemas for sign-in, sign-up, forgot/update password forms |
+| `app/(auth)/*/page.tsx`, `components/auth/auth-shell.tsx` | The auth forms and their shared card frame (see [Standalone Screens](../frontend/standalone-screens.md)) |
 | `documentation/backend/supabase-auth-setup.md` | `profiles` table schema, RLS policies, auth triggers |
 | `tests/unit/auth-server.test.ts` | Tests for `lib/auth/server.ts` |
 | `tests/unit/config-auth-request.test.ts` | Tests for auth-related request config |
