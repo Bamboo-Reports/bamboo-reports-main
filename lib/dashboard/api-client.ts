@@ -185,8 +185,35 @@ export function fetchEntityPage<T>(
   )
 }
 
-export const fetchAccountRelated = (name: string) =>
-  request<AccountRelatedResponse>(`/api/accounts/${encodeURIComponent(name)}/related`)
+// Account detail payloads are reopened constantly (row click, search hit,
+// "open account" from a centre or prospect) and can run to 1MB for accounts
+// with many prospects, so keep the last few for the session. Shared promise
+// so two dialogs opening the same account at once make one request.
+const MAX_RELATED_CACHE_ENTRIES = 20
+const relatedCache = new Map<string, Promise<AccountRelatedResponse>>()
+
+export function clearAccountRelatedCache(): void {
+  relatedCache.clear()
+}
+
+export function fetchAccountRelated(name: string, opts: FetchOpts = {}): Promise<AccountRelatedResponse> {
+  if (!opts.noCache) {
+    const hit = relatedCache.get(name)
+    if (hit) return hit
+  }
+  const pending = request<AccountRelatedResponse>(`/api/accounts/${encodeURIComponent(name)}/related`, {}, opts).catch((err) => {
+    relatedCache.delete(name)
+    throw err
+  })
+  relatedCache.delete(name)
+  relatedCache.set(name, pending)
+  while (relatedCache.size > MAX_RELATED_CACHE_ENTRIES) {
+    const oldest = relatedCache.keys().next().value
+    if (oldest === undefined) break
+    relatedCache.delete(oldest)
+  }
+  return pending
+}
 
 export const fetchCenterDetail = (key: string) =>
   request<CenterDetailResponse>(`/api/centers/${encodeURIComponent(key)}`)

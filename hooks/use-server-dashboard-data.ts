@@ -5,6 +5,7 @@ import { devError } from "@/lib/utils/dev-log"
 import { sanitizeFilters } from "@/lib/config/filters"
 import { createDefaultFilters } from "@/lib/dashboard/defaults"
 import {
+  clearAccountRelatedCache,
   fetchCentersMap,
   fetchDashboardCharts,
   fetchDashboardCore,
@@ -65,6 +66,7 @@ const mapCache = new Map<string, CentersMapResponse>()
 const pageCache = new Map<string, EntityPage<Record<string, unknown>>>()
 
 export function clearClientDashboardCache(): void {
+  clearAccountRelatedCache()
   summaryCache.clear()
   facetsCache.clear()
   chartsCache.clear()

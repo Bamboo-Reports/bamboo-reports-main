@@ -11,7 +11,7 @@ The app has two distinct server caches. Do not conflate them.
 | Cache | Code | Used by | Storage |
 |-------|------|---------|---------|
 | Route-local SWR payload cache | `app/api/dashboard/route.ts` | `GET /api/dashboard` only (the full gzipped dashboard payload) | Module-level variable, per instance, memory only |
-| Shared two-tier cache | `lib/cache/memory.ts` (`getOrCompute`), Upstash client in `lib/cache/redis.ts` | Filter-state endpoints: summary, facets, charts, centers map, entity queries, search, autocomplete | L1 in-process Map + optional L2 Upstash Redis |
+| Shared two-tier cache | `lib/cache/memory.ts` (`getOrCompute`), Upstash client in `lib/cache/redis.ts` | Filter-state endpoints: summary, facets, charts, centers map, entity queries, search, autocomplete, account related | L1 in-process Map + optional L2 Upstash Redis |
 
 The SWR cache predates the two-tier cache and is documented in [`api-caching-swr.md`](api-caching-swr.md). The rest of this section covers the two-tier cache.
 
@@ -63,6 +63,7 @@ The residency cap means an L1 entry is re-validated against Redis at most every 
 | `POST /api/dashboard/charts` | `charts:<filters JSON>` | `DASHBOARD_CACHE_TTL_MS` |
 | `POST /api/centers/map` | `centers-map:<filters JSON>` | `DASHBOARD_CACHE_TTL_MS` |
 | Entity queries (`lib/dashboard/entity-query-route.ts`) | `query:<entity>:<filters/page/sort JSON>` | `DASHBOARD_CACHE_TTL_MS` |
+| `GET /api/accounts/[name]/related` | `related:<account name>` | `DASHBOARD_CACHE_TTL_MS` |
 | `GET /api/search` | `search:<term>` | 24 h |
 | `GET /api/accounts/autocomplete` | `autocomplete:<term>` | 24 h |
 
