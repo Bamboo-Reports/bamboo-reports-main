@@ -39,11 +39,11 @@ export function LoadingState() {
               <p className="truncate text-lg font-bold text-foreground">Bamboo Reports</p>
             </div>
 
-            <div className="hidden items-center gap-2 md:flex" aria-hidden="true">
-              <Skeleton className="h-9 w-9 rounded-lg" />
-              <Skeleton className="h-9 w-9 rounded-lg" />
-              <Skeleton className="h-9 w-9 rounded-lg" />
-              <Skeleton className="h-9 w-9 rounded-full" />
+            <div className="flex items-center gap-2" aria-hidden="true">
+              <Skeleton className="hidden h-8 w-56 rounded-lg sm:block" />
+              <Skeleton className="h-8 w-20 rounded-md" />
+              <Skeleton className="h-8 w-8 rounded-md" />
+              <Skeleton className="h-8 w-8 rounded-md" />
             </div>
           </div>
         </div>
@@ -64,7 +64,7 @@ export function LoadingState() {
 
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden px-6 pt-6">
           {/* Summary cards: matches the row in summary-cards.tsx. */}
-          <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
+          <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-5">
             {SUMMARY_GHOSTS.map((widths, index) => (
               <Card key={index} className="border-border/70 bg-card/80 shadow-none">
                 <CardHeader className="px-4 pb-1.5 pt-3">
@@ -114,11 +114,11 @@ export function LoadingState() {
   )
 }
 
+// One ghost per summary card: Accounts, Centres, Upcoming Centres, Prospects, Headcount.
 const SUMMARY_GHOSTS = [
   { label: "w-16", value: "w-20" },
   { label: "w-14", value: "w-16" },
   { label: "w-24", value: "w-12" },
   { label: "w-16", value: "w-20" },
-  { label: "w-20", value: "w-28" },
-  { label: "w-14", value: "w-16" },
+  { label: "w-20", value: "w-24" },
 ]

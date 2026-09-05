@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TabsContent } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Skeleton } from "@/components/ui/skeleton"
+import { GridSkeletonCards, MapUpdatingPill, TableSkeletonRows } from "@/components/ui/data-skeletons"
 import { cn } from "@/lib/utils"
 import {
   ArrowDownAZ,
@@ -85,76 +85,6 @@ interface AccountsTabProps {
   mapData?: { cities: CityAggregate[]; states: StateAggregate[] } | null
   chartsLoading?: boolean
   mapLoading?: boolean
-}
-
-/** Placeholder rows while a page loads. Mirrors real row structure (logo plus two text lines in the name column) so row heights match and the table does not jump when data lands. */
-export function TableSkeletonRows({ rows = 8, columns }: { rows?: number; columns: number }) {
-  return (
-    <>
-      {Array.from({ length: rows }, (_, i) => (
-        <TableRow key={`skeleton-${i}`}>
-          {Array.from({ length: columns }, (_, j) => (
-            <TableCell key={j}>
-              {j === 0 ? (
-                <Skeleton className="h-4 w-4" />
-              ) : j === 1 ? (
-                <div className="flex items-center gap-3">
-                  <Skeleton className="h-8 w-8 shrink-0 rounded-md" />
-                  <div className="min-w-0 flex-1 space-y-1.5">
-                    <Skeleton className="h-3.5 w-3/4" />
-                    <Skeleton className="h-3 w-1/2" />
-                  </div>
-                </div>
-              ) : (
-                <Skeleton className="h-4 w-3/4" />
-              )}
-            </TableCell>
-          ))}
-        </TableRow>
-      ))}
-    </>
-  )
-}
-
-/** Placeholder cards for the grid layout. Mirrors real card structure (header with logo, stat lines, action button) so card heights match and the grid does not jump when data lands. */
-export function GridSkeletonCards({ cards = 6 }: { cards?: number }) {
-  return (
-    <>
-      {Array.from({ length: cards }, (_, i) => (
-        <div key={`skeleton-card-${i}`} className="rounded-lg border bg-card p-4 flex flex-col gap-4">
-          <div className="flex items-start gap-3">
-            <Skeleton className="h-10 w-10 shrink-0 rounded-md" />
-            <div className="min-w-0 flex-1 space-y-2 py-0.5">
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="h-3.5 w-1/2" />
-            </div>
-          </div>
-          <div className="mt-auto flex flex-col gap-4">
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between gap-3">
-                <Skeleton className="h-3.5 w-16" />
-                <Skeleton className="h-3.5 w-24" />
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <Skeleton className="h-3.5 w-16" />
-                <Skeleton className="h-3.5 w-24" />
-              </div>
-            </div>
-            <Skeleton className="h-8 w-full rounded-md" />
-          </div>
-        </div>
-      ))}
-    </>
-  )
-}
-
-/** A small floating pill shown over maps while fresh aggregates load. */
-export function MapUpdatingPill() {
-  return (
-    <div className="pointer-events-none absolute left-1/2 top-4 z-20 -translate-x-1/2 rounded-full border border-border/70 bg-background/90 px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur animate-pulse">
-      Updating map
-    </div>
-  )
 }
 
 // Module-level so the references are stable across renders (passed to memo'd rows).

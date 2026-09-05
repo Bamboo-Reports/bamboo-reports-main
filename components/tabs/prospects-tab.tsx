@@ -30,7 +30,8 @@ import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { fetchAccountRelated } from "@/lib/dashboard/api-client"
 import { devError } from "@/lib/utils/dev-log"
-import { GridSkeletonCards, TableSkeletonRows, type TabServerProps } from "@/components/tabs/accounts-tab"
+import type { TabServerProps } from "@/components/tabs/accounts-tab"
+import { GridSkeletonCards, TableSkeletonRows } from "@/components/ui/data-skeletons"
 import { cn } from "@/lib/utils"
 import type { Account, Center, Prospect, Service, Tech } from "@/lib/types"
 
@@ -469,7 +470,7 @@ export function ProspectsTab({
                     </TableHeader>
                     <TableBody>
                       {server?.loading ? (
-                        <TableSkeletonRows columns={1 + (["avatar", "name", "location", "title", "department"] as const).filter(isColumnVisible).length} />
+                        <TableSkeletonRows lead="avatar" columns={1 + (["avatar", "name", "location", "title", "department"] as const).filter(isColumnVisible).length} />
                       ) : pageProspects.map((prospect) => (
                         <ProspectRow
                           key={getProspectRecordId(prospect)}
@@ -508,7 +509,7 @@ export function ProspectsTab({
                       </Button>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
-                      {server?.loading ? <GridSkeletonCards /> : pageProspects.map((prospect) => (
+                      {server?.loading ? <GridSkeletonCards statRows={3} avatar /> : pageProspects.map((prospect) => (
                         <ProspectGridCard
                           key={getProspectRecordId(prospect)}
                           prospect={prospect}

@@ -1,5 +1,6 @@
 "use client"
 
+import { Skeleton } from "@/components/ui/skeleton"
 import { useEffect, useState } from "react"
 import { Bell, CheckCheck, CirclePlus, Pencil, Inbox } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -113,15 +114,18 @@ export function NotificationDropdown() {
             </div>
           ) : null}
 
-          {/* Loading skeleton */}
+          {/* Loading skeleton: mirrors the notification item layout below. */}
           {isLoading ? (
             <div className="space-y-1.5">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center gap-3 rounded-lg border border-border/40 px-3 py-3">
-                  <div className="h-7 w-7 shrink-0 animate-pulse rounded-md bg-muted/60" />
-                  <div className="flex-1 space-y-1.5">
-                    <div className="h-3.5 w-3/4 animate-pulse rounded bg-muted/60" />
-                    <div className="h-2.5 w-1/2 animate-pulse rounded bg-muted/40" />
+                <div key={i} className="flex items-start gap-3 rounded-lg border border-border/40 px-3 py-2.5">
+                  <Skeleton className="mt-0.5 h-7 w-7 shrink-0 rounded-md" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <Skeleton className="h-3.5 w-2/3" />
+                      <Skeleton className="h-2.5 w-10" />
+                    </div>
+                    <Skeleton className="mt-1.5 h-3 w-1/2" />
                   </div>
                 </div>
               ))}

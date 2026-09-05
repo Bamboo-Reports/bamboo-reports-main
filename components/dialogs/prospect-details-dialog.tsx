@@ -18,6 +18,7 @@ import { ProspectGridCard } from "@/components/cards/prospect-grid-card"
 import { PaginationControls } from "@/components/ui/pagination-controls"
 import { fetchAccountRelated } from "@/lib/dashboard/api-client"
 import { Skeleton } from "@/components/ui/skeleton"
+import { GridSkeletonCards } from "@/components/ui/data-skeletons"
 
 interface ProspectDetailsDialogProps {
   prospect: Prospect | null
@@ -386,10 +387,20 @@ export function ProspectDetailsDialog({
           {relatedLoading && (
             <section className="space-y-4">
               <SectionHeader title={`More Contacts From ${p.account_global_legal_name}`} />
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <Skeleton className="h-32 rounded-lg" />
-                <Skeleton className="h-32 rounded-lg" />
-                <Skeleton className="h-32 rounded-lg" />
+              <div className="space-y-2">
+                {[0, 1, 2].map((row) => (
+                  <div key={row} className="flex items-center gap-2">
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-6 w-20 rounded-full" />
+                    <Skeleton className="h-6 w-24 rounded-full" />
+                    <Skeleton className="h-6 w-16 rounded-full" />
+                  </div>
+                ))}
+              </div>
+              <div className="rounded-xl border border-border/60 bg-background/40 backdrop-blur-sm dark:border-white/10 dark:bg-white/5 overflow-hidden">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 p-4">
+                  <GridSkeletonCards cards={3} statRows={3} avatar />
+                </div>
               </div>
             </section>
           )}
