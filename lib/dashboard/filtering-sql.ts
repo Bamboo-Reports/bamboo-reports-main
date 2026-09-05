@@ -149,17 +149,25 @@ function keywordClause(col: string, fvs: FilterValue[], p: Params): string | nul
 
 /**
  * Mirrors rangeFilterMatch: a value of 0/NULL falls in the includeNull bucket.
- * Bounds are cast to float8 so a very large "wide open" max (e.g.
- * Number.MAX_SAFE_INTEGER) is not inferred as int4 against integer columns.
+ *
+ * The column is compared RAW (no coalesce wrapper) and the bounds are bound as
+ * bigint, the widest type the three range columns share (account_hq_revenue is
+ * bigint, years_in_india and center_inc_year are integer). Wrapping the column
+ * in coalesce() or casting it to double precision hides the column statistics
+ * from the planner, which then estimates the account CTE at one row and picks
+ * a nested-loop plan: measured at 1.2s for a facet and 12s for a prospects
+ * page against the live warehouse, versus 14ms and 94ms with this shape. The
+ * bounds are integers on the wire (Number.MAX_SAFE_INTEGER when wide open),
+ * so bigint holds them without loss; a fractional bound is truncated, which is
+ * what the client's integer sliders produce anyway.
  */
 function rangeClause(col: string, range: [number, number], includeNull: boolean, p: Params): string {
-  const v = `coalesce(${col}, 0)`
-  const min = `${p.add(range[0])}::double precision`
-  const max = `${p.add(range[1])}::double precision`
+  const min = `${p.add(Math.trunc(range[0]))}::bigint`
+  const max = `${p.add(Math.trunc(range[1]))}::bigint`
   if (includeNull) {
-    return `(${v} = 0 or (${v} >= ${min} and ${v} <= ${max}))`
+    return `(${col} is null or ${col} = 0 or (${col} >= ${min} and ${col} <= ${max}))`
   }
-  return `(${v} <> 0 and ${v} >= ${min} and ${v} <= ${max})`
+  return `(${col} is not null and ${col} <> 0 and ${col} >= ${min} and ${col} <= ${max})`
 }
 
 /** Mirrors matchAccountVisibility, applied only when no explicit name search. */
