@@ -1582,7 +1582,7 @@ function DashboardContent(): React.JSX.Element | null {
                   {...summaryCounts}
                   activeView={activeSection}
                   onSelect={handleSectionSelect}
-                  updating={serverMode && serverData.pending.core}
+                  updating={serverMode && serverData.pending.summary}
                 />
 
                 <Tabs value={activeSection} className="space-y-4" data-tour="tab-navigation">

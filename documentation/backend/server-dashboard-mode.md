@@ -28,7 +28,6 @@ All endpoints require a Supabase bearer token (`extractBearerToken` + `resolveAu
 
 | Endpoint | Method | Purpose | Params / body | Response |
 |---|---|---|---|---|
-| `/api/dashboard/core` | POST | Summary and facets together (what the dashboard fetches on every filter change: one auth, one rate-limit bump, both cache keys) | `{ filters }` | `{ summary, facets }` |
 | `/api/dashboard/summary` | POST | Filtered + full counts: accounts, centers, upcoming centers, prospects, headcount, services | `{ filters }` | `{ filtered, full }` count objects |
 | `/api/dashboard/facets` | POST | 23 facet option lists (value + count, facet-excludes-itself) plus base min/max ranges for revenue, years-in-India, center inc year | `{ filters }` | `{ options, ranges }` |
 | `/api/dashboard/charts` | POST | Grouped counts per section (top-10; center city as top-5 + "Others"); null/empty grouped as "Unknown" | `{ filters }` | `{ account, center, prospect }` chart arrays |
@@ -110,7 +109,7 @@ Order behavior is covered by `tests/unit/entity-query-order.test.ts`.
 - **Canonical wire key.** Filters are normalized (`normalizeFiltersForServer`: a range still spanning the known base range is sent wide-open `[0, MAX_SAFE_INTEGER]` so results do not depend on when base ranges loaded) and serialized to `effectiveKey`. All fetches and caches key off it.
 - **Debounce.** Filter changes debounce 350ms before becoming effective; a state already in the client cache applies immediately (removing a filter snaps back).
 - **What fetches when.**
-  - Summary + facets: always (cards and sidebar are always visible), fetched together from `/api/dashboard/core`.
+  - Summary + facets: always (cards and sidebar are always visible). Two parallel requests applied independently, so the cards (a few counts) update before the sidebar (23 lists in one statement).
   - Charts: only while a chart view is visible.
   - Map aggregates: only while a map view is visible; plus one unfiltered `fetchCentersMap` for the choropleth color scale, fetched once after a map is first shown.
   - Entity pages: only the active tab fetches, keyed by `entity:filters:page:sort`.
@@ -167,8 +166,8 @@ Per [security-249-progress.md](../security-249-progress.md):
 | `lib/db/warehouse.ts` | `queryWarehouse`: Neon HTTP driver, array-param-safe |
 | `lib/dashboard/api-client.ts` | Typed bearer-authed client fetchers |
 | `hooks/use-server-dashboard-data.ts` | Client orchestration: debounce, lazy fetch, prefetch, LRU cache, pending flags |
-| `app/api/dashboard/{core,summary,facets,charts}/route.ts` | Aggregate endpoints |
-| `lib/dashboard/dashboard-core.ts` | `computeSummary` / `computeFacets` / `computeCharts` shared by the core, summary, facets and charts routes; facets run as one union-all statement per filter group and all 11 chart bucket lists as one statement, via `buildFacetCountsQuery` |
+| `app/api/dashboard/{summary,facets,charts}/route.ts` | Aggregate endpoints |
+| `lib/dashboard/dashboard-core.ts` | `computeSummary` / `computeFacets` / `computeCharts` behind the summary, facets and charts routes; facets run as one union-all statement per filter group and all 11 chart bucket lists as one statement, via `buildFacetCountsQuery` |
 | `app/api/{accounts,centers,prospects}/query/route.ts` | Paginated row endpoints |
 | `app/api/centers/map/route.ts` | Map aggregates endpoint |
 | `app/api/search/route.ts`, `app/api/accounts/autocomplete/route.ts` | Server-backed search and autocomplete |

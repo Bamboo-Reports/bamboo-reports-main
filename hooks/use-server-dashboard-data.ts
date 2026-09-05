@@ -8,7 +8,8 @@ import {
   clearAccountRelatedCache,
   fetchCentersMap,
   fetchDashboardCharts,
-  fetchDashboardCore,
+  fetchDashboardFacets,
+  fetchDashboardSummary,
   fetchEntityPage,
   type CentersMapResponse,
   type ChartsResponse,
@@ -129,11 +130,12 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
   // The key each piece of state was last applied for, so the UI can tell
   // "showing the previous state while a newer one loads" (pending flags).
   const [appliedKeys, setAppliedKeys] = useState<{
-    core: string
+    summary: string
+    facets: string
     charts: string
     map: string
     pages: { accounts: string; centers: string; prospects: string }
-  }>({ core: "", charts: "", map: "", pages: { accounts: "", centers: "", prospects: "" } })
+  }>({ summary: "", facets: "", charts: "", map: "", pages: { accounts: "", centers: "", prospects: "" } })
 
   // Base ranges are read through a ref inside effects so a facets update does
   // not itself retrigger the fetch effects (the normalized filters only change
@@ -177,8 +179,11 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
     return () => clearTimeout(timer)
   }, [enabled, filtersKey, effectiveKey])
 
-  // Summary + facets: always needed (cards + sidebar are always visible), so
-  // they come back together from one request.
+  // Summary + facets: always needed (cards + sidebar are always visible).
+  // Two parallel requests, applied independently: the summary is a handful of
+  // count statements and lands well before the facets (23 grouped lists in
+  // one statement), so the cards update first instead of waiting for the
+  // sidebar. Both share the dashboard cache keys on the server.
   useEffect(() => {
     if (!enabled || !effectiveKey) return
     const cachedSummary = summaryCache.get(effectiveKey)
@@ -186,22 +191,46 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
     if (cachedSummary && cachedFacets) {
       setSummary(cachedSummary)
       setFacets(cachedFacets)
-      setAppliedKeys((prev) => ({ ...prev, core: effectiveKey }))
+      setAppliedKeys((prev) => ({ ...prev, summary: effectiveKey, facets: effectiveKey }))
       setError(null)
       setIsRefreshing(false)
       return
     }
     const requestId = ++coreRequestRef.current
     const wireFilters = JSON.parse(effectiveKey) as Filters
+    const bypass = { noCache: noCache() }
     setIsFetching(true)
-    fetchDashboardCore(wireFilters, { noCache: noCache() })
-      .then(({ summary: summaryRes, facets: facetsRes }) => {
+
+    const summaryPromise = cachedSummary
+      ? Promise.resolve(cachedSummary)
+      : fetchDashboardSummary(wireFilters, bypass).then((res) => {
+          if (coreRequestRef.current !== requestId) return res
+          lruSet(summaryCache, effectiveKey, res)
+          setSummary(res)
+          setAppliedKeys((prev) => ({ ...prev, summary: effectiveKey }))
+          return res
+        })
+    const facetsPromise = cachedFacets
+      ? Promise.resolve(cachedFacets)
+      : fetchDashboardFacets(wireFilters, bypass).then((res) => {
+          if (coreRequestRef.current !== requestId) return res
+          lruSet(facetsCache, effectiveKey, res)
+          setFacets(res)
+          setAppliedKeys((prev) => ({ ...prev, facets: effectiveKey }))
+          return res
+        })
+    if (cachedSummary) {
+      setSummary(cachedSummary)
+      setAppliedKeys((prev) => ({ ...prev, summary: effectiveKey }))
+    }
+    if (cachedFacets) {
+      setFacets(cachedFacets)
+      setAppliedKeys((prev) => ({ ...prev, facets: effectiveKey }))
+    }
+
+    Promise.all([summaryPromise, facetsPromise])
+      .then(() => {
         if (coreRequestRef.current !== requestId) return
-        lruSet(summaryCache, effectiveKey, summaryRes)
-        lruSet(facetsCache, effectiveKey, facetsRes)
-        setSummary(summaryRes)
-        setFacets(facetsRes)
-        setAppliedKeys((prev) => ({ ...prev, core: effectiveKey }))
         setError(null)
       })
       .catch((err) => {
@@ -368,8 +397,15 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
       return `${entity}:${effectiveKey}:${pages[entity]}:${sort ? `${sort.column}:${sort.direction}` : ""}`
     }
     const stale = (applied: string, target: string) => enabled && !!effectiveKey && applied !== target
+    const summary = stale(appliedKeys.summary, effectiveKey)
+    const facets = stale(appliedKeys.facets, effectiveKey)
     return {
-      core: stale(appliedKeys.core, effectiveKey),
+      /** Cards: only the summary counts. */
+      summary,
+      /** Sidebar option lists. */
+      facets,
+      /** Either of the always-visible pieces. */
+      core: summary || facets,
       charts: stale(appliedKeys.charts, effectiveKey),
       map: stale(appliedKeys.map, effectiveKey),
       accounts: stale(appliedKeys.pages.accounts, pageKeyFor("accounts")),

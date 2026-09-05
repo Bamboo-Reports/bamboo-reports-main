@@ -8,10 +8,10 @@ import type { AvailableOptions, ChartData, FilterOption, FilterValue, Filters } 
 
 /**
  * Server-side compute for the dashboard aggregates: the summary cards, the
- * sidebar facets and the chart buckets. Shared by /api/dashboard/core (which
- * returns summary + facets in one request) and the /api/dashboard/summary,
- * /api/dashboard/facets and /api/dashboard/charts routes. Each aggregate keeps
- * its own cache key so the routes and the merged endpoint share entries.
+ * sidebar facets and the chart buckets, behind the /api/dashboard/summary,
+ * /api/dashboard/facets and /api/dashboard/charts routes. The summary and
+ * facets are separate requests on purpose: the summary is a few counts and
+ * lands first, so the cards update before the slower sidebar lists.
  */
 
 type FacetSpec = { key: keyof AvailableOptions; entity: AggregateEntity; column: string }
