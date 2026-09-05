@@ -125,7 +125,6 @@ export default function SignUpPage() {
 
   return (
     <AuthShell
-      eyebrow="Create Account"
       title="Create your account"
       description="Join Bamboo Reports with email and password."
       footer={
@@ -140,14 +139,14 @@ export default function SignUpPage() {
       <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="firstName" className="text-[13px] font-medium text-foreground/90">
+            <Label htmlFor="firstName" className="text-sm font-medium">
               First name
             </Label>
             <Input id="firstName" autoComplete="given-name" required className="h-10 rounded-lg" {...register("firstName")} />
             {errors.firstName ? <p className="text-xs text-destructive">{errors.firstName.message}</p> : null}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="lastName" className="text-[13px] font-medium text-foreground/90">
+            <Label htmlFor="lastName" className="text-sm font-medium">
               Last name
             </Label>
             <Input id="lastName" autoComplete="family-name" required className="h-10 rounded-lg" {...register("lastName")} />
@@ -155,21 +154,21 @@ export default function SignUpPage() {
           </div>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="email" className="text-[13px] font-medium text-foreground/90">
+          <Label htmlFor="email" className="text-sm font-medium">
             Email
           </Label>
           <Input id="email" type="email" autoComplete="email" required className="h-10 rounded-lg" {...register("email")} />
           {errors.email ? <p className="text-xs text-destructive">{errors.email.message}</p> : null}
         </div>
         <div className="space-y-2">
-          <Label htmlFor="phone" className="text-[13px] font-medium text-foreground/90">
+          <Label htmlFor="phone" className="text-sm font-medium">
             Phone
           </Label>
           <Input id="phone" type="tel" autoComplete="tel" required className="h-10 rounded-lg" {...register("phone")} />
           {errors.phone ? <p className="text-xs text-destructive">{errors.phone.message}</p> : null}
         </div>
         <div className="space-y-2">
-          <Label htmlFor="password" className="text-[13px] font-medium text-foreground/90">
+          <Label htmlFor="password" className="text-sm font-medium">
             Password
           </Label>
           <PasswordInput
@@ -187,7 +186,7 @@ export default function SignUpPage() {
           </Alert>
         ) : null}
         <Button
-          className="h-10 w-full rounded-lg bg-gradient-to-r from-blue-600 via-blue-600 to-sky-500 text-white shadow-[0_14px_30px_-14px_rgba(37,99,235,0.85)] hover:from-blue-600 hover:via-blue-500 hover:to-sky-500"
+          className="h-10 w-full"
           type="submit"
           disabled={isSubmitting}
         >

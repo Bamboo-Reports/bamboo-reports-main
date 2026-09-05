@@ -79,7 +79,6 @@ export default function ResetPasswordPage() {
 
   return (
     <AuthShell
-      eyebrow="Account Recovery"
       title="Set a new password"
       description="Choose a new password for your account."
       footer={
@@ -109,7 +108,7 @@ export default function ResetPasswordPage() {
       ) : (
         <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-2">
-            <Label htmlFor="password" className="text-[13px] font-medium text-foreground/90">
+            <Label htmlFor="password" className="text-sm font-medium">
               New password
             </Label>
             <PasswordInput
@@ -124,7 +123,7 @@ export default function ResetPasswordPage() {
             ) : null}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="confirmPassword" className="text-[13px] font-medium text-foreground/90">
+            <Label htmlFor="confirmPassword" className="text-sm font-medium">
               Confirm new password
             </Label>
             <PasswordInput
@@ -144,7 +143,7 @@ export default function ResetPasswordPage() {
             </Alert>
           ) : null}
           <Button
-            className="h-10 w-full rounded-lg bg-gradient-to-r from-blue-600 via-blue-600 to-sky-500 text-white shadow-[0_14px_30px_-14px_rgba(37,99,235,0.85)] hover:from-blue-600 hover:via-blue-500 hover:to-sky-500"
+            className="h-10 w-full"
             type="submit"
             disabled={isSubmitting}
           >

@@ -115,7 +115,6 @@ function SignInForm() {
 
   return (
     <AuthShell
-      eyebrow="Secure Login"
       title="Welcome back"
       description="Sign in to access Bamboo Reports."
       footer={
@@ -129,7 +128,7 @@ function SignInForm() {
     >
       <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
         <div className="space-y-2">
-          <Label htmlFor="email" className="text-[13px] font-medium text-foreground/90">
+          <Label htmlFor="email" className="text-sm font-medium">
             Email
           </Label>
           <Input
@@ -144,7 +143,7 @@ function SignInForm() {
         </div>
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label htmlFor="password" className="text-[13px] font-medium text-foreground/90">
+            <Label htmlFor="password" className="text-sm font-medium">
               Password
             </Label>
             <Link
@@ -163,7 +162,7 @@ function SignInForm() {
           />
           {errors.password ? <p className="text-xs text-destructive">{errors.password.message}</p> : null}
         </div>
-        <div className="flex items-center gap-2 rounded-md border border-border/60 bg-muted/20 px-3 py-2">
+        <div className="flex items-center gap-2">
           <Controller
             control={control}
             name="rememberMe"
@@ -200,7 +199,7 @@ function SignInForm() {
           </Alert>
         ) : null}
         <Button
-          className="h-10 w-full rounded-lg bg-gradient-to-r from-blue-600 via-blue-600 to-sky-500 text-white shadow-[0_14px_30px_-14px_rgba(37,99,235,0.85)] hover:from-blue-600 hover:via-blue-500 hover:to-sky-500"
+          className="h-10 w-full"
           type="submit"
           disabled={isSubmitting}
         >
