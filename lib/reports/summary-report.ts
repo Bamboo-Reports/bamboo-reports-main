@@ -206,7 +206,7 @@ const rangeRow = (params: {
   excluded: params.includeNull ? [] : [blankValueNote(params.noun)],
 })
 
-const pluralYears = (value: number) => (value === 1 ? "1 year" : `${value.toLocaleString()} years`)
+const pluralYears = (value: number) => (value === 1 ? "1 year" : `${value.toLocaleString("en-US")} years`)
 
 export function buildReportFilterRows(
   filters: Filters,

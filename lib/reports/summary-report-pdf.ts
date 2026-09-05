@@ -27,7 +27,6 @@ const MUTED: RGB = [120, 130, 146]
 const RULE: RGB = [217, 222, 231]
 const BAND: RGB = [242, 245, 249]
 const ACCENT: RGB = hexToRgb(PIE_CHART_COLORS[0])
-const WHITE: RGB = [255, 255, 255]
 const COMPANY_LINE = "Bamboo Reports, a Research NXT product"
 
 // Pinned locale so the PDF reads the same no matter which machine produced it.

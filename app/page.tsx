@@ -25,12 +25,13 @@ import { Tabs } from "@/components/ui/tabs"
 import { useAuthGuard } from "@/hooks/use-auth-guard"
 import { useDashboardData } from "@/hooks/use-dashboard-data"
 import { useDashboardFilters } from "@/hooks/use-dashboard-filters"
-import { useServerDashboardData } from "@/hooks/use-server-dashboard-data"
+import { useServerDashboardData, normalizeFiltersForServer } from "@/hooks/use-server-dashboard-data"
 import { isServerDashboardEnabled } from "@/lib/config/server-dashboard"
 import {
   fetchAccountRelated,
   fetchCenterDetail,
   fetchDashboardChartsFull,
+  fetchDashboardSummary,
   fetchProspectById,
   type EntitySort,
   type FacetRanges,
@@ -835,23 +836,48 @@ function DashboardContent(): React.JSX.Element | null {
     if (isGeneratingReport) return
     setIsGeneratingReport(true)
     try {
-      // Server mode: the dashboard payload is capped (top 10, city "Others"),
-      // so fetch every bucket for the report. Client mode counts locally.
-      const charts = serverMode
-        ? await fetchDashboardChartsFull(filters).then((res) => ({
-            accounts: res.account,
-            centers: res.center,
-            prospects: { departmentData: res.prospect.departmentData, levelData: res.prospect.levelData },
-          }))
-        : getReportChartData({
-            accounts: filteredData.filteredAccounts,
-            centers: filteredData.filteredCenters,
-            functions: filteredData.filteredFunctions,
-            prospects: filteredData.filteredProspects,
-          })
+      // Server mode: fetch counts and every chart bucket for the applied
+      // filters directly. The dashboard state may still be catching up (the
+      // fetch is debounced) and its chart payload is capped (top 10, city
+      // "Others"). Both requests use the same canonical wire filters as the
+      // dashboard so the figures match the cards and hit the same cache.
+      // Client mode counts locally.
+      let counts = summaryCounts
+      let charts
+      if (serverMode) {
+        const wireFilters = normalizeFiltersForServer(filters, serverRanges)
+        const [summaryRes, chartsRes] = await Promise.all([
+          fetchDashboardSummary(wireFilters),
+          fetchDashboardChartsFull(wireFilters),
+        ])
+        counts = {
+          filteredAccountsCount: summaryRes.filtered.accounts,
+          totalAccountsCount: summaryRes.full.accounts,
+          filteredCentersCount: summaryRes.filtered.centers,
+          totalCentersCount: summaryRes.full.centers,
+          filteredUpcomingCentersCount: summaryRes.filtered.upcomingCenters,
+          totalUpcomingCentersCount: summaryRes.full.upcomingCenters,
+          filteredProspectsCount: summaryRes.filtered.prospects,
+          totalProspectsCount: summaryRes.full.prospects,
+          filteredHeadcount: summaryRes.filtered.headcount,
+          totalHeadcount: summaryRes.full.headcount,
+        }
+        charts = {
+          accounts: chartsRes.account,
+          centers: chartsRes.center,
+          prospects: { departmentData: chartsRes.prospect.departmentData, levelData: chartsRes.prospect.levelData },
+        }
+      } else {
+        charts = getReportChartData({
+          accounts: filteredData.filteredAccounts,
+          centers: filteredData.filteredCenters,
+          functions: filteredData.filteredFunctions,
+          prospects: filteredData.filteredProspects,
+        })
+      }
       const model = buildSummaryReport({
         filters,
-        counts: summaryCounts,
+        counts,
         baselineRanges: {
           revenue: revenueRange,
           yearsInIndia: yearsInIndiaRange,
@@ -898,6 +924,7 @@ function DashboardContent(): React.JSX.Element | null {
     activeFiltersCount,
     filteredData,
     serverMode,
+    serverRanges,
     userEmail,
   ])
 
