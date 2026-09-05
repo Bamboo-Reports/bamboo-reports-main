@@ -10,11 +10,12 @@ Single Python script run via `etl/V2/run.sh`. Since the 2026-07-29 cache work, `
 
 ```
 run.sh
-  └─ main_cache_purge.py (main.py = same minus the last step and the invisible-char strip)
+  └─ main_cache_purge.py (main.py = same minus the analyze and purge steps and the invisible-char strip)
        ├─ check_sheet_headers()      Diff each worksheet's header row vs master-schema.json
        ├─ run_import()               Pull sheets → clean → diff vs DB → replace tables → log changes
        ├─ apply_constraints()        Re-apply PKs/FKs (CONSTRAINTS_SQL)
        ├─ apply_indexes()            Re-apply per-table indexes (TABLE_DEFS[*]["indexes"])
+       ├─ analyze_tables()           ANALYZE each reloaded table so the planner has statistics before the purge (cache-purge variant only)
        ├─ run_snapshot()             Dump DB column/row/size stats to a JSON file on disk
        ├─ run_validate()             Compare DB column types vs master-schema.json
        └─ purge_dashboard_cache()    Delete the app's dash:* Redis keys (cache-purge variant only)

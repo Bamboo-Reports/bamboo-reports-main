@@ -994,6 +994,24 @@ def apply_constraints(engine: Engine):
     console.print("[success]Constraints applied.[/]")
 
 
+def analyze_tables(engine: Engine, target_tables: List[str] = None):
+    """Refreshes planner statistics for the reloaded tables.
+
+    The import drops and recreates each table, which leaves it with no
+    statistics until autovacuum's analyze runs (a minute or more later). The
+    cache purge that follows makes every dashboard request recompute in that
+    window, and the filter SQL relies on column statistics to pick hash joins
+    over nested loops, so run ANALYZE before the purge rather than waiting.
+    """
+    console.print("\n[header]Analyzing Tables[/]")
+    tables_to_run = target_tables or list(TABLE_DEFS.keys())
+    with engine.connect() as conn:
+        conn.execution_options(isolation_level="AUTOCOMMIT")
+        for table in tables_to_run:
+            conn.execute(text(f"ANALYZE public.{table};"))
+    console.print("[success]Statistics refreshed.[/]")
+
+
 def apply_indexes(engine: Engine, target_tables: List[str] = None):
     console.print("\n[header]Applying Indexes[/]")
     with engine.connect() as conn:
@@ -1195,6 +1213,7 @@ def run_import(
         if loaded:
             apply_constraints(engine)
             apply_indexes(engine, loaded)
+            analyze_tables(engine, loaded)
 
         if import_run_id is not None:
             finalize_import_run(
@@ -1454,6 +1473,7 @@ def main():
     if args.run_index and not args.run_import:
         console.print(Panel("[header]MODE: INDEX[/]", expand=False))
         apply_indexes(engine, target_tables)
+        analyze_tables(engine, target_tables)
 
     if args.run_snapshot or (args.run_import and not args.dry_run):
         run_snapshot(engine, processed_tables)
