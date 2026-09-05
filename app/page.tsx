@@ -601,7 +601,7 @@ function DashboardContent(): React.JSX.Element | null {
 
   const pageLoading = serverData.initialLoading
   const pageError = serverData.summary ? null : serverData.error
-  const pageConnectionStatus = "Loading data from database..."
+  const pageConnectionStatus = "Loading your dashboard"
 
   useEffect(() => {
     if (!pageError) {
