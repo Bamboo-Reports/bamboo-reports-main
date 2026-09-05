@@ -4,7 +4,7 @@ import { config as loadEnv } from "dotenv"
 import type { Account, Center, Filters } from "@/lib/types"
 import { createDefaultFilters } from "@/lib/dashboard/defaults"
 import { getFilteredData } from "@/lib/dashboard/filtering"
-import { buildCityMapQuery, buildStateMapQuery, type CityMapRow, type StateMapRow } from "@/lib/dashboard/centers-map"
+import { buildCentersMapQuery, splitCentersMapRows, type CityMapRow, type StateMapRow } from "@/lib/dashboard/centers-map"
 
 // Loads DATABASE_URL from .env (vitest does not do this automatically).
 loadEnv()
@@ -97,14 +97,13 @@ gated("centers map aggregation parity against the real Neon warehouse", () => {
     const filters = createDefaultFilters({ accountHqRevenueRange: WIDE, ...overrides })
     const engine = getFilteredData(accounts, centers, [], [], [], [], filters, {})
 
-    const cityRows = (await sql.query(
-      buildCityMapQuery(filters).text,
-      buildCityMapQuery(filters).values
-    )) as unknown as CityMapRow[]
-    const stateRows = (await sql.query(
-      buildStateMapQuery(filters).text,
-      buildStateMapQuery(filters).values
-    )) as unknown as StateMapRow[]
+    // The endpoint's single combined statement, split back into the two shapes.
+    const combined = buildCentersMapQuery(filters)
+    const split = splitCentersMapRows(
+      (await sql.query(combined.text, combined.values)) as unknown as Parameters<typeof splitCentersMapRows>[0]
+    )
+    const cityRows: CityMapRow[] = split.cities
+    const stateRows: StateMapRow[] = split.states
 
     const expectedCities = clientCityData(engine.filteredCenters)
     expect(cityRows).toHaveLength(expectedCities.size)

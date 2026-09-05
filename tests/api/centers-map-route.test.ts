@@ -14,8 +14,8 @@ vi.mock("@/lib/logger", () => ({ createLogger: () => ({ debug: vi.fn(), info: vi
 
 import { POST as centersMap } from "@/app/api/centers/map/route"
 
-const CITY_ROW = { city: "Bengaluru", country: "India", lat: 12.97, lng: 77.59, count: 40, accounts_count: 25, headcount: 12000 }
-const STATE_ROW = { country_iso2: "IN", state_key: "karnataka", country_name: "India", count: 55, accounts_count: 30, headcount: 15000 }
+const CITY_UNION_ROW = { kind: "city", key1: "Bengaluru", key2: null, name: "India", lat: 12.97, lng: 77.59, count: 40, accounts_count: 25, headcount: 12000 }
+const STATE_UNION_ROW = { kind: "state", key1: "IN", key2: "karnataka", name: "India", lat: null, lng: null, count: 55, accounts_count: 30, headcount: 15000 }
 
 const post = (body: unknown, auth = true) =>
   centersMap(new Request("https://x/api/centers/map", {
@@ -30,10 +30,8 @@ describe("POST /api/centers/map", () => {
     authMocks.extractBearerToken.mockImplementation((h: string | null) => (h === "Bearer token-1" ? "token-1" : null))
     authMocks.resolveAuthenticatedUserId.mockResolvedValue("user-1")
     rateLimitMocks.enforceRateLimit.mockResolvedValue({ ok: true })
-    // The city query is the one carrying array_agg; the state query selects country_iso2.
-    warehouseMocks.queryWarehouse.mockImplementation(async (q: { text: string }) =>
-      q.text.includes("array_agg") ? [CITY_ROW] : [STATE_ROW]
-    )
+    // One union-all statement returns both kinds, discriminated by `kind`.
+    warehouseMocks.queryWarehouse.mockImplementation(async () => [CITY_UNION_ROW, STATE_UNION_ROW])
   })
 
   it("rejects without a token", async () => {
@@ -55,13 +53,13 @@ describe("POST /api/centers/map", () => {
       cities: [{ city: "Bengaluru", country: "India", lat: 12.97, lng: 77.59, count: 40, accountsCount: 25, headcount: 12000 }],
       states: [{ countryIso2: "IN", stateKey: "karnataka", countryName: "India", count: 55, accountsCount: 30, headcount: 15000 }],
     })
-    expect(warehouseMocks.queryWarehouse).toHaveBeenCalledTimes(2)
+    expect(warehouseMocks.queryWarehouse).toHaveBeenCalledTimes(1)
+    expect(warehouseMocks.queryWarehouse.mock.calls[0][0].text).toContain("'city' as kind")
+    expect(warehouseMocks.queryWarehouse.mock.calls[0][0].text).toContain("'state' as kind")
   })
 
   it("falls back to the ISO2 when a state group has no country name", async () => {
-    warehouseMocks.queryWarehouse.mockImplementation(async (q: { text: string }) =>
-      q.text.includes("array_agg") ? [] : [{ ...STATE_ROW, country_name: null }]
-    )
+    warehouseMocks.queryWarehouse.mockImplementation(async () => [{ ...STATE_UNION_ROW, name: null }])
     const res = await post({ filters: {} })
     const body = (await res.json()) as { states: Array<{ countryName: string }> }
     expect(body.states[0].countryName).toBe("IN")

@@ -2,7 +2,7 @@ import { extractBearerToken, resolveAuthenticatedUserId } from "@/lib/auth/serve
 import { enforceRateLimit } from "@/lib/rate-limit/server"
 import { createLogger } from "@/lib/logger"
 import { parseFilters, resolveAccess } from "@/lib/dashboard/filters-request"
-import { buildCityMapQuery, buildStateMapQuery, type CityMapRow, type StateMapRow } from "@/lib/dashboard/centers-map"
+import { buildCentersMapQuery, splitCentersMapRows } from "@/lib/dashboard/centers-map"
 import { queryWarehouse } from "@/lib/db/warehouse"
 import { dashboardCacheTtlMs, getOrCompute } from "@/lib/cache/memory"
 
@@ -48,10 +48,10 @@ export async function POST(request: Request) {
       `centers-map:${JSON.stringify(filters)}`,
       dashboardCacheTtlMs(),
       async () => {
-        const [cityRows, stateRows] = await Promise.all([
-          queryWarehouse<CityMapRow>(buildCityMapQuery(filters, access)),
-          queryWarehouse<StateMapRow>(buildStateMapQuery(filters, access)),
-        ])
+        // One statement for both groupings (one cascade evaluation).
+        const { cities: cityRows, states: stateRows } = splitCentersMapRows(
+          await queryWarehouse<Parameters<typeof splitCentersMapRows>[0][number]>(buildCentersMapQuery(filters, access))
+        )
         return {
           cities: cityRows.map((r) => ({
             city: r.city,

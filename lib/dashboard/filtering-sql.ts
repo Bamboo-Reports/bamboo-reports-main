@@ -495,6 +495,8 @@ export function buildProspectsCountQuery(f: Filters, access: FilterAccess = {}):
 
 export type AggregateEntity = "accounts" | "centers" | "prospects" | "functions"
 
+export type AggregateBranch = { select: string; where?: string; groupBy?: string }
+
 /**
  * Builds an aggregate/projection query over an entity's FILTERED set, reusing
  * the same cascade CTEs as the paginated queries. Powers the summary, facets
@@ -511,45 +513,51 @@ export function buildEntityAggregateQuery(
   select: string,
   opts: { groupBy?: string; where?: string; materialized?: boolean } = {}
 ): SqlQuery {
+  return buildEntityUnionQuery(entity, f, access, [{ select, where: opts.where, groupBy: opts.groupBy }], {
+    materialized: opts.materialized,
+  })
+}
+
+/**
+ * Several aggregates over the SAME entity's filtered set as one statement:
+ * the cascade CTEs are emitted once and each branch becomes a `union all`
+ * member, so callers pay one round trip and one cascade evaluation. Branches
+ * must project the same column list. Same code-controlled-SQL rule as
+ * buildEntityAggregateQuery.
+ */
+export function buildEntityUnionQuery(
+  entity: AggregateEntity,
+  f: Filters,
+  access: FilterAccess = {},
+  branches: AggregateBranch[],
+  opts: { materialized?: boolean } = {}
+): SqlQuery {
   const flags = computeFlags(f, access)
   const materialized = opts.materialized ?? true
-  const tail = `${opts.where ? ` and (${opts.where})` : ""}${opts.groupBy ? ` group by ${opts.groupBy}` : ""}`
-  const emptyText = `select ${select} from ${entity} where false${opts.groupBy ? ` group by ${opts.groupBy}` : ""}`
+  const tail = (b: AggregateBranch) => `${b.where ? ` and (${b.where})` : ""}${b.groupBy ? ` group by ${b.groupBy}` : ""}`
+  const emptyText = branches
+    .map((b) => `select ${b.select} from ${entity} where false${b.groupBy ? ` group by ${b.groupBy}` : ""}`)
+    .join(" union all ")
   const p = new Params()
 
-  if (entity === "accounts") {
-    if (!flags.ae) return { text: emptyText, values: [] }
-    const withClause = buildWith(["final_accounts"], f, p, flags, materialized)
-    return {
-      text: `${withClause} select ${select} from accounts where ${memberIn(ACCOUNT_ID_COLUMN, "final_accounts")}${tail}`,
-      values: p.values,
-    }
-  }
+  // filteredFunctions = functions whose center survives (getFilteredData
+  // re-filters functions by the final centerKeySet).
+  const enabled = entity === "accounts" ? flags.ae : entity === "prospects" ? flags.pe : flags.ce
+  if (!enabled) return { text: emptyText, values: [] }
 
-  if (entity === "centers") {
-    if (!flags.ce) return { text: emptyText, values: [] }
-    const withClause = buildWith(["surviving_centers"], f, p, flags, materialized)
-    return {
-      text: `${withClause} select ${select} from centers where ${memberIn(CENTER_ID_COLUMN, "surviving_centers")}${tail}`,
-      values: p.values,
-    }
-  }
+  const roots: CteName[] =
+    entity === "accounts" ? ["final_accounts"] : entity === "prospects" ? prospectsRoots(flags) : ["surviving_centers"]
+  const withClause = buildWith(roots, f, p, flags, materialized)
+  // Built once, after the WITH: the prospects predicate binds parameters.
+  const membership =
+    entity === "accounts"
+      ? memberIn(ACCOUNT_ID_COLUMN, "final_accounts")
+      : entity === "prospects"
+        ? prospectsWhereClause(f, p, flags)
+        : memberIn(CENTER_ID_COLUMN, "surviving_centers")
 
-  if (entity === "functions") {
-    // filteredFunctions = functions whose center survives (getFilteredData
-    // re-filters functions by the final centerKeySet).
-    if (!flags.ce) return { text: emptyText, values: [] }
-    const withClause = buildWith(["surviving_centers"], f, p, flags, materialized)
-    return {
-      text: `${withClause} select ${select} from functions where ${memberIn(CENTER_ID_COLUMN, "surviving_centers")}${tail}`,
-      values: p.values,
-    }
-  }
-
-  if (!flags.pe) return { text: emptyText, values: [] }
-  const withClause = buildWith(prospectsRoots(flags), f, p, flags, materialized)
-  const where = prospectsWhereClause(f, p, flags)
-  return { text: `${withClause} select ${select} from prospects where ${where}${tail}`, values: p.values }
+  const text = branches.map((b) => `select ${b.select} from ${entity} where ${membership}${tail(b)}`).join(" union all ")
+  return { text: `${withClause} ${text}`, values: p.values }
 }
 
 export type FacetCountSpec = { id: number; entity: AggregateEntity; column: string }
