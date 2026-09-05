@@ -46,7 +46,6 @@ export default function ForgotPasswordPage() {
 
   return (
     <AuthShell
-      eyebrow="Account Recovery"
       title="Reset your password"
       description="Enter your email and we will send you a link to set a new password."
       footer={
@@ -68,7 +67,7 @@ export default function ForgotPasswordPage() {
       ) : (
         <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-2">
-            <Label htmlFor="email" className="text-[13px] font-medium text-foreground/90">
+            <Label htmlFor="email" className="text-sm font-medium">
               Email
             </Label>
             <Input
@@ -87,7 +86,7 @@ export default function ForgotPasswordPage() {
             </Alert>
           ) : null}
           <Button
-            className="h-10 w-full rounded-lg bg-gradient-to-r from-blue-600 via-blue-600 to-sky-500 text-white shadow-[0_14px_30px_-14px_rgba(37,99,235,0.85)] hover:from-blue-600 hover:via-blue-500 hover:to-sky-500"
+            className="h-10 w-full"
             type="submit"
             disabled={isSubmitting}
           >

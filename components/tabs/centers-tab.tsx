@@ -33,7 +33,8 @@ import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { fetchAccountRelated, type CityAggregate, type StateAggregate } from "@/lib/dashboard/api-client"
 import { devError } from "@/lib/utils/dev-log"
-import { GridSkeletonCards, MapUpdatingPill, TableSkeletonRows, type TabServerProps } from "@/components/tabs/accounts-tab"
+import type { TabServerProps } from "@/components/tabs/accounts-tab"
+import { GridSkeletonCards, MapUpdatingPill, TableSkeletonRows } from "@/components/ui/data-skeletons"
 import type { Account, Center, Function, Prospect, Service, Tech } from "@/lib/types"
 
 interface CentersTabProps {
@@ -584,7 +585,7 @@ export function CentersTab({
                       </Button>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
-                      {server?.loading ? <GridSkeletonCards /> : pageCenters.map(
+                      {server?.loading ? <GridSkeletonCards statRows={3} /> : pageCenters.map(
                         (center) => (
                           <CenterGridCard
                             key={center.cn_unique_key}

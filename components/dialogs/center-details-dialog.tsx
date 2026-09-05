@@ -360,10 +360,20 @@ export function CenterDetailsDialog({
           {detailLoading && (
             <section className="space-y-4">
               <SectionHeader title="Services Offered" />
-              <div className="space-y-2">
-                <Skeleton className="h-10 w-full rounded-lg" />
-                <Skeleton className="h-10 w-full rounded-lg" />
-                <Skeleton className="h-10 w-2/3 rounded-lg" />
+              <div className="divide-y divide-border/30 rounded-lg border border-border/50 dark:border-white/10 overflow-hidden">
+                {[3, 2, 4].map((pills, row) => (
+                  <div key={row} className="flex items-start gap-4 px-4 py-3 bg-background/40 dark:bg-white/5">
+                    <div className="flex w-40 shrink-0 items-center gap-2 pt-0.5">
+                      <Skeleton className="h-3.5 w-3.5 rounded-sm" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {Array.from({ length: pills }, (_, i) => (
+                        <Skeleton key={i} className={`h-5 rounded-full ${i % 2 === 0 ? "w-20" : "w-14"}`} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
             </section>
           )}
