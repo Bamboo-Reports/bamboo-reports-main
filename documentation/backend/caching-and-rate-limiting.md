@@ -1,19 +1,16 @@
 # Caching and Rate Limiting
 
-> **Scope:** Server-side response caching (two-tier memory + Upstash Redis, plus the route-local `/api/dashboard` SWR cache), cache invalidation (manual purge and ETL post-import purge), and per-user rate limiting across the API routes.
+> **Scope:** Server-side response caching (two-tier memory + Upstash Redis), cache invalidation (manual purge and ETL post-import purge), and per-user rate limiting across the API routes.
 
 ---
 
-## Two caching mechanisms
-
-The app has two distinct server caches. Do not conflate them.
+## One cache
 
 | Cache | Code | Used by | Storage |
 |-------|------|---------|---------|
-| Route-local SWR payload cache | `app/api/dashboard/route.ts` | `GET /api/dashboard` only (the full gzipped dashboard payload) | Module-level variable, per instance, memory only |
-| Shared two-tier cache | `lib/cache/memory.ts` (`getOrCompute`), Upstash client in `lib/cache/redis.ts` | Filter-state endpoints: summary, facets, charts, centers map, entity queries, search, autocomplete, account related | L1 in-process Map + optional L2 Upstash Redis |
+| Shared two-tier cache | `lib/cache/memory.ts` (`getOrCompute`), Upstash client in `lib/cache/redis.ts` | Every data endpoint: summary, facets, charts, centers map, entity queries, search, autocomplete, account related | L1 in-process Map + optional L2 Upstash Redis |
 
-The SWR cache predates the two-tier cache and is documented in [`api-caching-swr.md`](api-caching-swr.md). The rest of this section covers the two-tier cache.
+A route-local SWR cache used to sit in front of `GET /api/dashboard` (the full-payload route). That route was retired on 2026-09-05 along with its cache.
 
 ## Two-tier cache (`lib/cache/memory.ts`)
 
@@ -78,7 +75,6 @@ Latency numbers for compute vs Redis-served requests: [`redis-cache-benchmark.md
 
 | Mechanism | Clears | When to use |
 |-----------|--------|-------------|
-| `POST /api/dashboard` | The route-local SWR payload cache on that instance | User-facing force refresh (the dashboard Refresh button). Does not touch the `dash:*` Redis keys |
 | `x-no-cache: 1` request header | Bypasses reads on the two-tier endpoints, rewrites the entry | Debugging, benchmarks, forced repopulation of a single key |
 | ETL post-import purge | All `dash:*` keys in Redis | After every production data import |
 | TTL expiry | Everything, eventually | Backstop only |
@@ -134,8 +130,6 @@ Without Redis credentials the original Supabase path is used. Migration: [`sql/r
 
 | Bucket | Route | Budget |
 |--------|-------|--------|
-| `dashboard:get` | `GET /api/dashboard` | default (60/min) |
-| `dashboard:post` | `POST /api/dashboard` (cache purge) | 10/min, tighter because it forces a full DB re-query |
 | `dashboard:summary`, `dashboard:facets`, `dashboard:charts` | dashboard aggregate endpoints | default |
 | `<entity>:query` | entity table queries via `lib/dashboard/entity-query-route.ts` | default |
 | `centers:map`, `centers:detail`, `accounts:related`, `prospects:detail` | detail endpoints | default |
@@ -163,6 +157,5 @@ Export **generation** (`POST /api/exports/generate`) uses a separate mechanism: 
 | `etl/V2/main_cache_purge.py` | ETL import variant with post-import `dash:*` purge |
 | `tests/unit/memory-cache.test.ts`, `tests/unit/redis-cache.test.ts` | Cache behavior tests |
 | `tests/unit/rate-limit.test.ts`, `tests/unit/rate-limits-migration.test.ts` | Rate limit behavior and migration tests |
-| `documentation/backend/api-caching-swr.md` | SWR cache doc for `GET /api/dashboard` |
 | `documentation/backend/redis-cache-benchmark.md` | Compute vs Redis latency benchmark (#249) |
 | `documentation/2026-07-29-perf-and-data-hygiene.md` | Session log: 8-day TTL decision, purge-as-invalidation |

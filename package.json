@@ -11,8 +11,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "start": "next start",
-    "benchmark": "node --env-file=.env scripts/benchmark-loading.mjs"
+    "start": "next start"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

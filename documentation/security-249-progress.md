@@ -26,7 +26,7 @@ retrieval stays on the admin-only export path.
 - **#248** (profiles PII), **#250** (exports authz-before-validation), **#251**
   (export IDOR) - already CLOSED before this work.
 - **#242** (umbrella audit) - OPEN.
-- **#249** (rate limiting / bulk extraction) - OPEN. This is the active work.
+- **#249** (rate limiting / bulk extraction) - DONE 2026-09-05: `/api/dashboard` retired, every read paginated/aggregated, per-user rate limits in Redis. Closing with the retirement PR.
 
 ## DONE
 
@@ -112,7 +112,7 @@ integration tests are gated on `DATABASE_URL` and skip without it.
   "export all filtered" (now filter-based, see Phase 4) covers the
   whole-filtered-set workflow.
 
-### Retire `/api/dashboard` - BUILT on branch `feat/249-retire-dashboard` (commit 1ef29dd), MERGE PENDING USER GO-AHEAD
+### Retire `/api/dashboard` - DONE 2026-09-05 (redone fresh on dev-work; the old branch had gone stale)
 
 - [x] Deletes `app/api/dashboard/route.ts`, `hooks/use-dashboard-data.ts`,
       `app/actions/data.ts`, and the flag module; server mode unconditional;
@@ -206,8 +206,7 @@ Fixes the reported slowness (10s+ snap-back when removing a filter):
 
 ### Housekeeping
 
-- [ ] Close #249 when the cutover + export-by-filter land; consider closing the
-      #242 umbrella.
+- [x] Close #249 and the #242 umbrella (retirement PR, 2026-09-05).
 
 ## Key facts for next session
 

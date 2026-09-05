@@ -77,7 +77,7 @@ accounts → ticker → alias → centers → services → functions → tech �
 
 The dashboard honours the same linking columns at every layer. No discrepancies found.
 
-### DB-Level Queries (`app/actions/data.ts`, `lib/exports/server-builder.ts`)
+### DB-Level Queries (`lib/dashboard/filtering-sql.ts`, `lib/dashboard/account-related.ts`, `lib/exports/server-builder.ts`)
 
 | Join | Column | Source |
 |------|--------|--------|
@@ -121,7 +121,7 @@ Only `AccountWarehouse` (`accounts`) and `CenterWarehouse` (`centers`) are model
 |------|---------|
 | `etl/V2/main.py` | Single source of truth for `CONSTRAINTS_SQL`, `TABLE_DEFS`, and `IMPORT_ORDER` |
 | `prisma/schema.prisma` | Prisma models for `accounts` and `centers` |
-| `app/actions/data.ts` | Server-side data fetching with DB-level joins |
+| `lib/dashboard/filtering-sql.ts` | Server-side filter cascade with DB-level joins (accounts, centers, functions, tech, prospects) |
 | `lib/dashboard/filtering.ts` | Client-side in-memory linking and filter propagation |
 | `lib/exports/server-builder.ts` | Export queries filtered by `account_global_legal_name` / `cn_unique_key` |
 | `documentation/backend/schema-migration-guide.md` | Full column definitions and migration history |

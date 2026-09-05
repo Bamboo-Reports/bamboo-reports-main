@@ -29,7 +29,7 @@ Component Mount / User Action
     → UI Re-render
 ```
 
-With `NEXT_PUBLIC_DASHBOARD_SERVER_MODE=1` (#249), the first flow changes shape: filters are sent to server read endpoints, translated to parameterized SQL, and only paginated/aggregated slices reach the browser:
+Since #249 (the legacy full-payload route was retired on 2026-09-05) the first flow has this shape: filters are sent to server read endpoints, translated to parameterized SQL, and only paginated/aggregated slices reach the browser:
 
 ```
 User Interaction
@@ -51,14 +51,13 @@ Supabase-backed user data (auth, profiles, saved filters, favorites, export audi
 ### 2.1 `app/` (Routes & Actions)
 
 -   **`actions.ts`**: Central re-export point for all server action modules.
--   **`actions/data.ts`**: Core Neon warehouse fetching — accounts, centers, services, functions, tech, prospects, and aliases. Uses Prisma model reads for `accounts`/`centers` and Prisma tagged raw SQL for the linked child tables and analytical queries.
+-   **`api/**`**: Warehouse reads (Route Handlers): `dashboard/{summary,facets,charts}`, `<entity>/query`, `centers/map`, `accounts/[name]/related`, `search`, `accounts/autocomplete`, built on `lib/dashboard/filtering-sql.ts` and `lib/db/warehouse.ts`. See [Server-Mode Dashboard](backend/server-dashboard-mode.md).
 -   **`actions/financial.ts`**: Financial data queries (Yahoo Finance integration for stock data).
 -   **`actions/notifications.ts`**: Notification tracking — recently updated accounts and records, read status.
 -   **`actions/system.ts`**: System diagnostics and health checks.
 -   **`page.tsx`**: Main dashboard entry point and UI orchestrator. Wires auth, data loading, filtering hooks, and layout composition.
 -   **`providers.tsx`**: Application-level providers (PostHog analytics).
 -   **`(auth)/`**: Auth route group containing `signin/` and `signup/` pages.
--   **`api/dashboard/`**: Route Handler that serves the full dashboard dataset with an in-memory SWR cache and gzip compression (see `documentation/backend/api-caching-swr.md`).
 -   **`api/dashboard/{summary,facets,charts}/`**, **`api/{accounts,centers,prospects}/query/`**, **`api/search/`**, **`api/accounts/autocomplete/`**, **`api/centers/map/`**: Server-mode read endpoints (#249) that serve aggregated and paginated slices with filters translated to SQL (see `documentation/backend/server-dashboard-mode.md`).
 -   **`api/financials/`**: Authed, rate-limited proxy for Yahoo Finance data.
 -   **`api/exports/`**: Route Handlers for generating, listing, and re-downloading user exports.
@@ -99,7 +98,7 @@ Key components:
 |------|---------------|
 | `use-auth-guard.ts` | Redirects unauthenticated users to sign-in |
 | `use-copy-to-clipboard.ts` | Copy-to-clipboard with auto-reset "copied" state |
-| `use-dashboard-data.ts` | Orchestrates data fetching and loading state |
+| `use-server-dashboard-data.ts` | Orchestrates the server-backed data fetching (summary, facets, charts, map, pages), debounce, client cache and loading state |
 | `use-dashboard-filters.ts` | Complex filter state management (the largest hook, manages all filter logic, include/exclude modes, range sliders, keyword search) |
 | `use-favorites.ts` | Favorites CRUD and toggle state for accounts/centers/prospects (see [Favorites & Filter Sharing](backend/favorites-and-filter-sharing.md)) |
 | `use-global-search.ts` | Alias-aware global account search state |
@@ -181,18 +180,13 @@ Managed by `useNotifications` hook.
 We use Prisma ORM over Neon PostgreSQL only. `accounts` and `centers` are modelled in Prisma, matching `documentation/backend/table-relationships.md`. The linked child tables (`alias`, `functions`, `services`, `tech`, `prospects`) stay on Prisma tagged raw SQL; their linkage is handled through `account_global_legal_name` and `cn_unique_key` in query logic and client-side filters. Aggregation-heavy queries and edge-case selection logic also use Prisma raw SQL for control over query structure.
 
 ```typescript
-// app/actions/data.ts
-const accounts = await queryWithRetry(() =>
-  prisma.accountWarehouse.findMany({
-    orderBy: { account_global_legal_name: "asc" },
-  })
-)
+// lib/dashboard/filtering-sql.ts builds the SQL; lib/db/warehouse.ts runs it
+const rows = await queryWarehouse(buildEntityAggregateQuery("accounts", filters, access, "count(*)::int as total"))
 ```
 
--   **Safety:** Prisma model queries and Prisma tagged raw queries keep dynamic values parameterized.
--   **Performance:** `Promise.all` in `getAllData` fetches Accounts, Centers, and Prospects concurrently.
--   **Retry Logic:** Exponential retry handling via `queryWithRetry` in `lib/db/prisma.ts`.
--   **Caching:** Server Actions themselves keep no cross-request cache and fetch fresh data. The `GET /api/dashboard` Route Handler layers an in-memory stale-while-revalidate cache (default 1-hour TTL, configurable via `DASHBOARD_CACHE_TTL_MS`) over the dashboard query. See `documentation/backend/api-caching-swr.md`.
+-   **Safety:** every user-supplied value enters the SQL as a bound parameter; column lists and grouping expressions are code-controlled.
+-   **Performance:** aggregates that share a filter state run as one statement (facets, charts, map); a table page carries its total in the same statement. The range clause compares raw columns against bigint bounds so the planner keeps its statistics (see the `rangeClause` comment).
+-   **Caching:** the shared two-tier cache (`lib/cache/memory.ts`), 8-day TTL, purged by the ETL after each import. See [Caching and Rate Limiting](backend/caching-and-rate-limiting.md).
 
 ### 4.2 Supabase PostgreSQL (User Data)
 
@@ -208,15 +202,13 @@ Two columns on `accounts` control whether an account is included by default in d
 -   `account_visibility`: `'include'` (default) or `'exclude'`. Excluded accounts are records we keep but do not want to surface by default (for example, companies with only sales, manufacturing, or distribution presence in India, not full GCC operations).
 -   `account_visibility_note`: short, human-readable reason for the exclusion. Surfaced as a chip alongside the NASSCOM chip on the accounts table row (`components/tables/account-row.tsx`) and grid card (`components/cards/account-grid-card.tsx`).
 
-**Visibility filter behavior:** the Account Attributes sidebar includes `Account Visibility` with `ALL`, `GCCs`, and `NON-GCCs`. `GCCs` is the default and includes accounts where `account_visibility = 'include'`; `NON-GCCs` includes `account_visibility = 'exclude'`; `ALL` includes both. The selected visibility mode constrains `filteredAccounts` / `filteredCenters` / `filteredProspects`, so tables, charts, exports, and summary card numerators stay aligned. The summary card denominators always show the full universe (e.g., 2657 accounts) so the user can see "2349 visible / 2657 total". Explicit account-name search bypasses the visibility mode so a searched account can be found directly. This is implemented in `lib/dashboard/filtering.ts` (`getFilteredData`) and `app/page.tsx` (summary card props use the `*Full` totals from `DashboardSummaryMetrics`).
-
-**Server-side totals:** `getDashboardSummaryMetrics` in `app/actions/data.ts` returns BOTH a visible universe (`totalAccountsCount`, etc.) and a full universe (`totalAccountsCountFull`, etc.) for accounts, centers, upcoming centers, prospects, and headcount. Centers and prospects join `accounts` on `account_global_legal_name` to compute the visible variants.
+**Visibility filter behavior:** the Account Attributes sidebar includes `Account Visibility` with `ALL`, `GCCs`, and `NON-GCCs`. `GCCs` is the default and includes accounts where `account_visibility = 'include'`; `NON-GCCs` includes `account_visibility = 'exclude'`; `ALL` includes both. The selected visibility mode constrains `filteredAccounts` / `filteredCenters` / `filteredProspects`, so tables, charts, exports, and summary card numerators stay aligned. The summary card denominators always show the full universe (e.g., 2657 accounts) so the user can see "2349 visible / 2657 total". Explicit account-name search bypasses the visibility mode so a searched account can be found directly. This is implemented in `lib/dashboard/filtering-sql.ts` (`visibilityClause`, mirrored by `lib/dashboard/filtering.ts` for the parity tests) and `POST /api/dashboard/summary`, which returns both the filtered counts (numerators) and the full-universe totals (denominators).
 
 ### 4.4 Account Aliases (`alias` table)
 
 The `public.alias` table stores alternate names for each account (short legal name, brand name, abbreviation, flagship products, "currently known as"), linked to `accounts` by a foreign key on `account_global_legal_name` with `ON UPDATE`/`ON DELETE CASCADE`.
 
-Alias rows power alias-aware account search: the global search (`components/search/global-search.tsx`) and the account filter autocomplete (`components/filters/account-autocomplete.tsx`) match a query against both account names and alias values, so searching for an alternate name (for example "HMH" or "HackerRank") resolves to the underlying account. Matches found through an alias surface a "Known as: <alias>" hint so the result is not confusing. Matching logic lives in `lib/search/alias-utils.ts` and `lib/search/index.ts`; the alias dataset is loaded alongside dashboard data in `app/actions/data.ts`. The migration is `documentation/backend/sql/alias-table-migration.sql`.
+Alias rows power alias-aware account search: the global search (`components/search/global-search.tsx`) and the account filter autocomplete (`components/filters/account-autocomplete.tsx`) match a query against both account names and alias values, so searching for an alternate name (for example "HMH" or "HackerRank") resolves to the underlying account. Matches found through an alias surface a "Known as: <alias>" hint so the result is not confusing. Matching logic lives in `lib/search/alias-utils.ts` and `lib/search/index.ts`; alias matches are served by `GET /api/accounts/autocomplete` and `GET /api/search` (`lib/search/search-sql.ts`). The migration is `documentation/backend/sql/alias-table-migration.sql`.
 
 ---
 

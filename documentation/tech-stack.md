@@ -223,17 +223,15 @@ Technologies for storing and querying data.
 | **Retry logic** | Exponential retry wrapper in `lib/db/prisma.ts` |
 | **Package** | `prisma`, `@prisma/client`, `@prisma/adapter-neon`, `ws` (WebSocket driver required by `@prisma/adapter-neon` outside edge runtimes) |
 
-### Dashboard API Route (`/api/dashboard`)
+### Dashboard read endpoints (`/api/dashboard/*`, `/api/<entity>/query`, `/api/centers/map`, ...)
 
 | | |
 |---|---|
-| **What it is** | A Next.js Route Handler that serves the full dashboard dataset to the client on initial load |
-| **Why we use it** | Wraps the underlying Server Action with an in-memory stale-while-revalidate (SWR) cache and gzip compression, so warm requests skip the database round-trip and ship pre-compressed JSON to the browser |
-| **Caching** | In-memory SWR with a 1-hour TTL (configurable via `DASHBOARD_CACHE_TTL_MS`); stale responses are served immediately while a background revalidation refreshes the cache |
-| **Compression** | Pre-gzipped payload returned when the client sends `Accept-Encoding: gzip`; raw JSON otherwise |
-| **Authentication** | Requires a Supabase JWT bearer token in the `Authorization` header, validated server-side before any cached data is returned |
-| **Cache invalidation** | `POST /api/dashboard` (also auth-gated) clears the cache; called by the client before a force-refresh |
-| **Related** | The server-mode read endpoints use a separate shared two-tier cache (in-memory L1 + Upstash Redis L2); see [Caching and Rate Limiting](backend/caching-and-rate-limiting.md) |
+| **What they are** | Next.js Route Handlers that translate the dashboard's filter state to parameterized SQL and return paginated rows and pre-computed aggregates; no endpoint can return the whole dataset |
+| **Caching** | Shared two-tier response cache (in-memory L1 + Upstash Redis L2) keyed on the canonical filter state, 8-day TTL, purged by the ETL after each import; see [Caching and Rate Limiting](backend/caching-and-rate-limiting.md) |
+| **Authentication** | Supabase JWT bearer token, validated server-side (cached 60s, one validation shared by concurrent requests) |
+| **Rate limiting** | Per-user fixed windows in Upstash Redis |
+| **History** | Until 2026-09-05 a `GET /api/dashboard` route served the full warehouse to the browser behind an in-memory SWR cache; it was retired with #249 |
 
 ### Supabase PostgreSQL
 
@@ -412,8 +410,8 @@ Third-party services the application communicates with at runtime.
 
 A summary of key technology choices and the reasoning behind them.
 
-### Why Server Actions (with one Route Handler) instead of REST/GraphQL?
-The vast majority of data fetching uses Server Actions, which eliminate the boilerplate of building and maintaining a separate API layer and keep data fetching co-located with the UI code. The one exception is `/api/dashboard`, a Next.js Route Handler that wraps the dashboard Server Action to add an in-memory SWR cache, gzip compression, and explicit bearer-token auth — capabilities that don't fit neatly into the Server Action model. The Route Handler is gated by Supabase JWT validation so the small expansion of attack surface stays bounded.
+### Why Route Handlers for warehouse reads, Server Actions for the rest?
+Warehouse reads go through explicit Route Handlers (`app/api/**`) because they need bearer-token auth, per-user rate limiting and a shared response cache, and because every one of them must be reviewable as a data-exposure surface (#249). User-data operations (notifications, financials) stay on Server Actions, which keep that code co-located with the UI without a separate API layer.
 
 ### Why Prisma with some raw SQL?
 Prisma provides a typed server-side client for straightforward warehouse reads while preserving parameterized raw SQL for joins, aggregations, and tables that do not expose stable Prisma identifiers. This keeps the common data path typed without forcing analytical queries into awkward ORM shapes.

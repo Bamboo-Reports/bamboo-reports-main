@@ -1,26 +1,18 @@
 # Server-Mode Dashboard
 
-> **Scope:** The server-backed dashboard data path behind `NEXT_PUBLIC_DASHBOARD_SERVER_MODE` (#249): the SQL filter translation, the paginated/aggregated read endpoints, the client fetch layer, and export-by-filter. Background: [security-249-progress.md](../security-249-progress.md) (phased plan and rollout state) and [filtering-sql-parity-report.md](filtering-sql-parity-report.md) (parity verification).
+> **Scope:** The server-backed dashboard data path (#249), the only data path since the legacy full-payload route was retired on 2026-09-05: the SQL filter translation, the paginated/aggregated read endpoints, the client fetch layer, and export-by-filter. Background: [security-249-progress.md](../security-249-progress.md) (phased plan and rollout state) and [filtering-sql-parity-report.md](filtering-sql-parity-report.md) (parity verification).
 
 ## Why it exists
 
 Historically the dashboard loaded the ENTIRE warehouse into the browser via `GET /api/dashboard` (accounts, centers, ~64k prospects with PII in one response) and filtered client-side (`lib/dashboard/filtering.ts`, `getFilteredData`). That made the dashboard a de-facto "export everything" endpoint, bypassing the admin-only export gate (#247/#249), and shipped a multi-MB payload on every load.
 
-Server mode inverts this: the client sends its `Filters` object to the server, the server translates it to parameterized SQL against the Neon warehouse, and the client receives only paginated rows and pre-computed aggregates. No single call can return the whole dataset; per-user rate limits throttle scripted scraping.
+The server-backed path inverts this: the client sends its `Filters` object to the server, the server translates it to parameterized SQL against the Neon warehouse, and the client receives only paginated rows and pre-computed aggregates. No single call can return the whole dataset; per-user rate limits throttle scripted scraping.
 
-## The flag
+## No flag any more
 
-```ts
-// lib/config/server-dashboard.ts
-export function isServerDashboardEnabled(): boolean {
-  return process.env.NEXT_PUBLIC_DASHBOARD_SERVER_MODE === "1"
-}
-```
+The path shipped behind `NEXT_PUBLIC_DASHBOARD_SERVER_MODE` and was flipped on in production in early July 2026. On 2026-09-05 the legacy path was removed outright: `GET /api/dashboard` (the full-payload route), `app/actions/data.ts`, `hooks/use-dashboard-data.ts` and the flag module are gone, and `app/page.tsx` is server-backed unconditionally. The env var is obsolete and can be deleted from every environment.
 
-- `NEXT_PUBLIC_` prefix: the value is inlined into the client bundle at **build time**. Enabling it in a deployment means setting the env var and rebuilding (`.env.local` for dev).
-- `app/page.tsx` reads the flag once (`serverMode`) and branches every data source: `useDashboardData` (legacy, full payload) runs with `enabled: !serverMode`; `useServerDashboardData` runs with `enabled: serverMode && authReady`. View data (`viewAccounts`, `viewAvailableOptions`, chart data, summary counts, maps) picks the server responses when on, the client-filtered arrays when off.
-- **When off**, nothing changes: the legacy `/api/dashboard` full-payload path and the in-browser engine still run. The new endpoints exist either way (they are additive), they are just not consumed.
-- Retirement of the legacy path is built on `feat/249-retire-dashboard` and pending merge (see [Rollout state](#rollout-state)).
+`lib/dashboard/filtering.ts` (the in-browser filter engine) is kept as the reference implementation the SQL parity tests compare against; the page feeds it empty arrays, so its output is only the placeholder before the first response. Components that still accept the warehouse arrays as props (`useDashboardFilters`, `useGlobalSearch`, the detail dialogs, the tabs) receive stable empty lists from the page.
 
 ## Endpoint catalog
 
@@ -145,15 +137,14 @@ Keyword filters on new columns should stay as raw-column `ILIKE` and get a pg_tr
 Per [security-249-progress.md](../security-249-progress.md):
 
 - Server mode is fully built and user-verified behind the flag; counts match the parity report. The legacy `/api/dashboard` full-payload path still exists and is what runs whenever the flag is unset.
-- Retirement is BUILT on branch `feat/249-retire-dashboard`: deletes `app/api/dashboard/route.ts`, `hooks/use-dashboard-data.ts`, `app/actions/data.ts`, and the flag module, making server mode unconditional. `lib/dashboard/filtering.ts` is kept as the parity-test reference engine. Merge is pending user go-ahead.
+- The legacy path was retired on 2026-09-05 (see [No flag any more](#no-flag-any-more)).
 - Known trade-offs in server mode: filter changes round-trip to the server (mitigated by the client/server caches), and cross-page "select all" is limited to the visible page (export-by-filter covers the whole-filtered-set workflow).
-- Response caching (L1 memory + L2 Upstash Redis, ETL purge) is documented in the progress log; the legacy route's SWR cache is in [api-caching-swr.md](api-caching-swr.md).
+- Response caching (L1 memory + L2 Upstash Redis, ETL purge) is documented in [caching-and-rate-limiting.md](caching-and-rate-limiting.md).
 
 ## Related Files
 
 | Path | Purpose |
 |------|---------|
-| `lib/config/server-dashboard.ts` | The `NEXT_PUBLIC_DASHBOARD_SERVER_MODE` flag |
 | `lib/dashboard/filtering-sql.ts` | Filters to parameterized SQL: clause builders, cascade CTEs, entity/aggregate query builders |
 | `lib/dashboard/filtering.ts` | Client filter engine (legacy path; parity reference) |
 | `lib/dashboard/filters-request.ts` | `parseFilters` (untrusted body coercion) + `resolveAccess` (section entitlements) |

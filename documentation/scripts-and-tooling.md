@@ -4,26 +4,9 @@
 
 ---
 
-## 1. `scripts/benchmark-loading.mjs`
+## 1. `scripts/benchmark-loading.mjs` (retired)
 
-Compares raw database query time against the `/api/dashboard` route's cached, gzip'd response, to measure how much the SWR cache and compression layer actually save. See [API Caching (SWR)](backend/api-caching-swr.md) for what that layer does.
-
-**What it measures, in two parts:**
-
-1. **Direct DB queries**: runs the six warehouse table queries (`accounts`, `centers`, `functions`, `services`, `tech`, `prospects`) directly against Neon via `@neondatabase/serverless`, three iterations, reporting per-table timing, row counts, and raw JSON payload size. Also gzip-simulates the combined payload to show the theoretical compression ceiling.
-2. **API route**: fetches `GET /api/dashboard` three times, reporting wall-clock time, transfer size, and the `Content-Encoding` header actually returned.
-
-It then prints a side-by-side comparison table (query time, raw payload, transfer size, gzip estimate).
-
-**Run it:**
-
-```bash
-node --env-file=.env scripts/benchmark-loading.mjs
-```
-
-Requires `DATABASE_URL` in the environment (the script exits immediately if it's missing). For the API-route half to reflect gzip compression, the app must be running a **production** build (`npm run build && npm run start`); `next dev` does not compress responses, and the script detects and warns about this (`Content-Encoding: none`).
-
-`API_URL` env var overrides the target (`http://localhost:3000` by default) if benchmarking a deployed environment.
+Measured the retired `GET /api/dashboard` full-payload route against raw warehouse queries. Removed on 2026-09-05 with that route. Latency figures for the current endpoints: [`backend/redis-cache-benchmark.md`](backend/redis-cache-benchmark.md).
 
 ## 2. `scripts/generate_work_summary.py`
 
@@ -47,7 +30,5 @@ Requires `openpyxl` (not a project-wide npm/Python dependency; install it in you
 
 | File | Purpose |
 |------|---------|
-| `scripts/benchmark-loading.mjs` | DB-vs-API-route load time and payload size comparison |
 | `scripts/generate_work_summary.py` | Git-history-driven `.xlsx` work summary generator |
-| `documentation/backend/api-caching-swr.md` | What the `/api/dashboard` cache layer the benchmark measures actually does |
 | `documentation/backend/etl-pipeline.md` | The other standalone script category: `etl/V2/` |
