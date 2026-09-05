@@ -28,6 +28,7 @@ All endpoints require a Supabase bearer token (`extractBearerToken` + `resolveAu
 
 | Endpoint | Method | Purpose | Params / body | Response |
 |---|---|---|---|---|
+| `/api/dashboard/core` | POST | Summary and facets together (what the dashboard fetches on every filter change: one auth, one rate-limit bump, both cache keys) | `{ filters }` | `{ summary, facets }` |
 | `/api/dashboard/summary` | POST | Filtered + full counts: accounts, centers, upcoming centers, prospects, headcount, services | `{ filters }` | `{ filtered, full }` count objects |
 | `/api/dashboard/facets` | POST | 23 facet option lists (value + count, facet-excludes-itself) plus base min/max ranges for revenue, years-in-India, center inc year | `{ filters }` | `{ options, ranges }` |
 | `/api/dashboard/charts` | POST | Grouped counts per section (top-10; center city as top-5 + "Others"); null/empty grouped as "Unknown" | `{ filters }` | `{ account, center, prospect }` chart arrays |
@@ -76,7 +77,7 @@ final_accounts    acc0 restricted by prospect_accounts and surviving_centers
 
 `buildWith` resolves only the CTEs a query transitively needs (driven by `computeFlags`, which mirrors the engine's `hasAccountFilters` / `hasProspectFilters` flags and section entitlements) and emits them `AS MATERIALIZED`: a pure planner hint that avoids a nested-loop blow-up from under-estimated CTE cardinalities (`materialized: false` for pg-mem, which does not parse the keyword). Predicates are built at emit time so parameter order always matches SQL text order.
 
-Public builders: `buildAccountsQuery` / `buildCentersQuery` / `buildProspectsQuery` (+ `...CountQuery` variants) with `columns` / `orderBy` / `limit` / `offset` options, and `buildEntityAggregateQuery(entity, filters, access, select, { groupBy, where })`, which reuses the same cascade for the summary, facets, charts, and map endpoints. A disabled section returns a `where false` query. `lib/dashboard/centers-map.ts` builds the city/state map aggregates on top of `buildEntityAggregateQuery`.
+Public builders: `buildAccountsQuery` / `buildCentersQuery` / `buildProspectsQuery` (+ `...CountQuery` variants) with `columns` / `orderBy` / `limit` / `offset` options, and `buildEntityAggregateQuery(entity, filters, access, select, { groupBy, where })`, which reuses the same cascade for the summary, charts, and map endpoints. `buildFacetCountsQuery(specs, filters, access)` emits the cascade once and one `union all` branch per facet, so the 23 sidebar lists are one statement when no facet is active (one extra statement per active facet, which excludes itself). A disabled section returns a `where false` query. `lib/dashboard/centers-map.ts` builds the city/state map aggregates on top of `buildEntityAggregateQuery`.
 
 ### Parity guarantee
 
@@ -109,7 +110,7 @@ Order behavior is covered by `tests/unit/entity-query-order.test.ts`.
 - **Canonical wire key.** Filters are normalized (`normalizeFiltersForServer`: a range still spanning the known base range is sent wide-open `[0, MAX_SAFE_INTEGER]` so results do not depend on when base ranges loaded) and serialized to `effectiveKey`. All fetches and caches key off it.
 - **Debounce.** Filter changes debounce 350ms before becoming effective; a state already in the client cache applies immediately (removing a filter snaps back).
 - **What fetches when.**
-  - Summary + facets: always (cards and sidebar are always visible), fetched together.
+  - Summary + facets: always (cards and sidebar are always visible), fetched together from `/api/dashboard/core`.
   - Charts: only while a chart view is visible.
   - Map aggregates: only while a map view is visible; plus one unfiltered `fetchCentersMap` for the choropleth color scale, fetched once after a map is first shown.
   - Entity pages: only the active tab fetches, keyed by `entity:filters:page:sort`.
@@ -135,7 +136,7 @@ Both engines must change in lockstep or parity breaks:
 1. Add the field to `Filters` (`lib/types`), defaults (`lib/dashboard/defaults.ts`), and the client engine matcher in `lib/dashboard/filtering.ts`.
 2. Add the SQL clause in `lib/dashboard/filtering-sql.ts`: the appropriate predicate (`accountPredicate` / `centerSurvivesPredicate` / `prospectPredicate`) via `valueClause` / `keywordClause` / `rangeClause`, AND the corresponding flag in `computeFlags` (`haf` / `rawHpf` / `hff` / `hsf`) so the cascade CTEs activate.
 3. Register the field in `lib/dashboard/filters-request.ts` (`VALUE_ARRAY_KEYS` for value arrays, or explicit coercion for ranges/booleans). A field missing here is silently dropped server-side.
-4. If it should appear in the sidebar facet lists, add a `FacetSpec` in `app/api/dashboard/facets/route.ts`.
+4. If it should appear in the sidebar facet lists, add a `FacetSpec` to `FACETS` in `lib/dashboard/dashboard-core.ts`.
 5. Extend `tests/unit/filtering-sql-parity.test.ts` with scenarios exercising the new filter (include, exclude, null values) and run the gated real-data parity tests against a live `DATABASE_URL` before shipping.
 
 Keyword filters on new columns should stay as raw-column `ILIKE` and get a pg_trgm index in the ETL (`etl/V2/main.py apply_indexes`) if the column is large.
@@ -166,7 +167,8 @@ Per [security-249-progress.md](../security-249-progress.md):
 | `lib/db/warehouse.ts` | `queryWarehouse`: Neon HTTP driver, array-param-safe |
 | `lib/dashboard/api-client.ts` | Typed bearer-authed client fetchers |
 | `hooks/use-server-dashboard-data.ts` | Client orchestration: debounce, lazy fetch, prefetch, LRU cache, pending flags |
-| `app/api/dashboard/{summary,facets,charts}/route.ts` | Aggregate endpoints |
+| `app/api/dashboard/{core,summary,facets,charts}/route.ts` | Aggregate endpoints |
+| `lib/dashboard/dashboard-core.ts` | `computeSummary` / `computeFacets` shared by the core, summary and facets routes; facets run as one union-all statement per filter group via `buildFacetCountsQuery` |
 | `app/api/{accounts,centers,prospects}/query/route.ts` | Paginated row endpoints |
 | `app/api/centers/map/route.ts` | Map aggregates endpoint |
 | `app/api/search/route.ts`, `app/api/accounts/autocomplete/route.ts` | Server-backed search and autocomplete |

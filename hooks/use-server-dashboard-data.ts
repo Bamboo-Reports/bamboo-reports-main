@@ -7,8 +7,7 @@ import { createDefaultFilters } from "@/lib/dashboard/defaults"
 import {
   fetchCentersMap,
   fetchDashboardCharts,
-  fetchDashboardFacets,
-  fetchDashboardSummary,
+  fetchDashboardCore,
   fetchEntityPage,
   type CentersMapResponse,
   type ChartsResponse,
@@ -176,7 +175,8 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
     return () => clearTimeout(timer)
   }, [enabled, filtersKey, effectiveKey])
 
-  // Summary + facets: always needed (cards + sidebar are always visible).
+  // Summary + facets: always needed (cards + sidebar are always visible), so
+  // they come back together from one request.
   useEffect(() => {
     if (!enabled || !effectiveKey) return
     const cachedSummary = summaryCache.get(effectiveKey)
@@ -192,11 +192,8 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
     const requestId = ++coreRequestRef.current
     const wireFilters = JSON.parse(effectiveKey) as Filters
     setIsFetching(true)
-    Promise.all([
-      fetchDashboardSummary(wireFilters, { noCache: noCache() }),
-      fetchDashboardFacets(wireFilters, { noCache: noCache() }),
-    ])
-      .then(([summaryRes, facetsRes]) => {
+    fetchDashboardCore(wireFilters, { noCache: noCache() })
+      .then(({ summary: summaryRes, facets: facetsRes }) => {
         if (coreRequestRef.current !== requestId) return
         lruSet(summaryCache, effectiveKey, summaryRes)
         lruSet(facetsCache, effectiveKey, facetsRes)

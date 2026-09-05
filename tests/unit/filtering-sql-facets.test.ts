@@ -3,7 +3,7 @@ import { newDb } from "pg-mem"
 import type { Account, Center, Function as FnRow, Prospect, Tech, Filters, FilterOption, AvailableOptions } from "@/lib/types"
 import { createDefaultFilters } from "@/lib/dashboard/defaults"
 import { getAvailableOptions } from "@/lib/dashboard/filtering"
-import { buildEntityAggregateQuery, type AggregateEntity } from "@/lib/dashboard/filtering-sql"
+import { buildEntityAggregateQuery, buildFacetCountsQuery, type AggregateEntity } from "@/lib/dashboard/filtering-sql"
 
 type Spec = { key: keyof AvailableOptions; entity: AggregateEntity; column: string }
 const FACETS: Spec[] = [
@@ -107,12 +107,33 @@ async function sqlFacet(filters: Filters, spec: Spec): Promise<FilterOption[]> {
   return rows.map((r) => ({ value: String(r.value ?? ""), count: Number(r.count) }))
 }
 
+/** Same lists via the single-statement union builder (grouped like the endpoint). */
+async function sqlFacetsUnion(filters: Filters): Promise<Record<string, FilterOption[]>> {
+  const groups = new Map<string, { filters: Filters; specs: { id: number; entity: AggregateEntity; column: string }[] }>()
+  FACETS.forEach((spec, id) => {
+    const active = ((filters[spec.key as keyof Filters] as { length?: number } | undefined)?.length ?? 0) > 0
+    const ff = active ? ({ ...filters, [spec.key]: [] } as Filters) : filters
+    const g = groups.get(active ? spec.key : "") ?? { filters: ff, specs: [] }
+    g.specs.push({ id, entity: spec.entity, column: spec.column })
+    groups.set(active ? spec.key : "", g)
+  })
+  const out: Record<string, FilterOption[]> = Object.fromEntries(FACETS.map((s) => [s.key, []]))
+  for (const g of groups.values()) {
+    const q = buildFacetCountsQuery(g.specs, g.filters, {}, { materialized: false })
+    const rows = (await pool.query(q.text, q.values)).rows as { facet: number; value: string | null; count: number }[]
+    for (const r of rows) out[FACETS[Number(r.facet)].key].push({ value: String(r.value ?? ""), count: Number(r.count) })
+  }
+  return out
+}
+
 async function assertFacets(overrides: Partial<Filters>) {
   const filters = createDefaultFilters({ accountHqRevenueRange: [0, Number.MAX_SAFE_INTEGER], ...overrides })
   const engine = getAvailableOptions(accounts, centers, functions, prospects, tech, filters, {})
+  const union = await sqlFacetsUnion(filters)
   for (const spec of FACETS) {
     const sql = await sqlFacet(filters, spec)
     expect(norm(sql), spec.key).toEqual(norm(engine[spec.key]))
+    expect(norm(union[spec.key]), `${spec.key} (union)`).toEqual(norm(engine[spec.key]))
   }
 }
 

@@ -151,6 +151,12 @@ export const fetchDashboardSummary = (filters: Filters, opts: FetchOpts = {}) =>
 export const fetchDashboardFacets = (filters: Filters, opts: FetchOpts = {}) =>
   postFilters<FacetsResponse>("/api/dashboard/facets", filters, opts)
 
+export type CoreResponse = { summary: SummaryResponse; facets: FacetsResponse }
+
+/** Summary + facets in one request (the dashboard always needs both). */
+export const fetchDashboardCore = (filters: Filters, opts: FetchOpts = {}) =>
+  postFilters<CoreResponse>("/api/dashboard/core", filters, opts)
+
 export const fetchDashboardCharts = (filters: Filters, opts: FetchOpts = {}) =>
   postFilters<ChartsResponse>("/api/dashboard/charts", filters, opts)
 

@@ -57,6 +57,7 @@ The residency cap means an L1 entry is re-validated against Redis at most every 
 
 | Endpoint | Key | TTL |
 |----------|-----|-----|
+| `POST /api/dashboard/core` | `summary:<filters JSON>` and `facets:<filters JSON>` (the two halves are cached separately, shared with the routes below) | `DASHBOARD_CACHE_TTL_MS` |
 | `POST /api/dashboard/summary` | `summary:<filters JSON>` | `DASHBOARD_CACHE_TTL_MS` |
 | `POST /api/dashboard/facets` | `facets:<filters JSON>` | `DASHBOARD_CACHE_TTL_MS` |
 | `POST /api/dashboard/charts` | `charts:<filters JSON>` | `DASHBOARD_CACHE_TTL_MS` |
@@ -135,7 +136,7 @@ Without Redis credentials the original Supabase path is used. Migration: [`sql/r
 |--------|-------|--------|
 | `dashboard:get` | `GET /api/dashboard` | default (60/min) |
 | `dashboard:post` | `POST /api/dashboard` (cache purge) | 10/min, tighter because it forces a full DB re-query |
-| `dashboard:summary`, `dashboard:facets`, `dashboard:charts` | dashboard aggregate endpoints | default |
+| `dashboard:core`, `dashboard:summary`, `dashboard:facets`, `dashboard:charts` | dashboard aggregate endpoints | default |
 | `<entity>:query` | entity table queries via `lib/dashboard/entity-query-route.ts` | default |
 | `centers:map`, `centers:detail`, `accounts:related`, `prospects:detail` | detail endpoints | default |
 | `search`, `autocomplete` | `GET /api/search`, `GET /api/accounts/autocomplete` | default |

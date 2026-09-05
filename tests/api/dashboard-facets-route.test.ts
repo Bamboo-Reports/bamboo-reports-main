@@ -28,8 +28,13 @@ describe("dashboard facets route", () => {
     authMocks.resolveAuthenticatedUserId.mockResolvedValue("user-1")
     rateLimitMocks.enforceRateLimit.mockResolvedValue({ ok: true })
     warehouseMocks.queryWarehouse.mockImplementation(async (q: { text: string }) => {
-      if (q.text.includes("as min")) return [{ min: 5, max: 900 }]
-      return [{ value: "B", count: 2 }, { value: "A", count: 5 }]
+      if (q.text.includes("as min")) {
+        return ["revenue", "yearsInIndia", "centerIncYear"].map((key) => ({ key, min: 5, max: 900 }))
+      }
+      // One union-all statement for every facet in the group: echo rows for
+      // each `<id> as facet` branch present in the SQL.
+      const ids = [...q.text.matchAll(/select (\d+) as facet/g)].map((m) => Number(m[1]))
+      return ids.flatMap((facet) => [{ facet, value: "B", count: 2 }, { facet, value: "A", count: 5 }])
     })
   })
 
@@ -53,6 +58,22 @@ describe("dashboard facets route", () => {
     expect(Object.keys(body.options)).toHaveLength(23)
     expect(body.options.accountHqCountryValues).toEqual([{ value: "A", count: 5 }, { value: "B", count: 2 }])
     expect(body.ranges).toEqual({ revenue: { min: 5, max: 900 }, yearsInIndia: { min: 5, max: 900 }, centerIncYear: { min: 5, max: 900 } })
+    // No active facet: all 23 lists come from ONE statement, plus one for the ranges.
+    expect(warehouseMocks.queryWarehouse).toHaveBeenCalledTimes(2)
+  })
+
+  it("runs an active facet in its own statement (facet-excludes-itself)", async () => {
+    const res = await post({ filters: { accountHqCountryValues: [{ value: "India", mode: "include" }] } })
+    expect(res.status).toBe(200)
+    const texts = warehouseMocks.queryWarehouse.mock.calls.map((c) => c[0] as { text: string; values: unknown[] })
+    const facetQueries = texts.filter((q) => q.text.includes("as facet"))
+    expect(facetQueries).toHaveLength(2)
+    const own = facetQueries.find((q) => q.text.includes("select 1 as facet"))
+    const rest = facetQueries.find((q) => !q.text.includes("select 1 as facet"))
+    // The country facet's own statement must not filter on the country.
+    expect(own?.values.flat()).not.toContain("India")
+    expect(rest?.values.flat()).toContain("India")
+    expect(rest?.text.match(/as facet/g)).toHaveLength(22)
   })
 
   it("returns 500 when the warehouse fails", async () => {

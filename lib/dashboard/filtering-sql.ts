@@ -551,3 +551,50 @@ export function buildEntityAggregateQuery(
   const where = prospectsWhereClause(f, p, flags)
   return { text: `${withClause} select ${select} from prospects where ${where}${tail}`, values: p.values }
 }
+
+export type FacetCountSpec = { id: number; entity: AggregateEntity; column: string }
+
+/**
+ * Grouped counts for MANY facets in ONE statement: the cascade CTEs are
+ * emitted once and each facet becomes a `union all` branch over them, so the
+ * sidebar's 23 option lists cost one warehouse round trip and one cascade
+ * evaluation instead of one of each per facet. Every spec must share the same
+ * `filters` (the facets endpoint groups specs by their facet-excludes-itself
+ * filters before calling this). Rows come back as `{ facet, value, count }`
+ * with `facet` echoing the spec id. Specs for a disabled section are simply
+ * absent from the output. `column` MUST be code-controlled, never user input.
+ */
+export function buildFacetCountsQuery(
+  specs: FacetCountSpec[],
+  f: Filters,
+  access: FilterAccess = {},
+  opts: { materialized?: boolean } = {}
+): SqlQuery {
+  const flags = computeFlags(f, access)
+  const enabled = (entity: AggregateEntity) =>
+    entity === "accounts" ? flags.ae : entity === "prospects" ? flags.pe : flags.ce
+  const live = specs.filter((s) => enabled(s.entity))
+  if (live.length === 0) return { text: "select 0 as facet, '' as value, 0 as count where false", values: [] }
+
+  const roots = new Set<CteName>()
+  if (live.some((s) => s.entity === "accounts")) roots.add("final_accounts")
+  if (live.some((s) => s.entity === "centers" || s.entity === "functions")) roots.add("surviving_centers")
+  const needProspects = live.some((s) => s.entity === "prospects")
+  if (needProspects) for (const r of prospectsRoots(flags)) roots.add(r)
+
+  const p = new Params()
+  const withClause = buildWith([...roots], f, p, flags, opts.materialized ?? true)
+  // The prospects predicate binds params, so build it once, after the WITH.
+  const prospectsWhere = needProspects ? prospectsWhereClause(f, p, flags) : null
+  const membership: Record<AggregateEntity, string> = {
+    accounts: memberIn(ACCOUNT_ID_COLUMN, "final_accounts"),
+    centers: memberIn(CENTER_ID_COLUMN, "surviving_centers"),
+    functions: memberIn(CENTER_ID_COLUMN, "surviving_centers"),
+    prospects: prospectsWhere ?? "false",
+  }
+  const branches = live.map((s) => {
+    const value = `coalesce(${s.column}, '')`
+    return `select ${s.id} as facet, ${value} as value, count(*)::int as count from ${s.entity} where ${membership[s.entity]} group by ${value}`
+  })
+  return { text: `${withClause} ${branches.join(" union all ")}`, values: p.values }
+}
