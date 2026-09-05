@@ -8,6 +8,9 @@ const TOKEN_CACHE_TTL_MS = 60_000
 const TOKEN_CACHE_MAX_ENTRIES = 500
 
 const tokenCache = new Map<string, { userId: string; expires: number }>()
+// A page load fires several data requests at once with the same token; they
+// all miss the cache together, so share one validation instead of one each.
+const inflight = new Map<string, Promise<string>>()
 
 let cachedClient: SupabaseClient | null = null
 
@@ -46,25 +49,32 @@ export async function resolveAuthenticatedUserId(accessToken: string): Promise<s
   }
   if (cached) tokenCache.delete(token)
 
-  const supabase = getSupabaseAuthClient()
+  const pending = inflight.get(token)
+  if (pending) return pending
 
-  const { data, error } = await supabase.auth.getUser(token)
-  if (error || !data.user?.id) {
-    throw new Error("Authentication failed.")
-  }
-
-  if (tokenCache.size >= TOKEN_CACHE_MAX_ENTRIES) {
-    const oldest = tokenCache.keys().next().value
-    if (oldest !== undefined) tokenCache.delete(oldest)
-  }
-  tokenCache.set(token, { userId: data.user.id, expires: Date.now() + TOKEN_CACHE_TTL_MS })
-
-  return data.user.id
+  const validation = (async () => {
+    const supabase = getSupabaseAuthClient()
+    const { data, error } = await supabase.auth.getUser(token)
+    if (error || !data.user?.id) {
+      throw new Error("Authentication failed.")
+    }
+    if (tokenCache.size >= TOKEN_CACHE_MAX_ENTRIES) {
+      const oldest = tokenCache.keys().next().value
+      if (oldest !== undefined) tokenCache.delete(oldest)
+    }
+    tokenCache.set(token, { userId: data.user.id, expires: Date.now() + TOKEN_CACHE_TTL_MS })
+    return data.user.id
+  })().finally(() => {
+    inflight.delete(token)
+  })
+  inflight.set(token, validation)
+  return validation
 }
 
 /** Test-only: clears the token validation cache and client singleton. */
 export function __clearAuthCachesForTests(): void {
   tokenCache.clear()
+  inflight.clear()
   cachedClient = null
 }
 

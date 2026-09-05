@@ -94,6 +94,35 @@ describe("auth server", () => {
       expect(mockGetUser).toHaveBeenCalledTimes(1)
     })
 
+    it("shares one Supabase call between concurrent validations of the same token", async () => {
+      process.env.NEXT_PUBLIC_SUPABASE_URL = "url"
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "key"
+
+      const mockGetUser = vi.fn().mockResolvedValue({ error: null, data: { user: { id: "user-123" } } })
+      ;(createClient as any).mockReturnValue({ auth: { getUser: mockGetUser } })
+
+      // A page load fires several data requests at once with the same token.
+      const results = await Promise.all(Array.from({ length: 5 }, () => resolveAuthenticatedUserId("token")))
+      expect(results).toEqual(Array(5).fill("user-123"))
+      expect(mockGetUser).toHaveBeenCalledTimes(1)
+    })
+
+    it("does not cache a failed validation, even a shared one", async () => {
+      process.env.NEXT_PUBLIC_SUPABASE_URL = "url"
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "key"
+
+      const mockGetUser = vi
+        .fn()
+        .mockResolvedValueOnce({ error: new Error("bad"), data: { user: null } })
+        .mockResolvedValue({ error: null, data: { user: { id: "user-123" } } })
+      ;(createClient as any).mockReturnValue({ auth: { getUser: mockGetUser } })
+
+      const attempts = await Promise.allSettled([resolveAuthenticatedUserId("token"), resolveAuthenticatedUserId("token")])
+      expect(attempts.every((a) => a.status === "rejected")).toBe(true)
+      await expect(resolveAuthenticatedUserId("token")).resolves.toBe("user-123")
+      expect(mockGetUser).toHaveBeenCalledTimes(2)
+    })
+
     it("re-validates after the token cache TTL expires", async () => {
       vi.useFakeTimers()
       process.env.NEXT_PUBLIC_SUPABASE_URL = "url"
