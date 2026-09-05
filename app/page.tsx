@@ -192,8 +192,15 @@ function DashboardContent(): React.JSX.Element | null {
     views: dashboardViews,
   })
 
+  // Facets come back with every filter change, but the base ranges are global
+  // (not filtered), so only adopt a new object when the values differ. The
+  // filters hook keys its base-range sync on identity; a fresh object per
+  // response would rewrite the applied ranges after every fetch, which both
+  // drops a saved filter's narrowed range and triggers a second round trip.
   useEffect(() => {
-    if (serverData.facets) setServerRanges(serverData.facets.ranges)
+    const ranges = serverData.facets?.ranges
+    if (!ranges) return
+    setServerRanges((prev) => (prev && JSON.stringify(prev) === JSON.stringify(ranges) ? prev : ranges))
   }, [serverData.facets])
 
   const makeSortHandler = useCallback(
