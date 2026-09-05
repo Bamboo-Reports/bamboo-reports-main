@@ -60,7 +60,7 @@ Bamboo Reports provides a unified view of business entities (**Accounts**, **Cen
 
 ### Advanced Filtering Engine
 - **Multi-Select Filters:** Country, Region, Industry, Category, Nature, Technology, Functions, and more.
-- **Server-Mode Filtering (#249):** Behind `NEXT_PUBLIC_DASHBOARD_SERVER_MODE=1`, filters are translated to parameterized SQL on the server and the client reads paginated slices, replacing the full-payload download. See [Server-Mode Dashboard](documentation/backend/server-dashboard-mode.md).
+- **Server-Side Filtering (#249):** Filters are translated to parameterized SQL on the server and the client reads paginated slices and pre-computed aggregates; no endpoint returns the whole dataset. See [Server-Mode Dashboard](documentation/backend/server-dashboard-mode.md).
 - **Account Visibility Filter:** `ALL` / `GCCs` / `NON-GCCs` toggle (default `GCCs`) constrains tables, charts, and exports to the chosen account set, while summary cards still report the full universe.
 - **Alias-Aware Account Search:** Global search and the account filter autocomplete match accounts by alternate names (short legal name, brand, abbreviation, flagship products, "currently known as") and show a "Known as" hint on alias matches.
 - **Precision Slicing:** "Include" vs. "Exclude" toggle per filter group.
@@ -128,9 +128,8 @@ graph TD
 ### Data Fetching Strategy
 1. **Initial Load:** The client fetches the full dashboard dataset from the `GET /api/dashboard` Route Handler, which wraps the underlying Server Action with an in-memory SWR cache and gzip compression.
 2. **Filtering:** User actions update React state; client-side filtering and chart aggregation run locally for responsiveness.
-3. **Server Actions:** Modular action files (`app/actions/data.ts`, `app/actions/saved-filters.ts`, `app/actions/financial.ts`, `app/actions/notifications.ts`, `app/actions/system.ts`) handle database communication.
-4. **Runtime Behavior:** Server Actions keep no cross-request cache and fetch fresh data with retry logic (3 retries, exponential backoff). The `/api/dashboard` Route Handler adds a two-tier stale-while-revalidate cache on top (in-memory L1 + optional Upstash Redis L2). See [API Caching](documentation/backend/api-caching-swr.md) and [Caching and Rate Limiting](documentation/backend/caching-and-rate-limiting.md).
-5. **Server Mode (#249):** With `NEXT_PUBLIC_DASHBOARD_SERVER_MODE=1`, the dashboard skips the full payload entirely: filters are translated to SQL on the server and the client reads paginated/aggregated slices from dedicated endpoints (`/api/dashboard/summary`, `/api/dashboard/facets`, `/api/dashboard/charts`, `/api/{accounts,centers,prospects}/query`, `/api/search`, `/api/centers/map`). See [Server-Mode Dashboard](documentation/backend/server-dashboard-mode.md).
+3. **Route Handlers and Server Actions:** Warehouse reads go through `app/api/**` Route Handlers built on `lib/dashboard/filtering-sql.ts`; user-data operations use action files (`app/actions/saved-filters.ts`, `app/actions/financial.ts`, `app/actions/notifications.ts`, `app/actions/system.ts`).
+4. **Runtime Behavior (#249):** Filters are translated to SQL on the server and the client reads paginated/aggregated slices from dedicated endpoints (`/api/dashboard/summary`, `/api/dashboard/facets`, `/api/dashboard/charts`, `/api/{accounts,centers,prospects}/query`, `/api/search`, `/api/centers/map`). Responses are cached in a two-tier cache (in-memory L1 + Upstash Redis L2) keyed on the filter state and purged by the ETL after each import. See [Server-Mode Dashboard](documentation/backend/server-dashboard-mode.md) and [Caching and Rate Limiting](documentation/backend/caching-and-rate-limiting.md).
 
 ---
 
@@ -231,7 +230,7 @@ bamboo-reports-nextjs/
 ├── hooks/                          # Custom React Hooks
 │   ├── use-auth-guard.ts           # Authentication guard
 │   ├── use-copy-to-clipboard.ts    # Copy-to-clipboard with reset timeout
-│   ├── use-dashboard-data.ts       # Data fetching and loading state
+│   ├── use-server-dashboard-data.ts # Server-backed data fetching, client cache and loading state
 │   ├── use-dashboard-filters.ts    # Complex filter state management
 │   ├── use-favorites.ts            # Favorites CRUD (accounts/centers/prospects)
 │   ├── use-global-search.ts        # Alias-aware global search
@@ -290,7 +289,6 @@ bamboo-reports-nextjs/
 │   │   ├── schema-migration-guide.md    # Database schema reference (column-level)
 │   │   ├── table-relationships.md       # Table hierarchy, keys, FK constraints, import order
 │   │   ├── etl-pipeline.md              # ETL process: source, diffing, audit trail, extending it
-│   │   ├── api-caching-swr.md           # Dashboard API SWR cache reference
 │   │   ├── supabase-auth-setup.md       # Auth setup guide
 │   │   ├── rbac-and-auth-guards.md      # Role enforcement and request authentication
 │   │   ├── supabase-saved-filters.md    # Saved filters spec
@@ -362,7 +360,6 @@ bamboo-reports-nextjs/
 | `npm run test` | Run Vitest test suite |
 | `npm run test:watch` | Run Vitest in watch mode |
 | `npm run prisma:generate` | Regenerate the Prisma Client after schema changes |
-| `npm run benchmark` | Benchmark dashboard data loading (`scripts/benchmark-loading.mjs`) |
 
 ---
 
@@ -378,7 +375,6 @@ bamboo-reports-nextjs/
 | `DASHBOARD_CACHE_TTL_MS` | No | Response cache TTL. Code default: `600000` (10 min); recommended `691200000` (8 days) since the ETL purges the cache after each weekly import. |
 | `EXPORT_RATE_LIMIT_PER_HOUR` | No | Max data exports per user per rolling hour. Default: `20`. |
 | `NEXT_PUBLIC_BRANDFETCH_CLIENT_ID` | No | Brandfetch Logo API client ID. Without it the UI shows monogram fallbacks. |
-| `NEXT_PUBLIC_DASHBOARD_SERVER_MODE` | No | Set to `1` to switch the dashboard to the server-backed data path (paginated endpoints + SQL filters). |
 | `DATA_RATE_LIMIT_PER_MIN` | No | Max requests per user per minute on data endpoints. Default: `60`. |
 | `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | No | Upstash Redis credentials for the L2 response cache (`KV_REST_API_URL` / `KV_REST_API_TOKEN` also accepted). Without them the cache runs L1-only. |
 | `NEXT_PUBLIC_POSTHOG_KEY` | No | PostHog project API key for analytics. |

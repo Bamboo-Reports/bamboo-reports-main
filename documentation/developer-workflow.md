@@ -38,7 +38,6 @@ This guide is for developers maintaining or extending the Bamboo Reports applica
     - `DASHBOARD_CACHE_TTL_MS` — Response cache TTL override (code default 10 min; 8 days recommended since the ETL purges the cache weekly)
     - `EXPORT_RATE_LIMIT_PER_HOUR` — Max exports per user per rolling hour, default 20
     - `DATA_RATE_LIMIT_PER_MIN` — Max requests per user per minute on data endpoints, default 60
-    - `NEXT_PUBLIC_DASHBOARD_SERVER_MODE` — Set to `1` to use the server-backed dashboard data path (see [Server-Mode Dashboard](backend/server-dashboard-mode.md))
     - `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` — Optional Redis L2 for the response cache (see [Caching and Rate Limiting](backend/caching-and-rate-limiting.md))
     - `NEXT_PUBLIC_POSTHOG_KEY` / `NEXT_PUBLIC_POSTHOG_HOST` — Analytics
     - `NEXT_PUBLIC_BRANDFETCH_CLIENT_ID` — Company logos (Brandfetch)
@@ -64,7 +63,6 @@ This guide is for developers maintaining or extending the Bamboo Reports applica
 | `npm run test` | Run Vitest test suite |
 | `npm run test:watch` | Run Vitest in watch mode |
 | `npm run prisma:generate` | Regenerate the Prisma Client after a schema change |
-| `npm run benchmark` | Benchmark dashboard data loading (`scripts/benchmark-loading.mjs`) |
 
 ---
 
@@ -83,8 +81,8 @@ To add a new filter (e.g., "Founded Year") to the sidebar:
     }
     ```
 
-2. **Update Server Action (if needed):**
-    If the filter requires server-side data, edit the relevant function in `app/actions/data.ts`.
+2. **Update the SQL translation:**
+    Add the clause to `lib/dashboard/filtering-sql.ts` (and the facet spec in `lib/dashboard/dashboard-core.ts` if it has a sidebar list), see [Server-Mode Dashboard](backend/server-dashboard-mode.md).
 
 3. **Update Filter Hook:**
     Add the filter logic to `hooks/use-dashboard-filters.ts`. This is where include/exclude mode, default values, and filter counting are handled.
@@ -150,7 +148,7 @@ If you modify the database schema (e.g., rename a column), see [ETL Pipeline](ba
 2. **Update `documentation/backend/schema-migration-guide.md`** to log the change.
 3. **Update `documentation/backend/table-relationships.md`** if the change affects primary keys, FK constraints, or import order.
 4. **Update `lib/types.ts`** to match the new column names.
-5. **Update server actions** in `app/actions/data.ts` to use the new column names.
+5. **Update the projections** in `lib/dashboard/entity-columns.ts` and the SQL in `lib/dashboard/filtering-sql.ts` to use the new column names.
 6. **Update filter helpers** in `lib/utils/filter-helpers.ts` if filters reference the changed columns.
 7. **Update `documentation/frontend/filter-column-ui-label-map.json`** if UI labels changed.
 
@@ -243,7 +241,7 @@ If UI alignment needs tuning:
 | :--- | :--- | :--- |
 | **Styles missing** | `globals.css` | Ensure Tailwind directives are present and `tailwind.config.ts` includes content paths for `app/` and `components/`. |
 | **Auth redirect loop** | Supabase config | Verify `NEXT_PUBLIC_SUPABASE_URL` and `ANON_KEY`. Check `useAuthGuard` hook behavior. |
-| **Slow queries** | `app/actions/data.ts` | Ensure SQL queries have appropriate indexes in Neon. Use `EXPLAIN ANALYZE` in Neon console. |
+| **Slow queries** | `lib/dashboard/filtering-sql.ts` | Run `EXPLAIN ANALYZE` on the generated SQL in the Neon console; the range clause shape matters (see the comment on `rangeClause`). |
 | **Map not rendering** | Basemap or local boundary request | Check browser requests to `basemaps.cartocdn.com` and confirm `public/data/admin-1.geojson` is available. |
 | **Notifications not appearing** | Feature flag | Set `NEXT_PUBLIC_NOTIFICATIONS_ENABLED=enabled` in `.env.local`. Restart dev server. |
 | **Unexpected map boundaries** | Basemap boundary layers remain visible | Verify `hideBasemapBoundaries` runs after map load and the local boundary overlay loads. See `documentation/frontend/map-disputed-boundaries.md`. |

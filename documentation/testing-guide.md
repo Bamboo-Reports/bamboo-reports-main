@@ -131,29 +131,30 @@ vi.mock("@supabase/supabase-js", () => ({ createClient: vi.fn() }))
 
 Source: `tests/unit/auth-server.test.ts`.
 
-### Server actions and internal app modules (route/auth/logger)
+### Internal app modules (warehouse/auth/rate limit/logger)
 
-API route tests mock `@/app/actions/data`, `@/lib/auth/server`, and `@/lib/logger` wholesale via `vi.hoisted` objects, then import the route's `GET`/`POST` and call them directly with a real `Request`:
+API route tests mock `@/lib/db/warehouse` (`queryWarehouse`), `@/lib/auth/server`, `@/lib/rate-limit/server` and `@/lib/logger` wholesale via `vi.hoisted` objects, then import the route's `GET`/`POST` and call them directly with a real `Request`:
 
 ```ts
-const dataMocks = vi.hoisted(() => ({ getDashboardData: vi.fn() }))
+const warehouseMocks = vi.hoisted(() => ({ queryWarehouse: vi.fn() }))
 const authMocks = vi.hoisted(() => ({
   extractBearerToken: vi.fn((h: string | null) => (h === "Bearer token-1" ? "token-1" : null)),
   resolveAuthenticatedUserId: vi.fn(async () => "user-1"),
 }))
-vi.mock("@/app/actions/data", () => dataMocks)
+vi.mock("@/lib/db/warehouse", () => warehouseMocks)
 vi.mock("@/lib/auth/server", () => authMocks)
+vi.mock("@/lib/rate-limit/server", () => ({ enforceRateLimit: vi.fn(async () => ({ ok: true })) }))
 vi.mock("@/lib/logger", () => ({ createLogger: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() }) }))
 
-const res = await GET(new Request("https://example.com/api/dashboard", {
-  headers: { authorization: "Bearer token-1" },
+const res = await POST(new Request("https://example.com/api/dashboard/summary", {
+  method: "POST",
+  headers: { authorization: "Bearer token-1", "content-type": "application/json" },
+  body: JSON.stringify({ filters: {} }),
 }))
 expect(res.status).toBe(200)
 ```
 
-Source: `tests/api/dashboard-route.test.ts`. `vi.clearAllMocks()` in `beforeEach` resets call state between tests; per-test overrides use `mockResolvedValueOnce`/`mockRejectedValueOnce`.
-
-Newer SQL-backed routes (dashboard summary, entity query, search) skip the actions layer entirely: they mock `@/lib/db/warehouse` (`queryWarehouse`) and `@/lib/rate-limit/server` (`enforceRateLimit`) instead of `@/app/actions/data`, then queue one `mockResolvedValueOnce` result row-set per SQL query the route issues, in issue order. Source: `tests/api/dashboard-summary-route.test.ts`, `tests/api/entity-query-route.test.ts`, `tests/api/search-route.test.ts`.
+Queue one `mockResolvedValueOnce` result row-set per SQL statement the route issues, in issue order, or use `mockImplementation` keyed on the SQL text when the order is not stable. `vi.clearAllMocks()` in `beforeEach` resets call state between tests. Source: `tests/api/dashboard-summary-route.test.ts`, `tests/api/entity-query-route.test.ts`, `tests/api/search-route.test.ts`, `tests/api/account-related-route.test.ts`.
 
 ### `fetch`
 
