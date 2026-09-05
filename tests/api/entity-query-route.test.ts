@@ -29,8 +29,9 @@ describe("entity query routes", () => {
     authMocks.extractBearerToken.mockImplementation((h: string | null) => (h === "Bearer token-1" ? "token-1" : null))
     authMocks.resolveAuthenticatedUserId.mockResolvedValue("user-1")
     rateLimitMocks.enforceRateLimit.mockResolvedValue({ ok: true })
+    // The page statement carries the filtered total in every row as __total.
     warehouseMocks.queryWarehouse.mockImplementation(async (q: { text: string }) =>
-      q.text.includes("count(*)") ? [{ total: 1234 }] : [{ account_global_legal_name: "Acme" }]
+      q.text.includes("as __total") ? [{ account_global_legal_name: "Acme", __total: 1234 }] : [{ total: 1234 }]
     )
   })
 
@@ -50,6 +51,22 @@ describe("entity query routes", () => {
     const res = await post(accountsQuery, "https://x/api/accounts/query", { filters: { accountVisibilityMode: "all" }, page: 2, pageSize: 25 })
     expect(res.status).toBe(200)
     await expect(res.json()).resolves.toEqual({ rows: [{ account_global_legal_name: "Acme" }], total: 1234, page: 2, pageSize: 25 })
+    // Rows and total from ONE statement.
+    expect(warehouseMocks.queryWarehouse).toHaveBeenCalledTimes(1)
+  })
+
+  it("reports total 0 for an empty first page without a count query", async () => {
+    warehouseMocks.queryWarehouse.mockResolvedValue([])
+    const res = await post(accountsQuery, "https://x/api/accounts/query", { filters: {}, page: 1 })
+    await expect(res.json()).resolves.toMatchObject({ rows: [], total: 0 })
+    expect(warehouseMocks.queryWarehouse).toHaveBeenCalledTimes(1)
+  })
+
+  it("falls back to the count query for an empty page past the first", async () => {
+    warehouseMocks.queryWarehouse.mockImplementation(async (q: { text: string }) => (q.text.includes("as __total") ? [] : [{ total: 7 }]))
+    const res = await post(accountsQuery, "https://x/api/accounts/query", { filters: {}, page: 5 })
+    await expect(res.json()).resolves.toMatchObject({ rows: [], total: 7, page: 5 })
+    expect(warehouseMocks.queryWarehouse).toHaveBeenCalledTimes(2)
   })
 
   it("clamps pageSize to the max and page to >= 1", async () => {
@@ -62,7 +79,6 @@ describe("entity query routes", () => {
   it("only emits ORDER BY for a whitelisted sort column (else default)", async () => {
     let lastRowsSql = ""
     warehouseMocks.queryWarehouse.mockImplementation(async (q: { text: string }) => {
-      if (q.text.includes("count(*)")) return [{ total: 0 }]
       lastRowsSql = q.text
       return []
     })

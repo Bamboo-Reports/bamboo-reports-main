@@ -25,7 +25,7 @@ type EntityConfig = {
   defaultColumn: string
   /** Columns appended to every ORDER BY to make it total. See resolveOrder. */
   tiebreak: string[]
-  rows: (f: Filters, a: FilterAccess, o: { columns: string; orderBy: string; limit: number; offset: number }) => SqlQuery
+  rows: (f: Filters, a: FilterAccess, o: { columns: string; orderBy: string; limit: number; offset: number; withTotal?: boolean }) => SqlQuery
   count: (f: Filters, a: FilterAccess) => SqlQuery
 }
 
@@ -153,18 +153,30 @@ export async function queryEntity(
   const pageSize = clampPageSize(opts.pageSize)
   const orderBy = resolveOrder(entity, opts.sort)
 
+  // The page carries the filtered total in every row (`__total`, one scalar
+  // subquery over the cascade), so a page is one statement instead of a rows
+  // query plus a count query. An empty page past the first cannot carry it
+  // (the client can be left on a stale page number after a filter change), so
+  // only that case falls back to the count query.
   const rowsQuery = cfg.rows(filters, access, {
     columns: cfg.projection,
     orderBy,
     limit: pageSize,
     offset: (page - 1) * pageSize,
+    withTotal: true,
   })
-  const countQuery = cfg.count(filters, access)
+  const pageRows = await queryWarehouse<Record<string, unknown> & { __total?: number }>(rowsQuery)
 
-  const [rows, countRows] = await Promise.all([
-    queryWarehouse(rowsQuery),
-    queryWarehouse<{ total: number }>(countQuery),
-  ])
+  let total: number
+  if (pageRows.length > 0) {
+    total = Number(pageRows[0].__total ?? 0)
+  } else if (page === 1) {
+    total = 0
+  } else {
+    const countRows = await queryWarehouse<{ total: number }>(cfg.count(filters, access))
+    total = Number(countRows[0]?.total ?? 0)
+  }
 
-  return { rows, total: Number(countRows[0]?.total ?? 0), page, pageSize }
+  const rows = pageRows.map(({ __total: _total, ...row }) => row)
+  return { rows, total, page, pageSize }
 }

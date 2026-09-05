@@ -32,7 +32,7 @@ All endpoints require a Supabase bearer token (`extractBearerToken` + `resolveAu
 | `/api/dashboard/summary` | POST | Filtered + full counts: accounts, centers, upcoming centers, prospects, headcount, services | `{ filters }` | `{ filtered, full }` count objects |
 | `/api/dashboard/facets` | POST | 23 facet option lists (value + count, facet-excludes-itself) plus base min/max ranges for revenue, years-in-India, center inc year | `{ filters }` | `{ options, ranges }` |
 | `/api/dashboard/charts` | POST | Grouped counts per section (top-10; center city as top-5 + "Others"); null/empty grouped as "Unknown" | `{ filters }` | `{ account, center, prospect }` chart arrays |
-| `/api/accounts/query` | POST | Paginated filtered account rows | `{ filters, page, pageSize, sort }` | `{ rows, total, page, pageSize }` |
+| `/api/accounts/query` | POST | Paginated filtered account rows. A page and its filtered total come from one statement (`withTotal`: an uncorrelated `count(*)` over the cascade as `__total`, stripped before the response); only an empty page past the first falls back to the count query | `{ filters, page, pageSize, sort }` | `{ rows, total, page, pageSize }` |
 | `/api/centers/query` | POST | Paginated filtered center rows | same | same |
 | `/api/prospects/query` | POST | Paginated filtered prospect rows | same | same |
 | `/api/centers/map` | POST | Map aggregates over the filtered centers: per-city bubbles (representative lat/lng) and per-state choropleth rows | `{ filters }` | `{ cities, states }` |

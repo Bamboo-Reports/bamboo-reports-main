@@ -40,6 +40,12 @@ export type FilterAccess = {
 export type SqlQuery = { text: string; values: unknown[] }
 
 export type EntityQueryOptions = {
+  /**
+   * Also select `__total`: the size of the whole filtered set, as an
+   * uncorrelated scalar subquery over the cascade (evaluated once per
+   * statement), so a page and its total come back from one round trip.
+   */
+  withTotal?: boolean
   /** Raw SQL column list to select. Defaults to the entity id column. */
   columns?: string
   /** ORDER BY expression, or null to omit ordering. */
@@ -408,7 +414,8 @@ export function buildAccountsQuery(f: Filters, access: FilterAccess = {}, opts: 
   const p = new Params()
   const withClause = buildWith(["final_accounts"], f, p, flags, opts.materialized ?? true)
   const orderBy = opts.orderBy === undefined ? `${ACCOUNT_ID_COLUMN} asc` : opts.orderBy
-  let text = `${withClause} select ${columns} from accounts where ${memberIn(
+  const total = opts.withTotal ? `, (select count(*)::int from final_accounts) as __total` : ""
+  let text = `${withClause} select ${columns}${total} from accounts where ${memberIn(
     ACCOUNT_ID_COLUMN,
     "final_accounts"
   )}`
@@ -432,7 +439,8 @@ export function buildCentersQuery(f: Filters, access: FilterAccess = {}, opts: E
   const p = new Params()
   const withClause = buildWith(["surviving_centers"], f, p, flags, opts.materialized ?? true)
   const orderBy = opts.orderBy === undefined ? `center_name asc` : opts.orderBy
-  let text = `${withClause} select ${columns} from centers where ${memberIn(CENTER_ID_COLUMN, "surviving_centers")}`
+  const total = opts.withTotal ? `, (select count(*)::int from surviving_centers) as __total` : ""
+  let text = `${withClause} select ${columns}${total} from centers where ${memberIn(CENTER_ID_COLUMN, "surviving_centers")}`
   text = withPagination(text, p, { ...opts, orderBy })
   return { text, values: p.values }
 }
@@ -479,7 +487,9 @@ export function buildProspectsQuery(f: Filters, access: FilterAccess = {}, opts:
   const withClause = buildWith(prospectsRoots(flags), f, p, flags, opts.materialized ?? true)
   const where = prospectsWhereClause(f, p, flags)
   const orderBy = opts.orderBy === undefined ? `${PROSPECT_ID_COLUMN} asc` : opts.orderBy
-  let text = `${withClause} select ${columns} from prospects where ${where}`
+  // The same WHERE text (and so the same $n parameters) serves the count.
+  const total = opts.withTotal ? `, (select count(*)::int from prospects where ${where}) as __total` : ""
+  let text = `${withClause} select ${columns}${total} from prospects where ${where}`
   text = withPagination(text, p, { ...opts, orderBy })
   return { text, values: p.values }
 }
