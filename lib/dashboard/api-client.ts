@@ -1,4 +1,5 @@
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import type { AccountMatchResult } from "@/lib/accounts/account-match"
 import type {
   Account,
   Alias,
@@ -219,3 +220,7 @@ export const fetchSearch = (query: string) => request<SearchResponse>(`/api/sear
 
 export const fetchAccountAutocomplete = (query: string) =>
   request<{ suggestions: AutocompleteSuggestion[] }>(`/api/accounts/autocomplete?q=${encodeURIComponent(query)}`)
+
+/** Maps an uploaded list of company names onto warehouse accounts (#account-list-upload). */
+export const fetchAccountMatches = (names: string[]) =>
+  request<{ results: AccountMatchResult[] }>("/api/accounts/match", { method: "POST", body: JSON.stringify({ names }) })
