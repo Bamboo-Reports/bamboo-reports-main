@@ -26,19 +26,31 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } })
 }
 
+type IndexRows = { accounts: AccountIndexRow[]; aliases: AliasIndexRow[] }
+
+// The cached value must be plain JSON: entries are mirrored to Redis, and a
+// Map would come back as an empty object. Cache the rows, build the index here.
+const indexByRows = new WeakMap<IndexRows, AccountMatchIndex>()
+
 async function loadIndex(bypassRead: boolean): Promise<AccountMatchIndex> {
-  return getOrCompute(
-    "account-match:index",
+  const rows = await getOrCompute<IndexRows>(
+    "account-match:index-rows",
     dashboardCacheTtlMs() === 0 ? 0 : INDEX_CACHE_TTL_MS,
     async () => {
       const [accounts, aliases] = await Promise.all([
         queryWarehouse<AccountIndexRow>(buildAccountIndexQuery()),
         queryWarehouse<AliasIndexRow>(buildAliasIndexQuery()),
       ])
-      return buildAccountMatchIndex(accounts, aliases)
+      return { accounts, aliases }
     },
     { bypassRead }
   )
+  let index = indexByRows.get(rows)
+  if (!index) {
+    index = buildAccountMatchIndex(Array.isArray(rows.accounts) ? rows.accounts : [], Array.isArray(rows.aliases) ? rows.aliases : [])
+    indexByRows.set(rows, index)
+  }
+  return index
 }
 
 /**

@@ -39,7 +39,7 @@ Notes:
 - The three `/query` routes are 9-line wrappers around `handleEntityQuery` in `lib/dashboard/entity-query-route.ts`. Page size defaults to 51 and is clamped to 100 (`MAX_PAGE_SIZE`), so no single call returns the dataset.
 - The rate-limit RPC is fired before body parsing and awaited after the (usually cached) compute, so the round trips overlap.
 - `/api/search` and `/api/accounts/autocomplete` cache for 24h keyed on the term only (warehouse data is weekly-static); the ETL purges `dash:*` keys after import.
-- `/api/accounts/match` caches the full account + alias name index (not per request) for 24h under `account-match:index` and resolves every name in memory (`lib/accounts/account-match.ts`); it is rate limited to 20 calls per minute per user.
+- `/api/accounts/match` caches the raw account + alias name rows (plain JSON, Redis-safe) for 24h under `account-match:index-rows` and builds the lookup index from them and resolves every name in memory (`lib/accounts/account-match.ts`); it is rate limited to 20 calls per minute per user.
 - Row shapes come from `lib/dashboard/entity-columns.ts` (`ACCOUNT_PROJECTION`, `CENTER_COLUMNS`, `PROSPECT_COLUMNS`, ...), mirroring the legacy fetchers so components render server rows unchanged. `ACCOUNT_PROJECTION` casts `account_hq_revenue::float8` and pulls `account_hq_stock_ticker` from the ticker table via a correlated subquery.
 
 ## SQL filter translation
