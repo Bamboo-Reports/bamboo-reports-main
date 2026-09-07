@@ -6,14 +6,19 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { getSectionUnavailableMessage, isSectionEnabled } from '@/lib/config/dashboard-access'
 import { cn } from '@/lib/utils'
 
+// Truncate to one decimal instead of rounding, so 2,459 reads as 2.4K (not 2.5K)
+// and the compact value never overstates the real count.
+function truncateToOneDecimal(val: number): string {
+  const truncated = Math.floor(val * 10) / 10
+  return truncated % 1 === 0 ? truncated.toFixed(0) : truncated.toFixed(1)
+}
+
 function formatCompactNumber(num: number): string {
   if (num >= 1_000_000) {
-    const val = num / 1_000_000
-    return `${val % 1 === 0 ? val.toFixed(0) : val.toFixed(1)}M`
+    return `${truncateToOneDecimal(num / 1_000_000)}M`
   }
   if (num >= 1_000) {
-    const val = num / 1_000
-    return `${val % 1 === 0 ? val.toFixed(0) : val.toFixed(1)}K`
+    return `${truncateToOneDecimal(num / 1_000)}K`
   }
   return num.toLocaleString()
 }
