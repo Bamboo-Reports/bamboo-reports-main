@@ -29,6 +29,7 @@ All endpoints require a Supabase bearer token (`extractBearerToken` + `resolveAu
 | `/api/centers/map` | POST | Map aggregates over the filtered centers: per-city bubbles (representative lat/lng) and per-state choropleth rows | `{ filters }` | `{ cities, states }` |
 | `/api/search` | GET | Global search across accounts/centers/prospects, 10 hits per group hydrated to full rows, plus total match counts | `?q=` (min length gate) | `{ accounts, centers, prospects, total }` |
 | `/api/accounts/autocomplete` | GET | Account name suggestions, including "Known as" alias matches and visibility metadata | `?q=` | `{ suggestions }` |
+| `/api/accounts/match` | POST | Maps an uploaded client account list onto warehouse accounts: exact name, then alias, then a suffix-insensitive normalized key, then fuzzy candidates for review (max 1000 names) | `{ names }` | `{ results }` with `status` matched / review / not_found, `match`, `candidates` |
 | `/api/accounts/[name]/related` | GET | Account detail dialog payload: account row + its centers, services, tech, prospects (each gated by section entitlement) | path param | `{ account, centers, services, tech, prospects }` |
 | `/api/centers/[key]` | GET | One center by `cn_unique_key` with services and tech (center dialog, favorites) | path param | `{ center, services, tech }` |
 | `/api/prospects/[id]` | GET | One prospect by `ps_unique_key` (favorites, recent items) | path param | `{ prospect }` |
@@ -38,6 +39,7 @@ Notes:
 - The three `/query` routes are 9-line wrappers around `handleEntityQuery` in `lib/dashboard/entity-query-route.ts`. Page size defaults to 51 and is clamped to 100 (`MAX_PAGE_SIZE`), so no single call returns the dataset.
 - The rate-limit RPC is fired before body parsing and awaited after the (usually cached) compute, so the round trips overlap.
 - `/api/search` and `/api/accounts/autocomplete` cache for 24h keyed on the term only (warehouse data is weekly-static); the ETL purges `dash:*` keys after import.
+- `/api/accounts/match` caches the raw account + alias name rows (plain JSON, Redis-safe) for 24h under `account-match:index-rows` and builds the lookup index from them and resolves every name in memory (`lib/accounts/account-match.ts`); it is rate limited to 20 calls per minute per user.
 - Row shapes come from `lib/dashboard/entity-columns.ts` (`ACCOUNT_PROJECTION`, `CENTER_COLUMNS`, `PROSPECT_COLUMNS`, ...), mirroring the legacy fetchers so components render server rows unchanged. `ACCOUNT_PROJECTION` casts `account_hq_revenue::float8` and pulls `account_hq_stock_ticker` from the ticker table via a correlated subquery.
 
 ## SQL filter translation
@@ -162,6 +164,7 @@ Per [security-249-progress.md](../security-249-progress.md):
 | `app/api/{accounts,centers,prospects}/query/route.ts` | Paginated row endpoints |
 | `app/api/centers/map/route.ts` | Map aggregates endpoint |
 | `app/api/search/route.ts`, `app/api/accounts/autocomplete/route.ts` | Server-backed search and autocomplete |
+| `app/api/accounts/match/route.ts`, `lib/accounts/account-match.ts`, `lib/accounts/account-list-parser.ts` | Account list upload: list parsing (CSV/TSV/XLSX/paste), name matching and candidate scoring |
 | `app/api/accounts/[name]/related/route.ts`, `app/api/centers/[key]/route.ts`, `app/api/prospects/[id]/route.ts` | Lookup endpoints (dialogs, favorites) |
 | `app/api/exports/generate/route.ts`, `lib/exports/server-builder.ts` | Export-by-filter |
 | `tests/unit/filtering-sql-parity.test.ts` | pg-mem golden-parity suite (engine vs SQL) |

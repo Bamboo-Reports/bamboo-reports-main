@@ -294,6 +294,7 @@ export function useDashboardFilters({
       prospectCityValues: filters.prospectCityValues,
       prospectTitleKeywords: filters.prospectTitleKeywords,
       accountGlobalLegalNameKeywords: filters.accountGlobalLegalNameKeywords,
+      accountNameValues: filters.accountNameValues,
       accountHqRevenueRange: filters.accountHqRevenueRange,
       accountHqRevenueIncludeNull: filters.accountHqRevenueIncludeNull,
     }),
@@ -329,6 +330,7 @@ export function useDashboardFilters({
       if (e("accountHqEmployeeRangeValues")) count += sourceFilters.accountHqEmployeeRangeValues.length
       if (e("accountCenterEmployeesRangeValues")) count += sourceFilters.accountCenterEmployeesRangeValues.length
       if (e("accountGlobalLegalNameKeywords")) count += sourceFilters.accountGlobalLegalNameKeywords.length
+      if (e("accountNameValues")) count += sourceFilters.accountNameValues.length
       if (e("centerTypeValues")) count += sourceFilters.centerTypeValues.length
       if (e("centerFocusValues")) count += sourceFilters.centerFocusValues.length
       if (e("centerCityValues")) count += sourceFilters.centerCityValues.length

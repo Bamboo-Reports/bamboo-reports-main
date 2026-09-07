@@ -145,6 +145,7 @@ const VISIBILITY_LABEL: Record<AccountVisibilityMode, string> = {
 // Keys rendered as value lists, in the order they appear in the sidebar.
 const LIST_FILTER_KEYS = [
   "accountGlobalLegalNameKeywords",
+  "accountNameValues",
   "accountHqRegionValues",
   "accountHqCountryValues",
   "accountPrimaryCategoryValues",

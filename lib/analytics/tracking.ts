@@ -87,6 +87,7 @@ export const buildTrackedFiltersSnapshot = (
   )
   pushIfActive("yearsInIndiaIncludeNull", filters.yearsInIndiaIncludeNull)
   pushIfActive("accountGlobalLegalNameKeywords", filters.accountGlobalLegalNameKeywords.length > 0)
+  pushIfActive("accountNameValues", filters.accountNameValues.length > 0)
   pushIfActive("centerTypeValues", filters.centerTypeValues.length > 0)
   pushIfActive("centerFocusValues", filters.centerFocusValues.length > 0)
   pushIfActive("centerCityValues", filters.centerCityValues.length > 0)
@@ -141,6 +142,7 @@ export const buildTrackedFiltersSnapshot = (
     account_years_in_india_range_max: filters.accountYearsInIndiaRange[1],
     include_null_years_in_india: filters.yearsInIndiaIncludeNull,
     account_name_keywords: toTrackedFilterValueArray(filters.accountGlobalLegalNameKeywords),
+    account_name_values: toTrackedFilterValueArray(filters.accountNameValues),
     center_types: toTrackedFilterValueArray(filters.centerTypeValues),
     center_focus: toTrackedFilterValueArray(filters.centerFocusValues),
     center_cities: toTrackedFilterValueArray(filters.centerCityValues),

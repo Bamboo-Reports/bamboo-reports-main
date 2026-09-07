@@ -161,7 +161,18 @@ Saved filters are intentionally forward-compatible with deployment packaging cha
 
 ---
 
-## 5. Filter Sharing
+## 5. Account List Upload
+
+Clients often hand over their own account list and want stats limited to it. The upload button next to "Save current filters" in `components/saved-filters-manager.tsx` opens `components/filters/account-list-upload-dialog.tsx`:
+
+1. The user drops a CSV/TSV/TXT/XLSX file (column auto-detected, changeable) or pastes names one per line. Names are de-duplicated client-side (`lib/accounts/account-list-parser.ts`).
+2. `POST /api/accounts/match` returns one result per name: `matched` (exact name, alias, or suffix-insensitive key), `review` (ambiguous or fuzzy candidates) or `not_found`.
+3. The review table lets the user accept, change or clear the mapped account per row via `components/filters/account-picker.tsx` (server autocomplete). Unmapped rows are skipped.
+4. "Save filter" / "Save and apply" store a regular `saved_filters` row whose `filters` JSON is the defaults plus `accountNameValues` (one `include` entry per mapped account) and `accountVisibilityMode: "all"`. No new tables or columns are involved.
+
+`accountNameValues` is an exact-match filter on `account_global_legal_name` (`valueClause` in SQL, `createValueMatcher` in the client engine), unlike the sidebar's `accountGlobalLegalNameKeywords` which is a contains-match. Like the keyword filter it bypasses the GCC visibility clause. Loaded lists appear in the sidebar's account section as removable chips under "Account List (exact match)".
+
+## 6. Filter Sharing
 
 ### 5.1 Table: `filter_shares`
 

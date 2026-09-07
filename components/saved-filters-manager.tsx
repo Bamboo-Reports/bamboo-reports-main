@@ -30,7 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Save, FolderOpen, Settings, X, ChevronDown, ShieldAlert, Share2, Users, Trash2, FileText } from "lucide-react"
+import { Save, FolderOpen, Settings, X, ChevronDown, ShieldAlert, Share2, Users, Trash2, FileText, Upload } from "lucide-react"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { buildTrackedFiltersSnapshot, normalizeTrackedText, toTrackedStringArray } from "@/lib/analytics/tracking"
@@ -38,6 +38,7 @@ import type { Filters } from "@/lib/types"
 import { calculateActiveFilters } from "@/lib/dashboard/filter-summary"
 import { SavedFilterCard, type SavedFilter } from "@/components/filters/saved-filter-card"
 import { useSavedFilters, type FilterShare } from "@/hooks/use-saved-filters"
+import { AccountListUploadDialog } from "@/components/filters/account-list-upload-dialog"
 
 interface SavedFiltersManagerProps {
   currentFilters: Filters
@@ -76,6 +77,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
   } = useSavedFilters()
 
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
   const [manageDialogOpen, setManageDialogOpen] = useState(false)
   const [savedFiltersDropdownOpen, setSavedFiltersDropdownOpen] = useState(false)
   const [filterName, setFilterName] = useState("")
@@ -398,7 +400,28 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="h-9 w-9 rounded-full shrink-0"
+          title="Upload an account list and save it as a filter"
+          aria-label="Upload account list"
+          onClick={() => setUploadDialogOpen(true)}
+          data-tour="upload-account-list-button"
+        >
+          <Upload className="h-4 w-4" />
+        </Button>
       </div>
+
+      <AccountListUploadDialog
+        open={uploadDialogOpen}
+        onOpenChange={setUploadDialogOpen}
+        onSave={saveFilter}
+        onApply={onLoadFilters}
+        saving={loading}
+      />
 
       {(onReset || onExport) && (
         <div className="grid grid-cols-2 gap-2 w-full">

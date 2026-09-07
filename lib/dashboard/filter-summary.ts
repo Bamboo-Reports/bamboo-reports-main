@@ -58,6 +58,7 @@ export function calculateActiveFilters(filters: Filters) {
     (yearsInIndiaFilterActive ? 1 : 0) +
     (filters.yearsInIndiaIncludeNull ? 1 : 0) +
     filters.accountGlobalLegalNameKeywords.length +
+    filters.accountNameValues.length +
     filters.centerTypeValues.length +
     filters.centerFocusValues.length +
     filters.centerCityValues.length +

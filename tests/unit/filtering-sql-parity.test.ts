@@ -181,6 +181,9 @@ describe("filtering-sql parity with getFilteredData", () => {
     ["years range", { accountYearsInIndiaRange: [3, 20], yearsInIndiaIncludeNull: false }],
     ["name keyword (visibility bypass)", { accountGlobalLegalNameKeywords: inc("global") }],
     ["name keyword exclude", { accountGlobalLegalNameKeywords: exc("auto"), accountVisibilityMode: "all" }],
+    ["exact name include (visibility bypass)", { accountNameValues: inc("Global Auto GmbH", "Acme Corp") }],
+    ["exact name is not a contains match", { accountNameValues: inc("Acme"), accountVisibilityMode: "all" }],
+    ["exact name exclude", { accountNameValues: exc("Acme Corp"), accountVisibilityMode: "all" }],
     ["center type include", { centerTypeValues: inc("RnD"), accountVisibilityMode: "all" }],
     ["center city + account country", { accountHqCountryValues: inc("United States"), centerCityValues: inc("New York") }],
     ["center inc year range", { centerIncYearRange: [2012, 2019], centerIncYearIncludeNull: false, accountVisibilityMode: "all" }],
@@ -232,6 +235,7 @@ const POOLS = {
   empRange: ["1000-5000", "5000-10000", "100-500", "500-1000"],
   centerEmpRange: ["500-1000", "100-500", ""],
   nameKw: ["acme", "auto", "systems", "global", "zzz"],
+  exactName: ["Acme Corp", "Global Auto GmbH", "Gamma Systems", "Acme", "Nope Inc"],
   centerType: ["Delivery", "RnD", "Support", "Sales"],
   centerFocus: ["IT", "Engineering", "Operations"],
   centerCity: ["New York", "Austin", "Berlin", "Paris", "Mumbai"],
@@ -280,6 +284,7 @@ describe("filtering-sql parity fuzz (seeded)", () => {
     set("accountHqEmployeeRangeValues", maybeValues(POOLS.empRange))
     set("accountCenterEmployeesRangeValues", maybeValues(POOLS.centerEmpRange))
     set("accountGlobalLegalNameKeywords", maybeValues(POOLS.nameKw, 0.2))
+    set("accountNameValues", maybeValues(POOLS.exactName, 0.2))
     set("centerTypeValues", maybeValues(POOLS.centerType))
     set("centerFocusValues", maybeValues(POOLS.centerFocus))
     set("centerCityValues", maybeValues(POOLS.centerCity))
