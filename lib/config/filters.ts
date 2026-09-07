@@ -97,6 +97,15 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
         description: "Autocomplete search for account names",
       },
       {
+        key: "accountNameValues",
+        label: "Account List",
+        enabled: true,
+        type: "multi-select",
+        column: "account_global_legal_name",
+        table: "accounts",
+        description: "Exact account names, typically from an uploaded client account list",
+      },
+      {
         key: "accountHqRevenueRange",
         label: "HQ Company Revenue",
         enabled: true,

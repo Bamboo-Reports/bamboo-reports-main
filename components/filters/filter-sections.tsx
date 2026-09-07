@@ -1,5 +1,5 @@
 import React from "react"
-import { ChevronDown, ChevronUp, Lock } from "lucide-react"
+import { ChevronDown, ChevronUp, Lock, X } from "lucide-react"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -90,6 +90,49 @@ export function AccountFiltersSection({
               placeholder="Type to search account names..."
               trackingKey="accountGlobalLegalNameKeywords"
             />
+          </div>
+          )}
+
+          {isFilterEnabled("accountNameValues") && pendingFilters.accountNameValues.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-medium">Account List (exact match)</Label>
+              <button
+                type="button"
+                className="text-[11px] text-muted-foreground hover:text-foreground"
+                onClick={() => setPendingFilters((prev) => ({ ...prev, accountNameValues: [] }))}
+              >
+                Clear {pendingFilters.accountNameValues.length}
+              </button>
+            </div>
+            <div className="flex max-h-40 flex-wrap gap-1.5 overflow-y-auto">
+              {pendingFilters.accountNameValues.map((entry) => (
+                <span
+                  key={`${entry.mode}-${entry.value}`}
+                  className={
+                    entry.mode === "exclude"
+                      ? "inline-flex max-w-full items-center gap-1 rounded-full border border-red-500/50 bg-red-500/15 px-2 py-0.5 text-xs text-red-700 dark:text-red-300"
+                      : "inline-flex max-w-full items-center gap-1 rounded-full border border-green-500/50 bg-green-500/15 px-2 py-0.5 text-xs text-green-700 dark:text-green-300"
+                  }
+                  title={entry.value}
+                >
+                  <span className="truncate">{entry.value}</span>
+                  <button
+                    type="button"
+                    aria-label={`Remove ${entry.value}`}
+                    className="rounded-sm opacity-70 hover:opacity-100"
+                    onClick={() =>
+                      setPendingFilters((prev) => ({
+                        ...prev,
+                        accountNameValues: prev.accountNameValues.filter((v) => v !== entry),
+                      }))
+                    }
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
           </div>
           )}
 

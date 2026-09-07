@@ -168,9 +168,9 @@ Clients often hand over their own account list and want stats limited to it. The
 1. The user drops a CSV/TSV/TXT/XLSX file (column auto-detected, changeable) or pastes names one per line. Names are de-duplicated client-side (`lib/accounts/account-list-parser.ts`).
 2. `POST /api/accounts/match` returns one result per name: `matched` (exact name, alias, or suffix-insensitive key), `review` (ambiguous or fuzzy candidates) or `not_found`.
 3. The review table lets the user accept, change or clear the mapped account per row via `components/filters/account-picker.tsx` (server autocomplete). Unmapped rows are skipped.
-4. "Save filter" / "Save and apply" store a regular `saved_filters` row whose `filters` JSON is the defaults plus `accountGlobalLegalNameKeywords` (one `include` entry per mapped account) and `accountVisibilityMode: "all"`. No new tables or columns are involved.
+4. "Save filter" / "Save and apply" store a regular `saved_filters` row whose `filters` JSON is the defaults plus `accountNameValues` (one `include` entry per mapped account) and `accountVisibilityMode: "all"`. No new tables or columns are involved.
 
-Because `accountGlobalLegalNameKeywords` is a contains-match on `account_global_legal_name`, an account whose legal name is a prefix of another (for example "Infosys Limited" and "Infosys BPM Limited") also pulls in the longer name. An exact-match filter key would remove that edge case if it becomes a problem.
+`accountNameValues` is an exact-match filter on `account_global_legal_name` (`valueClause` in SQL, `createValueMatcher` in the client engine), unlike the sidebar's `accountGlobalLegalNameKeywords` which is a contains-match. Like the keyword filter it bypasses the GCC visibility clause. Loaded lists appear in the sidebar's account section as removable chips under "Account List (exact match)".
 
 ## 6. Filter Sharing
 

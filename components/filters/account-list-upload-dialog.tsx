@@ -222,7 +222,7 @@ export function AccountListUploadDialog({ open, onOpenChange, onSave, onApply, s
     (): Filters =>
       createDefaultFilters({
         accountVisibilityMode: "all",
-        accountGlobalLegalNameKeywords: mappedNames.map((value) => ({ value, mode: "include" as const })),
+        accountNameValues: mappedNames.map((value) => ({ value, mode: "include" as const })),
       }),
     [mappedNames]
   )
@@ -257,7 +257,7 @@ export function AccountListUploadDialog({ open, onOpenChange, onSave, onApply, s
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={cn("max-h-[90vh] overflow-y-auto", step === "review" ? "max-w-4xl" : "max-w-lg")}>
+      <DialogContent className={cn("max-h-[90vh] w-[calc(100%-2rem)] overflow-x-hidden overflow-y-auto", step === "review" ? "max-w-4xl" : "max-w-lg")}>
         <DialogHeader>
           <DialogTitle>{step === "input" ? "Upload account list" : "Review account matches"}</DialogTitle>
           <DialogDescription>
@@ -268,7 +268,7 @@ export function AccountListUploadDialog({ open, onOpenChange, onSave, onApply, s
         </DialogHeader>
 
         {step === "input" ? (
-          <div className="space-y-4 py-1">
+          <div className="min-w-0 space-y-4 py-1">
             <div
               role="button"
               tabIndex={0}
@@ -309,7 +309,7 @@ export function AccountListUploadDialog({ open, onOpenChange, onSave, onApply, s
               {fileName ? (
                 <>
                   <FileSpreadsheet className="h-6 w-6 text-primary" />
-                  <p className="text-sm font-medium">{fileName}</p>
+                  <p className="max-w-full truncate text-sm font-medium" title={fileName}>{fileName}</p>
                   <p className="text-xs text-muted-foreground">Click or drop another file to replace it</p>
                 </>
               ) : (
@@ -328,7 +328,7 @@ export function AccountListUploadDialog({ open, onOpenChange, onSave, onApply, s
                   id="account-list-column"
                   value={column}
                   onChange={(e) => setColumn(Number(e.target.value))}
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                  className="flex h-9 w-full max-w-full min-w-0 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
                 >
                   {table.headers.map((header, i) => (
                     <option key={`${header}-${i}`} value={i}>
@@ -361,7 +361,7 @@ export function AccountListUploadDialog({ open, onOpenChange, onSave, onApply, s
             )}
 
             {names.length > 0 && (
-              <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
+              <div className="min-w-0 rounded-md border bg-muted/30 px-3 py-2 text-sm">
                 <span className="font-medium">{Math.min(names.length, MAX_MATCH_NAMES)}</span> unique names ready to match
                 {names.length > MAX_MATCH_NAMES && (
                   <span className="text-muted-foreground"> (only the first {MAX_MATCH_NAMES} will be used)</span>
@@ -374,7 +374,7 @@ export function AccountListUploadDialog({ open, onOpenChange, onSave, onApply, s
             )}
           </div>
         ) : (
-          <div className="space-y-4 py-1">
+          <div className="min-w-0 space-y-4 py-1">
             <div className="flex flex-wrap items-center gap-2">
               {(["all", "matched", "review", "not_found"] as const).map((key) => {
                 const count = key === "all" ? rows.length : counts[key]
@@ -401,7 +401,7 @@ export function AccountListUploadDialog({ open, onOpenChange, onSave, onApply, s
               </span>
             </div>
 
-            <div className="max-h-[46vh] overflow-auto rounded-md border">
+            <div className="max-h-[46vh] min-w-0 overflow-auto rounded-md border">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 z-10 bg-muted/80 backdrop-blur">
                   <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">

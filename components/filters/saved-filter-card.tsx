@@ -127,6 +127,7 @@ export const SavedFilterCard = memo(({
                     />
                   )}
                   {renderFilterValues(filter.filters.accountGlobalLegalNameKeywords, "Account Name")}
+                  {renderFilterValues(filter.filters.accountNameValues, "Account List")}
                   {renderFilterValues(filter.filters.accountHqRegionValues, "Region")}
                   {renderFilterValues(filter.filters.accountHqCountryValues, "Country")}
                   {renderFilterValues(filter.filters.accountHqIndustryValues, "Industry")}

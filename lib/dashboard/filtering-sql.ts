@@ -200,7 +200,7 @@ function memberIn(col: string, cte: string): string {
 // ---------------------------------------------------------------------------
 
 function accountPredicate(f: Filters, p: Params): string {
-  const hasNameSearch = f.accountGlobalLegalNameKeywords.length > 0
+  const hasNameSearch = f.accountGlobalLegalNameKeywords.length > 0 || f.accountNameValues.length > 0
   return andAll([
     valueClause("account_hq_region", f.accountHqRegionValues, p),
     valueClause("account_hq_country", f.accountHqCountryValues, p),
@@ -216,6 +216,7 @@ function accountPredicate(f: Filters, p: Params): string {
     rangeClause("account_hq_revenue", f.accountHqRevenueRange, f.accountHqRevenueIncludeNull, p),
     rangeClause("years_in_india", f.accountYearsInIndiaRange, f.yearsInIndiaIncludeNull, p),
     keywordClause("account_global_legal_name", f.accountGlobalLegalNameKeywords, p),
+    valueClause("account_global_legal_name", f.accountNameValues, p),
     visibilityClause(f.accountVisibilityMode, !hasNameSearch),
   ])
 }
@@ -270,7 +271,7 @@ function computeFlags(f: Filters, access: FilterAccess) {
   const ce = access.centersEnabled ?? true
   const pe = access.prospectsEnabled ?? true
 
-  const hasNameSearch = f.accountGlobalLegalNameKeywords.length > 0
+  const hasNameSearch = f.accountGlobalLegalNameKeywords.length > 0 || f.accountNameValues.length > 0
 
   const haf =
     f.accountHqRegionValues.length > 0 ||
@@ -291,7 +292,8 @@ function computeFlags(f: Filters, access: FilterAccess) {
     f.accountYearsInIndiaRange[0] > 0 ||
     f.accountYearsInIndiaRange[1] < Number.MAX_SAFE_INTEGER ||
     f.yearsInIndiaIncludeNull ||
-    f.accountGlobalLegalNameKeywords.length > 0
+    f.accountGlobalLegalNameKeywords.length > 0 ||
+    f.accountNameValues.length > 0
 
   const rawHpf =
     f.prospectDepartmentValues.length > 0 ||

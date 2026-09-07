@@ -213,6 +213,8 @@ export interface Filters {
   accountYearsInIndiaRange: [number, number]
   yearsInIndiaIncludeNull: boolean
   accountGlobalLegalNameKeywords: FilterValue[]
+  /** Exact account legal names (uploaded account lists). */
+  accountNameValues: FilterValue[]
   centerTypeValues: FilterValue[]
   centerFocusValues: FilterValue[]
   centerCityValues: FilterValue[]

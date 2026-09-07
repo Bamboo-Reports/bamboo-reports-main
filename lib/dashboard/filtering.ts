@@ -162,6 +162,7 @@ export function getFilteredData(
   const matchAccountEmployeesRange = createValueMatcher(filters.accountHqEmployeeRangeValues)
   const matchAccountCenterEmployees = createValueMatcher(filters.accountCenterEmployeesRangeValues)
   const matchAccountName = createKeywordMatcher(filters.accountGlobalLegalNameKeywords)
+  const matchAccountExactName = createValueMatcher(filters.accountNameValues)
   const matchVisibility = (value: Account["account_visibility"]) =>
     matchAccountVisibility(value, filters.accountVisibilityMode)
   const matchAccountRevenue = (value: number | string | null | undefined) =>
@@ -187,7 +188,7 @@ export function getFilteredData(
   const matchProspectLevel = createValueMatcher(filters.prospectLevelValues)
   const matchProspectCity = createValueMatcher(filters.prospectCityValues)
   const matchProspectTitle = createKeywordMatcher(filters.prospectTitleKeywords)
-  const hasExplicitAccountNameSearch = filters.accountGlobalLegalNameKeywords.length > 0
+  const hasExplicitAccountNameSearch = filters.accountGlobalLegalNameKeywords.length > 0 || filters.accountNameValues.length > 0
 
   const hasAccountFilters =
     filters.accountHqRegionValues.length > 0 ||
@@ -208,7 +209,8 @@ export function getFilteredData(
     filters.accountYearsInIndiaRange[0] > 0 ||
     filters.accountYearsInIndiaRange[1] < Number.MAX_SAFE_INTEGER ||
     filters.yearsInIndiaIncludeNull ||
-    filters.accountGlobalLegalNameKeywords.length > 0
+    filters.accountGlobalLegalNameKeywords.length > 0 ||
+    filters.accountNameValues.length > 0
 
   const hasProspectFilters =
     filters.prospectDepartmentValues.length > 0 ||
@@ -245,6 +247,7 @@ export function getFilteredData(
     if (!matchAccountRevenue(account.account_hq_revenue)) continue
     if (!matchAccountYearsInIndia(account.years_in_india)) continue
     if (!matchAccountName(account.account_global_legal_name)) continue
+    if (!matchAccountExactName(account.account_global_legal_name)) continue
     if (!hasExplicitAccountNameSearch && !matchVisibility(account.account_visibility)) continue
 
     filteredAccounts.push(account)
