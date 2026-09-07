@@ -52,6 +52,11 @@ from `.env` in the same directory.
 Run with:
     uv run validate.py
 
+Flags:
+    --force              Keep going after a phase fails instead of stopping early.
+    --exclude a,b,c      Skip the named sheets in every phase. A rule whose
+                         source of truth is excluded is skipped with a warning.
+
 The dependencies are declared in the PEP 723 metadata above and are installed
 automatically by uv.
 """
@@ -125,6 +130,16 @@ SERVICE_COVERAGE_RULES = [
         ],
     },
 ]
+
+ALL_SHEETS = ["accounts", "centers", "services", "prospects", "ticker", "alias", "functions", "tech"]
+
+# Sheets skipped in every phase. Populated from --exclude in main().
+EXCLUDED_SHEETS: set[str] = set()
+
+
+def is_excluded(sheet_name: str) -> bool:
+    return sheet_name.strip().lower() in EXCLUDED_SHEETS
+
 
 UNIQUENESS_RULES = [
     {"sheet": "accounts", "column": "account_global_legal_name"},
@@ -1263,7 +1278,7 @@ def check_all_tables_format(cache: SheetCache) -> bool:
     console.rule("[border]PHASE 0: FORMAT VALIDATION[/border]")
     console.print()
 
-    tables = ["accounts", "centers", "services", "prospects", "ticker", "alias", "functions", "tech"]
+    tables = [t for t in ALL_SHEETS if not is_excluded(t)]
     all_ok = True
     for t in tables:
         if not check_table_format(cache, t):
@@ -1281,7 +1296,7 @@ def check_invisible_characters(cache: SheetCache) -> bool:
     console.rule("[border]PHASE 0B: INVISIBLE CHARACTERS[/border]")
     console.print()
 
-    tables = ["accounts", "centers", "services", "prospects", "ticker", "alias", "functions", "tech"]
+    tables = [t for t in ALL_SHEETS if not is_excluded(t)]
     offenders: list[tuple[str, int, str, str, str]] = []
 
     for table in tables:
@@ -1347,6 +1362,9 @@ def check_uniqueness(cache: SheetCache) -> bool:
     for rule in UNIQUENESS_RULES:
         sheet_name = rule["sheet"]
         column = rule["column"]
+        if is_excluded(sheet_name):
+            console.print(f"  [warning][SKIP][/warning] '{sheet_name}' excluded via --exclude.\n")
+            continue
 
         console.print(
             f"  [info][*][/info] Checking '{column}' is unique in '{sheet_name}' ..."
@@ -1460,6 +1478,18 @@ def validate_column(
     console.print()
 
     # -- Read source of truth --------------------------------------------------
+    if is_excluded(source_sheet):
+        console.print(
+            f"  [warning][SKIP][/warning] Source of truth '{source_sheet}' excluded via --exclude, "
+            f"rule skipped.\n"
+        )
+        return 0, 0, False
+
+    target_sheets = [t for t in target_sheets if not is_excluded(t)]
+    if not target_sheets:
+        console.print("  [warning][SKIP][/warning] All target sheets excluded via --exclude.\n")
+        return 0, 0, False
+
     console.print(f"  [info][*][/info] Reading '{source_sheet}' (source of truth) ...")
     try:
         source_data = cache.get_column_values(source_sheet, column)
@@ -1617,6 +1647,14 @@ def check_completeness(cache: SheetCache) -> bool:
         target_sheet = rule["target_sheet"]
         column = rule["column"]
 
+        if is_excluded(source_sheet) or is_excluded(target_sheet):
+            skipped = source_sheet if is_excluded(source_sheet) else target_sheet
+            console.print(
+                f"  [warning][SKIP][/warning] '{skipped}' excluded via --exclude, "
+                f"'{source_sheet}' -> '{target_sheet}' completeness skipped.\n"
+            )
+            continue
+
         console.print(
             f"  [info][*][/info] Checking every '{source_sheet}.{column}' "
             f"exists in '{target_sheet}' ..."
@@ -1744,6 +1782,10 @@ def check_service_coverage(cache: SheetCache) -> bool:
         label_col = rule["label_column"]
         service_cols = rule["service_columns"]
 
+        if is_excluded(sheet_name):
+            console.print(f"  [warning][SKIP][/warning] '{sheet_name}' excluded via --exclude.\n")
+            continue
+
         console.print(
             f"  [info][*][/info] Checking every row in '{sheet_name}' has at least one service ..."
         )
@@ -1848,8 +1890,42 @@ def check_service_coverage(cache: SheetCache) -> bool:
 
 
 # -- Main ---------------------------------------------------------------------
+def parse_excluded_sheets(argv: list[str]) -> set[str]:
+    """Read --exclude a,b,c (or --exclude=a,b,c) into a set of sheet names."""
+    raw: list[str] = []
+    i = 1
+    while i < len(argv):
+        arg = argv[i]
+        if arg == "--exclude":
+            if i + 1 >= len(argv) or argv[i + 1].startswith("--"):
+                console.print("[error][ERROR][/error] --exclude needs a comma-separated list of sheet names.")
+                sys.exit(2)
+            raw.append(argv[i + 1])
+            i += 2
+            continue
+        if arg.startswith("--exclude="):
+            raw.append(arg.split("=", 1)[1])
+        i += 1
+
+    names = {n.strip().lower() for chunk in raw for n in chunk.split(",") if n.strip()}
+    unknown = sorted(names - set(ALL_SHEETS))
+    if unknown:
+        console.print(
+            f"[error][ERROR][/error] Unknown sheet(s) in --exclude: {', '.join(unknown)}.\n"
+            f"        Known sheets: {', '.join(ALL_SHEETS)}"
+        )
+        sys.exit(2)
+    return names
+
+
 def main() -> None:
     force_mode = "--force" in sys.argv
+    EXCLUDED_SHEETS.update(parse_excluded_sheets(sys.argv))
+    if EXCLUDED_SHEETS:
+        console.print(
+            f"[warning][*][/warning] Excluding sheet(s): {', '.join(sorted(EXCLUDED_SHEETS))}. "
+            f"Results below are partial.\n"
+        )
 
     console.print("[info][*][/info] Opening spreadsheet ...")
     try:
@@ -1952,6 +2028,11 @@ def main() -> None:
     grand_table = Table(show_header=False, expand=False, box=None)
     grand_table.add_column("Metric", style="bold")
     grand_table.add_column("Value")
+
+    if EXCLUDED_SHEETS:
+        grand_table.add_row(
+            "Excluded sheets", "[warning]" + ", ".join(sorted(EXCLUDED_SHEETS)) + "[/warning]"
+        )
 
     format_text = (
         "[success]PASS[/success]" if tables_format_ok else "[error]FAIL[/error]"
