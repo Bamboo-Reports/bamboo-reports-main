@@ -1,11 +1,12 @@
 "use client"
 
 import { useCallback, useMemo, useState } from "react"
-import { Check, ChevronDown, ChevronUp, ListChecks, Pencil, Play, RefreshCw, Trash2, Upload, X } from "lucide-react"
+import { Check, ChevronDown, ChevronUp, ListChecks, Pencil, Play, RefreshCw, Share2, Trash2, Upload, Users, X } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,7 +18,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { AccountListUploadDialog } from "@/components/filters/account-list-upload-dialog"
-import { useAccountLists } from "@/contexts/account-lists-context"
+import { useAccountLists, type AccountListShare } from "@/contexts/account-lists-context"
 import type { AccountList } from "@/lib/accounts/account-lists"
 
 interface AccountListsDialogProps {
@@ -35,7 +36,7 @@ function formatDate(value: string): string {
 
 /** Manage uploaded account lists: upload, rename, update from a new file, apply, delete. */
 export function AccountListsDialog({ open, onOpenChange, onApply }: AccountListsDialogProps) {
-  const { lists, loading, updateList, deleteList } = useAccountLists()
+  const { lists, loading, userId, updateList, deleteList, shareList, unshareList, getListShares } = useAccountLists()
   const [uploadOpen, setUploadOpen] = useState(false)
   const [uploadTarget, setUploadTarget] = useState<AccountList | null>(null)
   const [renamingId, setRenamingId] = useState<string | null>(null)
@@ -43,7 +44,52 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [listToDelete, setListToDelete] = useState<AccountList | null>(null)
 
-  const sorted = useMemo(() => lists, [lists])
+  const myLists = useMemo(() => lists.filter((l) => l.user_id === userId), [lists, userId])
+  const sharedLists = useMemo(() => lists.filter((l) => l.user_id !== userId), [lists, userId])
+
+  // Share dialog state
+  const [listToShare, setListToShare] = useState<AccountList | null>(null)
+  const [shareEmail, setShareEmail] = useState("")
+  const [shareError, setShareError] = useState<string | null>(null)
+  const [shareSuccess, setShareSuccess] = useState<string | null>(null)
+  const [currentShares, setCurrentShares] = useState<AccountListShare[]>([])
+  const [sharing, setSharing] = useState(false)
+
+  const openShare = useCallback(
+    async (list: AccountList) => {
+      setListToShare(list)
+      setShareEmail("")
+      setShareError(null)
+      setShareSuccess(null)
+      setCurrentShares([])
+      setCurrentShares(await getListShares(list.id))
+    },
+    [getListShares]
+  )
+
+  const handleShare = useCallback(async () => {
+    if (!listToShare || !shareEmail.trim()) return
+    setSharing(true)
+    setShareError(null)
+    setShareSuccess(null)
+    const result = await shareList(listToShare.id, shareEmail)
+    if (result.success) {
+      setShareSuccess(`Shared with ${shareEmail.trim()}.`)
+      setShareEmail("")
+      setCurrentShares(await getListShares(listToShare.id))
+    } else {
+      setShareError(result.error ?? "Failed to share list")
+    }
+    setSharing(false)
+  }, [listToShare, shareEmail, shareList, getListShares])
+
+  const handleUnshare = useCallback(
+    async (share: AccountListShare) => {
+      const ok = await unshareList(share.list_id, share.shared_with_user_id)
+      if (ok) setCurrentShares((prev) => prev.filter((s) => s.id !== share.id))
+    },
+    [unshareList]
+  )
 
   const openUpload = useCallback((target: AccountList | null) => {
     setUploadTarget(target)
@@ -80,37 +126,7 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
     [onApply, onOpenChange]
   )
 
-  return (
-    <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[85vh] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ListChecks className="h-5 w-5" />
-              Account Lists
-            </DialogTitle>
-            <DialogDescription>
-              Upload a client account list once, then apply it from the Account List filter in the sidebar or inside any saved filter.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-sm text-muted-foreground">
-              {lists.length === 0 ? "No lists yet." : `${lists.length} list${lists.length === 1 ? "" : "s"}`}
-            </p>
-            <Button size="sm" onClick={() => openUpload(null)}>
-              <Upload className="h-4 w-4" />
-              Upload list
-            </Button>
-          </div>
-
-          {lists.length === 0 ? (
-            <div className="rounded-lg border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">
-              Upload a CSV, TSV, TXT or XLSX file with company names. We map each name to an account and save the result as a list you can apply any time.
-            </div>
-          ) : (
-            <ul className="divide-y rounded-lg border">
-              {sorted.map((list) => {
+  const renderList = (list: AccountList, own: boolean) => {
                 const expanded = expandedId === list.id
                 const renaming = renamingId === list.id
                 return (
@@ -147,6 +163,7 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
                           {list.unmatched.length > 0 ? `, ${list.unmatched.length} unmatched` : ""}
                           {list.updated_at ? ` , updated ${formatDate(list.updated_at)}` : ""}
                           {list.source_file ? ` , from ${list.source_file}` : ""}
+                          {!own && list.owner_email ? ` , shared by ${list.owner_email}` : ""}
                         </p>
                       </div>
                       <div className="flex shrink-0 items-center gap-0.5">
@@ -154,15 +171,22 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
                           <Play className="h-3.5 w-3.5" />
                           Apply
                         </Button>
-                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => startRename(list)} aria-label={`Rename ${list.name}`} title="Rename">
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openUpload(list)} aria-label={`Update ${list.name} from a file`} title="Update from a new file">
-                          <RefreshCw className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setListToDelete(list)} aria-label={`Delete ${list.name}`} title="Delete">
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        {own && (
+                          <>
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openShare(list)} aria-label={`Share ${list.name}`} title="Share">
+                              <Share2 className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => startRename(list)} aria-label={`Rename ${list.name}`} title="Rename">
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openUpload(list)} aria-label={`Update ${list.name} from a file`} title="Update from a new file">
+                              <RefreshCw className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setListToDelete(list)} aria-label={`Delete ${list.name}`} title="Delete">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </>
+                        )}
                         <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setExpandedId(expanded ? null : list.id)} aria-label={expanded ? "Hide accounts" : "Show accounts"} aria-expanded={expanded}>
                           {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                         </Button>
@@ -187,13 +211,118 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
                     )}
                   </li>
                 )
-              })}
-            </ul>
+  }
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-h-[85vh] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ListChecks className="h-5 w-5" />
+              Account Lists
+            </DialogTitle>
+            <DialogDescription className="sr-only">Manage uploaded account lists.</DialogDescription>
+          </DialogHeader>
+
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm text-muted-foreground">
+              {myLists.length === 0 ? "No lists yet." : `${myLists.length} list${myLists.length === 1 ? "" : "s"}`}
+            </p>
+            <Button size="sm" onClick={() => openUpload(null)}>
+              <Upload className="h-4 w-4" />
+              Upload list
+            </Button>
+          </div>
+
+          {myLists.length === 0 ? (
+            <div className="rounded-lg border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">
+              Upload a CSV, TSV, TXT or XLSX file with company names. We map each name to an account and save the result as a list you can apply any time.
+            </div>
+          ) : (
+            <ul className="divide-y rounded-lg border">{myLists.map((list) => renderList(list, true))}</ul>
+          )}
+
+          {sharedLists.length > 0 && (
+            <div className="space-y-2">
+              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <Users className="h-3 w-3" />
+                Shared with me
+              </p>
+              <ul className="divide-y rounded-lg border">{sharedLists.map((list) => renderList(list, false))}</ul>
+            </div>
           )}
         </DialogContent>
       </Dialog>
 
       <AccountListUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} existingList={uploadTarget} onApply={handleApply} />
+
+      <Dialog open={Boolean(listToShare)} onOpenChange={(o) => !o && setListToShare(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Share2 className="h-5 w-5" />
+              Share List
+            </DialogTitle>
+            <DialogDescription>
+              {listToShare ? `Share "${listToShare.name}" with a teammate by entering their email address.` : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="share-list-email">Email address</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="share-list-email"
+                  type="email"
+                  placeholder="teammate@company.com"
+                  value={shareEmail}
+                  onChange={(e) => {
+                    setShareEmail(e.target.value)
+                    setShareError(null)
+                    setShareSuccess(null)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault()
+                      void handleShare()
+                    }
+                  }}
+                />
+                <Button onClick={handleShare} disabled={!shareEmail.trim() || sharing} size="sm" className="shrink-0">
+                  {sharing ? "Sharing..." : "Share"}
+                </Button>
+              </div>
+              {shareError && <p className="text-sm text-destructive">{shareError}</p>}
+              {shareSuccess && <p className="text-sm text-green-600 dark:text-green-400">{shareSuccess}</p>}
+            </div>
+            {currentShares.length > 0 ? (
+              <div className="space-y-2">
+                <Label className="text-muted-foreground">Currently shared with</Label>
+                <div className="space-y-1.5">
+                  {currentShares.map((share) => (
+                    <div key={share.id} className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2 text-sm">
+                      <span className="truncate">{share.shared_with_email}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => handleUnshare(share)}
+                        aria-label={`Stop sharing with ${share.shared_with_email}`}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">Not shared with anyone yet.</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={Boolean(listToDelete)} onOpenChange={(o) => !o && setListToDelete(null)}>
         <AlertDialogContent>

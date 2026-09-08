@@ -43,7 +43,10 @@ Expansion happens whenever the sidebar selection changes (`withAccountLists`) an
 
 `contexts/account-lists-context.tsx` loads the caller's lists once and exposes create, update and delete. It is mounted in `app/providers.tsx` so the sidebar picker, the upload dialog, the manage dialog and the filters hook all see the same state.
 
+## Sharing
+
+`account_list_shares` (migration: `sql/account-list-shares-migration.sql`) mirrors `filter_shares`: owners share a list by email (`lookup_profile_by_email`), recipients get read-only SELECT on the list through an RLS policy, and owner emails for the "Shared with me" section come from `lookup_shared_account_list_owner_emails`. Shared lists appear in the sidebar picker and can be applied, inspected and used in saved filters; only the owner can rename, update, share or delete.
+
 ## Follow-ups
 
-- Sharing lists with teammates (mirror `filter_shares`).
 - Server-side expansion if lists ever need to be applied without the client (scheduled exports, API consumers).

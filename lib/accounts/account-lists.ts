@@ -11,6 +11,8 @@ export interface AccountList {
   source_file: string | null
   created_at: string
   updated_at: string
+  /** Set on lists shared with the current user (not owned by them). */
+  owner_email?: string
 }
 
 export const MAX_ACCOUNT_LIST_NAME_LENGTH = 120

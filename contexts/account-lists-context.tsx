@@ -5,6 +5,14 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { devError } from "@/lib/utils/dev-log"
 import { normalizeAccountList, type AccountList } from "@/lib/accounts/account-lists"
 
+export interface AccountListShare {
+  id: string
+  list_id: string
+  shared_with_user_id: string
+  shared_with_email: string
+  created_at: string
+}
+
 export type AccountListInput = {
   name: string
   accounts: string[]
@@ -20,6 +28,9 @@ type AccountListsContextValue = {
   createList: (input: AccountListInput) => Promise<AccountList | null>
   updateList: (id: string, input: Partial<AccountListInput>) => Promise<AccountList | null>
   deleteList: (id: string) => Promise<boolean>
+  shareList: (listId: string, email: string) => Promise<{ success: boolean; error?: string }>
+  unshareList: (listId: string, sharedWithUserId: string) => Promise<boolean>
+  getListShares: (listId: string) => Promise<AccountListShare[]>
 }
 
 const AccountListsContext = createContext<AccountListsContextValue | null>(null)
@@ -62,17 +73,38 @@ export function AccountListsProvider({ children }: { children: ReactNode }) {
     }
     setLoading(true)
     try {
-      const { data, error } = await supabase
-        .from("account_lists")
-        .select(COLUMNS)
-        .eq("user_id", userId)
-        .order("updated_at", { ascending: false })
-      if (error) throw error
-      setLists(
-        (Array.isArray(data) ? data : [])
-          .map((row) => normalizeAccountList(row as Record<string, unknown>))
-          .filter((row): row is AccountList => Boolean(row))
-      )
+      const [{ data: ownData, error: ownError }, { data: sharedData, error: sharedError }] = await Promise.all([
+        supabase.from("account_lists").select(COLUMNS).eq("user_id", userId).order("updated_at", { ascending: false }),
+        supabase.from("account_list_shares").select(`list_id, account_lists(${COLUMNS})`).eq("shared_with_user_id", userId),
+      ])
+      if (ownError) throw ownError
+      if (sharedError) throw sharedError
+
+      const own = (Array.isArray(ownData) ? ownData : [])
+        .map((row) => normalizeAccountList(row as Record<string, unknown>))
+        .filter((row): row is AccountList => Boolean(row))
+
+      const sharedRows = (Array.isArray(sharedData) ? sharedData : [])
+        .map((share) => (share as { account_lists?: unknown }).account_lists as Record<string, unknown> | null)
+        .filter((row): row is Record<string, unknown> => Boolean(row))
+
+      // Owner emails come from a security-definer RPC scoped to lists shared
+      // with the caller; direct profile reads are owner-only.
+      const ownerEmailById = new Map<string, string>()
+      if (sharedRows.length > 0) {
+        const { data: owners } = await supabase.rpc("lookup_shared_account_list_owner_emails")
+        for (const profile of (owners as Array<{ user_id?: unknown; email?: unknown }> | null) ?? []) {
+          if (typeof profile.user_id === "string" && typeof profile.email === "string") ownerEmailById.set(profile.user_id, profile.email)
+        }
+      }
+      const shared: AccountList[] = []
+      for (const row of sharedRows) {
+        const list = normalizeAccountList(row)
+        if (!list || list.user_id === userId) continue
+        shared.push({ ...list, owner_email: ownerEmailById.get(list.user_id) ?? "a teammate" })
+      }
+
+      setLists([...own, ...shared])
     } catch (error) {
       devError("Failed to load account lists:", error)
     } finally {
@@ -166,9 +198,73 @@ export function AccountListsProvider({ children }: { children: ReactNode }) {
     [supabase]
   )
 
+  const shareList = useCallback(
+    async (listId: string, email: string): Promise<{ success: boolean; error?: string }> => {
+      if (!userId) return { success: false, error: "Not authenticated" }
+      const normalizedEmail = email.trim().toLowerCase()
+      try {
+        const { data: profileData, error: profileError } = await supabase
+          .rpc("lookup_profile_by_email", { input_email: normalizedEmail })
+          .maybeSingle()
+        const profile = profileData as { user_id?: unknown; email?: unknown } | null
+        if (profileError || !profile || typeof profile.user_id !== "string" || typeof profile.email !== "string") {
+          return { success: false, error: "No user found with that email address" }
+        }
+        if (profile.user_id === userId) return { success: false, error: "You cannot share a list with yourself" }
+        const { error } = await supabase.from("account_list_shares").insert({
+          list_id: listId,
+          owner_user_id: userId,
+          shared_with_user_id: profile.user_id,
+          shared_with_email: profile.email,
+        })
+        if (error) {
+          if (error.code === "23505") return { success: false, error: "This list is already shared with that user" }
+          throw error
+        }
+        return { success: true }
+      } catch (error) {
+        devError("Failed to share account list:", error)
+        return { success: false, error: "Failed to share list" }
+      }
+    },
+    [supabase, userId]
+  )
+
+  const unshareList = useCallback(
+    async (listId: string, sharedWithUserId: string): Promise<boolean> => {
+      try {
+        const { error } = await supabase.from("account_list_shares").delete().eq("list_id", listId).eq("shared_with_user_id", sharedWithUserId)
+        if (error) throw error
+        return true
+      } catch (error) {
+        devError("Failed to unshare account list:", error)
+        return false
+      }
+    },
+    [supabase]
+  )
+
+  const getListShares = useCallback(
+    async (listId: string): Promise<AccountListShare[]> => {
+      try {
+        const { data, error } = await supabase
+          .from("account_list_shares")
+          .select("id, list_id, shared_with_user_id, shared_with_email, created_at")
+          .eq("list_id", listId)
+          .order("created_at", { ascending: false })
+        if (error) throw error
+        return (data as AccountListShare[] | null) ?? []
+      } catch (error) {
+        devError("Failed to load account list shares:", error)
+        return []
+      }
+    },
+    [supabase]
+  )
+
   const value = useMemo<AccountListsContextValue>(
-    () => ({ lists, loading, userId, refresh, createList, updateList, deleteList }),
-    [lists, loading, userId, refresh, createList, updateList, deleteList]
+    () => ({ lists, loading, userId, refresh, createList, updateList, deleteList, shareList, unshareList, getListShares }),
+    [lists, loading, userId, refresh, createList, updateList, deleteList, shareList, unshareList, getListShares]
   )
 
   return <AccountListsContext.Provider value={value}>{children}</AccountListsContext.Provider>
@@ -182,6 +278,9 @@ const EMPTY: AccountListsContextValue = {
   createList: async () => null,
   updateList: async () => null,
   deleteList: async () => false,
+  shareList: async () => ({ success: false, error: "Not available" }),
+  unshareList: async () => false,
+  getListShares: async () => [],
 }
 
 /** Account lists from the nearest provider; a no-op stub outside one (tests, auth pages). */
