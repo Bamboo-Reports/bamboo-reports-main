@@ -43,6 +43,8 @@ function changedFilterKeys(prev: Filters, next: Filters): string[] {
   return changed
 }
 import { sanitizeFilters } from "@/lib/config/filters"
+import { useAccountLists } from "@/contexts/account-lists-context"
+import { expandAccountLists } from "@/lib/accounts/account-lists"
 
 interface UseDashboardFiltersParams {
   accounts: Account[]
@@ -81,6 +83,7 @@ export function useDashboardFilters({
   tech,
   serverRanges,
 }: UseDashboardFiltersParams) {
+  const { lists: accountLists } = useAccountLists()
   const accountsEnabled = isSectionEnabled("accounts")
   const centersEnabled = isSectionEnabled("centers")
   const prospectsEnabled = isSectionEnabled("prospects")
@@ -295,6 +298,7 @@ export function useDashboardFilters({
       prospectTitleKeywords: filters.prospectTitleKeywords,
       accountGlobalLegalNameKeywords: filters.accountGlobalLegalNameKeywords,
       accountNameValues: filters.accountNameValues,
+      accountListValues: filters.accountListValues,
       accountHqRevenueRange: filters.accountHqRevenueRange,
       accountHqRevenueIncludeNull: filters.accountHqRevenueIncludeNull,
     }),
@@ -330,7 +334,8 @@ export function useDashboardFilters({
       if (e("accountHqEmployeeRangeValues")) count += sourceFilters.accountHqEmployeeRangeValues.length
       if (e("accountCenterEmployeesRangeValues")) count += sourceFilters.accountCenterEmployeesRangeValues.length
       if (e("accountGlobalLegalNameKeywords")) count += sourceFilters.accountGlobalLegalNameKeywords.length
-      if (e("accountNameValues")) count += sourceFilters.accountNameValues.length
+      if (e("accountNameValues"))
+        count += sourceFilters.accountListValues.length > 0 ? sourceFilters.accountListValues.length : sourceFilters.accountNameValues.length
       if (e("centerTypeValues")) count += sourceFilters.centerTypeValues.length
       if (e("centerFocusValues")) count += sourceFilters.centerFocusValues.length
       if (e("centerCityValues")) count += sourceFilters.centerCityValues.length
@@ -400,11 +405,13 @@ export function useDashboardFilters({
   }, [baseRanges, filters, getActiveFilterCountFor])
 
   const handleLoadSavedFilters = useCallback((savedFilters: Filters) => {
-    const sanitizedSavedFilters = sanitizeFilters(savedFilters)
+    // Re-derive exact names from the current account lists so edits to a list
+    // reach saved filters that reference it.
+    const sanitizedSavedFilters = expandAccountLists(sanitizeFilters(savedFilters), accountLists)
     isRevenueRangeAutoRef.current = false
     setPendingFilters(sanitizedSavedFilters)
     setFilters(sanitizedSavedFilters)
-  }, [])
+  }, [accountLists])
 
   const handleMinRevenueChange = useCallback(
     (value: string) => {

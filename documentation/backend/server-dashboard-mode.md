@@ -164,7 +164,7 @@ Per [security-249-progress.md](../security-249-progress.md):
 | `app/api/{accounts,centers,prospects}/query/route.ts` | Paginated row endpoints |
 | `app/api/centers/map/route.ts` | Map aggregates endpoint |
 | `app/api/search/route.ts`, `app/api/accounts/autocomplete/route.ts` | Server-backed search and autocomplete |
-| `app/api/accounts/match/route.ts`, `lib/accounts/account-match.ts`, `lib/accounts/account-list-parser.ts` | Account list upload: list parsing (CSV/TSV/XLSX/paste), name matching and candidate scoring |
+| `app/api/accounts/match/route.ts`, `lib/accounts/account-match.ts`, `lib/accounts/account-list-parser.ts` | Account lists: list parsing (CSV/TSV/XLSX/paste), name matching and candidate scoring (see `account-lists.md`) |
 | `app/api/accounts/[name]/related/route.ts`, `app/api/centers/[key]/route.ts`, `app/api/prospects/[id]/route.ts` | Lookup endpoints (dialogs, favorites) |
 | `app/api/exports/generate/route.ts`, `lib/exports/server-builder.ts` | Export-by-filter |
 | `tests/unit/filtering-sql-parity.test.ts` | pg-mem golden-parity suite (engine vs SQL) |

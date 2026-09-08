@@ -215,8 +215,8 @@ export interface Filters {
   accountGlobalLegalNameKeywords: FilterValue[]
   /** Exact account legal names (uploaded account lists). */
   accountNameValues: FilterValue[]
-  /** Display name of the uploaded list behind accountNameValues, if any. */
-  accountListName?: string | null
+  /** Selected account lists (value = account_lists.id); expanded into accountNameValues on the client. */
+  accountListValues: FilterValue[]
   centerTypeValues: FilterValue[]
   centerFocusValues: FilterValue[]
   centerCityValues: FilterValue[]

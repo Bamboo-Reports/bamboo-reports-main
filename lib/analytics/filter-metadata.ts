@@ -96,14 +96,14 @@ export const FILTER_METADATA = {
     inputType: "keyword",
   },
   accountNameValues: {
-    label: "Account List",
+    label: "Account List Accounts",
     group: "account",
     inputType: "multi_select",
   },
-  accountListName: {
-    label: "Account List Name",
+  accountListValues: {
+    label: "Account List",
     group: "account",
-    inputType: "keyword",
+    inputType: "multi_select",
   },
   centerTypeValues: {
     label: "Center Type",

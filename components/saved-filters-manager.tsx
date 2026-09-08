@@ -30,7 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Save, FolderOpen, Settings, X, ChevronDown, ShieldAlert, Share2, Users, Trash2, FileText, Upload } from "lucide-react"
+import { Save, FolderOpen, Settings, X, ChevronDown, ShieldAlert, Share2, Users, Trash2, FileText, ListChecks } from "lucide-react"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { buildTrackedFiltersSnapshot, normalizeTrackedText, toTrackedStringArray } from "@/lib/analytics/tracking"
@@ -38,7 +38,9 @@ import type { Filters } from "@/lib/types"
 import { calculateActiveFilters } from "@/lib/dashboard/filter-summary"
 import { SavedFilterCard, type SavedFilter } from "@/components/filters/saved-filter-card"
 import { useSavedFilters, type FilterShare } from "@/hooks/use-saved-filters"
-import { AccountListUploadDialog } from "@/components/filters/account-list-upload-dialog"
+import { AccountListsDialog } from "@/components/filters/account-lists-dialog"
+import { useAccountLists } from "@/contexts/account-lists-context"
+import { withAccountLists, type AccountList } from "@/lib/accounts/account-lists"
 
 interface SavedFiltersManagerProps {
   currentFilters: Filters
@@ -77,7 +79,8 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
   } = useSavedFilters()
 
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
-  const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
+  const [accountListsOpen, setAccountListsOpen] = useState(false)
+  const { lists: accountLists } = useAccountLists()
   const [manageDialogOpen, setManageDialogOpen] = useState(false)
   const [savedFiltersDropdownOpen, setSavedFiltersDropdownOpen] = useState(false)
   const [filterName, setFilterName] = useState("")
@@ -114,6 +117,17 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
       setFilterName("")
     }
   }, [currentFilters, filterName, saveFilter])
+
+  // Adds the list to whatever is applied now (it does not reset other filters).
+  const handleApplyAccountList = useCallback(
+    (list: AccountList) => {
+      const already = currentFilters.accountListValues.some((v) => v.value === list.id)
+      const selection = already ? currentFilters.accountListValues : [...currentFilters.accountListValues, { value: list.id, mode: "include" as const }]
+      const lists = accountLists.some((l) => l.id === list.id) ? accountLists : [...accountLists, list]
+      onLoadFilters(withAccountLists(currentFilters, selection, lists))
+    },
+    [currentFilters, accountLists, onLoadFilters]
+  )
 
   const handleLoadFilter = useCallback((savedFilter: SavedFilter) => {
     onLoadFilters(savedFilter.filters)
@@ -406,22 +420,16 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
           variant="outline"
           size="icon"
           className="h-9 w-9 rounded-full shrink-0"
-          title="Upload an account list and save it as a filter"
-          aria-label="Upload account list"
-          onClick={() => setUploadDialogOpen(true)}
-          data-tour="upload-account-list-button"
+          title="Account lists: upload a client account list and apply it as a filter"
+          aria-label="Account lists"
+          onClick={() => setAccountListsOpen(true)}
+          data-tour="account-lists-button"
         >
-          <Upload className="h-4 w-4" />
+          <ListChecks className="h-4 w-4" />
         </Button>
       </div>
 
-      <AccountListUploadDialog
-        open={uploadDialogOpen}
-        onOpenChange={setUploadDialogOpen}
-        onSave={saveFilter}
-        onApply={onLoadFilters}
-        saving={loading}
-      />
+      <AccountListsDialog open={accountListsOpen} onOpenChange={setAccountListsOpen} onApply={handleApplyAccountList} />
 
       {(onReset || onExport) && (
         <div className="grid grid-cols-2 gap-2 w-full">

@@ -145,7 +145,6 @@ const VISIBILITY_LABEL: Record<AccountVisibilityMode, string> = {
 // Keys rendered as value lists, in the order they appear in the sidebar.
 const LIST_FILTER_KEYS = [
   "accountGlobalLegalNameKeywords",
-  "accountNameValues",
   "accountHqRegionValues",
   "accountHqCountryValues",
   "accountPrimaryCategoryValues",
@@ -239,6 +238,18 @@ export function buildReportFilterRows(
   for (const key of accountKeys) {
     const row = listRowFor(key)
     if (row) rows.push(row)
+  }
+
+  if (filters.accountNameValues.length > 0) {
+    const { included, excluded } = splitByMode(filters.accountNameValues)
+    const lists = filters.accountListValues.length
+    const describe = (n: number) => `${n} account${n === 1 ? "" : "s"}${lists > 0 ? ` from ${lists} list${lists === 1 ? "" : "s"}` : ""}`
+    rows.push({
+      group: GROUP_LABEL.account,
+      label: FILTER_METADATA.accountListValues.label,
+      included: included.length > 0 ? [describe(included.length)] : [],
+      excluded: excluded.length > 0 ? [describe(excluded.length)] : [],
+    })
   }
 
   if (isRangeActive(filters.accountHqRevenueRange, baselineRanges.revenue)) {

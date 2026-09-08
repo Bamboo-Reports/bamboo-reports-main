@@ -14,7 +14,7 @@ const VALUE_ARRAY_KEYS = [
   "accountHqRegionValues", "accountHqCountryValues", "accountHqIndustryValues", "accountDataCoverageValues",
   "accountSourceValues", "accountTypeValues", "accountPrimaryCategoryValues", "accountPrimaryNatureValues",
   "accountNasscomStatusValues", "accountHqEmployeeRangeValues", "accountCenterEmployeesRangeValues",
-  "accountGlobalLegalNameKeywords", "accountNameValues", "centerTypeValues", "centerFocusValues", "centerCityValues",
+  "accountGlobalLegalNameKeywords", "accountNameValues", "accountListValues", "centerTypeValues", "centerFocusValues", "centerCityValues",
   "centerStateValues", "centerCountryValues", "centerEmployeesRangeValues", "centerStatusValues",
   "functionNameValues", "techSoftwareInUseKeywords", "prospectDepartmentValues", "prospectHeadTypeValues",
   "prospectLevelValues", "prospectCityValues", "prospectTitleKeywords",
