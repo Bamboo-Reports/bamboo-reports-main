@@ -2,7 +2,7 @@
 
 import { Skeleton } from "@/components/ui/skeleton"
 import { useEffect, useState } from "react"
-import { Bell, CheckCheck, CirclePlus, Pencil, Inbox } from "lucide-react"
+import { RiAddCircleLine, RiCheckDoubleLine, RiInboxLine, RiNotification3Line, RiPencilLine } from "@remixicon/react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -54,7 +54,7 @@ export function NotificationDropdown() {
           title="Notifications"
           aria-label="Open notifications"
         >
-          <Bell className={`h-4 w-4 transition-colors ${unreadCount > 0 ? "text-amber-500" : ""}`} />
+          <RiNotification3Line className={`h-4 w-4 transition-colors ${unreadCount > 0 ? "text-amber-500" : ""}`} />
           {unreadCount > 0 ? (
             <span className="absolute right-0.5 top-0.5 h-2 w-2 rounded-full bg-amber-500" />
           ) : null}
@@ -66,7 +66,7 @@ export function NotificationDropdown() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/15">
-                <Bell className="h-3.5 w-3.5 text-amber-700 dark:text-amber-300" />
+                <RiNotification3Line className="h-3.5 w-3.5 text-amber-700 dark:text-amber-300" />
               </div>
               <div>
                 <p className="text-sm font-semibold text-foreground">Activity</p>
@@ -83,7 +83,7 @@ export function NotificationDropdown() {
                 className="h-7 gap-1 px-2 text-[11px] text-muted-foreground hover:text-foreground"
                 onClick={handleMarkAllRead}
               >
-                <CheckCheck className="h-3 w-3" />
+                <RiCheckDoubleLine className="h-3 w-3" />
                 Clear all
               </Button>
             ) : null}
@@ -103,7 +103,7 @@ export function NotificationDropdown() {
           {!isLoading && !error && notificationSummaries.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-6 text-center">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted/50">
-                <Inbox className="h-5 w-5 text-muted-foreground/60" />
+                <RiInboxLine className="h-5 w-5 text-muted-foreground/60" />
               </div>
               <div>
                 <p className="text-xs font-medium text-muted-foreground">No new activity</p>
@@ -154,9 +154,9 @@ export function NotificationDropdown() {
                       }`}
                     >
                       {isAdded ? (
-                        <CirclePlus className="h-3.5 w-3.5" />
+                        <RiAddCircleLine className="h-3.5 w-3.5" />
                       ) : (
-                        <Pencil className="h-3 w-3" />
+                        <RiPencilLine className="h-3 w-3" />
                       )}
                     </div>
                     <div className="min-w-0 flex-1">

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Briefcase, Building, Clock, UserCheck, Users } from 'lucide-react'
+import { RiBriefcaseLine, RiBuildingLine, RiGroupLine, RiTimeLine, RiUserFollowLine } from "@remixicon/react"
 import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -177,7 +177,7 @@ export const SummaryCards = React.memo(function SummaryCards({
       title: 'Accounts',
       value: filteredAccountsCount,
       total: totalAccountsCount,
-      icon: Building,
+      icon: RiBuildingLine,
       iconClassName: 'text-primary',
       interactive: accountsEnabled,
       procured: accountsEnabled,
@@ -188,7 +188,7 @@ export const SummaryCards = React.memo(function SummaryCards({
       title: 'Centres',
       value: filteredCentersCount,
       total: totalCentersCount,
-      icon: Briefcase,
+      icon: RiBriefcaseLine,
       iconClassName: 'text-primary',
       interactive: centersEnabled,
       procured: centersEnabled,
@@ -199,7 +199,7 @@ export const SummaryCards = React.memo(function SummaryCards({
       title: 'Upcoming Centres',
       value: filteredUpcomingCentersCount,
       total: totalUpcomingCentersCount,
-      icon: Clock,
+      icon: RiTimeLine,
       iconClassName: 'text-primary',
       interactive: false,
       procured: centersEnabled,
@@ -212,7 +212,7 @@ export const SummaryCards = React.memo(function SummaryCards({
       title: 'Prospects',
       value: filteredProspectsCount,
       total: totalProspectsCount,
-      icon: Users,
+      icon: RiGroupLine,
       iconClassName: 'text-primary',
       interactive: prospectsEnabled,
       procured: prospectsEnabled,
@@ -223,7 +223,7 @@ export const SummaryCards = React.memo(function SummaryCards({
       title: 'Headcount',
       value: filteredHeadcount,
       total: totalHeadcount,
-      icon: UserCheck,
+      icon: RiUserFollowLine,
       iconClassName: 'text-primary',
       interactive: false,
       procured: centersEnabled,

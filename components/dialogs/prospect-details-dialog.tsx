@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Check, Copy, Linkedin, Mail, SlidersHorizontal, SquareArrowOutUpRight } from "lucide-react"
+import { RiCheckLine, RiEqualizerLine, RiExternalLinkLine, RiFileCopyLine, RiLinkedinBoxLine, RiMailLine } from "@remixicon/react"
 import { formatProspectLocation } from "@/lib/utils/helpers"
 import type { Prospect } from "@/lib/types"
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard"
@@ -143,7 +143,7 @@ export function ProspectDetailsDialog({
   }, [relatedAccount])
 
   const relatedLoading = fetchRelated && open && !!p && relatedProspects === null
-  const allProspects = fetchRelated ? (relatedProspects ?? []) : allProspectsProp
+  const allProspects = useMemo(() => (fetchRelated ? (relatedProspects ?? []) : allProspectsProp), [fetchRelated, relatedProspects, allProspectsProp])
 
   const companyContacts = useMemo(
     () =>
@@ -287,7 +287,7 @@ export function ProspectDetailsDialog({
                         aria-label={`Open account details for ${p.account_global_legal_name}`}
                         title={`Open account details for ${p.account_global_legal_name}`}
                       >
-                        <SquareArrowOutUpRight className="h-3.5 w-3.5" />
+                        <RiExternalLinkLine className="h-3.5 w-3.5" />
                       </button>
                     ) : null}
                   </p>
@@ -301,7 +301,7 @@ export function ProspectDetailsDialog({
                     title={p.prospect_email}
                     aria-label="Send email"
                   >
-                    <Mail className="h-4 w-4" />
+                    <RiMailLine className="h-4 w-4" />
                   </a>
                 ) : null}
                 {p.prospect_linkedin_url ? (
@@ -313,7 +313,7 @@ export function ProspectDetailsDialog({
                     title="View LinkedIn"
                     aria-label="View LinkedIn profile"
                   >
-                    <Linkedin className="h-4 w-4" />
+                    <RiLinkedinBoxLine className="h-4 w-4" />
                   </a>
                 ) : null}
                 {p.head_type === "GCC Head" ? (
@@ -347,7 +347,7 @@ export function ProspectDetailsDialog({
                   {p.prospect_email ? (
                     <div>
                       <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
-                        <Mail className="h-3.5 w-3.5" />
+                        <RiMailLine className="h-3.5 w-3.5" />
                         Email
                       </p>
                       <div className="flex items-center gap-2">
@@ -364,8 +364,8 @@ export function ProspectDetailsDialog({
                           aria-label="Copy email"
                         >
                           {copied
-                            ? <Check className="h-3.5 w-3.5 text-green-500 animate-scale-in" />
-                            : <Copy className="h-3.5 w-3.5" />}
+                            ? <RiCheckLine className="h-3.5 w-3.5 text-green-500 animate-scale-in" />
+                            : <RiFileCopyLine className="h-3.5 w-3.5" />}
                         </button>
                       </div>
                     </div>
@@ -458,7 +458,7 @@ export function ProspectDetailsDialog({
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 bg-background/40 py-10 text-center backdrop-blur-sm dark:bg-white/5 dark:border-white/10 animate-fade-in">
-                  <SlidersHorizontal className="mb-2 h-7 w-7 text-muted-foreground/50" />
+                  <RiEqualizerLine className="mb-2 h-7 w-7 text-muted-foreground/50" />
                   <p className="text-sm font-medium text-foreground">No matching contacts</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">Adjust the department or level filters above.</p>
                 </div>

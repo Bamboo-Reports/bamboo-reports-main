@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button"
 import { devError } from "@/lib/utils/dev-log"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
-import { Building, Briefcase, Users, Sparkles, CheckCircle2, Download } from "lucide-react"
+import { RiBriefcaseLine, RiBuildingLine, RiCheckboxCircleLine, RiDownloadLine, RiGroupLine, RiSparklingLine } from "@remixicon/react"
 import type { ExportDatasetKey } from "@/lib/utils/export-helpers"
 import {
   requestServerExport,
@@ -68,35 +68,35 @@ const DATASET_META: Array<{
   key: ExportDatasetKey
   label: string
   description: string
-  icon: typeof Building
+  icon: typeof RiBuildingLine
   accent: string
 }> = [
   {
     key: "accounts",
     label: "Accounts",
     description: "Legal names, HQ details, revenue ranges",
-    icon: Building,
+    icon: RiBuildingLine,
     accent: "text-primary",
   },
   {
     key: "centers",
     label: "Centres",
     description: "Locations, type, employees, status",
-    icon: Briefcase,
+    icon: RiBriefcaseLine,
     accent: "text-primary",
   },
   {
     key: "services",
     label: "Services",
     description: "Service lines, focus, software stack",
-    icon: Sparkles,
+    icon: RiSparklingLine,
     accent: "text-primary",
   },
   {
     key: "prospects",
     label: "Prospects",
     description: "Decision makers, titles, departments",
-    icon: Users,
+    icon: RiGroupLine,
     accent: "text-primary",
   },
 ]
@@ -394,7 +394,7 @@ export function ExportDialog({
 
   const statusBlock = showResult && exportResult ? (
     <div className="flex flex-col items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-6 py-5 text-center">
-      <CheckCircle2 className="h-9 w-9 text-emerald-500" />
+      <RiCheckboxCircleLine className="h-9 w-9 text-emerald-500" />
       <div>
         <p className="text-sm font-semibold">Your file is ready</p>
         <p className="mt-0.5 text-xs text-muted-foreground">
@@ -416,7 +416,7 @@ export function ExportDialog({
           }
         }}
       >
-        <Download className="h-4 w-4" />
+        <RiDownloadLine className="h-4 w-4" />
         Download file
       </Button>
     </div>

@@ -8,17 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { GridSkeletonCards, MapUpdatingPill, TableSkeletonRows } from "@/components/ui/data-skeletons"
 import { cn } from "@/lib/utils"
-import {
-  ArrowDownAZ,
-  ArrowUpAZ,
-  ArrowUpDown,
-  LayoutGrid,
-  MapIcon,
-  MapPin,
-  PieChartIcon,
-  Table as TableIcon,
-  Layers,
-} from "lucide-react"
+import { RiExpandUpDownLine, RiLayoutGridLine, RiMapLine, RiMapPinLine, RiPieChartLine, RiSortAlphabetAsc, RiSortAlphabetDesc, RiStackLine, RiTableLine } from "@remixicon/react"
 import { AccountRow } from "@/components/tables"
 import { SelectionActionBar } from "@/components/tables/selection-action-bar"
 import { useTableRowSelection } from "@/hooks/use-table-row-selection"
@@ -329,7 +319,7 @@ export function AccountsTab({
     <TabsContent value="accounts">
       {/* Header with View Toggle */}
       <div className="flex items-center gap-2 mb-4">
-        <PieChartIcon className="h-5 w-5 text-primary" />
+        <RiPieChartLine className="h-5 w-5 text-primary" />
         <h2 className="text-lg font-semibold text-foreground">Account Analytics</h2>
         <ViewSwitcher
           data-tour="view-switcher"
@@ -340,7 +330,7 @@ export function AccountsTab({
               value: "chart",
               label: "Charts",
               icon: (
-                <PieChartIcon className="h-4 w-4" />
+                <RiPieChartLine className="h-4 w-4" />
               ),
             },
             ...(allowMapView
@@ -348,7 +338,7 @@ export function AccountsTab({
                   value: "map",
                   label: "Map",
                   icon: (
-                    <MapIcon className="h-4 w-4" />
+                    <RiMapLine className="h-4 w-4" />
                   ),
                 }]
               : []),
@@ -356,7 +346,7 @@ export function AccountsTab({
               value: "data",
               label: "Data",
               icon: (
-                <TableIcon className="h-4 w-4" />
+                <RiTableLine className="h-4 w-4" />
               ),
             },
           ]}
@@ -421,12 +411,12 @@ export function AccountsTab({
                   {
                     value: "city",
                     label: "City",
-                    icon: <MapPin className="h-4 w-4" />,
+                    icon: <RiMapPinLine className="h-4 w-4" />,
                   },
                   {
                     value: "state",
                     label: "State",
-                    icon: <Layers className="h-4 w-4" />,
+                    icon: <RiStackLine className="h-4 w-4" />,
                   },
                 ]}
                 className="ml-auto"
@@ -469,14 +459,14 @@ export function AccountsTab({
                       value: "table",
                       label: "Table",
                       icon: (
-                        <TableIcon className="h-4 w-4" />
+                        <RiTableLine className="h-4 w-4" />
                       ),
                     },
                     {
                       value: "grid",
                       label: "Grid",
                       icon: (
-                        <LayoutGrid className="h-4 w-4" />
+                        <RiLayoutGridLine className="h-4 w-4" />
                       ),
                     },
                   ]}
@@ -553,11 +543,11 @@ export function AccountsTab({
                         aria-pressed={sort.key === "name" && sort.direction !== null}
                       >
                         {sort.key !== "name" || sort.direction === null ? (
-                          <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+                          <RiExpandUpDownLine className="h-3.5 w-3.5 text-muted-foreground" />
                         ) : sort.direction === "asc" ? (
-                          <ArrowUpAZ className="h-3.5 w-3.5 text-primary" />
+                          <RiSortAlphabetAsc className="h-3.5 w-3.5 text-primary" />
                         ) : (
-                          <ArrowDownAZ className="h-3.5 w-3.5 text-primary" />
+                          <RiSortAlphabetDesc className="h-3.5 w-3.5 text-primary" />
                         )}
                       </Button>
                     </div>

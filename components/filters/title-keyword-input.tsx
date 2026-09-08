@@ -2,7 +2,7 @@ import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Minus, X } from "lucide-react"
+import { RiAddLine, RiCloseLine, RiSubtractLine } from "@remixicon/react"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import {
@@ -128,9 +128,9 @@ export function TitleKeywordInput({
                   aria-label={isInclude ? `Exclude ${keyword.value}` : `Include ${keyword.value}`}
                 >
                   {isInclude ? (
-                    <Plus className="h-3 w-3" />
+                    <RiAddLine className="h-3 w-3" />
                   ) : (
-                    <Minus className="h-3 w-3" />
+                    <RiSubtractLine className="h-3 w-3" />
                   )}
                 </button>
                 <span className="text-xs">{keyword.value}</span>
@@ -141,7 +141,7 @@ export function TitleKeywordInput({
                   title="Remove"
                   aria-label={`Remove ${keyword.value}`}
                 >
-                  <X className="h-3 w-3" />
+                  <RiCloseLine className="h-3 w-3" />
                 </button>
               </Badge>
             )

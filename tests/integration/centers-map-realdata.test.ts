@@ -134,7 +134,7 @@ gated("centers map aggregation parity against the real Neon warehouse", () => {
 
   it("defaults (gcc, wide revenue)", async () => {
     const r = await parity({})
-    // eslint-disable-next-line no-console
+     
     console.log("map parity defaults:", r)
   }, 120_000)
 

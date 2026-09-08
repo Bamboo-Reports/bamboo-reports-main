@@ -1,5 +1,5 @@
 import { memo } from "react"
-import { ArrowUpRight, Copy, Eye, ExternalLink } from "lucide-react"
+import { RiArrowRightUpLine, RiExternalLinkLine, RiEyeLine, RiFileCopyLine } from "@remixicon/react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -115,28 +115,28 @@ export const ProspectGridCard = memo(({ prospect, onClick }: ProspectGridCardPro
               className="w-full justify-between border border-border/70 bg-background text-foreground hover:bg-accent hover:text-accent-foreground"
             >
               View Details
-              <ArrowUpRight className="h-4 w-4" />
+              <RiArrowRightUpLine className="h-4 w-4" />
             </Button>
           </CardContent>
         </Card>
       </ContextMenuTrigger>
       <ContextMenuContent className="w-48">
         <ContextMenuItem onClick={onClick}>
-          <Eye className="h-4 w-4" />
+          <RiEyeLine className="h-4 w-4" />
           View Details
         </ContextMenuItem>
         {prospect.prospect_email && (
           <>
             <ContextMenuSeparator />
             <ContextMenuItem onClick={() => copy(prospect.prospect_email!, "Email")}>
-              <Copy className="h-4 w-4" />
+              <RiFileCopyLine className="h-4 w-4" />
               Copy Email
             </ContextMenuItem>
           </>
         )}
         {prospect.prospect_linkedin_url && (
           <ContextMenuItem onClick={() => window.open(ensureAbsoluteUrl(prospect.prospect_linkedin_url!), "_blank", "noopener,noreferrer")}>
-            <ExternalLink className="h-4 w-4" />
+            <RiExternalLinkLine className="h-4 w-4" />
             Open LinkedIn
           </ContextMenuItem>
         )}

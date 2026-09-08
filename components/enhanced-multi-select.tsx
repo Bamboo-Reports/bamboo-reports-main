@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { ChevronsUpDown, X, Plus, Minus } from "lucide-react"
+import { RiAddLine, RiCloseLine, RiExpandUpDownLine, RiSubtractLine } from "@remixicon/react"
 import { cn } from "@/lib/utils"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
@@ -69,9 +69,9 @@ const EnhancedSelectBadge = React.memo(({
         aria-label={isInclude ? `Exclude ${item.value}` : `Include ${item.value}`}
       >
         {isInclude ? (
-          <Plus className="h-3 w-3" />
+          <RiAddLine className="h-3 w-3" />
         ) : (
-          <Minus className="h-3 w-3" />
+          <RiSubtractLine className="h-3 w-3" />
         )}
       </button>
       <span className="min-w-0 truncate text-xs" title={item.value}>
@@ -88,7 +88,7 @@ const EnhancedSelectBadge = React.memo(({
         title={`Remove ${item.value}`}
         aria-label={`Remove ${item.value}`}
       >
-        <X className="h-3 w-3" />
+        <RiCloseLine className="h-3 w-3" />
       </button>
     </Badge>
   )
@@ -144,7 +144,7 @@ const EnhancedSelectItem = React.memo(({
             title="Include"
             aria-label={`Include ${value}`}
           >
-            <Plus className="h-3 w-3 text-green-600" />
+            <RiAddLine className="h-3 w-3 text-green-600" />
           </Button>
           <Button
             type="button"
@@ -158,7 +158,7 @@ const EnhancedSelectItem = React.memo(({
             title="Exclude"
             aria-label={`Exclude ${value}`}
           >
-            <Minus className="h-3 w-3 text-red-600" />
+            <RiSubtractLine className="h-3 w-3 text-red-600" />
           </Button>
         </div>
       </div>
@@ -441,7 +441,7 @@ export const EnhancedMultiSelect = React.memo(function EnhancedMultiSelect({
                 )}
                 {renderBadges}
               </div>
-              <ChevronsUpDown className={cn(
+              <RiExpandUpDownLine className={cn(
                 "h-4 w-4 shrink-0 opacity-50 ml-2",
                 open && "rotate-180"
               )} />

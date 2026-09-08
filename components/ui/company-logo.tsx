@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Image from "next/image"
-import { Building2 } from "lucide-react"
+import { RiBuilding2Line } from "@remixicon/react"
 import { useTheme } from "next-themes"
 import { getBrandfetchClientId } from "@/lib/config/environment"
 import { cn } from "@/lib/utils"
@@ -95,7 +95,7 @@ export function CompanyLogo({
           {companyMonogram}
         </span>
       ) : (
-        <Building2 className={cn("text-primary", sizeConfig.icon)} />
+        <RiBuilding2Line className={cn("text-primary", sizeConfig.icon)} />
       )}
     </div>
   )
@@ -128,7 +128,7 @@ export function CompanyLogo({
       {/* Fallback while loading */}
       {!imageLoaded && (
         <div className="absolute inset-0 flex items-center justify-center bg-primary/10">
-          <Building2 className={cn("text-primary", sizeConfig.icon)} />
+          <RiBuilding2Line className={cn("text-primary", sizeConfig.icon)} />
         </div>
       )}
 

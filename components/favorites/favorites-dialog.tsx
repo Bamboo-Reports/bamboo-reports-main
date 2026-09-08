@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Star, Trash2, X } from "lucide-react"
+import { RiCloseLine, RiDeleteBinLine, RiStarLine } from "@remixicon/react"
 import {
   Dialog,
   DialogContent,
@@ -40,7 +40,7 @@ export function FavoritesDialog({ open, onOpenChange, favorites, onOpenFavorite,
             <div>
               <DialogTitle className="text-2xl font-bold flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
-                  <Star className="h-4 w-4" />
+                  <RiStarLine className="h-4 w-4" />
                 </div>
                 Favourites
               </DialogTitle>
@@ -55,7 +55,7 @@ export function FavoritesDialog({ open, onOpenChange, favorites, onOpenFavorite,
                 className="mt-1 gap-1.5 text-muted-foreground hover:text-destructive"
                 onClick={onClearAll}
               >
-                <Trash2 className="h-3.5 w-3.5" />
+                <RiDeleteBinLine className="h-3.5 w-3.5" />
                 Clear favorites
               </Button>
             )}
@@ -65,7 +65,7 @@ export function FavoritesDialog({ open, onOpenChange, favorites, onOpenFavorite,
         <div className="flex-1 overflow-auto px-6 py-6">
           {favorites.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 bg-background/40 py-24 text-center backdrop-blur-sm dark:bg-white/5 dark:border-white/10">
-              <Star className="mb-3 h-10 w-10 text-muted-foreground" />
+              <RiStarLine className="mb-3 h-10 w-10 text-muted-foreground" />
               <p className="text-sm font-medium">No favorites yet</p>
               <p className="mt-1 text-xs text-muted-foreground">
                 Right-click any account, center, or prospect and choose &quot;Add to Favorites&quot;.
@@ -116,7 +116,7 @@ export function FavoritesDialog({ open, onOpenChange, favorites, onOpenFavorite,
                         aria-label={`Remove ${item.title} from favourites`}
                         onClick={() => onRemove(item)}
                       >
-                        <X className="h-4 w-4" />
+                        <RiCloseLine className="h-4 w-4" />
                       </Button>
                     </div>
                   )

@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { AlertCircle, ArrowLeft, CheckCircle2, FileSpreadsheet, HelpCircle, Loader2, Upload, XCircle } from "lucide-react"
+import { RiArrowLeftLine, RiCheckboxCircleLine, RiCloseCircleLine, RiErrorWarningLine, RiFileExcelLine, RiLoader4Line, RiQuestionLine, RiUploadLine } from "@remixicon/react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,21 +13,20 @@ import { cn } from "@/lib/utils"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { normalizeTrackedText } from "@/lib/analytics/tracking"
-import { createDefaultFilters } from "@/lib/dashboard/defaults"
 import { fetchAccountMatches } from "@/lib/dashboard/api-client"
 import { MAX_MATCH_NAMES, type AccountMatchCandidate, type AccountMatchResult, type AccountMatchStatus } from "@/lib/accounts/account-match"
 import { extractNames, guessNameColumn, parseDelimitedText, tableFromRows, type ParsedAccountTable } from "@/lib/accounts/account-list-parser"
 import { devError } from "@/lib/utils/dev-log"
-import type { Filters } from "@/lib/types"
+import { useAccountLists } from "@/contexts/account-lists-context"
+import type { AccountList } from "@/lib/accounts/account-lists"
 
 interface AccountListUploadDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  /** Persists the filter; resolves true on success. */
-  onSave: (name: string, filters: Filters) => Promise<boolean>
-  /** Applies the filter to the dashboard right away (used by "Save and apply"). */
-  onApply?: (filters: Filters) => void
-  saving?: boolean
+  /** When set, the upload replaces the accounts of this existing list instead of creating a new one. */
+  existingList?: AccountList | null
+  /** Called after the list is saved when the user chose "Save and apply". */
+  onApply?: (list: AccountList) => void
 }
 
 type ReviewRow = {
@@ -91,10 +90,10 @@ function rowsFromResults(results: AccountMatchResult[]): ReviewRow[] {
   }))
 }
 
-const STATUS_META: Record<AccountMatchStatus, { label: string; className: string; Icon: typeof CheckCircle2 }> = {
-  matched: { label: "Matched", className: "border-green-500/40 bg-green-500/10 text-green-700 dark:text-green-300", Icon: CheckCircle2 },
-  review: { label: "Needs review", className: "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300", Icon: HelpCircle },
-  not_found: { label: "Not found", className: "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300", Icon: XCircle },
+const STATUS_META: Record<AccountMatchStatus, { label: string; className: string; Icon: typeof RiCheckboxCircleLine }> = {
+  matched: { label: "Matched", className: "border-green-500/40 bg-green-500/10 text-green-700 dark:text-green-300", Icon: RiCheckboxCircleLine },
+  review: { label: "Needs review", className: "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300", Icon: RiQuestionLine },
+  not_found: { label: "Not found", className: "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300", Icon: RiCloseCircleLine },
 }
 
 function viaLabel(candidate: AccountMatchCandidate | null): string | null {
@@ -104,7 +103,8 @@ function viaLabel(candidate: AccountMatchCandidate | null): string | null {
   return null
 }
 
-export function AccountListUploadDialog({ open, onOpenChange, onSave, onApply, saving = false }: AccountListUploadDialogProps) {
+export function AccountListUploadDialog({ open, onOpenChange, existingList = null, onApply }: AccountListUploadDialogProps) {
+  const { createList, updateList, loading: saving } = useAccountLists()
   const [step, setStep] = useState<Step>("input")
   const [fileName, setFileName] = useState<string | null>(null)
   const [table, setTable] = useState<ParsedAccountTable | null>(null)
@@ -137,8 +137,9 @@ export function AccountListUploadDialog({ open, onOpenChange, onSave, onApply, s
       reset()
       return
     }
-    captureEvent(ANALYTICS_EVENTS.ACCOUNT_LIST_UPLOAD_OPENED, {})
-  }, [open, reset])
+    if (existingList) setFilterName(existingList.name)
+    captureEvent(ANALYTICS_EVENTS.ACCOUNT_LIST_UPLOAD_OPENED, { mode: existingList ? "update" : "create" })
+  }, [open, reset, existingList])
 
   const names = useMemo(() => {
     if (table) return extractNames(table, column)
@@ -218,33 +219,27 @@ export function AccountListUploadDialog({ open, onOpenChange, onSave, onApply, s
     [rows, statusFilter]
   )
 
-  const buildFilters = useCallback(
-    (): Filters =>
-      createDefaultFilters({
-        accountVisibilityMode: "all",
-        accountNameValues: mappedNames.map((value) => ({ value, mode: "include" as const })),
-      }),
-    [mappedNames]
-  )
-
   const handleSave = useCallback(
     async (apply: boolean) => {
       const name = filterName.trim()
       if (!name || mappedNames.length === 0) return
-      const filters = buildFilters()
-      const ok = await onSave(name, filters)
-      if (!ok) {
-        toast.error("Could not save the filter. Please try again.")
+      const unmatched = rows.filter((r) => !r.selected).map((r) => r.input)
+      const input = { name, accounts: mappedNames, unmatched, sourceFile: fileName }
+      const saved = existingList ? await updateList(existingList.id, input) : await createList(input)
+      if (!saved) {
+        toast.error("Could not save the account list. Please try again.")
         return
       }
       captureEvent(ANALYTICS_EVENTS.ACCOUNT_LIST_FILTER_SAVED, {
-        saved_filter_name: normalizeTrackedText(name),
+        account_list_id: saved.id,
+        account_list_name: normalizeTrackedText(name),
+        mode: existingList ? "update" : "create",
         uploaded_count: rows.length,
         mapped_count: mappedNames.length,
         unmapped_count: unmappedCount,
         applied: apply,
       })
-      if (apply && onApply) onApply(filters)
+      if (apply && onApply) onApply(saved)
       toast.success(
         unmappedCount > 0
           ? `Saved "${name}" with ${mappedNames.length} accounts (${unmappedCount} skipped).`
@@ -252,19 +247,23 @@ export function AccountListUploadDialog({ open, onOpenChange, onSave, onApply, s
       )
       onOpenChange(false)
     },
-    [filterName, mappedNames, buildFilters, onSave, rows.length, unmappedCount, onApply, onOpenChange]
+    [filterName, mappedNames, rows, fileName, existingList, updateList, createList, unmappedCount, onApply, onOpenChange]
   )
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={cn("max-h-[90vh] w-[calc(100%-2rem)] overflow-x-hidden overflow-y-auto", step === "review" ? "max-w-4xl" : "max-w-lg")}>
         <DialogHeader>
-          <DialogTitle>{step === "input" ? "Upload account list" : "Review account matches"}</DialogTitle>
-          <DialogDescription>
-            {step === "input"
-              ? "Upload a client's account list and we will map each name to an account in the database. The mapped list is saved as a filter."
-              : "Confirm the mapping for each uploaded name. Rows without a selected account are left out of the saved filter."}
-          </DialogDescription>
+          <DialogTitle>
+            {step === "input" ? (existingList ? `Update "${existingList.name}"` : "Upload account list") : "Review account matches"}
+          </DialogTitle>
+          {step === "input" ? (
+            <DialogDescription className="sr-only">Upload an account list file or paste account names.</DialogDescription>
+          ) : (
+            <DialogDescription>
+              Confirm the mapping for each uploaded name. Rows without a selected account are left out of the list.
+            </DialogDescription>
+          )}
         </DialogHeader>
 
         {step === "input" ? (
@@ -308,13 +307,13 @@ export function AccountListUploadDialog({ open, onOpenChange, onSave, onApply, s
               />
               {fileName ? (
                 <>
-                  <FileSpreadsheet className="h-6 w-6 text-primary" />
+                  <RiFileExcelLine className="h-6 w-6 text-primary" />
                   <p className="max-w-full truncate text-sm font-medium" title={fileName}>{fileName}</p>
                   <p className="text-xs text-muted-foreground">Click or drop another file to replace it</p>
                 </>
               ) : (
                 <>
-                  <Upload className="h-6 w-6 text-muted-foreground" />
+                  <RiUploadLine className="h-6 w-6 text-muted-foreground" />
                   <p className="text-sm font-medium">Drop a file here or click to browse</p>
                   <p className="text-xs text-muted-foreground">CSV, TSV, TXT or XLSX. Up to {MAX_MATCH_NAMES} names per upload.</p>
                 </>
@@ -355,7 +354,7 @@ export function AccountListUploadDialog({ open, onOpenChange, onSave, onApply, s
 
             {parseError && (
               <p role="alert" className="flex items-center gap-2 text-sm text-destructive">
-                <AlertCircle className="h-4 w-4 shrink-0" />
+                <RiErrorWarningLine className="h-4 w-4 shrink-0" />
                 {parseError}
               </p>
             )}
@@ -397,7 +396,7 @@ export function AccountListUploadDialog({ open, onOpenChange, onSave, onApply, s
                 )
               })}
               <span className="ml-auto text-xs text-muted-foreground">
-                {mappedNames.length} account{mappedNames.length === 1 ? "" : "s"} will be saved
+                {mappedNames.length} account{mappedNames.length === 1 ? "" : "s"} will be saved to the list
               </span>
             </div>
 
@@ -468,7 +467,7 @@ export function AccountListUploadDialog({ open, onOpenChange, onSave, onApply, s
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="account-list-filter-name">Save as filter</Label>
+              <Label htmlFor="account-list-filter-name">List name</Label>
               <Input
                 id="account-list-filter-name"
                 value={filterName}
@@ -488,7 +487,7 @@ export function AccountListUploadDialog({ open, onOpenChange, onSave, onApply, s
               <Button onClick={handleMatch} disabled={names.length === 0 || matching}>
                 {matching ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <RiLoader4Line className="h-4 w-4 animate-spin" />
                     Matching...
                   </>
                 ) : (
@@ -499,11 +498,11 @@ export function AccountListUploadDialog({ open, onOpenChange, onSave, onApply, s
           ) : (
             <>
               <Button variant="ghost" onClick={() => setStep("input")} disabled={saving} className="sm:mr-auto">
-                <ArrowLeft className="h-4 w-4" />
+                <RiArrowLeftLine className="h-4 w-4" />
                 Back
               </Button>
               <Button variant="outline" onClick={() => handleSave(false)} disabled={!filterName.trim() || mappedNames.length === 0 || saving}>
-                {saving ? "Saving..." : "Save filter"}
+                {saving ? "Saving..." : existingList ? "Update list" : "Save list"}
               </Button>
               {onApply && (
                 <Button onClick={() => handleSave(true)} disabled={!filterName.trim() || mappedNames.length === 0 || saving}>

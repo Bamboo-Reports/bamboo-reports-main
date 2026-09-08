@@ -96,6 +96,11 @@ export const FILTER_METADATA = {
     inputType: "keyword",
   },
   accountNameValues: {
+    label: "Account List Accounts",
+    group: "account",
+    inputType: "multi_select",
+  },
+  accountListValues: {
     label: "Account List",
     group: "account",
     inputType: "multi_select",

@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { devError } from "@/lib/utils/dev-log"
 import { sanitizeFilters } from "@/lib/config/filters"
 import { createDefaultFilters } from "@/lib/dashboard/defaults"
@@ -145,14 +145,18 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
     rangesRef.current = facets?.ranges ?? null
   }, [facets])
 
+  // Latest-value refs are assigned in a layout effect (never during render) so
+  // they are current before any passive effect below reads them.
   const filtersRef = useRef(filters)
-  filtersRef.current = filters
+  useLayoutEffect(() => {
+    filtersRef.current = filters
+  }, [filters])
   const filtersKey = useMemo(() => JSON.stringify(sanitizeFilters(filters)), [filters])
 
   // reload() clears the caches and briefly bypasses the server-side response
   // cache so "refresh" actually recomputes from the warehouse.
   const bypassUntilRef = useRef(0)
-  const noCache = () => Date.now() < bypassUntilRef.current
+  const noCache = useCallback(() => Date.now() < bypassUntilRef.current, [])
   const reload = useCallback(() => {
     clearClientDashboardCache()
     bypassUntilRef.current = Date.now() + 5000
@@ -244,7 +248,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
           setIsRefreshing(false)
         }
       })
-  }, [enabled, effectiveKey, refreshKey])
+  }, [enabled, effectiveKey, refreshKey, noCache])
 
   // Charts: only when a chart view is visible.
   useEffect(() => {
@@ -264,7 +268,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
         setAppliedKeys((prev) => ({ ...prev, charts: effectiveKey }))
       })
       .catch((err) => devError("dashboard charts fetch failed:", err))
-  }, [enabled, effectiveKey, views.needCharts, refreshKey])
+  }, [enabled, effectiveKey, views.needCharts, refreshKey, noCache])
 
   // Map aggregates: only when a map view is visible.
   useEffect(() => {
@@ -284,7 +288,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
         setAppliedKeys((prev) => ({ ...prev, map: effectiveKey }))
       })
       .catch((err) => devError("centres map fetch failed:", err))
-  }, [enabled, effectiveKey, views.needMap, refreshKey])
+  }, [enabled, effectiveKey, views.needMap, refreshKey, noCache])
 
   // Background prefetch: ~400ms after a new filter state settles (visible
   // requests go out first), quietly warm the client cache with whatever the
@@ -292,11 +296,13 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
   // inactive tabs' pages. View/tab switches then hit the cache and feel
   // instant. Fire-and-forget cache writes only; the lazy effects own state.
   const viewsRef = useRef(views)
-  viewsRef.current = views
   const pagesRef = useRef(pages)
-  pagesRef.current = pages
   const sortsRef = useRef(sorts)
-  sortsRef.current = sorts
+  useLayoutEffect(() => {
+    viewsRef.current = views
+    pagesRef.current = pages
+    sortsRef.current = sorts
+  }, [views, pages, sorts])
   useEffect(() => {
     if (!enabled || !effectiveKey) return
     const timer = setTimeout(() => {
@@ -352,11 +358,10 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
 
   // Per-entity paginated rows: only the active section fetches; the others
   // fetch on first activation (and then hit the cache).
-  const useEntityEffect = (entity: "accounts" | "centers" | "prospects", page: number, sort: EntitySort | null) => {
-    const sortKey = sort ? `${sort.column}:${sort.direction}` : ""
-    const active = views.activeEntity === entity
-    useEffect(() => {
-      if (!enabled || !effectiveKey || !active) return
+  const loadEntityPage = useCallback(
+    (entity: "accounts" | "centers" | "prospects", page: number, sort: EntitySort | null) => {
+      if (!effectiveKey) return
+      const sortKey = sort ? `${sort.column}:${sort.direction}` : ""
       const cacheKey = `${entity}:${effectiveKey}:${page}:${sortKey}`
       const cached = pageCache.get(cacheKey)
       if (cached) {
@@ -378,14 +383,24 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
           devError(`${entity} page fetch failed:`, err)
           setError(err instanceof Error ? err.message : `Failed to load ${entity}`)
         })
+    },
+    [effectiveKey, pageSize, noCache]
+  )
+
+  const useEntityEffect = (entity: "accounts" | "centers" | "prospects", page: number, sort: EntitySort | null) => {
+    const sortKey = sort ? `${sort.column}:${sort.direction}` : ""
+    const active = views.activeEntity === entity
+    useEffect(() => {
+      if (!enabled || !active) return
+      loadEntityPage(entity, page, sort)
+      // sort is keyed by sortKey so an equal sort object does not refetch.
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [enabled, effectiveKey, active, page, sortKey, refreshKey])
+    }, [enabled, active, page, sortKey, refreshKey, loadEntityPage])
   }
-  /* eslint-disable react-hooks/rules-of-hooks -- fixed call order: the three entities are static */
+  // Fixed call order: the three entities are static.
   useEntityEffect("accounts", pages.accounts, sorts.accounts)
   useEntityEffect("centers", pages.centers, sorts.centers)
   useEntityEffect("prospects", pages.prospects, sorts.prospects)
-  /* eslint-enable react-hooks/rules-of-hooks */
 
   const initialLoading = enabled && summary === null && error === null
 

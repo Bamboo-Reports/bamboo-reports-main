@@ -1,5 +1,5 @@
 import React from "react"
-import { ChevronDown, ChevronUp, Lock, X } from "lucide-react"
+import { RiArrowDownSLine, RiArrowUpSLine, RiLockLine } from "@remixicon/react"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button"
 import { EnhancedMultiSelect } from "@/components/enhanced-multi-select"
 import { AccountAutocomplete, type AccountVisibilityInfo } from "@/components/filters/account-autocomplete"
 import { TitleKeywordInput } from "@/components/filters/title-keyword-input"
+import { AccountListPicker } from "@/components/filters/account-list-picker"
+import { withAccountLists } from "@/lib/accounts/account-lists"
 import { getPremiumFilterKeys, isFilterEnabled, isShowMoreEnabled } from "@/lib/config/filters"
 import type { Alias, Filters, AvailableOptions } from "@/lib/types"
 
@@ -93,46 +95,17 @@ export function AccountFiltersSection({
           </div>
           )}
 
-          {isFilterEnabled("accountNameValues") && pendingFilters.accountNameValues.length > 0 && (
+          {isFilterEnabled("accountListValues") && (
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs font-medium">Account List (exact match)</Label>
-              <button
-                type="button"
-                className="text-[11px] text-muted-foreground hover:text-foreground"
-                onClick={() => setPendingFilters((prev) => ({ ...prev, accountNameValues: [] }))}
-              >
-                Clear {pendingFilters.accountNameValues.length}
-              </button>
-            </div>
-            <div className="flex max-h-40 flex-wrap gap-1.5 overflow-y-auto">
-              {pendingFilters.accountNameValues.map((entry) => (
-                <span
-                  key={`${entry.mode}-${entry.value}`}
-                  className={
-                    entry.mode === "exclude"
-                      ? "inline-flex max-w-full items-center gap-1 rounded-full border border-red-500/50 bg-red-500/15 px-2 py-0.5 text-xs text-red-700 dark:text-red-300"
-                      : "inline-flex max-w-full items-center gap-1 rounded-full border border-green-500/50 bg-green-500/15 px-2 py-0.5 text-xs text-green-700 dark:text-green-300"
-                  }
-                  title={entry.value}
-                >
-                  <span className="truncate">{entry.value}</span>
-                  <button
-                    type="button"
-                    aria-label={`Remove ${entry.value}`}
-                    className="rounded-sm opacity-70 hover:opacity-100"
-                    onClick={() =>
-                      setPendingFilters((prev) => ({
-                        ...prev,
-                        accountNameValues: prev.accountNameValues.filter((v) => v !== entry),
-                      }))
-                    }
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              ))}
-            </div>
+            <Label className="text-xs font-medium">Account List</Label>
+            <AccountListPicker
+              selected={pendingFilters.accountListValues}
+              accountNameCount={pendingFilters.accountNameValues.length}
+              onChange={(selection, lists) =>
+                setPendingFilters((prev) => withAccountLists(prev, selection, lists))
+              }
+              onClearNames={() => setPendingFilters((prev) => ({ ...prev, accountListValues: [], accountNameValues: [] }))}
+            />
           </div>
           )}
 
@@ -381,12 +354,12 @@ export function AccountFiltersSection({
                 : "Show More"}
               {canShowMoreAccountFilters ? (
                 showMoreAccountFilters ? (
-                  <ChevronUp className="ml-1.5 h-3.5 w-3.5" />
+                  <RiArrowUpSLine className="ml-1.5 h-3.5 w-3.5" />
                 ) : (
-                  <ChevronDown className="ml-1.5 h-3.5 w-3.5" />
+                  <RiArrowDownSLine className="ml-1.5 h-3.5 w-3.5" />
                 )
               ) : (
-                <Lock className="ml-1.5 h-3.5 w-3.5" />
+                <RiLockLine className="ml-1.5 h-3.5 w-3.5" />
               )}
             </Button>
           </div>
@@ -739,12 +712,12 @@ export function CenterFiltersSection({
                 : "Show More"}
               {canShowMoreCenterFilters ? (
                 showMoreCenterFilters ? (
-                  <ChevronUp className="ml-1.5 h-3.5 w-3.5" />
+                  <RiArrowUpSLine className="ml-1.5 h-3.5 w-3.5" />
                 ) : (
-                  <ChevronDown className="ml-1.5 h-3.5 w-3.5" />
+                  <RiArrowDownSLine className="ml-1.5 h-3.5 w-3.5" />
                 )
               ) : (
-                <Lock className="ml-1.5 h-3.5 w-3.5" />
+                <RiLockLine className="ml-1.5 h-3.5 w-3.5" />
               )}
             </Button>
           </div>

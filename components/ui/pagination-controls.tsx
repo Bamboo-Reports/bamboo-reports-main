@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Download } from "lucide-react"
+import { RiDownloadLine } from "@remixicon/react"
 import { getPageInfo, getTotalPages } from "@/lib/utils/helpers"
 
 interface PaginationControlsProps {
@@ -41,7 +41,7 @@ export function PaginationControls({
             onClick={onExport}
             className="flex items-center gap-2 h-8"
           >
-            <Download className="h-4 w-4" />
+            <RiDownloadLine className="h-4 w-4" />
             {exportLabel}
           </Button>
         )}

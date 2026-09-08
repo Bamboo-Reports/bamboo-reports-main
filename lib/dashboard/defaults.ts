@@ -24,6 +24,7 @@ export function createDefaultFilters(overrides: Partial<Filters> = {}): Filters 
     yearsInIndiaIncludeNull: overrides.yearsInIndiaIncludeNull ?? true,
     accountGlobalLegalNameKeywords: overrides.accountGlobalLegalNameKeywords ?? [],
     accountNameValues: overrides.accountNameValues ?? [],
+    accountListValues: overrides.accountListValues ?? [],
     centerTypeValues: overrides.centerTypeValues ?? [],
     centerFocusValues: overrides.centerFocusValues ?? [],
     centerCityValues: overrides.centerCityValues ?? [],

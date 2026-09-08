@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { RefreshCw } from "lucide-react"
+import { RiRefreshLine } from "@remixicon/react"
 import { BrandPage } from "@/components/brand/brand-page"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -38,7 +38,7 @@ export function ErrorState({ error, onRetry }: ErrorStateProps) {
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <Button onClick={onRetry} className="h-10 sm:flex-1">
-              <RefreshCw className="mr-2 h-4 w-4" />
+              <RiRefreshLine className="mr-2 h-4 w-4" />
               Retry
             </Button>
             <Button asChild variant="outline" className="h-10 sm:flex-1">

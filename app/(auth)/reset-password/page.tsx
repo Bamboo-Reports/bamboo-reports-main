@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Loader2 } from "lucide-react"
+import { RiLoader4Line } from "@remixicon/react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Button } from "@/components/ui/button"
@@ -92,7 +92,7 @@ export default function ResetPasswordPage() {
     >
       {status === "checking" ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
+          <RiLoader4Line className="h-4 w-4 animate-spin" />
           Verifying your reset link
         </div>
       ) : status === "invalid" ? (
@@ -149,7 +149,7 @@ export default function ResetPasswordPage() {
           >
             {isSubmitting ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <RiLoader4Line className="mr-2 h-4 w-4 animate-spin" />
                 Updating password
               </>
             ) : (

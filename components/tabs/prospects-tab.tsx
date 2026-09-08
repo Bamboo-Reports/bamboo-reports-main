@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TabsContent } from "@/components/ui/tabs"
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ArrowDownAZ, ArrowUpAZ, ArrowUpDown, PieChartIcon, Table as TableIcon, LayoutGrid } from "lucide-react"
+import { RiExpandUpDownLine, RiLayoutGridLine, RiPieChartLine, RiSortAlphabetAsc, RiSortAlphabetDesc, RiTableLine } from "@remixicon/react"
 import { ProspectRow } from "@/components/tables/prospect-row"
 import { SelectionActionBar } from "@/components/tables/selection-action-bar"
 import { useTableRowSelection } from "@/hooks/use-table-row-selection"
@@ -340,7 +340,7 @@ export function ProspectsTab({
     <TabsContent value="prospects">
       {/* Header with View Toggle */}
       <div className="flex items-center gap-2 mb-4">
-        <PieChartIcon className="h-5 w-5 text-primary" />
+        <RiPieChartLine className="h-5 w-5 text-primary" />
         <h2 className="text-lg font-semibold text-foreground">Prospect Analytics</h2>
         <ViewSwitcher
           data-tour="view-switcher"
@@ -351,14 +351,14 @@ export function ProspectsTab({
               value: "chart",
               label: "Charts",
               icon: (
-                <PieChartIcon className="h-4 w-4" />
+                <RiPieChartLine className="h-4 w-4" />
               ),
             },
             {
               value: "data",
               label: "Data",
               icon: (
-                <TableIcon className="h-4 w-4" />
+                <RiTableLine className="h-4 w-4" />
               ),
             },
           ]}
@@ -415,14 +415,14 @@ export function ProspectsTab({
                        value: "table",
                        label: "Table",
                        icon: (
-                         <TableIcon className="h-4 w-4" />
+                         <RiTableLine className="h-4 w-4" />
                        ),
                      },
                      {
                        value: "grid",
                        label: "Grid",
                        icon: (
-                         <LayoutGrid className="h-4 w-4" />
+                         <RiLayoutGridLine className="h-4 w-4" />
                        ),
                      },
                    ]}
@@ -500,11 +500,11 @@ export function ProspectsTab({
                         aria-pressed={sort.key === "name" && sort.direction !== null}
                       >
                         {sort.key !== "name" || sort.direction === null ? (
-                          <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+                          <RiExpandUpDownLine className="h-3.5 w-3.5 text-muted-foreground" />
                         ) : sort.direction === "asc" ? (
-                          <ArrowUpAZ className="h-3.5 w-3.5 text-primary" />
+                          <RiSortAlphabetAsc className="h-3.5 w-3.5 text-primary" />
                         ) : (
-                          <ArrowDownAZ className="h-3.5 w-3.5 text-primary" />
+                          <RiSortAlphabetDesc className="h-3.5 w-3.5 text-primary" />
                         )}
                       </Button>
                     </div>

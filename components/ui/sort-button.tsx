@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowDownAZ, ArrowUpAZ, ArrowUpDown } from "lucide-react"
+import { RiExpandUpDownLine, RiSortAlphabetAsc, RiSortAlphabetDesc } from "@remixicon/react"
 import { cn } from "@/lib/utils"
 
 interface SortButtonProps<T extends string = string> {
@@ -31,11 +31,11 @@ export function SortButton<T extends string = string>({
     >
       <span>{label}</span>
       {!isActive ? (
-        <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+        <RiExpandUpDownLine className="h-3.5 w-3.5 text-muted-foreground" />
       ) : direction === "asc" ? (
-        <ArrowUpAZ className="h-3.5 w-3.5 text-primary" />
+        <RiSortAlphabetAsc className="h-3.5 w-3.5 text-primary" />
       ) : (
-        <ArrowDownAZ className="h-3.5 w-3.5 text-primary" />
+        <RiSortAlphabetDesc className="h-3.5 w-3.5 text-primary" />
       )}
     </button>
   )

@@ -1,6 +1,6 @@
 "use client"
 
-import { Settings2 } from "lucide-react"
+import { RiSettings3Line } from "@remixicon/react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -37,7 +37,7 @@ export function TableColumnMenu<ColumnKey extends string>({
           aria-label="Customise table columns"
           title="Customise table columns"
         >
-          <Settings2 className="h-3.5 w-3.5" />
+          <RiSettings3Line className="h-3.5 w-3.5" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" side="bottom" sideOffset={6} alignOffset={-32} className="w-64">

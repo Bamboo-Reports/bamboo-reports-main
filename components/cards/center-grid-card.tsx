@@ -1,5 +1,5 @@
 import { memo } from "react"
-import { ArrowUpRight, Eye, ExternalLink, Globe } from "lucide-react"
+import { RiArrowRightUpLine, RiExternalLinkLine, RiEyeLine, RiGlobalLine } from "@remixicon/react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CompanyLogo } from "@/components/ui/company-logo"
@@ -102,28 +102,28 @@ export const CenterGridCard = memo(({ center, onClick }: CenterGridCardProps) =>
               className="w-full justify-between border border-border/70 bg-background text-foreground hover:bg-accent hover:text-accent-foreground"
             >
               View Details
-              <ArrowUpRight className="h-4 w-4" />
+              <RiArrowRightUpLine className="h-4 w-4" />
             </Button>
           </CardContent>
         </Card>
       </ContextMenuTrigger>
       <ContextMenuContent className="w-48">
         <ContextMenuItem onClick={onClick}>
-          <Eye className="h-4 w-4" />
+          <RiEyeLine className="h-4 w-4" />
           View Details
         </ContextMenuItem>
         {center.center_website && (
           <>
             <ContextMenuSeparator />
             <ContextMenuItem onClick={() => window.open(ensureAbsoluteUrl(center.center_website!), "_blank", "noopener,noreferrer")}>
-              <Globe className="h-4 w-4" />
+              <RiGlobalLine className="h-4 w-4" />
               Open Website
             </ContextMenuItem>
           </>
         )}
         {center.center_linkedin && (
           <ContextMenuItem onClick={() => window.open(ensureAbsoluteUrl(center.center_linkedin!), "_blank", "noopener,noreferrer")}>
-            <ExternalLink className="h-4 w-4" />
+            <RiExternalLinkLine className="h-4 w-4" />
             Open LinkedIn
           </ContextMenuItem>
         )}

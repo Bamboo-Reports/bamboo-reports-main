@@ -8,21 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  Calendar,
-  Code,
-  DollarSign,
-  Globe,
-  Headphones,
-  Lightbulb,
-  Linkedin,
-  MoreHorizontal,
-  ShoppingCart,
-  SquareArrowOutUpRight,
-  TrendingUp,
-  UserCog,
-  Users,
-} from "lucide-react"
+import { RiCalendarLine, RiCodeLine, RiExternalLinkLine, RiGlobalLine, RiGroupLine, RiHeadphoneLine, RiLightbulbLine, RiLineChartLine, RiLinkedinBoxLine, RiMoneyDollarCircleLine, RiMoreLine, RiShoppingCartLine, RiUserSettingsLine } from "@remixicon/react"
 import type { Center, Service, Tech } from "@/lib/types"
 import { CompanyLogo } from "@/components/ui/company-logo"
 import { DialogBreadcrumb } from "@/components/ui/dialog-breadcrumb"
@@ -137,14 +123,14 @@ export function CenterDetailsDialog({
       : []
 
   const serviceCategories = [
-    { key: "it",          icon: Code,          title: "IT Services",          items: parseLines(centerServices?.service_it)              },
-    { key: "erd",         icon: Lightbulb,     title: "ER&D Services",        items: parseLines(centerServices?.service_erd)             },
-    { key: "finance",     icon: DollarSign,    title: "Finance & Accounting", items: parseLines(centerServices?.service_fna)             },
-    { key: "hr",          icon: UserCog,       title: "HR Services",          items: parseLines(centerServices?.service_hr)              },
-    { key: "procurement", icon: ShoppingCart,  title: "Procurement",          items: parseLines(centerServices?.service_procurement)     },
-    { key: "sales",       icon: TrendingUp,    title: "Sales & Marketing",    items: parseLines(centerServices?.service_sales_marketing) },
-    { key: "support",     icon: Headphones,    title: "Customer Support",     items: parseLines(centerServices?.service_customer_support)},
-    { key: "other",       icon: MoreHorizontal,title: "Other Services",       items: parseLines(centerServices?.service_others)          },
+    { key: "it",          icon: RiCodeLine,          title: "IT Services",          items: parseLines(centerServices?.service_it)              },
+    { key: "erd",         icon: RiLightbulbLine,     title: "ER&D Services",        items: parseLines(centerServices?.service_erd)             },
+    { key: "finance",     icon: RiMoneyDollarCircleLine,    title: "Finance & Accounting", items: parseLines(centerServices?.service_fna)             },
+    { key: "hr",          icon: RiUserSettingsLine,       title: "HR Services",          items: parseLines(centerServices?.service_hr)              },
+    { key: "procurement", icon: RiShoppingCartLine,  title: "Procurement",          items: parseLines(centerServices?.service_procurement)     },
+    { key: "sales",       icon: RiLineChartLine,    title: "Sales & Marketing",    items: parseLines(centerServices?.service_sales_marketing) },
+    { key: "support",     icon: RiHeadphoneLine,    title: "Customer Support",     items: parseLines(centerServices?.service_customer_support)},
+    { key: "other",       icon: RiMoreLine,title: "Other Services",       items: parseLines(centerServices?.service_others)          },
   ].filter((cat) => cat.items.length > 0)
 
   const getStatusColor = (status: string) => {
@@ -214,7 +200,7 @@ export function CenterDetailsDialog({
                       className="text-muted-foreground transition-colors hover:text-primary"
                       title={center.center_website}
                     >
-                      <Globe className="h-4 w-4" />
+                      <RiGlobalLine className="h-4 w-4" />
                     </a>
                   ) : null}
                   {center.center_linkedin ? (
@@ -229,7 +215,7 @@ export function CenterDetailsDialog({
                       className="text-muted-foreground transition-colors hover:text-[#0A66C2]"
                       title="LinkedIn"
                     >
-                      <Linkedin className="h-4 w-4" />
+                      <RiLinkedinBoxLine className="h-4 w-4" />
                     </a>
                   ) : null}
                 </div>
@@ -249,7 +235,7 @@ export function CenterDetailsDialog({
                     aria-label={`Open account details for ${center.account_global_legal_name}`}
                     title={`Open account details for ${center.account_global_legal_name}`}
                   >
-                    <SquareArrowOutUpRight className="h-3.5 w-3.5" />
+                    <RiExternalLinkLine className="h-3.5 w-3.5" />
                   </button>
                 ) : null}
               </p>
@@ -332,24 +318,24 @@ export function CenterDetailsDialog({
             <SectionHeader title="Scale & Timeline" />
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
               <KPITile
-                icon={Users}
+                icon={RiGroupLine}
                 label="Employees"
                 value={center.center_employees}
                 caption={center.center_employees_range}
               />
               <KPITile
-                icon={Calendar}
+                icon={RiCalendarLine}
                 label="Incorporation Year"
                 value={center.center_inc_year}
                 caption={center.center_timeline}
               />
               <KPITile
-                icon={Calendar}
+                icon={RiCalendarLine}
                 label="Announced"
                 value={announcedCombined || null}
               />
               <KPITile
-                icon={Calendar}
+                icon={RiCalendarLine}
                 label="End Year"
                 value={center.center_end_year}
               />

@@ -61,7 +61,7 @@ gated("filtering-sql parity against the real Neon warehouse", () => {
     derived.level = await one(`select prospect_level from prospects where prospect_level is not null group by 1 order by count(*) desc limit 1`)
     derived.status = await one(`select center_status from centers where center_status is not null group by 1 order by count(*) desc limit 1`)
 
-    // eslint-disable-next-line no-console
+     
     console.log("real-data sizes:", {
       accounts: accounts.length, centers: centers.length, functions: functions.length,
       tech: tech.length, prospects: prospects.length, derived,

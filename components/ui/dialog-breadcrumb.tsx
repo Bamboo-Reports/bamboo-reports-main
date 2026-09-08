@@ -1,8 +1,7 @@
 "use client"
 
 import React from "react"
-import { ChevronRight } from "lucide-react"
-
+import { RiArrowRightSLine } from "@remixicon/react"
 export interface DialogBreadcrumbItem {
   label: string
   onClick?: () => void
@@ -44,7 +43,7 @@ export function DialogBreadcrumb({ items }: DialogBreadcrumbProps) {
                 {item.label}
               </span>
             )}
-            {!isLast && <ChevronRight className="h-3 w-3 shrink-0" />}
+            {!isLast && <RiArrowRightSLine className="h-3 w-3 shrink-0" />}
           </React.Fragment>
         )
       })}

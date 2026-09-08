@@ -2,7 +2,7 @@
 
 import React, { memo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { PieChartIcon } from "lucide-react"
+import { RiPieChartLine } from "@remixicon/react"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { PIE_CHART_COLORS } from "@/lib/utils/chart-helpers"
@@ -242,7 +242,7 @@ export const PieChartCard = memo(({
     <Card className="border shadow-sm">
       <CardHeader className="pb-3">
         <CardTitle className="text-base font-semibold flex items-center gap-2">
-          <PieChartIcon className="h-4 w-4 text-[hsl(var(--chart-1))]" />
+          <RiPieChartLine className="h-4 w-4 text-[hsl(var(--chart-1))]" />
           {title}
         </CardTitle>
       </CardHeader>

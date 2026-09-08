@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Loader2 } from "lucide-react"
+import { RiLoader4Line } from "@remixicon/react"
 import { Controller, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Button } from "@/components/ui/button"
@@ -205,7 +205,7 @@ function SignInForm() {
         >
           {isSubmitting ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <RiLoader4Line className="mr-2 h-4 w-4 animate-spin" />
               Signing in
             </>
           ) : (

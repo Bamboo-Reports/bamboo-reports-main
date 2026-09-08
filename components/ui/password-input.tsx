@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Eye, EyeOff } from "lucide-react"
+import { RiEyeLine, RiEyeOffLine } from "@remixicon/react"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 
@@ -27,7 +27,7 @@ const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputProps>(
           aria-pressed={visible}
           className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground transition-colors hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-r-md"
         >
-          {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          {visible ? <RiEyeOffLine className="h-4 w-4" /> : <RiEyeLine className="h-4 w-4" />}
         </button>
       </div>
     )

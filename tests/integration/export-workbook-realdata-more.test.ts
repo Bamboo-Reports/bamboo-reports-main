@@ -178,7 +178,7 @@ gated("export-by-filter workbook sanity matrix (10 combos) against the real ware
       expect(sheetRows("Services"), `Services sheet for ${label}`).toBe(expected.services)
       expect(sheetRows("Prospects"), `Prospects sheet for ${label}`).toBe(expected.prospects)
 
-      // eslint-disable-next-line no-console
+       
       console.log(`workbook parity [${label}]:`, expected)
     }, 240_000)
   }

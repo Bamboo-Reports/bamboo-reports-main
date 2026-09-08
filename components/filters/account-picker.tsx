@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Check, ChevronsUpDown, Loader2, Search } from "lucide-react"
+import { RiCheckLine, RiExpandUpDownLine, RiLoader4Line, RiSearchLine } from "@remixicon/react"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
@@ -102,12 +102,12 @@ export function AccountPicker({ value, onChange, suggestions = [], placeholder =
           className={cn("h-8 w-full justify-between font-normal", !value && "text-muted-foreground", className)}
         >
           <span className="truncate">{value ?? placeholder}</span>
-          <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
+          <RiExpandUpDownLine className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[360px] p-0" align="start">
         <div className="flex items-center gap-2 border-b px-3">
-          <Search className="h-4 w-4 shrink-0 opacity-50" />
+          <RiSearchLine className="h-4 w-4 shrink-0 opacity-50" />
           <input
             ref={inputRef}
             value={query}
@@ -116,7 +116,7 @@ export function AccountPicker({ value, onChange, suggestions = [], placeholder =
             aria-label="Search accounts"
             className="flex h-10 w-full bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground"
           />
-          {searching && <Loader2 className="h-4 w-4 shrink-0 animate-spin opacity-60" />}
+          {searching && <RiLoader4Line className="h-4 w-4 shrink-0 animate-spin opacity-60" />}
         </div>
         <div className="max-h-[260px] overflow-y-auto p-1" role="listbox">
           {options.length === 0 ? (
@@ -136,7 +136,7 @@ export function AccountPicker({ value, onChange, suggestions = [], placeholder =
                   option.name === value && "bg-accent/60"
                 )}
               >
-                <Check className={cn("h-3.5 w-3.5 shrink-0", option.name === value ? "opacity-100" : "opacity-0")} />
+                <RiCheckLine className={cn("h-3.5 w-3.5 shrink-0", option.name === value ? "opacity-100" : "opacity-0")} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate">{option.name}</span>
                   {option.matchedAlias?.value && (
