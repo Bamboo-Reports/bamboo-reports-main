@@ -91,7 +91,7 @@ gated("export-by-filter workbook parity against the real Neon warehouse", () => 
     expect(sheetRows("Services"), `Services sheet for ${label}`).toBe(expected.services)
     expect(sheetRows("Prospects"), `Prospects sheet for ${label}`).toBe(expected.prospects)
 
-    // eslint-disable-next-line no-console
+     
     console.log(`workbook parity [${label}]:`, expected)
     return expected
   }

@@ -74,9 +74,9 @@ gated("filtering-sql count report (reproducible on any instance)", () => {
     }
     const out = process.env.REPORT_OUT
     if (out) writeFileSync(out, JSON.stringify(rows, null, 2))
-    // eslint-disable-next-line no-console
+     
     console.log("\n=== FILTERING-SQL COUNT REPORT (A=accounts, C=centers, P=prospects) ===")
-    // eslint-disable-next-line no-console
+     
     console.table(rows)
   }, 300_000)
 })
