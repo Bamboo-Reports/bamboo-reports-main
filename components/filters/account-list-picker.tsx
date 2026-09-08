@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Check, ChevronsUpDown, ListChecks, X } from "lucide-react"
+import { Check, ChevronsUpDown, ListChecks, Minus, Plus, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
@@ -34,13 +34,26 @@ export function AccountListPicker({ selected, accountNameCount, onChange, onClea
     onChange(next, lists)
   }
   const remove = (id: string) => onChange(selected.filter((s) => s.value !== id), lists)
+  const toggleMode = (id: string) =>
+    onChange(
+      selected.map((s) => (s.value === id ? { ...s, mode: s.mode === "exclude" ? ("include" as const) : ("exclude" as const) } : s)),
+      lists
+    )
+  const includeCount = selected.filter((s) => s.mode !== "exclude").length
+  const excludeCount = selected.length - includeCount
 
   const summary =
     selected.length === 0
       ? accountNameCount > 0
         ? `${accountNameCount} accounts from a shared list`
         : "Select an uploaded list"
-      : `${selected.length} list${selected.length === 1 ? "" : "s"}, ${accountNameCount} accounts`
+      : [
+          includeCount > 0 ? `${includeCount} included` : null,
+          excludeCount > 0 ? `${excludeCount} excluded` : null,
+          `${accountNameCount} accounts`,
+        ]
+          .filter(Boolean)
+          .join(", ")
 
   return (
     <div className="space-y-2">
@@ -101,12 +114,30 @@ export function AccountListPicker({ selected, accountNameCount, onChange, onClea
           {selected.map((entry) => {
             const list = byId.get(entry.value)
             if (!list) return null
+            const isInclude = entry.mode !== "exclude"
             return (
               <span
                 key={entry.value}
-                className="inline-flex max-w-full items-center gap-1 rounded-full border border-green-500/50 bg-green-500/15 px-2 py-0.5 text-xs text-green-700 dark:text-green-300"
-                title={`${list.name} (${list.accounts.length} accounts)`}
+                className={cn(
+                  "inline-flex max-w-full items-center gap-1 rounded-full border px-1.5 py-0.5 text-xs",
+                  isInclude
+                    ? "border-green-500/50 bg-green-500/15 text-green-700 dark:text-green-300"
+                    : "border-red-500/50 bg-red-500/15 text-red-700 dark:text-red-300"
+                )}
+                title={`${list.name} (${list.accounts.length} accounts, ${isInclude ? "included" : "excluded"})`}
               >
+                <button
+                  type="button"
+                  onClick={() => toggleMode(entry.value)}
+                  className={cn(
+                    "flex h-4 w-4 shrink-0 items-center justify-center rounded-sm",
+                    isInclude ? "bg-green-600/30 hover:bg-green-600/50" : "bg-red-600/30 hover:bg-red-600/50"
+                  )}
+                  title={isInclude ? "Click to exclude" : "Click to include"}
+                  aria-label={isInclude ? `Exclude ${list.name}` : `Include ${list.name}`}
+                >
+                  {isInclude ? <Plus className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
+                </button>
                 <span className="truncate">{list.name}</span>
                 <span className="opacity-70">({list.accounts.length})</span>
                 <button type="button" aria-label={`Remove ${list.name}`} className="rounded-sm opacity-70 hover:opacity-100" onClick={() => remove(entry.value)}>
