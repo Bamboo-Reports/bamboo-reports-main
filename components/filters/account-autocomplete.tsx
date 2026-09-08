@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback, useId } from 
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { X, Plus, Minus, Loader2 } from "lucide-react"
+import { RiAddLine, RiCloseLine, RiLoader4Line, RiSubtractLine } from "@remixicon/react"
 import { cn } from "@/lib/utils"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
@@ -350,9 +350,9 @@ export function AccountAutocomplete({
                   aria-label={isInclude ? `Exclude ${account.value}` : `Include ${account.value}`}
                 >
                   {isInclude ? (
-                    <Plus className="h-3 w-3" />
+                    <RiAddLine className="h-3 w-3" />
                   ) : (
-                    <Minus className="h-3 w-3" />
+                    <RiSubtractLine className="h-3 w-3" />
                   )}
                 </button>
                 <span className="text-xs truncate max-w-[240px]" title={account.value}>{account.value}</span>
@@ -363,7 +363,7 @@ export function AccountAutocomplete({
                   title="Remove"
                   aria-label={`Remove ${account.value}`}
                 >
-                  <X className="h-3 w-3" />
+                  <RiCloseLine className="h-3 w-3" />
                 </button>
               </Badge>
             )
@@ -457,7 +457,7 @@ export function AccountAutocomplete({
                         title="Include"
                         aria-label={`Include ${suggestion.name}`}
                       >
-                        <Plus className="h-3 w-3 text-green-600" />
+                        <RiAddLine className="h-3 w-3 text-green-600" />
                       </Button>
                       <Button
                         type="button"
@@ -471,7 +471,7 @@ export function AccountAutocomplete({
                         title="Exclude"
                         aria-label={`Exclude ${suggestion.name}`}
                       >
-                        <Minus className="h-3 w-3 text-red-600" />
+                        <RiSubtractLine className="h-3 w-3 text-red-600" />
                       </Button>
                     </div>
                   </div>
@@ -498,7 +498,7 @@ export function AccountAutocomplete({
           >
             {isFetching ? (
               <span className="flex items-center gap-2">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <RiLoader4Line className="h-3.5 w-3.5 animate-spin" />
                 Searching accounts…
               </span>
             ) : (

@@ -1,5 +1,5 @@
 import { memo } from "react"
-import { Eye, ExternalLink, Globe, Star, StarOff } from "lucide-react"
+import { RiExternalLinkLine, RiEyeLine, RiGlobalLine, RiStarLine, RiStarOffLine } from "@remixicon/react"
 import { TableRow, TableCell } from "@/components/ui/table"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -111,12 +111,12 @@ export const CenterRow = memo(({ center, onOpen, visibleColumns, selectable, isS
       </ContextMenuTrigger>
       <ContextMenuContent className="w-48">
         <ContextMenuItem onClick={handleOpen}>
-          <Eye className="h-4 w-4" />
+          <RiEyeLine className="h-4 w-4" />
           View Details
         </ContextMenuItem>
         {onToggleFavorite && (
           <ContextMenuItem onClick={() => onToggleFavorite(center)}>
-            {isFavorite ? <StarOff className="h-4 w-4" /> : <Star className="h-4 w-4" />}
+            {isFavorite ? <RiStarOffLine className="h-4 w-4" /> : <RiStarLine className="h-4 w-4" />}
             {isFavorite ? "Remove from Favourites" : "Add to Favourites"}
           </ContextMenuItem>
         )}
@@ -124,14 +124,14 @@ export const CenterRow = memo(({ center, onOpen, visibleColumns, selectable, isS
           <>
             <ContextMenuSeparator />
             <ContextMenuItem onClick={() => window.open(ensureAbsoluteUrl(center.center_website!), "_blank", "noopener,noreferrer")}>
-              <Globe className="h-4 w-4" />
+              <RiGlobalLine className="h-4 w-4" />
               Open Website
             </ContextMenuItem>
           </>
         )}
         {center.center_linkedin && (
           <ContextMenuItem onClick={() => window.open(ensureAbsoluteUrl(center.center_linkedin!), "_blank", "noopener,noreferrer")}>
-            <ExternalLink className="h-4 w-4" />
+            <RiExternalLinkLine className="h-4 w-4" />
             Open LinkedIn
           </ContextMenuItem>
         )}

@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useMemo } from "react"
-import { X } from "lucide-react"
+import { RiCloseLine } from "@remixicon/react"
 import { EnhancedMultiSelect } from "@/components/enhanced-multi-select"
 import { useAccountLists } from "@/contexts/account-lists-context"
 import type { AccountList } from "@/lib/accounts/account-lists"
@@ -84,7 +84,7 @@ export function AccountListPicker({ selected, accountNameCount, onChange, onClea
           title="This filter carries account names from a list that is not in your lists"
         >
           {accountNameCount} accounts from a shared list
-          <X className="h-3 w-3" />
+          <RiCloseLine className="h-3 w-3" />
         </button>
       )}
       {unknownSelected.length > 0 && (

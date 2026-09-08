@@ -1,5 +1,5 @@
 import { memo } from "react"
-import { Copy, Eye, ExternalLink, Star, StarOff } from "lucide-react"
+import { RiExternalLinkLine, RiEyeLine, RiFileCopyLine, RiStarLine, RiStarOffLine } from "@remixicon/react"
 import { TableRow, TableCell } from "@/components/ui/table"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -121,12 +121,12 @@ export const ProspectRow = memo(({ prospect, onOpen, visibleColumns, selectable,
       </ContextMenuTrigger>
       <ContextMenuContent className="w-48">
         <ContextMenuItem onClick={handleOpen}>
-          <Eye className="h-4 w-4" />
+          <RiEyeLine className="h-4 w-4" />
           View Details
         </ContextMenuItem>
         {onToggleFavorite && (
           <ContextMenuItem onClick={() => onToggleFavorite(prospect)}>
-            {isFavorite ? <StarOff className="h-4 w-4" /> : <Star className="h-4 w-4" />}
+            {isFavorite ? <RiStarOffLine className="h-4 w-4" /> : <RiStarLine className="h-4 w-4" />}
             {isFavorite ? "Remove from Favourites" : "Add to Favourites"}
           </ContextMenuItem>
         )}
@@ -134,14 +134,14 @@ export const ProspectRow = memo(({ prospect, onOpen, visibleColumns, selectable,
           <>
             <ContextMenuSeparator />
             <ContextMenuItem onClick={() => copy(prospect.prospect_email!, "Email")}>
-              <Copy className="h-4 w-4" />
+              <RiFileCopyLine className="h-4 w-4" />
               Copy Email
             </ContextMenuItem>
           </>
         )}
         {prospect.prospect_linkedin_url && (
           <ContextMenuItem onClick={() => window.open(ensureAbsoluteUrl(prospect.prospect_linkedin_url!), "_blank", "noopener,noreferrer")}>
-            <ExternalLink className="h-4 w-4" />
+            <RiExternalLinkLine className="h-4 w-4" />
             Open LinkedIn
           </ContextMenuItem>
         )}

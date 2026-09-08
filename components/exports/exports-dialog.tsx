@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { Download, Eye, FileArchive, Loader2, MoreHorizontal } from "lucide-react"
+import { RiDownloadLine, RiEyeLine, RiFileZipLine, RiLoader4Line, RiMoreLine } from "@remixicon/react"
 import { PaginationControls } from "@/components/ui/pagination-controls"
 import { getPaginatedData } from "@/lib/utils/helpers"
 import { devError } from "@/lib/utils/dev-log"
@@ -141,7 +141,7 @@ export function ExportsDialog({ open, onOpenChange }: ExportsDialogProps) {
             <div className="pr-10">
               <DialogTitle className="text-2xl font-bold flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
-                  <FileArchive className="h-4 w-4" />
+                  <RiFileZipLine className="h-4 w-4" />
                 </div>
                 My Exports
               </DialogTitle>
@@ -187,7 +187,7 @@ export function ExportsDialog({ open, onOpenChange }: ExportsDialogProps) {
 
             {!loading && exports.length === 0 && !error && (
               <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 bg-background/40 py-24 text-center backdrop-blur-sm dark:bg-white/5 dark:border-white/10">
-                <FileArchive className="mb-3 h-10 w-10 text-muted-foreground" />
+                <RiFileZipLine className="mb-3 h-10 w-10 text-muted-foreground" />
                 <p className="text-sm font-medium">No exports yet</p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Your past exports will appear here after you generate one from the dashboard.
@@ -241,9 +241,9 @@ export function ExportsDialog({ open, onOpenChange }: ExportsDialogProps) {
                                 aria-label="Export actions"
                               >
                                 {downloadingId === row.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                  <RiLoader4Line className="h-4 w-4 animate-spin" />
                                 ) : (
-                                  <MoreHorizontal className="h-4 w-4" />
+                                  <RiMoreLine className="h-4 w-4" />
                                 )}
                               </Button>
                             </DropdownMenuTrigger>
@@ -252,14 +252,14 @@ export function ExportsDialog({ open, onOpenChange }: ExportsDialogProps) {
                                 onSelect={() => setDetailsRow(row)}
                                 className="cursor-pointer"
                               >
-                                <Eye className="h-4 w-4" />
+                                <RiEyeLine className="h-4 w-4" />
                                 View details
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onSelect={() => handleDownload(row)}
                                 className="cursor-pointer"
                               >
-                                <Download className="h-4 w-4" />
+                                <RiDownloadLine className="h-4 w-4" />
                                 Download
                               </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -311,7 +311,7 @@ function ExportDetailsDialog({
         <DialogHeader>
           <DialogTitle className="text-xl font-bold flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
-              <FileArchive className="h-4 w-4" />
+              <RiFileZipLine className="h-4 w-4" />
             </div>
             Export details
           </DialogTitle>
@@ -389,11 +389,11 @@ function ExportDetailsDialog({
                 className="gap-1.5"
               >
                 {isDownloading(row.id) ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <RiLoader4Line className="h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <Download className="h-3.5 w-3.5" />
+                  <RiDownloadLine className="h-3.5 w-3.5" />
                 )}
-                Download
+                RiDownloadLine
               </Button>
             </div>
           </div>

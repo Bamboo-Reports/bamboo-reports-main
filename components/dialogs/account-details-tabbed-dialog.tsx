@@ -15,19 +15,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
-import {
-  Building2,
-  MapPin,
-  DollarSign,
-  Users,
-  TrendingUp,
-  Calendar,
-  Package,
-  Building,
-  Briefcase,
-  Globe,
-  Linkedin,
-} from "lucide-react"
+import { RiBox3Line, RiBriefcaseLine, RiBuilding2Line, RiBuildingLine, RiCalendarLine, RiGlobalLine, RiGroupLine, RiLineChartLine, RiLinkedinBoxLine, RiMapPinLine, RiMoneyDollarCircleLine } from "@remixicon/react"
 import { formatRevenueInMillions, parseRevenue } from "@/lib/utils/helpers"
 import type { Account, AccountFinancialInfo, Center, Prospect, Service, Tech } from "@/lib/types"
 import { CompanyLogo } from "@/components/ui/company-logo"
@@ -467,7 +455,7 @@ export function AccountDetailsDialog({
                         className="text-muted-foreground hover:text-primary transition-colors"
                         title={account.account_hq_website}
                       >
-                        <Globe className="h-4 w-4" />
+                        <RiGlobalLine className="h-4 w-4" />
                       </a>
                     )}
                     {account.account_hq_linkedin_link && (
@@ -478,7 +466,7 @@ export function AccountDetailsDialog({
                         className="text-muted-foreground hover:text-[#0A66C2] transition-colors"
                         title="LinkedIn"
                       >
-                        <Linkedin className="h-4 w-4" />
+                        <RiLinkedinBoxLine className="h-4 w-4" />
                       </a>
                     )}
                   </div>
@@ -493,7 +481,7 @@ export function AccountDetailsDialog({
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
             <TabsList className={`grid w-full ${relatedLoading ? `grid-cols-${1 + (canViewCenters ? 1 : 0) + (canViewProspects ? 1 : 0)}` : accountCenters.length > 0 && accountProspects.length > 0 ? "grid-cols-3" : accountCenters.length > 0 || accountProspects.length > 0 ? "grid-cols-2" : "grid-cols-1"}`}>
               <TabsTrigger value="info" className="flex items-center gap-2">
-                <Building className="h-4 w-4" />
+                <RiBuildingLine className="h-4 w-4" />
                 Account Info
               </TabsTrigger>
               {relatedLoading && canViewCenters && (
@@ -508,7 +496,7 @@ export function AccountDetailsDialog({
               )}
               {accountCenters.length > 0 && (
               <TabsTrigger value="centers" className="flex items-center gap-2">
-                <Briefcase className="h-4 w-4" />
+                <RiBriefcaseLine className="h-4 w-4" />
                 Centres
                 <Badge variant="secondary" className="ml-1">
                   {accountCenters.length}
@@ -517,7 +505,7 @@ export function AccountDetailsDialog({
               )}
               {accountProspects.length > 0 && (
               <TabsTrigger value="prospects" className="flex items-center gap-2">
-                <Users className="h-4 w-4" />
+                <RiGroupLine className="h-4 w-4" />
                 Prospects
                 <Badge variant="secondary" className="ml-1">
                   {accountProspects.length}
@@ -541,7 +529,7 @@ export function AccountDetailsDialog({
                     {account.account_hq_key_offerings && account.account_hq_key_offerings.trim() !== "" && (
                       <div>
                         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
-                          <Package className="h-3.5 w-3.5" />
+                          <RiBox3Line className="h-3.5 w-3.5" />
                           Key Offerings
                         </p>
                         <ul className="space-y-1 text-sm leading-relaxed text-foreground/90">
@@ -581,7 +569,7 @@ export function AccountDetailsDialog({
                 <SectionHeader title="Scale & Financials" />
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <KPITile
-                    icon={DollarSign}
+                    icon={RiMoneyDollarCircleLine}
                     label="Revenue"
                     value={formatRevenueInMillions(parseRevenue(account.account_hq_revenue ?? undefined))}
                     caption={account.account_hq_revenue_range}
@@ -589,13 +577,13 @@ export function AccountDetailsDialog({
                   {financialData && (
                     <>
                       <KPITile
-                        icon={TrendingUp}
+                        icon={RiLineChartLine}
                         label="Market Cap"
                         value={formatCompactNumber(financialData.marketCap)}
                         caption={[financialData.inputTicker, financialData.exchange].filter(Boolean).join(" • ")}
                       />
                       <KPITile
-                        icon={TrendingUp}
+                        icon={RiLineChartLine}
                         label="Net Profit"
                         value={financialData.netProfit !== null ? formatCompactNumber(financialData.netProfit) : null}
                         caption={[financialData.inputTicker, financialData.exchange].filter(Boolean).join(" • ")}
@@ -603,7 +591,7 @@ export function AccountDetailsDialog({
                     </>
                   )}
                   <KPITile
-                    icon={Users}
+                    icon={RiGroupLine}
                     label="Employees"
                     value={account.account_hq_employee_count}
                     caption={account.account_hq_employee_range}
@@ -663,18 +651,18 @@ export function AccountDetailsDialog({
                 <section className="space-y-4">
                   <SectionHeader title="India Presence" />
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <KPITile icon={Calendar} label="First Centre" value={account.account_first_center_year} />
-                    <KPITile icon={Calendar} label="Years in India" value={account.years_in_india} />
-                    <KPITile icon={Users} label="Centre Employees" value={account.account_center_employees} />
-                    <KPITile icon={Users} label="GCC Aggregate Headcount (India)" value={account.account_center_employees_range} />
-                    <KPITile icon={MapPin} label="Primary City" value={account.account_primary_city} />
-                    <KPITile icon={Building2} label="Hub Structure" value={account.account_hub_structure} />
+                    <KPITile icon={RiCalendarLine} label="First Centre" value={account.account_first_center_year} />
+                    <KPITile icon={RiCalendarLine} label="Years in India" value={account.years_in_india} />
+                    <KPITile icon={RiGroupLine} label="Centre Employees" value={account.account_center_employees} />
+                    <KPITile icon={RiGroupLine} label="GCC Aggregate Headcount (India)" value={account.account_center_employees_range} />
+                    <KPITile icon={RiMapPinLine} label="Primary City" value={account.account_primary_city} />
+                    <KPITile icon={RiBuilding2Line} label="Hub Structure" value={account.account_hub_structure} />
                   </div>
                   {accountCenters.length > 0 && (
                     <div className="rounded-lg border border-border/60 bg-background/40 backdrop-blur-sm shadow-sm overflow-hidden h-[360px] lg:h-[420px] dark:bg-white/5 dark:border-white/10">
                       <div className="flex h-full flex-col">
                         <div className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-muted-foreground border-b border-border/40">
-                          <MapPin className="h-4 w-4" />
+                          <RiMapPinLine className="h-4 w-4" />
                           Centres Map
                         </div>
                         <div className="flex-1 min-h-0">

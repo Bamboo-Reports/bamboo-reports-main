@@ -1,6 +1,6 @@
 "use client"
 
-import { RefreshCw } from "lucide-react"
+import { RiRefreshLine } from "@remixicon/react"
 import { BrandPage } from "@/components/brand/brand-page"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -37,7 +37,7 @@ export default function GlobalError({
               ) : null}
 
               <Button onClick={reset} className="mt-6 h-10 w-full sm:w-auto">
-                <RefreshCw className="mr-2 h-4 w-4" />
+                <RiRefreshLine className="mr-2 h-4 w-4" />
                 Try again
               </Button>
             </div>

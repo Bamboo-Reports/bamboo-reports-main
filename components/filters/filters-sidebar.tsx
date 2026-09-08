@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { Briefcase, Building, ChevronDown, ChevronLeft, ChevronRight, Filter, Users } from 'lucide-react'
+import { RiArrowDownSLine, RiArrowLeftSLine, RiArrowRightSLine, RiBriefcaseLine, RiBuildingLine, RiFilterLine, RiGroupLine } from "@remixicon/react"
 import { SavedFiltersManager } from '@/components/saved-filters-manager'
 import {
   AccountFiltersSection,
@@ -167,18 +167,18 @@ export function FiltersSidebar({
             aria-expanded={false}
             aria-controls="filters-sidebar"
           >
-            <ChevronRight className="h-4 w-4" />
+            <RiArrowRightSLine className="h-4 w-4" />
           </Button>
           <div
             className="flex h-10 w-10 items-center justify-center rounded-xl border border-sidebar-border bg-background/70 text-primary"
             title="FILTERS"
           >
-            <Filter className="h-4 w-4" />
+            <RiFilterLine className="h-4 w-4" />
           </div>
           {[
-            { icon: Building, label: 'Account Attributes', section: 'accounts', iconClass: 'text-primary' },
-            { icon: Briefcase, label: 'Centre Attributes', section: 'centers', iconClass: 'text-primary' },
-            { icon: Users, label: 'Prospect Attributes', section: 'prospects', iconClass: 'text-primary' },
+            { icon: RiBuildingLine, label: 'Account Attributes', section: 'accounts', iconClass: 'text-primary' },
+            { icon: RiBriefcaseLine, label: 'Centre Attributes', section: 'centers', iconClass: 'text-primary' },
+            { icon: RiGroupLine, label: 'Prospect Attributes', section: 'prospects', iconClass: 'text-primary' },
           ].filter(({ section }) => isSectionVisible(section)).map(({ icon: Icon, label, section, iconClass }) => (
             <Button
               key={label}
@@ -213,7 +213,7 @@ export function FiltersSidebar({
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10">
-                <Filter className="h-4 w-4 text-primary" />
+                <RiFilterLine className="h-4 w-4 text-primary" />
               </div>
               <span className="text-sm font-semibold text-foreground">FILTERS</span>
             </div>
@@ -227,7 +227,7 @@ export function FiltersSidebar({
               aria-expanded={true}
               aria-controls="filters-sidebar"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <RiArrowLeftSLine className="h-4 w-4" />
             </Button>
           </div>
           <div className="flex flex-col gap-2" data-tour="saved-filters">
@@ -288,7 +288,7 @@ export function FiltersSidebar({
             <AccordionTrigger className="py-3 text-sm font-semibold hover:no-underline">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-5 w-5 shrink-0 items-center justify-center">
-                  <Building className="h-4 w-4 text-primary" />
+                  <RiBuildingLine className="h-4 w-4 text-primary" />
                 </div>
                 <span className="uppercase tracking-wider text-[12px]">Account Attributes</span>
               </div>
@@ -330,7 +330,7 @@ export function FiltersSidebar({
             <AccordionTrigger className="py-3 text-sm font-semibold hover:no-underline">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-5 w-5 shrink-0 items-center justify-center">
-                  <Briefcase className="h-4 w-4 text-primary" />
+                  <RiBriefcaseLine className="h-4 w-4 text-primary" />
                 </div>
                 <span className="uppercase tracking-wider text-[12px]">Centre Attributes</span>
               </div>
@@ -363,7 +363,7 @@ export function FiltersSidebar({
             <AccordionTrigger className="py-3 text-sm font-semibold hover:no-underline">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-5 w-5 shrink-0 items-center justify-center">
-                  <Users className="h-4 w-4 text-primary" />
+                  <RiGroupLine className="h-4 w-4 text-primary" />
                 </div>
                 <span className="uppercase tracking-wider text-[12px]">Prospect Attributes</span>
               </div>
@@ -398,7 +398,7 @@ export function FiltersSidebar({
       >
         <div className="bg-gradient-to-t from-sidebar/90 to-transparent w-full pt-6 pb-3 flex justify-center">
           <div className="flex h-6 w-6 items-center justify-center rounded-full bg-muted/80 border border-border/70 animate-bounce">
-            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0 translate-y-[0.5px]" />
+            <RiArrowDownSLine className="h-3.5 w-3.5 text-muted-foreground shrink-0 translate-y-[0.5px]" />
           </div>
         </div>
       </div>

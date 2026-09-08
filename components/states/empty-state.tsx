@@ -1,4 +1,4 @@
-import { FileQuestion, Filter, Search, DatabaseZap } from "lucide-react"
+import { RiDatabase2Line, RiFileUnknowLine, RiFilterLine, RiSearchLine } from "@remixicon/react"
 import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { captureEvent } from "@/lib/analytics/client"
@@ -31,25 +31,25 @@ export function EmptyState({
 
   const config = {
     "no-data": {
-      icon: DatabaseZap,
+      icon: RiDatabase2Line,
       defaultTitle: "No Data Available",
       defaultDescription: "There's no data to display at the moment. Please check back later.",
       iconColor: "text-muted-foreground",
     },
     "no-results": {
-      icon: FileQuestion,
+      icon: RiFileUnknowLine,
       defaultTitle: "No Results Found",
       defaultDescription: "We couldn't find any items matching your current filters. Try adjusting your search criteria.",
       iconColor: "text-primary",
     },
     "no-filters": {
-      icon: Filter,
+      icon: RiFilterLine,
       defaultTitle: "Apply Filters to Get Started",
       defaultDescription: "Select filters from the sidebar to view relevant data and insights.",
       iconColor: "text-accent",
     },
     "error": {
-      icon: Search,
+      icon: RiSearchLine,
       defaultTitle: "Something Went Wrong",
       defaultDescription: "We encountered an error while loading the data. Please try again.",
       iconColor: "text-destructive",
@@ -61,7 +61,7 @@ export function EmptyState({
   return (
     <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center animate-fade-in">
       <div className={`mb-6 p-6 rounded-full bg-muted/50 ${iconColor}`}>
-        <Icon className="h-16 w-16" strokeWidth={1.5} />
+        <Icon className="h-16 w-16" />
       </div>
       <h3 className="text-xl font-semibold text-foreground mb-2">
         {title || defaultTitle}

@@ -2,8 +2,7 @@
 
 import * as React from "react"
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
-import { Check, ChevronRight, Circle } from "lucide-react"
-
+import { RiArrowRightSLine, RiCheckLine, RiCheckboxBlankCircleFill } from "@remixicon/react"
 import { cn } from "@/lib/utils"
 
 const DropdownMenu = DropdownMenuPrimitive.Root
@@ -34,7 +33,7 @@ const DropdownMenuSubTrigger = React.forwardRef<
     {...props}
   >
     {children}
-    <ChevronRight className="ml-auto" />
+    <RiArrowRightSLine className="ml-auto" />
   </DropdownMenuPrimitive.SubTrigger>
 ))
 DropdownMenuSubTrigger.displayName =
@@ -108,7 +107,7 @@ const DropdownMenuCheckboxItem = React.forwardRef<
     {/* Mirrors the Checkbox component so menu checkboxes match table checkboxes. */}
     <span className="absolute left-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary transition-colors group-data-[state=checked]:bg-primary group-data-[state=checked]:text-primary-foreground">
       <DropdownMenuPrimitive.ItemIndicator>
-        <Check className="h-3 w-3" />
+        <RiCheckLine className="h-3 w-3" />
       </DropdownMenuPrimitive.ItemIndicator>
     </span>
     {children}
@@ -131,7 +130,7 @@ const DropdownMenuRadioItem = React.forwardRef<
   >
     <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
       <DropdownMenuPrimitive.ItemIndicator>
-        <Circle className="h-2 w-2 fill-current" />
+        <RiCheckboxBlankCircleFill className="h-2 w-2 fill-current" />
       </DropdownMenuPrimitive.ItemIndicator>
     </span>
     {children}

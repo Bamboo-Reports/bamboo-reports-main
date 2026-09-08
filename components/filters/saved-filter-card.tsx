@@ -1,5 +1,5 @@
 import { memo } from "react"
-import { Calendar, Edit2, Filter, Share2, Trash2, Users } from "lucide-react"
+import { RiCalendarLine, RiDeleteBinLine, RiEditLine, RiFilterLine, RiGroupLine, RiShareLine } from "@remixicon/react"
 import {
   ContextMenu,
   ContextMenuContent,
@@ -81,7 +81,7 @@ export const SavedFilterCard = memo(({
           {/* Card header: mirrors user info avatar row */}
           <div className="flex items-center gap-3 px-4 pt-3.5 pb-3">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-              <Filter className="h-3.5 w-3.5" />
+              <RiFilterLine className="h-3.5 w-3.5" />
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-start justify-between gap-2">
@@ -93,12 +93,12 @@ export const SavedFilterCard = memo(({
               <div className="mt-0.5 flex flex-wrap items-center gap-2">
                 {!isOwner && filter.owner_email && (
                   <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                    <Users className="h-2.5 w-2.5" />
+                    <RiGroupLine className="h-2.5 w-2.5" />
                     Shared by {filter.owner_email}
                   </span>
                 )}
                 <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                  <Calendar className="h-2.5 w-2.5" />
+                  <RiCalendarLine className="h-2.5 w-2.5" />
                   {createdDate}
                 </span>
                 {updatedDate && (
@@ -185,7 +185,7 @@ export const SavedFilterCard = memo(({
               onClick={() => onLoad(filter)}
               className="flex flex-1 flex-col items-center justify-center gap-1 cursor-pointer rounded-md border border-primary/25 bg-primary/5 px-2 py-2 text-[11px] font-medium text-primary transition-colors hover:border-primary/40 hover:bg-primary/10"
             >
-              <Filter className="h-3.5 w-3.5" />
+              <RiFilterLine className="h-3.5 w-3.5" />
               Load
             </button>
 
@@ -196,7 +196,7 @@ export const SavedFilterCard = memo(({
                 className="flex flex-1 flex-col items-center justify-center gap-1 cursor-pointer rounded-md border border-border/60 bg-muted/20 px-2 py-2 text-[11px] font-medium text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 hover:text-foreground"
                 aria-label={`Share ${filter.name}`}
               >
-                <Share2 className="h-3.5 w-3.5" />
+                <RiShareLine className="h-3.5 w-3.5" />
                 Share
               </button>
             )}
@@ -208,7 +208,7 @@ export const SavedFilterCard = memo(({
                 className="flex flex-1 flex-col items-center justify-center gap-1 cursor-pointer rounded-md border border-border/60 bg-muted/20 px-2 py-2 text-[11px] font-medium text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 hover:text-foreground"
                 aria-label={`Rename ${filter.name}`}
               >
-                <Edit2 className="h-3.5 w-3.5" />
+                <RiEditLine className="h-3.5 w-3.5" />
                 Rename
               </button>
             )}
@@ -220,7 +220,7 @@ export const SavedFilterCard = memo(({
                 className="flex flex-1 flex-col items-center justify-center gap-1 cursor-pointer rounded-md border border-destructive/25 bg-destructive/5 px-2 py-2 text-[11px] font-medium text-destructive transition-colors hover:border-destructive/40 hover:bg-destructive/10"
                 aria-label={`Delete ${filter.name}`}
               >
-                <Trash2 className="h-3.5 w-3.5" />
+                <RiDeleteBinLine className="h-3.5 w-3.5" />
                 Delete
               </button>
             )}
@@ -230,7 +230,7 @@ export const SavedFilterCard = memo(({
 
       <ContextMenuContent className="w-48">
         <ContextMenuItem onClick={() => onLoad(filter)}>
-          <Filter className="h-4 w-4" />
+          <RiFilterLine className="h-4 w-4" />
           Load Filters
         </ContextMenuItem>
         {isOwner && (
@@ -238,19 +238,19 @@ export const SavedFilterCard = memo(({
             <ContextMenuSeparator />
             {onShare && (
               <ContextMenuItem onClick={() => onShare(filter)}>
-                <Share2 className="h-4 w-4" />
+                <RiShareLine className="h-4 w-4" />
                 Share
               </ContextMenuItem>
             )}
             <ContextMenuItem onClick={() => onEdit(filter)}>
-              <Edit2 className="h-4 w-4" />
+              <RiEditLine className="h-4 w-4" />
               Rename
             </ContextMenuItem>
             <ContextMenuItem
               className="text-destructive focus:text-destructive focus:bg-destructive/10"
               onClick={() => onDelete(filter)}
             >
-              <Trash2 className="h-4 w-4" />
+              <RiDeleteBinLine className="h-4 w-4" />
               Delete
             </ContextMenuItem>
           </>

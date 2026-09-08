@@ -1,7 +1,7 @@
 "use client"
 
 import React, { memo } from "react"
-import { Layers } from "lucide-react"
+import { RiStackLine } from "@remixicon/react"
 import { cn } from "@/lib/utils"
 import { ChartWaveSkeleton } from "@/components/ui/chart-wave-skeleton"
 import { PIE_CHART_COLORS } from "@/lib/utils/chart-helpers"
@@ -125,7 +125,7 @@ export const TechTreemap = memo(({
   if (data.length === 0) {
     return (
       <div className={cn("flex flex-col items-center justify-center gap-2 text-muted-foreground", heightClass)}>
-        <Layers className="h-5 w-5" />
+        <RiStackLine className="h-5 w-5" />
         <p className="text-sm">No tech stack data available</p>
       </div>
     )
@@ -135,7 +135,7 @@ export const TechTreemap = memo(({
     <div className="w-full h-full min-h-0">
       {showTitle && (
         <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground mb-2">
-          <Layers className="h-4 w-4" />
+          <RiStackLine className="h-4 w-4" />
           {title}
         </div>
       )}

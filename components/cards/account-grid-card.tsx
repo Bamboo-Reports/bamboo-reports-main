@@ -1,5 +1,5 @@
 import { memo } from "react"
-import { ArrowUpRight, CircleCheck, Eye, ExternalLink, Globe } from "lucide-react"
+import { RiArrowRightUpLine, RiCheckboxCircleLine, RiExternalLinkLine, RiEyeLine, RiGlobalLine } from "@remixicon/react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CompanyLogo } from "@/components/ui/company-logo"
@@ -67,7 +67,7 @@ export const AccountGridCard = memo(({ account, onClick }: AccountGridCardProps)
                         className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold bg-[#C03430]/15 text-[#C03430]"
                         title="NASSCOM listed"
                       >
-                        <CircleCheck className="h-3 w-3" aria-hidden="true" />
+                        <RiCheckboxCircleLine className="h-3 w-3" aria-hidden="true" />
                         NASSCOM
                       </div>
                     )}
@@ -112,7 +112,7 @@ export const AccountGridCard = memo(({ account, onClick }: AccountGridCardProps)
                 className="w-full justify-between border border-border/70 bg-background text-foreground hover:bg-accent hover:text-accent-foreground"
               >
                 View Details
-                <ArrowUpRight className="h-4 w-4" />
+                <RiArrowRightUpLine className="h-4 w-4" />
               </Button>
             </div>
           </CardContent>
@@ -120,21 +120,21 @@ export const AccountGridCard = memo(({ account, onClick }: AccountGridCardProps)
       </ContextMenuTrigger>
       <ContextMenuContent className="w-48">
         <ContextMenuItem onClick={onClick}>
-          <Eye className="h-4 w-4" />
+          <RiEyeLine className="h-4 w-4" />
           View Details
         </ContextMenuItem>
         {account.account_hq_website && (
           <>
             <ContextMenuSeparator />
             <ContextMenuItem onClick={() => window.open(ensureAbsoluteUrl(account.account_hq_website!), "_blank", "noopener,noreferrer")}>
-              <Globe className="h-4 w-4" />
+              <RiGlobalLine className="h-4 w-4" />
               Open Website
             </ContextMenuItem>
           </>
         )}
         {account.account_hq_linkedin_link && (
           <ContextMenuItem onClick={() => window.open(ensureAbsoluteUrl(account.account_hq_linkedin_link!), "_blank", "noopener,noreferrer")}>
-            <ExternalLink className="h-4 w-4" />
+            <RiExternalLinkLine className="h-4 w-4" />
             Open LinkedIn
           </ContextMenuItem>
         )}

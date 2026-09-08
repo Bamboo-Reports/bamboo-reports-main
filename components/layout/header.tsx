@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { Clock, Compass, FileArchive, LogOut, Monitor, Moon, RefreshCw, Search, Star, Sun, Terminal, UserRound } from 'lucide-react'
+import { RiCompass3Line, RiComputerLine, RiFileZipLine, RiLogoutBoxRLine, RiMoonLine, RiRefreshLine, RiSearchLine, RiStarLine, RiSunLine, RiTerminalBoxLine, RiTimeLine, RiUserLine } from "@remixicon/react"
 import { useTheme } from 'next-themes'
 import { Button } from '@/components/ui/button'
 import {
@@ -40,9 +40,9 @@ const THEME_OPTIONS: Array<{
   label: string
   icon: React.ComponentType<{ className?: string }>
 }> = [
-  { value: 'light', label: 'Light', icon: Sun },
-  { value: 'dark', label: 'Dark', icon: Moon },
-  { value: 'system', label: 'System', icon: Monitor },
+  { value: 'light', label: 'Light', icon: RiSunLine },
+  { value: 'dark', label: 'Dark', icon: RiMoonLine },
+  { value: 'system', label: 'System', icon: RiComputerLine },
 ]
 
 function ProfileThemeSwitcher() {
@@ -202,7 +202,7 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
                 <p className="truncate text-lg font-bold text-foreground">Bamboo Reports</p>
                 {environmentBadgeLabel ? (
                   <div className="inline-flex shrink-0 items-center gap-1 rounded-md border border-amber-500/25 bg-amber-500/8 px-2 py-0.5 dark:border-amber-400/20 dark:bg-amber-500/10">
-                    <Terminal className="h-3 w-3 shrink-0 text-amber-600 dark:text-amber-400" />
+                    <RiTerminalBoxLine className="h-3 w-3 shrink-0 text-amber-600 dark:text-amber-400" />
                     <span className="font-mono text-[10px] font-bold uppercase leading-none tracking-widest text-amber-700 dark:text-amber-300">
                       {environmentBadgeLabel}
                     </span>
@@ -220,7 +220,7 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
                 aria-label="Open search"
                 className="hidden sm:inline-flex items-center gap-2 rounded-lg border border-border/60 bg-muted/30 px-3 py-1.5 text-sm text-muted-foreground/70 transition-colors hover:bg-muted/60 hover:text-muted-foreground hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 w-56"
               >
-                <Search className="h-3.5 w-3.5 shrink-0" />
+                <RiSearchLine className="h-3.5 w-3.5 shrink-0" />
                 <span className="flex-1 text-left text-xs">Search…</span>
               </button>
             )}
@@ -234,7 +234,7 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
               title={refreshing ? 'Refreshing…' : 'Refresh'}
               aria-label={refreshing ? 'Refreshing data' : 'Refresh data'}
             >
-              <RefreshCw
+              <RiRefreshLine
                 className={
                   refreshing
                     ? 'h-4 w-4 animate-spin'
@@ -246,7 +246,7 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8" title="Profile" aria-label="Open profile menu">
-                  <UserRound className="h-4 w-4" />
+                  <RiUserLine className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-80 p-0 overflow-hidden">
@@ -298,7 +298,7 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
                       className="flex flex-1 flex-col items-center justify-center gap-1 cursor-pointer rounded-md border border-border/60 bg-muted/20 px-2 py-2.5 text-[11px] font-medium text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 focus:border-border focus:bg-muted/60 focus:text-foreground"
                       onSelect={() => onStartTour()}
                     >
-                      <Compass className="h-4 w-4" />
+                      <RiCompass3Line className="h-4 w-4" />
                       Tour
                     </DropdownMenuItem>
                   )}
@@ -310,7 +310,7 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
                       handleSignOut()
                     }}
                   >
-                    <LogOut className="h-4 w-4" />
+                    <RiLogoutBoxRLine className="h-4 w-4" />
                     Sign out
                   </DropdownMenuItem>
                 </div>
@@ -321,7 +321,7 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
                       className="flex flex-1 flex-col items-center justify-center gap-1 cursor-pointer rounded-md border border-border/60 bg-muted/20 px-2 py-2.5 text-[11px] font-medium text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 focus:border-border focus:bg-muted/60 focus:text-foreground"
                       onSelect={() => onOpenFavorites()}
                     >
-                      <Star className="h-4 w-4" />
+                      <RiStarLine className="h-4 w-4" />
                       Favourites
                     </DropdownMenuItem>
                   )}
@@ -330,7 +330,7 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
                       className="flex flex-1 flex-col items-center justify-center gap-1 cursor-pointer rounded-md border border-border/60 bg-muted/20 px-2 py-2.5 text-[11px] font-medium text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 focus:border-border focus:bg-muted/60 focus:text-foreground"
                       onSelect={() => onOpenExports()}
                     >
-                      <FileArchive className="h-4 w-4" />
+                      <RiFileZipLine className="h-4 w-4" />
                       Exports
                     </DropdownMenuItem>
                   )}
@@ -339,7 +339,7 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
                       className="flex flex-1 flex-col items-center justify-center gap-1 cursor-pointer rounded-md border border-border/60 bg-muted/20 px-2 py-2.5 text-[11px] font-medium text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 focus:border-border focus:bg-muted/60 focus:text-foreground"
                       onSelect={() => onOpenHistory()}
                     >
-                      <Clock className="h-4 w-4" />
+                      <RiTimeLine className="h-4 w-4" />
                       History
                     </DropdownMenuItem>
                   )}

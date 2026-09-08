@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { AlertCircle, ArrowLeft, CheckCircle2, FileSpreadsheet, HelpCircle, Loader2, Upload, XCircle } from "lucide-react"
+import { RiArrowLeftLine, RiCheckboxCircleLine, RiCloseCircleLine, RiErrorWarningLine, RiFileExcelLine, RiLoader4Line, RiQuestionLine, RiUploadLine } from "@remixicon/react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -90,10 +90,10 @@ function rowsFromResults(results: AccountMatchResult[]): ReviewRow[] {
   }))
 }
 
-const STATUS_META: Record<AccountMatchStatus, { label: string; className: string; Icon: typeof CheckCircle2 }> = {
-  matched: { label: "Matched", className: "border-green-500/40 bg-green-500/10 text-green-700 dark:text-green-300", Icon: CheckCircle2 },
-  review: { label: "Needs review", className: "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300", Icon: HelpCircle },
-  not_found: { label: "Not found", className: "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300", Icon: XCircle },
+const STATUS_META: Record<AccountMatchStatus, { label: string; className: string; Icon: typeof RiCheckboxCircleLine }> = {
+  matched: { label: "Matched", className: "border-green-500/40 bg-green-500/10 text-green-700 dark:text-green-300", Icon: RiCheckboxCircleLine },
+  review: { label: "Needs review", className: "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300", Icon: RiQuestionLine },
+  not_found: { label: "Not found", className: "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300", Icon: RiCloseCircleLine },
 }
 
 function viaLabel(candidate: AccountMatchCandidate | null): string | null {
@@ -307,13 +307,13 @@ export function AccountListUploadDialog({ open, onOpenChange, existingList = nul
               />
               {fileName ? (
                 <>
-                  <FileSpreadsheet className="h-6 w-6 text-primary" />
+                  <RiFileExcelLine className="h-6 w-6 text-primary" />
                   <p className="max-w-full truncate text-sm font-medium" title={fileName}>{fileName}</p>
                   <p className="text-xs text-muted-foreground">Click or drop another file to replace it</p>
                 </>
               ) : (
                 <>
-                  <Upload className="h-6 w-6 text-muted-foreground" />
+                  <RiUploadLine className="h-6 w-6 text-muted-foreground" />
                   <p className="text-sm font-medium">Drop a file here or click to browse</p>
                   <p className="text-xs text-muted-foreground">CSV, TSV, TXT or XLSX. Up to {MAX_MATCH_NAMES} names per upload.</p>
                 </>
@@ -354,7 +354,7 @@ export function AccountListUploadDialog({ open, onOpenChange, existingList = nul
 
             {parseError && (
               <p role="alert" className="flex items-center gap-2 text-sm text-destructive">
-                <AlertCircle className="h-4 w-4 shrink-0" />
+                <RiErrorWarningLine className="h-4 w-4 shrink-0" />
                 {parseError}
               </p>
             )}
@@ -487,7 +487,7 @@ export function AccountListUploadDialog({ open, onOpenChange, existingList = nul
               <Button onClick={handleMatch} disabled={names.length === 0 || matching}>
                 {matching ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <RiLoader4Line className="h-4 w-4 animate-spin" />
                     Matching...
                   </>
                 ) : (
@@ -498,7 +498,7 @@ export function AccountListUploadDialog({ open, onOpenChange, existingList = nul
           ) : (
             <>
               <Button variant="ghost" onClick={() => setStep("input")} disabled={saving} className="sm:mr-auto">
-                <ArrowLeft className="h-4 w-4" />
+                <RiArrowLeftLine className="h-4 w-4" />
                 Back
               </Button>
               <Button variant="outline" onClick={() => handleSave(false)} disabled={!filterName.trim() || mappedNames.length === 0 || saving}>

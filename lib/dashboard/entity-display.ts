@@ -1,5 +1,4 @@
-import { Briefcase, Building2, Users } from "lucide-react"
-
+import { RiBriefcaseLine, RiBuilding2Line, RiGroupLine } from "@remixicon/react"
 export type EntityDisplayType = "account" | "center" | "prospect"
 
 /**
@@ -24,24 +23,24 @@ export function formatTimeAgo(value: number | string): string {
 /** Icon and colour treatment for each entity type, shared across record lists. */
 export const ENTITY_TYPE_META: Record<
   EntityDisplayType,
-  { icon: typeof Building2; iconClass: string; borderClass: string; badgeClass: string; label: string }
+  { icon: typeof RiBuilding2Line; iconClass: string; borderClass: string; badgeClass: string; label: string }
 > = {
   account: {
-    icon: Building2,
+    icon: RiBuilding2Line,
     iconClass: "text-primary",
     borderClass: "border-primary/20",
     badgeClass: "bg-primary/10 text-primary border-primary/20",
     label: "Account",
   },
   center: {
-    icon: Briefcase,
+    icon: RiBriefcaseLine,
     iconClass: "text-[hsl(var(--chart-2))]",
     borderClass: "border-[hsl(var(--chart-2))]/25",
     badgeClass: "bg-[hsl(var(--chart-2)/0.12)] text-[hsl(var(--chart-2))] border-[hsl(var(--chart-2)/0.25)]",
     label: "Center",
   },
   prospect: {
-    icon: Users,
+    icon: RiGroupLine,
     iconClass: "text-[hsl(var(--chart-3))]",
     borderClass: "border-[hsl(var(--chart-3))]/25",
     badgeClass: "bg-[hsl(var(--chart-3)/0.12)] text-[hsl(var(--chart-3))] border-[hsl(var(--chart-3)/0.25)]",

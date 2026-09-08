@@ -1,5 +1,5 @@
 import React from "react"
-import { ChevronDown, ChevronUp, Lock } from "lucide-react"
+import { RiArrowDownSLine, RiArrowUpSLine, RiLockLine } from "@remixicon/react"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -354,12 +354,12 @@ export function AccountFiltersSection({
                 : "Show More"}
               {canShowMoreAccountFilters ? (
                 showMoreAccountFilters ? (
-                  <ChevronUp className="ml-1.5 h-3.5 w-3.5" />
+                  <RiArrowUpSLine className="ml-1.5 h-3.5 w-3.5" />
                 ) : (
-                  <ChevronDown className="ml-1.5 h-3.5 w-3.5" />
+                  <RiArrowDownSLine className="ml-1.5 h-3.5 w-3.5" />
                 )
               ) : (
-                <Lock className="ml-1.5 h-3.5 w-3.5" />
+                <RiLockLine className="ml-1.5 h-3.5 w-3.5" />
               )}
             </Button>
           </div>
@@ -712,12 +712,12 @@ export function CenterFiltersSection({
                 : "Show More"}
               {canShowMoreCenterFilters ? (
                 showMoreCenterFilters ? (
-                  <ChevronUp className="ml-1.5 h-3.5 w-3.5" />
+                  <RiArrowUpSLine className="ml-1.5 h-3.5 w-3.5" />
                 ) : (
-                  <ChevronDown className="ml-1.5 h-3.5 w-3.5" />
+                  <RiArrowDownSLine className="ml-1.5 h-3.5 w-3.5" />
                 )
               ) : (
-                <Lock className="ml-1.5 h-3.5 w-3.5" />
+                <RiLockLine className="ml-1.5 h-3.5 w-3.5" />
               )}
             </Button>
           </div>

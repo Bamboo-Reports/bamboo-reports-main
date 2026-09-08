@@ -30,7 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Save, FolderOpen, Settings, X, ChevronDown, ShieldAlert, Share2, Users, Trash2, FileText, ListChecks } from "lucide-react"
+import { RiArrowDownSLine, RiCloseLine, RiDeleteBinLine, RiFileTextLine, RiFolderOpenLine, RiGroupLine, RiListCheck3, RiSaveLine, RiSettings4Line, RiShareLine, RiShieldFlashLine } from "@remixicon/react"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { buildTrackedFiltersSnapshot, normalizeTrackedText, toTrackedStringArray } from "@/lib/analytics/tracking"
@@ -282,10 +282,10 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
               className="flex-1 justify-between h-9"
             >
               <div className="flex items-center gap-2 truncate">
-                <FolderOpen className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <RiFolderOpenLine className="h-4 w-4 shrink-0 text-muted-foreground" />
                 <span className="truncate">Saved Filters</span>
               </div>
-              <ChevronDown className="h-3.5 w-3.5 opacity-50 ml-2 shrink-0" />
+              <RiArrowDownSLine className="h-3.5 w-3.5 opacity-50 ml-2 shrink-0" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width] min-w-[220px]" align="start">
@@ -320,7 +320,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
                     }}
                     aria-label={`Share saved filter ${filter.name}`}
                   >
-                    <Share2 className="h-3.5 w-3.5" />
+                    <RiShareLine className="h-3.5 w-3.5" />
                   </Button>
                 </DropdownMenuItem>
               ))
@@ -331,7 +331,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
               <>
                 <DropdownMenuSeparator />
                 <div className="px-2 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                  <Users className="h-3 w-3" />
+                  <RiGroupLine className="h-3 w-3" />
                   Shared with me
                 </div>
                 <DropdownMenuSeparator />
@@ -360,7 +360,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
                     className="w-full justify-start text-xs h-8 font-normal text-muted-foreground hover:text-foreground"
                     onClick={() => setManageDialogOpen(true)}
                   >
-                    <Settings className="h-3.5 w-3.5 mr-2" />
+                    <RiSettings4Line className="h-3.5 w-3.5 mr-2" />
                     {myFilters.length > 5 || sharedWithMeFilters.length > 5
                       ? `Manage all filters (${myFilters.length + sharedWithMeFilters.length})...`
                       : "Manage all filters..."}
@@ -382,7 +382,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
               title="Save current filters"
               aria-label="Save current filters"
             >
-              <Save className="h-4 w-4" />
+              <RiSaveLine className="h-4 w-4" />
             </Button>
           </DialogTrigger>
           <DialogContent>
@@ -425,7 +425,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
           onClick={() => setAccountListsOpen(true)}
           data-tour="account-lists-button"
         >
-          <ListChecks className="h-4 w-4" />
+          <RiListCheck3 className="h-4 w-4" />
         </Button>
       </div>
 
@@ -470,7 +470,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
           title="Download a PDF with the current counts and applied filters"
           data-tour="summary-report-button"
         >
-          <FileText className="h-3.5 w-3.5" />
+          <RiFileTextLine className="h-3.5 w-3.5" />
           {isGeneratingReport ? "Preparing PDF..." : "Summary PDF"}
         </Button>
       )}
@@ -484,7 +484,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
           <div className="absolute inset-y-0 left-0 w-1 bg-amber-500/80" />
           <div className="flex items-start gap-2.5 pl-2">
             <div className="mt-0.5 rounded-md bg-amber-500/15 p-1 text-amber-700 dark:bg-amber-400/20 dark:text-amber-200">
-              <ShieldAlert className="h-3.5 w-3.5" />
+              <RiShieldFlashLine className="h-3.5 w-3.5" />
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-amber-700 dark:text-amber-200">
@@ -500,7 +500,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
               onClick={handleDismissExportAccessError}
               aria-label="Dismiss export access warning"
             >
-              <X className="h-3.5 w-3.5" />
+              <RiCloseLine className="h-3.5 w-3.5" />
             </Button>
           </div>
         </div>
@@ -540,7 +540,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
                 {sharedWithMeFilters.length > 0 && (
                   <>
                     <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 mt-6">
-                      <Users className="h-3.5 w-3.5" />
+                      <RiGroupLine className="h-3.5 w-3.5" />
                       Shared with me
                     </h3>
                     {sharedWithMeFilters.map((filter) => (
@@ -634,7 +634,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Share2 className="h-5 w-5" />
+              <RiShareLine className="h-5 w-5" />
               Share Filter
             </DialogTitle>
             <DialogDescription>
@@ -700,7 +700,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
                         onClick={() => handleUnshareFilter(share)}
                         aria-label={`Revoke access for ${share.shared_with_email}`}
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <RiDeleteBinLine className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   ))}

@@ -1,16 +1,7 @@
 "use client"
 
 import React, { useCallback, useEffect, useMemo } from "react"
-import {
-  Briefcase,
-  Building,
-  Clock,
-  Loader2,
-  RefreshCw,
-  Search,
-  SunMoon,
-  Users,
-} from "lucide-react"
+import { RiBriefcaseLine, RiBuildingLine, RiContrastLine, RiGroupLine, RiLoader4Line, RiRefreshLine, RiSearchLine, RiTimeLine } from "@remixicon/react"
 import {
   CommandDialog,
   CommandEmpty,
@@ -48,9 +39,9 @@ interface GlobalSearchProps {
 }
 
 const typeIcons: Record<SearchResultType, React.ReactNode> = {
-  account: <Building className="h-4 w-4 shrink-0 text-primary" />,
-  center: <Briefcase className="h-4 w-4 shrink-0 text-primary" />,
-  prospect: <Users className="h-4 w-4 shrink-0 text-primary" />,
+  account: <RiBuildingLine className="h-4 w-4 shrink-0 text-primary" />,
+  center: <RiBriefcaseLine className="h-4 w-4 shrink-0 text-primary" />,
+  prospect: <RiGroupLine className="h-4 w-4 shrink-0 text-primary" />,
 }
 
 const typeLabels: Record<SearchResultType, string> = {
@@ -199,7 +190,7 @@ export function GlobalSearch({
           {hasQuery ? (
             isSearching ? (
               <div className="flex flex-col items-center gap-2 py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground/60" />
+                <RiLoader4Line className="h-6 w-6 animate-spin text-muted-foreground/60" />
                 <p className="text-sm text-muted-foreground">
                   Searching for &quot;{query}&quot;…
                 </p>
@@ -211,7 +202,7 @@ export function GlobalSearch({
             ) : (
               <div className="flex flex-col items-center gap-2 py-8">
                 <div className="rounded-full bg-muted/50 p-3">
-                  <Search className="h-6 w-6 text-muted-foreground/50" />
+                  <RiSearchLine className="h-6 w-6 text-muted-foreground/50" />
                 </div>
                 <div className="space-y-1 text-center">
                   <p className="text-sm font-medium text-muted-foreground">
@@ -308,7 +299,7 @@ export function GlobalSearch({
                     className="py-2.5 px-3"
                   >
                     <div className="flex items-start gap-3 w-full">
-                      <Clock className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/60" />
+                      <RiTimeLine className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/60" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-baseline justify-between gap-3">
                           <span className="truncate text-sm font-medium leading-tight">
@@ -338,7 +329,7 @@ export function GlobalSearch({
                     onSelect={handleSelect}
                     className="py-2 px-3"
                   >
-                    <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
+                    <RiSearchLine className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
                     <span className="truncate text-sm">{search}</span>
                   </CommandItem>
                 ))}
@@ -354,7 +345,7 @@ export function GlobalSearch({
                   onSelect={handleSelect}
                   className="py-2 px-3"
                 >
-                  <Building className="h-4 w-4 shrink-0 text-primary/70" />
+                  <RiBuildingLine className="h-4 w-4 shrink-0 text-primary/70" />
                   <span className="text-sm">Go to Accounts</span>
                   <CommandShortcut>Tab</CommandShortcut>
                 </CommandItem>
@@ -365,7 +356,7 @@ export function GlobalSearch({
                   onSelect={handleSelect}
                   className="py-2 px-3"
                 >
-                  <Briefcase className="h-4 w-4 shrink-0 text-primary/70" />
+                  <RiBriefcaseLine className="h-4 w-4 shrink-0 text-primary/70" />
                   <span className="text-sm">Go to Centres</span>
                   <CommandShortcut>Tab</CommandShortcut>
                 </CommandItem>
@@ -376,7 +367,7 @@ export function GlobalSearch({
                   onSelect={handleSelect}
                   className="py-2 px-3"
                 >
-                  <Users className="h-4 w-4 shrink-0 text-primary/70" />
+                  <RiGroupLine className="h-4 w-4 shrink-0 text-primary/70" />
                   <span className="text-sm">Go to Prospects</span>
                   <CommandShortcut>Tab</CommandShortcut>
                 </CommandItem>
@@ -386,7 +377,7 @@ export function GlobalSearch({
                 onSelect={handleSelect}
                 className="py-2 px-3"
               >
-                <RefreshCw className="h-4 w-4 shrink-0 text-muted-foreground/60" />
+                <RiRefreshLine className="h-4 w-4 shrink-0 text-muted-foreground/60" />
                 <span className="text-sm">Refresh data</span>
               </CommandItem>
               <CommandItem
@@ -394,7 +385,7 @@ export function GlobalSearch({
                 onSelect={handleSelect}
                 className="py-2 px-3"
               >
-                <SunMoon className="h-4 w-4 shrink-0 text-muted-foreground/60" />
+                <RiContrastLine className="h-4 w-4 shrink-0 text-muted-foreground/60" />
                 <span className="text-sm">Toggle theme</span>
               </CommandItem>
             </CommandGroup>

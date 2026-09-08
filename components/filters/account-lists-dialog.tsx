@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useMemo, useState } from "react"
-import { Check, ChevronDown, ChevronUp, ListChecks, Pencil, Play, RefreshCw, Share2, Trash2, Upload, Users, X } from "lucide-react"
+import { RiArrowDownSLine, RiArrowUpSLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiGroupLine, RiListCheck3, RiPencilLine, RiPlayLine, RiRefreshLine, RiShareLine, RiUploadLine } from "@remixicon/react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -147,10 +147,10 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
                               aria-label="List name"
                             />
                             <Button size="icon" variant="ghost" className="h-8 w-8" onClick={commitRename} aria-label="Save name" disabled={!renameValue.trim() || loading}>
-                              <Check className="h-4 w-4" />
+                              <RiCheckLine className="h-4 w-4" />
                             </Button>
                             <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setRenamingId(null)} aria-label="Cancel rename">
-                              <X className="h-4 w-4" />
+                              <RiCloseLine className="h-4 w-4" />
                             </Button>
                           </div>
                         ) : (
@@ -168,27 +168,27 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
                       </div>
                       <div className="flex shrink-0 items-center gap-0.5">
                         <Button size="sm" variant="outline" className="h-8" onClick={() => handleApply(list)} title="Apply this list to the dashboard">
-                          <Play className="h-3.5 w-3.5" />
+                          <RiPlayLine className="h-3.5 w-3.5" />
                           Apply
                         </Button>
                         {own && (
                           <>
                             <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openShare(list)} aria-label={`Share ${list.name}`} title="Share">
-                              <Share2 className="h-3.5 w-3.5" />
+                              <RiShareLine className="h-3.5 w-3.5" />
                             </Button>
                             <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => startRename(list)} aria-label={`Rename ${list.name}`} title="Rename">
-                              <Pencil className="h-3.5 w-3.5" />
+                              <RiPencilLine className="h-3.5 w-3.5" />
                             </Button>
                             <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openUpload(list)} aria-label={`Update ${list.name} from a file`} title="Update from a new file">
-                              <RefreshCw className="h-3.5 w-3.5" />
+                              <RiRefreshLine className="h-3.5 w-3.5" />
                             </Button>
                             <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setListToDelete(list)} aria-label={`Delete ${list.name}`} title="Delete">
-                              <Trash2 className="h-3.5 w-3.5" />
+                              <RiDeleteBinLine className="h-3.5 w-3.5" />
                             </Button>
                           </>
                         )}
                         <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setExpandedId(expanded ? null : list.id)} aria-label={expanded ? "Hide accounts" : "Show accounts"} aria-expanded={expanded}>
-                          {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                          {expanded ? <RiArrowUpSLine className="h-4 w-4" /> : <RiArrowDownSLine className="h-4 w-4" />}
                         </Button>
                       </div>
                     </div>
@@ -219,7 +219,7 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
         <DialogContent className="max-h-[85vh] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <ListChecks className="h-5 w-5" />
+              <RiListCheck3 className="h-5 w-5" />
               Account Lists
             </DialogTitle>
             <DialogDescription className="sr-only">Manage uploaded account lists.</DialogDescription>
@@ -230,7 +230,7 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
               {myLists.length === 0 ? "No lists yet." : `${myLists.length} list${myLists.length === 1 ? "" : "s"}`}
             </p>
             <Button size="sm" onClick={() => openUpload(null)}>
-              <Upload className="h-4 w-4" />
+              <RiUploadLine className="h-4 w-4" />
               Upload list
             </Button>
           </div>
@@ -246,7 +246,7 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
           {sharedLists.length > 0 && (
             <div className="space-y-2">
               <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                <Users className="h-3 w-3" />
+                <RiGroupLine className="h-3 w-3" />
                 Shared with me
               </p>
               <ul className="divide-y rounded-lg border">{sharedLists.map((list) => renderList(list, false))}</ul>
@@ -261,7 +261,7 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Share2 className="h-5 w-5" />
+              <RiShareLine className="h-5 w-5" />
               Share List
             </DialogTitle>
             <DialogDescription>
@@ -311,7 +311,7 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
                         onClick={() => handleUnshare(share)}
                         aria-label={`Stop sharing with ${share.shared_with_email}`}
                       >
-                        <X className="h-3.5 w-3.5" />
+                        <RiCloseLine className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   ))}

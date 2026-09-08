@@ -7,7 +7,7 @@ import { TabsContent } from "@/components/ui/tabs"
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
-import { ArrowDownAZ, ArrowUpAZ, ArrowUpDown, PieChartIcon, Table as TableIcon, MapIcon, LayoutGrid, Layers, MapPin } from "lucide-react"
+import { RiExpandUpDownLine, RiLayoutGridLine, RiMapLine, RiMapPinLine, RiPieChartLine, RiSortAlphabetAsc, RiSortAlphabetDesc, RiStackLine, RiTableLine } from "@remixicon/react"
 import { CenterRow } from "@/components/tables"
 import { SelectionActionBar } from "@/components/tables/selection-action-bar"
 import { useTableRowSelection } from "@/hooks/use-table-row-selection"
@@ -348,7 +348,7 @@ export function CentersTab({
     <TabsContent value="centers">
       {/* Header with View Toggle */}
       <div className="flex items-center gap-2 mb-4">
-        <PieChartIcon className="h-5 w-5 text-primary" />
+        <RiPieChartLine className="h-5 w-5 text-primary" />
         <h2 className="text-lg font-semibold text-foreground">Centre Analytics</h2>
         <ViewSwitcher
           data-tour="view-switcher"
@@ -359,21 +359,21 @@ export function CentersTab({
               value: "chart",
               label: "Charts",
               icon: (
-                <PieChartIcon className="h-4 w-4" />
+                <RiPieChartLine className="h-4 w-4" />
               ),
             },
             {
               value: "map",
               label: "Map",
               icon: (
-                <MapIcon className="h-4 w-4" />
+                <RiMapLine className="h-4 w-4" />
               ),
             },
             {
               value: "data",
               label: "Data",
               icon: (
-                <TableIcon className="h-4 w-4" />
+                <RiTableLine className="h-4 w-4" />
               ),
             },
           ]}
@@ -438,12 +438,12 @@ export function CentersTab({
                    {
                      value: "city",
                      label: "City",
-                     icon: <MapPin className="h-4 w-4" />,
+                     icon: <RiMapPinLine className="h-4 w-4" />,
                    },
                    {
                      value: "state",
                      label: "State",
-                     icon: <Layers className="h-4 w-4" />,
+                     icon: <RiStackLine className="h-4 w-4" />,
                    },
                  ]}
                  className="ml-auto"
@@ -492,14 +492,14 @@ export function CentersTab({
                        value: "table",
                        label: "Table",
                        icon: (
-                         <TableIcon className="h-4 w-4" />
+                         <RiTableLine className="h-4 w-4" />
                        ),
                      },
                      {
                        value: "grid",
                        label: "Grid",
                        icon: (
-                         <LayoutGrid className="h-4 w-4" />
+                         <RiLayoutGridLine className="h-4 w-4" />
                        ),
                      },
                    ]}
@@ -576,11 +576,11 @@ export function CentersTab({
                         aria-pressed={sort.key === "name" && sort.direction !== null}
                       >
                         {sort.key !== "name" || sort.direction === null ? (
-                          <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+                          <RiExpandUpDownLine className="h-3.5 w-3.5 text-muted-foreground" />
                         ) : sort.direction === "asc" ? (
-                          <ArrowUpAZ className="h-3.5 w-3.5 text-primary" />
+                          <RiSortAlphabetAsc className="h-3.5 w-3.5 text-primary" />
                         ) : (
-                          <ArrowDownAZ className="h-3.5 w-3.5 text-primary" />
+                          <RiSortAlphabetDesc className="h-3.5 w-3.5 text-primary" />
                         )}
                       </Button>
                     </div>

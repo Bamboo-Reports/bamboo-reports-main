@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Download, Star, X } from "lucide-react"
+import { RiCloseLine, RiDownloadLine, RiStarFill, RiStarLine } from "@remixicon/react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -59,7 +59,7 @@ export function SelectionActionBar({ show, count, onClear, onExport, onFavorite,
           onClick={onClear}
           aria-label="Clear selection"
         >
-          <X className="h-4 w-4" />
+          <RiCloseLine className="h-4 w-4" />
         </Button>
         <span className="text-sm font-medium">{displayCount} selected</span>
         {onFavorite && (
@@ -72,12 +72,12 @@ export function SelectionActionBar({ show, count, onClear, onExport, onFavorite,
             )}
             onClick={onFavorite}
           >
-            <Star className={cn("h-3.5 w-3.5", favoriteActive && "fill-blue-500 text-blue-500")} />
+            {favoriteActive ? <RiStarFill className="h-3.5 w-3.5 text-blue-500" /> : <RiStarLine className="h-3.5 w-3.5" />}
             {favoriteActive ? "Favourited" : "Favourite"}
           </Button>
         )}
         <Button size="sm" className="h-8 gap-2 rounded-full px-4 text-xs" onClick={onExport}>
-          <Download className="h-3.5 w-3.5" />
+          <RiDownloadLine className="h-3.5 w-3.5" />
           Export
         </Button>
       </div>
