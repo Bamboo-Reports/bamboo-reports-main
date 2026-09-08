@@ -143,7 +143,7 @@ export function ProspectDetailsDialog({
   }, [relatedAccount])
 
   const relatedLoading = fetchRelated && open && !!p && relatedProspects === null
-  const allProspects = fetchRelated ? (relatedProspects ?? []) : allProspectsProp
+  const allProspects = useMemo(() => (fetchRelated ? (relatedProspects ?? []) : allProspectsProp), [fetchRelated, relatedProspects, allProspectsProp])
 
   const companyContacts = useMemo(
     () =>

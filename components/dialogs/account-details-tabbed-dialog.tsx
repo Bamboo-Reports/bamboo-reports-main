@@ -216,10 +216,11 @@ export function AccountDetailsDialog({
   }, [relatedName])
 
   const relatedLoading = fetchRelated && open && !!account && related === null
-  const centers = fetchRelated ? (related?.centers ?? []) : centersProp
-  const prospects = fetchRelated ? (related?.prospects ?? []) : prospectsProp
-  const services = fetchRelated ? (related?.services ?? []) : servicesProp
-  const tech = fetchRelated ? (related?.tech ?? []) : techProp
+  // Memoized so a null `related` does not hand a fresh [] to the memos below on every render.
+  const centers = React.useMemo(() => (fetchRelated ? (related?.centers ?? []) : centersProp), [fetchRelated, related, centersProp])
+  const prospects = React.useMemo(() => (fetchRelated ? (related?.prospects ?? []) : prospectsProp), [fetchRelated, related, prospectsProp])
+  const services = React.useMemo(() => (fetchRelated ? (related?.services ?? []) : servicesProp), [fetchRelated, related, servicesProp])
+  const tech = React.useMemo(() => (fetchRelated ? (related?.tech ?? []) : techProp), [fetchRelated, related, techProp])
   const [activeTab, setActiveTab] = useState("info")
   const [selectedCenter, setSelectedCenter] = useState<Center | null>(null)
   const [isCenterDialogOpen, setIsCenterDialogOpen] = useState(false)
