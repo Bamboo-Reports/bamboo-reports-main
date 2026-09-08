@@ -100,6 +100,11 @@ export const FILTER_METADATA = {
     group: "account",
     inputType: "multi_select",
   },
+  accountListName: {
+    label: "Account List Name",
+    group: "account",
+    inputType: "keyword",
+  },
   centerTypeValues: {
     label: "Center Type",
     group: "center",
