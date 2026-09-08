@@ -260,11 +260,13 @@ export function AccountListUploadDialog({ open, onOpenChange, onSave, onApply, s
       <DialogContent className={cn("max-h-[90vh] w-[calc(100%-2rem)] overflow-x-hidden overflow-y-auto", step === "review" ? "max-w-4xl" : "max-w-lg")}>
         <DialogHeader>
           <DialogTitle>{step === "input" ? "Upload account list" : "Review account matches"}</DialogTitle>
-          <DialogDescription>
-            {step === "input"
-              ? "Upload a client's account list and we will map each name to an account in the database. The mapped list is saved as a filter."
-              : "Confirm the mapping for each uploaded name. Rows without a selected account are left out of the saved filter."}
-          </DialogDescription>
+          {step === "input" ? (
+            <DialogDescription className="sr-only">Upload an account list file or paste account names.</DialogDescription>
+          ) : (
+            <DialogDescription>
+              Confirm the mapping for each uploaded name. Rows without a selected account are left out of the saved filter.
+            </DialogDescription>
+          )}
         </DialogHeader>
 
         {step === "input" ? (
