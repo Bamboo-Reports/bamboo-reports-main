@@ -35,6 +35,16 @@ type AccountListsContextValue = {
 
 const AccountListsContext = createContext<AccountListsContextValue | null>(null)
 
+/** Supabase errors are plain objects that log as "{}"; surface their fields. */
+function describeError(error: unknown): string {
+  if (error instanceof Error) return error.message
+  if (error && typeof error === "object") {
+    const e = error as { message?: unknown; code?: unknown; details?: unknown; hint?: unknown }
+    return [e.code, e.message, e.details, e.hint].filter((v) => typeof v === "string" && v).join(" | ") || JSON.stringify(error)
+  }
+  return String(error)
+}
+
 const COLUMNS = "id, user_id, name, accounts, account_count, unmatched, source_file, created_at, updated_at"
 
 /**
@@ -78,7 +88,8 @@ export function AccountListsProvider({ children }: { children: ReactNode }) {
         supabase.from("account_list_shares").select(`list_id, account_lists(${COLUMNS})`).eq("shared_with_user_id", userId),
       ])
       if (ownError) throw ownError
-      if (sharedError) throw sharedError
+      // Sharing is optional (its migration may not be applied yet): keep own lists usable.
+      if (sharedError) devError("Failed to load shared account lists:", describeError(sharedError))
 
       const own = (Array.isArray(ownData) ? ownData : [])
         .map((row) => normalizeAccountList(row as Record<string, unknown>))
@@ -106,7 +117,7 @@ export function AccountListsProvider({ children }: { children: ReactNode }) {
 
       setLists([...own, ...shared])
     } catch (error) {
-      devError("Failed to load account lists:", error)
+      devError("Failed to load account lists:", describeError(error))
     } finally {
       setLoading(false)
     }
@@ -140,7 +151,7 @@ export function AccountListsProvider({ children }: { children: ReactNode }) {
         if (created) setLists((prev) => [created, ...prev])
         return created
       } catch (error) {
-        devError("Failed to create account list:", error)
+        devError("Failed to create account list:", describeError(error))
         return null
       } finally {
         setLoading(false)
@@ -171,7 +182,7 @@ export function AccountListsProvider({ children }: { children: ReactNode }) {
         if (updated) setLists((prev) => [updated, ...prev.filter((l) => l.id !== id)])
         return updated
       } catch (error) {
-        devError("Failed to update account list:", error)
+        devError("Failed to update account list:", describeError(error))
         return null
       } finally {
         setLoading(false)
@@ -189,7 +200,7 @@ export function AccountListsProvider({ children }: { children: ReactNode }) {
         setLists((prev) => prev.filter((l) => l.id !== id))
         return true
       } catch (error) {
-        devError("Failed to delete account list:", error)
+        devError("Failed to delete account list:", describeError(error))
         return false
       } finally {
         setLoading(false)
@@ -223,7 +234,7 @@ export function AccountListsProvider({ children }: { children: ReactNode }) {
         }
         return { success: true }
       } catch (error) {
-        devError("Failed to share account list:", error)
+        devError("Failed to share account list:", describeError(error))
         return { success: false, error: "Failed to share list" }
       }
     },
@@ -237,7 +248,7 @@ export function AccountListsProvider({ children }: { children: ReactNode }) {
         if (error) throw error
         return true
       } catch (error) {
-        devError("Failed to unshare account list:", error)
+        devError("Failed to unshare account list:", describeError(error))
         return false
       }
     },
@@ -255,7 +266,7 @@ export function AccountListsProvider({ children }: { children: ReactNode }) {
         if (error) throw error
         return (data as AccountListShare[] | null) ?? []
       } catch (error) {
-        devError("Failed to load account list shares:", error)
+        devError("Failed to load account list shares:", describeError(error))
         return []
       }
     },
