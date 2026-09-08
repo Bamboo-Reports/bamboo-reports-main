@@ -96,15 +96,20 @@ export function AccountFiltersSection({
           {isFilterEnabled("accountNameValues") && pendingFilters.accountNameValues.length > 0 && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label className="text-xs font-medium">Account List (exact match)</Label>
+              <Label className="text-xs font-medium">Account List</Label>
               <button
                 type="button"
                 className="text-[11px] text-muted-foreground hover:text-foreground"
-                onClick={() => setPendingFilters((prev) => ({ ...prev, accountNameValues: [] }))}
+                onClick={() => setPendingFilters((prev) => ({ ...prev, accountNameValues: [], accountListName: null }))}
               >
                 Clear {pendingFilters.accountNameValues.length}
               </button>
             </div>
+            {pendingFilters.accountListName && (
+              <p className="truncate text-xs text-muted-foreground" title={pendingFilters.accountListName}>
+                {pendingFilters.accountListName}
+              </p>
+            )}
             <div className="flex max-h-40 flex-wrap gap-1.5 overflow-y-auto">
               {pendingFilters.accountNameValues.map((entry) => (
                 <span

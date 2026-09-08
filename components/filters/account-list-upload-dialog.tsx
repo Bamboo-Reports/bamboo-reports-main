@@ -219,11 +219,13 @@ export function AccountListUploadDialog({ open, onOpenChange, onSave, onApply, s
   )
 
   const buildFilters = useCallback(
-    (): Filters =>
-      createDefaultFilters({
+    (listName: string): Filters => ({
+      ...createDefaultFilters({
         accountVisibilityMode: "all",
         accountNameValues: mappedNames.map((value) => ({ value, mode: "include" as const })),
       }),
+      accountListName: listName,
+    }),
     [mappedNames]
   )
 
@@ -231,7 +233,7 @@ export function AccountListUploadDialog({ open, onOpenChange, onSave, onApply, s
     async (apply: boolean) => {
       const name = filterName.trim()
       if (!name || mappedNames.length === 0) return
-      const filters = buildFilters()
+      const filters = buildFilters(name)
       const ok = await onSave(name, filters)
       if (!ok) {
         toast.error("Could not save the filter. Please try again.")
