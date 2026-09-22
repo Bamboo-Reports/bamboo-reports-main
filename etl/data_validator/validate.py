@@ -44,7 +44,10 @@ Validates Google Sheets data in several phases:
           Validated in    : services, functions, tech
 
   Phase 3 - Service Coverage
-      Every row in services must have at least one service column filled.
+      Every row in services must have at least one service column filled
+      (service_it, service_ai, service_erd, service_fna, service_hr,
+      service_procurement, service_sales_marketing, service_customer_support,
+      service_others).
 
 Uses a Google service-account for authentication. Configuration is read
 from `.env` in the same directory.
@@ -56,6 +59,14 @@ Flags:
     --force              Keep going after a phase fails instead of stopping early.
     --exclude a,b,c      Skip the named sheets in every phase. A rule whose
                          source of truth is excluded is skipped with a warning.
+    --highlight          Write the findings back into the spreadsheet: every row
+                         with an issue gets a yellow background and the offending
+                         cell(s) get a red background. Before painting, the
+                         background of every data row in each validated sheet is
+                         reset so highlights from earlier runs do not linger.
+                         Only the phases that actually ran are highlighted, so
+                         combine with --force to cover every phase in one go.
+                         Needs read/write access for the service account.
 
 The dependencies are declared in the PEP 723 metadata above and are installed
 automatically by uv.
@@ -84,6 +95,11 @@ from rich.theme import Theme
 # Practical email validator (not full RFC 5322, but rejects the common bad
 # cases): non-empty local part, "@", a dotted domain, and a 2+ char TLD.
 EMAIL_PATTERN = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
+
+# One URL on a line: optional scheme or www., a dotted host, optional path,
+# and no whitespace anywhere. Source data mixes "https://x.com/a" with bare
+# "linkedin.com/in/name", so the scheme is optional.
+URL_LINE_PATTERN = re.compile(r"^(https?://|www\.)?[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+(:\d+)?(/\S*)?$")
 
 # Invisible characters that arrive via copy-paste from websites and PDFs. They
 # render as nothing in Google Sheets but corrupt keys, joins, sorting, and
@@ -120,6 +136,7 @@ SERVICE_COVERAGE_RULES = [
         "label_column": "cn_unique_key",
         "service_columns": [
             "service_it",
+            "service_ai",
             "service_erd",
             "service_fna",
             "service_hr",
@@ -438,50 +455,110 @@ ALL_RULES = {
             "Can Have URL": "No",
             "Description": "should be proper string if multiple then should have line breaks",
         },
+        "primary_service_link": {
+            "Can Be Nullable": "Yes",
+            "Can Have URL": "Yes",
+            "Description": "should be a valid url or urls if urls should be line break",
+        },
         "focus_region": {
             "Can Be Nullable": "Yes",
             "Can Have URL": "No",
             "Description": "should be proper string if multiple then should have line breaks",
+        },
+        "focus_region_link": {
+            "Can Be Nullable": "Yes",
+            "Can Have URL": "Yes",
+            "Description": "should be a valid url or urls if urls should be line break",
         },
         "service_it": {
             "Can Be Nullable": "Yes",
             "Can Have URL": "No",
             "Description": "should be proper string if multiple then should have line breaks",
         },
+        "service_it_link": {
+            "Can Be Nullable": "Yes",
+            "Can Have URL": "Yes",
+            "Description": "should be a valid url or urls if urls should be line break",
+        },
+        "service_ai": {
+            "Can Be Nullable": "Yes",
+            "Can Have URL": "No",
+            "Description": "should be proper string if multiple then should have line breaks",
+        },
+        "service_ai_link": {
+            "Can Be Nullable": "Yes",
+            "Can Have URL": "Yes",
+            "Description": "should be a valid url or urls if urls should be line break",
+        },
         "service_erd": {
             "Can Be Nullable": "Yes",
             "Can Have URL": "No",
             "Description": "should be proper string if multiple then should have line breaks",
+        },
+        "service_erd_link": {
+            "Can Be Nullable": "Yes",
+            "Can Have URL": "Yes",
+            "Description": "should be a valid url or urls if urls should be line break",
         },
         "service_fna": {
             "Can Be Nullable": "Yes",
             "Can Have URL": "No",
             "Description": "should be proper string if multiple then should have line breaks",
         },
+        "service_fna_link": {
+            "Can Be Nullable": "Yes",
+            "Can Have URL": "Yes",
+            "Description": "should be a valid url or urls if urls should be line break",
+        },
         "service_hr": {
             "Can Be Nullable": "Yes",
             "Can Have URL": "No",
             "Description": "should be proper string if multiple then should have line breaks",
+        },
+        "service_hr_link": {
+            "Can Be Nullable": "Yes",
+            "Can Have URL": "Yes",
+            "Description": "should be a valid url or urls if urls should be line break",
         },
         "service_procurement": {
             "Can Be Nullable": "Yes",
             "Can Have URL": "No",
             "Description": "should be proper string if multiple then should have line breaks",
         },
+        "service_procurement_link": {
+            "Can Be Nullable": "Yes",
+            "Can Have URL": "Yes",
+            "Description": "should be a valid url or urls if urls should be line break",
+        },
         "service_sales_marketing": {
             "Can Be Nullable": "Yes",
             "Can Have URL": "No",
             "Description": "should be proper string if multiple then should have line breaks",
+        },
+        "service_sales_marketing_link": {
+            "Can Be Nullable": "Yes",
+            "Can Have URL": "Yes",
+            "Description": "should be a valid url or urls if urls should be line break",
         },
         "service_customer_support": {
             "Can Be Nullable": "Yes",
             "Can Have URL": "No",
             "Description": "should be proper string if multiple then should have line breaks",
         },
+        "service_customer_support_link": {
+            "Can Be Nullable": "Yes",
+            "Can Have URL": "Yes",
+            "Description": "should be a valid url or urls if urls should be line break",
+        },
         "service_others": {
             "Can Be Nullable": "Yes",
             "Can Have URL": "No",
             "Description": "should be proper string if multiple then should have line breaks",
+        },
+        "service_others_link": {
+            "Can Be Nullable": "Yes",
+            "Can Have URL": "Yes",
+            "Description": "should be a valid url or urls if urls should be line break",
         },
         "software_vendor": {
             "Can Be Nullable": "Yes",
@@ -492,6 +569,16 @@ ALL_RULES = {
             "Can Be Nullable": "Yes",
             "Can Have URL": "No",
             "Description": "should be proper string if multiple then should have line breaks",
+        },
+        "software_source_link": {
+            "Can Be Nullable": "Yes",
+            "Can Have URL": "Yes",
+            "Description": "should be a valid url or urls if urls should be line break",
+        },
+        "service_comments": {
+            "Can Be Nullable": "Yes",
+            "Can Have URL": "Yes",
+            "Description": "should be valid strings",
         },
     },
     "prospects": {
@@ -773,9 +860,10 @@ ALL_RULES = {
             "Description": "should contain||Annual Report||Company Website||Forbes||Fortune||Others||Reuters",
         },
         "account_hq_revenue_source_link": {
-            "Can Be Nullable": "Yes",
+            "Can Be Nullable": "No",
+            "Nullable When": {"column": "account_hq_revenue_source_type", "equals": "Others"},
             "Can Have URL": "Yes",
-            "Description": "string",
+            "Description": "should be a valid url or urls if urls should be line break",
         },
         "account_hq_employee_count": {
             "Can Be Nullable": "Yes",
@@ -794,8 +882,9 @@ ALL_RULES = {
         },
         "account_hq_employee_source_link": {
             "Can Be Nullable": "No",
+            "Nullable When": {"column": "account_hq_employee_source_type", "equals": "Others"},
             "Can Have URL": "Yes",
-            "Description": "string",
+            "Description": "should be a valid url or urls if urls should be line break",
         },
         "account_center_employees": {
             "Can Be Nullable": "Yes",
@@ -923,7 +1012,7 @@ ALL_RULES = {
         "function_name": {
             "Can Be Nullable": "No",
             "Can Have URL": "No",
-            "Description": "should contain||IT||ER&D||FnA||HR||Procurement & Supply Chain||Sales & Marketing||Customer Support||Others",
+            "Description": "should contain||IT||AI||ER&D||FnA||HR||Procurement & Supply Chain||Sales & Marketing||Customer Support||Others",
         },
     },
     "tech": {
@@ -995,8 +1084,13 @@ if not SA_PATH.exists():
 
 
 # -- Google Sheets Auth --------------------------------------------------------
+HIGHLIGHT_MODE = "--highlight" in sys.argv
+
+# Highlighting writes cell formatting, which the read-only scope does not allow.
 SCOPES = [
-    "https://www.googleapis.com/auth/spreadsheets.readonly",
+    "https://www.googleapis.com/auth/spreadsheets"
+    if HIGHLIGHT_MODE
+    else "https://www.googleapis.com/auth/spreadsheets.readonly",
 ]
 
 credentials = Credentials.from_service_account_file(str(SA_PATH), scopes=SCOPES)
@@ -1067,6 +1161,140 @@ class SheetCache:
         return results
 
 
+# -- Issue highlighting -------------------------------------------------------
+# Every phase records (sheet, row, column) for each failure it finds. With
+# --highlight these are painted into the spreadsheet at the end of the run:
+# the whole row yellow, the offending cell red.
+HIGHLIGHT_ROW_COLOR = {"red": 1.0, "green": 0.949, "blue": 0.6}  # yellow
+HIGHLIGHT_CELL_COLOR = {"red": 0.957, "green": 0.51, "blue": 0.51}  # red
+
+# sheet -> row (1-based) -> set of 0-based column indices (empty set = row only)
+ISSUE_CELLS: dict[str, dict[int, set[int]]] = {}
+
+
+def record_issue(
+    sheet: str,
+    row: int,
+    column: "str | int | None" = None,
+    headers: "list[str] | None" = None,
+) -> None:
+    """Remember a failing cell for --highlight.
+
+    `column` may be a header name (resolved against `headers`), a 0-based
+    column index, or None to flag the row without a specific cell.
+    """
+    cols = ISSUE_CELLS.setdefault(sheet, {}).setdefault(row, set())
+    if column is None:
+        return
+    if isinstance(column, int):
+        cols.add(column)
+        return
+    if headers is None:
+        return
+    key = column.strip().lower()
+    if key in headers:
+        cols.add(headers.index(key))
+
+
+def _batch_update(spreadsheet: gspread.Spreadsheet, requests: list[dict]) -> None:
+    chunk_size = 500
+    for start in range(0, len(requests), chunk_size):
+        chunk = requests[start : start + chunk_size]
+        safe_api_call(lambda chunk=chunk: spreadsheet.batch_update({"requests": chunk}))
+
+
+def apply_highlights(cache: SheetCache) -> None:
+    """Paint recorded issues into the spreadsheet (rows yellow, cells red)."""
+    if not HIGHLIGHT_MODE:
+        return
+
+    console.print()
+    console.rule("[border]HIGHLIGHTING ISSUES IN SHEET[/border]")
+    console.print()
+
+    try:
+        sheet_ids = {ws.title: ws.id for ws in safe_api_call(cache.spreadsheet.worksheets)}
+    except gspread.exceptions.APIError as exc:
+        console.print(f"  [error][FAIL][/error] Could not list worksheets: {exc}")
+        return
+
+    requests: list[dict] = []
+    reset_sheets: list[str] = []
+
+    # Reset the background of every data row in each validated sheet so stale
+    # highlights from a previous run disappear once the data is fixed.
+    for sheet in ALL_SHEETS:
+        if is_excluded(sheet) or sheet not in sheet_ids:
+            continue
+        reset_sheets.append(sheet)
+        requests.append(
+            {
+                "updateCells": {
+                    "range": {"sheetId": sheet_ids[sheet], "startRowIndex": 1},
+                    "fields": "userEnteredFormat.backgroundColor",
+                }
+            }
+        )
+
+    row_count = 0
+    cell_count = 0
+    for sheet, rows in ISSUE_CELLS.items():
+        sheet_id = sheet_ids.get(sheet)
+        if sheet_id is None or is_excluded(sheet):
+            continue
+        for row, cols in sorted(rows.items()):
+            row_count += 1
+            requests.append(
+                {
+                    "repeatCell": {
+                        "range": {
+                            "sheetId": sheet_id,
+                            "startRowIndex": row - 1,
+                            "endRowIndex": row,
+                        },
+                        "cell": {"userEnteredFormat": {"backgroundColor": HIGHLIGHT_ROW_COLOR}},
+                        "fields": "userEnteredFormat.backgroundColor",
+                    }
+                }
+            )
+            for col in sorted(cols):
+                cell_count += 1
+                requests.append(
+                    {
+                        "repeatCell": {
+                            "range": {
+                                "sheetId": sheet_id,
+                                "startRowIndex": row - 1,
+                                "endRowIndex": row,
+                                "startColumnIndex": col,
+                                "endColumnIndex": col + 1,
+                            },
+                            "cell": {"userEnteredFormat": {"backgroundColor": HIGHLIGHT_CELL_COLOR}},
+                            "fields": "userEnteredFormat.backgroundColor",
+                        }
+                    }
+                )
+
+    if not requests:
+        console.print("  [muted]Nothing to highlight.[/muted]")
+        return
+
+    try:
+        _batch_update(cache.spreadsheet, requests)
+    except gspread.exceptions.APIError as exc:
+        console.print(
+            f"  [error][FAIL][/error] Could not write highlights: {exc}\n"
+            f"        Make sure the service account '{credentials.service_account_email}'\n"
+            f"        has Editor access to the sheet."
+        )
+        return
+
+    console.print(
+        f"  [success][OK][/success]  Cleared old highlights in {len(reset_sheets)} sheet(s); "
+        f"painted {row_count} row(s) yellow and {cell_count} cell(s) red."
+    )
+
+
 # -- Phase 0: Table Format Validation -----------------------------------------
 def check_table_format(cache: SheetCache, table_name: str) -> bool:
     rules_map = ALL_RULES.get(table_name, {})
@@ -1111,6 +1339,14 @@ def check_table_format(cache: SheetCache, table_name: str) -> bool:
                 val = ""
 
             is_nullable = rule.get("Can Be Nullable", "Yes").lower() == "yes"
+            # A column can be conditionally nullable: for example a source
+            # link may be blank when its source type is "Others".
+            nullable_when = rule.get("Nullable When")
+            if nullable_when and not val:
+                other_idx = col_indices.get(nullable_when["column"].lower())
+                other_val = row[other_idx].strip() if other_idx is not None and other_idx < len(row) else ""
+                if other_val == nullable_when["equals"]:
+                    is_nullable = True
             can_have_url = rule.get("Can Have URL", "Yes").lower() == "yes"
             desc = rule.get("Description", "")
 
@@ -1178,6 +1414,15 @@ def check_table_format(cache: SheetCache, table_name: str) -> bool:
                     errors.append(
                         (row_idx, col_name, f"Must be linkedin.com format: {val}")
                     )
+
+            elif "valid url" in desc_lower or desc_lower == "should be url":
+                # One URL per line: a scheme or www. or a bare domain, and no
+                # whitespace inside the line (two URLs pasted with a space
+                # between them is the common failure).
+                for line in val.split("\n"):
+                    line = line.strip()
+                    if line and not URL_LINE_PATTERN.match(line):
+                        errors.append((row_idx, col_name, f"Not a URL: {line}"))
 
             elif "string or number" in desc_lower and "15 characters" in desc_lower:
                 clean_val = val.replace(",", "")
@@ -1249,6 +1494,8 @@ def check_table_format(cache: SheetCache, table_name: str) -> bool:
 
     if errors:
         all_ok = False
+        for r_idx, c_name, _msg in errors:
+            record_issue(table_name, r_idx, c_name, headers)
         console.print(
             f"  [error][FAIL][/error] Found {len(errors)} format issue(s) in '{table_name}'.\n"
         )
@@ -1319,6 +1566,7 @@ def check_invisible_characters(cache: SheetCache) -> bool:
                 # Make the invisible characters visible in the report.
                 preview = INVISIBLE_CHARS_RE.sub("<?>", str(value))[:50]
                 offenders.append((table, row_idx, column, kinds, preview))
+                record_issue(table, row_idx, col_idx)
 
     if not offenders:
         console.print("\n  [success][OK][/success]  No invisible characters found.")
@@ -1392,6 +1640,10 @@ def check_uniqueness(cache: SheetCache) -> bool:
 
         if duplicates:
             all_ok = False
+            headers, _ = cache.get_data(sheet_name)
+            for rows in duplicates.values():
+                for row in rows:
+                    record_issue(sheet_name, row, column, headers)
             dup_count = sum(len(rows) for rows in duplicates.values())
             console.print(
                 f"  [error][FAIL][/error] {len(duplicates)} duplicate value(s) "
@@ -1573,6 +1825,9 @@ def validate_column(
         if mismatches:
             has_failures = True
             status = "[error]FAIL[/error]"
+            target_headers, _ = cache.get_data(sheet_name)
+            for row, _name in mismatches:
+                record_issue(sheet_name, row, column, target_headers)
             console.print(
                 f"  [error][FAIL][/error] Missing from '{source_sheet}': {len(unique_mismatch_names)} unique ({len(mismatches)} rows)"
             )
@@ -1703,6 +1958,9 @@ def check_completeness(cache: SheetCache) -> bool:
 
         if missing:
             all_ok = False
+            source_headers, _ = cache.get_data(source_sheet)
+            for row, _name in missing:
+                record_issue(source_sheet, row, column, source_headers)
             console.print(
                 f"  [error][FAIL][/error] Missing from '{target_sheet}': "
                 f"{len(missing)} account(s)"
@@ -1840,6 +2098,9 @@ def check_service_coverage(cache: SheetCache) -> bool:
 
         if empty_rows:
             all_ok = False
+            for row_num, _label in empty_rows:
+                for idx in service_idxs:
+                    record_issue(sheet_name, row_num, idx)
             console.print(
                 f"  [error][FAIL][/error] {len(empty_rows)}/{total_data_rows} rows "
                 f"have no services ({coverage_pct:.1f}% coverage)\n"
@@ -1926,6 +2187,11 @@ def main() -> None:
             f"[warning][*][/warning] Excluding sheet(s): {', '.join(sorted(EXCLUDED_SHEETS))}. "
             f"Results below are partial.\n"
         )
+    if HIGHLIGHT_MODE:
+        console.print(
+            "[warning][*][/warning] --highlight is on: issues will be written into the sheet "
+            "(rows yellow, cells red) and old highlights cleared.\n"
+        )
 
     console.print("[info][*][/info] Opening spreadsheet ...")
     try:
@@ -1953,6 +2219,7 @@ def main() -> None:
             console.print(
                 "\n[error][FAIL][/error] Phase 0 failed. Stopping early. (Use --force to continue anyway)"
             )
+            apply_highlights(cache)
             sys.exit(1)
 
     # -- Phase 0B: Invisible Characters ----------------------------------------
@@ -1963,6 +2230,7 @@ def main() -> None:
             console.print(
                 "\n[error][FAIL][/error] Phase 0B failed. Stopping early. (Use --force to continue anyway)"
             )
+            apply_highlights(cache)
             sys.exit(1)
 
     # -- Phase 1: Uniqueness Checks --------------------------------------------
@@ -1973,6 +2241,7 @@ def main() -> None:
             console.print(
                 "\n[error][FAIL][/error] Phase 1 failed. Stopping early. (Use --force to continue anyway)"
             )
+            apply_highlights(cache)
             sys.exit(1)
 
     # -- Phase 2: Referential Integrity ----------------------------------------
@@ -2000,6 +2269,7 @@ def main() -> None:
         console.print(
             "\n[error][FAIL][/error] Phase 2 failed. Stopping early. (Use --force to continue anyway)"
         )
+        apply_highlights(cache)
         sys.exit(1)
 
     completeness_ok = check_completeness(cache)
@@ -2009,6 +2279,7 @@ def main() -> None:
             console.print(
                 "\n[error][FAIL][/error] Phase 2B failed. Stopping early. (Use --force to continue anyway)"
             )
+            apply_highlights(cache)
             sys.exit(1)
 
     # -- Phase 3: Service Coverage -----------------------------------------------
@@ -2019,7 +2290,10 @@ def main() -> None:
             console.print(
                 "\n[error][FAIL][/error] Phase 3 failed. Stopping early. (Use --force to continue anyway)"
             )
+            apply_highlights(cache)
             sys.exit(1)
+
+    apply_highlights(cache)
 
     # -- Grand Summary ---------------------------------------------------------
     console.print()

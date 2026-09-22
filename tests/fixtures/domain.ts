@@ -65,6 +65,7 @@ export function makeService(overrides: Partial<Service> = {}): Service {
     primary_service: "Product Engineering",
     focus_region: "Global",
     service_it: "Yes",
+    service_ai: null,
     service_erd: null,
     service_fna: null,
     service_hr: null,

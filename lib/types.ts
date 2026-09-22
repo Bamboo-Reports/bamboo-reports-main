@@ -111,17 +111,31 @@ export interface Service {
   center_focus: string | null
   center_city: string | null
   primary_service: string | null
+  primary_service_link?: string | null
   focus_region: string | null
+  focus_region_link?: string | null
   service_it: string | null
+  service_it_link?: string | null
+  service_ai?: string | null
+  service_ai_link?: string | null
   service_erd: string | null
+  service_erd_link?: string | null
   service_fna: string | null
+  service_fna_link?: string | null
   service_hr: string | null
+  service_hr_link?: string | null
   service_procurement: string | null
+  service_procurement_link?: string | null
   service_sales_marketing: string | null
+  service_sales_marketing_link?: string | null
   service_customer_support: string | null
+  service_customer_support_link?: string | null
   service_others: string | null
+  service_others_link?: string | null
   software_vendor: string | null
   software_in_use: string | null
+  software_source_link?: string | null
+  service_comments?: string | null
   account_global_legal_name?: string | null
 }
 
