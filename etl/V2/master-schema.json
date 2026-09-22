@@ -903,7 +903,23 @@
       },
       {
         "Table": "services",
+        "Column": "primary_service_link",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "services",
         "Column": "focus_region",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "services",
+        "Column": "focus_region_link",
         "Type": "TEXT",
         "Nullable": "YES",
         "Default": "",
@@ -919,7 +935,39 @@
       },
       {
         "Table": "services",
+        "Column": "service_it_link",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "services",
+        "Column": "service_ai",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "services",
+        "Column": "service_ai_link",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "services",
         "Column": "service_erd",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "services",
+        "Column": "service_erd_link",
         "Type": "TEXT",
         "Nullable": "YES",
         "Default": "",
@@ -935,7 +983,23 @@
       },
       {
         "Table": "services",
+        "Column": "service_fna_link",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "services",
         "Column": "service_hr",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "services",
+        "Column": "service_hr_link",
         "Type": "TEXT",
         "Nullable": "YES",
         "Default": "",
@@ -951,7 +1015,23 @@
       },
       {
         "Table": "services",
+        "Column": "service_procurement_link",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "services",
         "Column": "service_sales_marketing",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "services",
+        "Column": "service_sales_marketing_link",
         "Type": "TEXT",
         "Nullable": "YES",
         "Default": "",
@@ -967,7 +1047,23 @@
       },
       {
         "Table": "services",
+        "Column": "service_customer_support_link",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "services",
         "Column": "service_others",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "services",
+        "Column": "service_others_link",
         "Type": "TEXT",
         "Nullable": "YES",
         "Default": "",
@@ -984,6 +1080,22 @@
       {
         "Table": "services",
         "Column": "software_in_use",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "services",
+        "Column": "software_source_link",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "services",
+        "Column": "service_comments",
         "Type": "TEXT",
         "Nullable": "YES",
         "Default": "",
