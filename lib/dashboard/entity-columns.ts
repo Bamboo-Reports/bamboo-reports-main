@@ -38,8 +38,8 @@ export const PROSPECT_COLUMNS = [
 
 // Same columns as getDashboardServices / getDashboardTech in app/actions/data.ts.
 export const SERVICE_COLUMNS = [
-  "cn_unique_key", "center_name", "primary_service", "focus_region", "service_it", "service_erd",
-  "service_fna", "service_hr", "service_procurement", "service_sales_marketing",
+  "cn_unique_key", "center_name", "primary_service", "focus_region", "service_it", "service_ai",
+  "service_erd", "service_fna", "service_hr", "service_procurement", "service_sales_marketing",
   "service_customer_support", "service_others", "software_vendor", "software_in_use",
 ]
 

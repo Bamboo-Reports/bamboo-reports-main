@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { RiCalendarLine, RiCodeLine, RiExternalLinkLine, RiGlobalLine, RiGroupLine, RiHeadphoneLine, RiLightbulbLine, RiLineChartLine, RiLinkedinBoxLine, RiMoneyDollarCircleLine, RiMoreLine, RiShoppingCartLine, RiUserSettingsLine } from "@remixicon/react"
+import { RiCalendarLine, RiCodeLine, RiExternalLinkLine, RiGlobalLine, RiGroupLine, RiHeadphoneLine, RiLightbulbLine, RiLineChartLine, RiLinkedinBoxLine, RiMoneyDollarCircleLine, RiMoreLine, RiRobot2Line, RiShoppingCartLine, RiUserSettingsLine } from "@remixicon/react"
 import type { Center, Service, Tech } from "@/lib/types"
 import { CompanyLogo } from "@/components/ui/company-logo"
 import { DialogBreadcrumb } from "@/components/ui/dialog-breadcrumb"
@@ -124,6 +124,7 @@ export function CenterDetailsDialog({
 
   const serviceCategories = [
     { key: "it",          icon: RiCodeLine,          title: "IT Services",          items: parseLines(centerServices?.service_it)              },
+    { key: "ai",          icon: RiRobot2Line,        title: "AI Services",          items: parseLines(centerServices?.service_ai)              },
     { key: "erd",         icon: RiLightbulbLine,     title: "ER&D Services",        items: parseLines(centerServices?.service_erd)             },
     { key: "finance",     icon: RiMoneyDollarCircleLine,    title: "Finance & Accounting", items: parseLines(centerServices?.service_fna)             },
     { key: "hr",          icon: RiUserSettingsLine,       title: "HR Services",          items: parseLines(centerServices?.service_hr)              },
