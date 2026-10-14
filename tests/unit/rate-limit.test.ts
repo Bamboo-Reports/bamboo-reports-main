@@ -81,7 +81,9 @@ describe("enforceRateLimit with Upstash Redis configured", () => {
     const commands = JSON.parse(init.body) as (string | number)[][]
     expect(commands).toHaveLength(2)
     expect(commands[0][0]).toBe("INCR")
-    expect(commands[0][1]).toMatch(/^rl:user-1:test:\d+$/)
+    // Outside production the key is scoped by NODE_ENV ("test" here), so local
+    // dev never shares counters with production on the same Redis.
+    expect(commands[0][1]).toMatch(/^rl:test:user-1:test:\d+$/)
     expect(commands[1]).toEqual(["PEXPIRE", commands[0][1], 61_000])
   })
 

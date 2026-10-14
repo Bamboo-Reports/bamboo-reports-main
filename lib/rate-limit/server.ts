@@ -24,8 +24,11 @@ type EnforceParams = {
 }
 
 // Redis keys live outside the "dash:" response-cache prefix so the ETL's
-// post-import purge (dash:*) never resets anyone's budget.
-const REDIS_KEY_PREFIX = "rl:"
+// post-import purge (dash:*) never resets anyone's budget. Local dev shares
+// the production Redis and Supabase users, so production keeps the bare
+// prefix and every other NODE_ENV gets its own counters; otherwise dev
+// traffic (doubled by React Strict Mode) spends the user's production budget.
+const REDIS_KEY_PREFIX = process.env.NODE_ENV === "production" ? "rl:" : `rl:${process.env.NODE_ENV ?? "dev"}:`
 
 /**
  * Bumps the window counter in Upstash Redis: INCR plus PEXPIRE in one
