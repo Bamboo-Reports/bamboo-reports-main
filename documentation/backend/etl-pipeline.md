@@ -21,7 +21,7 @@ run.sh
        └─ purge_dashboard_cache()    Delete the app's dash:* Redis keys (cache-purge variant only)
 ```
 
-**Input source.** A single Google Sheet (`SPREADSHEET_ID`), one worksheet per table. The worksheet-name-to-table-name mapping is `WORKSHEET_MAP`, derived from `TABLE_DEFS[*]["worksheet"]` (currently 1:1: `accounts`, `alias`, `ticker`, `centers`, `services`, `functions`, `tech`, `prospects`). Sheets are read with `gspread` + `gspread_dataframe.get_as_dataframe(evaluate_formulas=True, header=0)`, then fully-blank rows and `Unnamed:*` columns are dropped.
+**Input source.** A single Google Sheet (`SPREADSHEET_ID`), one worksheet per table. The worksheet-name-to-table-name mapping is `WORKSHEET_MAP`, derived from `TABLE_DEFS[*]["worksheet"]` (currently 1:1: `accounts`, `alias`, `ticker`, `centers`, `services`, `functions`, `tech`, `prospects`, `subscribers`). Sheets are read with `gspread` + `gspread_dataframe.get_as_dataframe(evaluate_formulas=True, header=0)`, then fully-blank rows and `Unnamed:*` columns are dropped.
 
 **Cleaning.** `clean_dataframe` coerces each column to its `master-schema.json` type. In the cache-purge variant, every value is additionally stripped of invisible characters (`INVISIBLE_CHARS_RE`: zero-width space U+200B, zero-width non-joiner U+200C, zero-width joiner U+200D, BOM U+FEFF, soft hyphen U+00AD) before numeric parsing in `clean_dataframe` and in `normalize_change_value` / `normalize_text_value`. These are paste artifacts that render as nothing in Google Sheets but corrupt keys, sorting, and search in the warehouse (the "Freudenberg SE" incident, see `documentation/2026-07-29-perf-and-data-hygiene.md`); commit `e526d53`.
 
@@ -59,7 +59,7 @@ References to `main.py` internals below (function names, `TABLE_DEFS`, `CONSTRAI
 
 ### What counts as a "change"
 
-Only tables with `track_changes: True` in `TABLE_DEFS` produce field-change events: `accounts`, `alias`, `ticker`, `centers`, `services`, `prospects`. `functions` and `tech` are excluded (`track_changes: False`).
+Only tables with `track_changes: True` in `TABLE_DEFS` produce field-change events: `accounts`, `alias`, `ticker`, `centers`, `services`, `prospects`. `functions`, `tech` and `subscribers` are excluded (`track_changes: False`).
 
 - **Tracked fields** (`get_tracked_table_fields`): every schema column for that table except `uuid` and the table's `primary_id` columns.
 - **Identity for diffing** (`prepare_table_identity_index`): built from `primary_id` columns if present and non-null for a row, else falls back to `secondary_id` columns. Values are normalized (`normalize_change_value`) and concatenated as `col=value|col=value`, prefixed `key:` (primary) or `fallback:` (secondary). Duplicate identities within one side keep the first row and log a warning.
