@@ -16,11 +16,17 @@ Validates Google Sheets data in several phases:
 
   Phase 0 - Table Format Validation
       Per-column format/enum/nullable checks driven by ALL_RULES for:
-        accounts, centers, services, prospects, ticker, alias, functions, tech
+        accounts, centers, services, prospects, ticker, alias, functions, tech,
+        subscribers
 
   Phase 0B - Invisible Characters
       Flags cells containing zero-width spaces, BOMs, or soft hyphens
       (paste artifacts that corrupt keys, sorting, and search downstream).
+
+  Phase 0C - Chips and Dropdowns
+      Every cell must be plain text: no smart chips (a people chip holding an
+      email is skipped by VLOOKUP) and no dropdowns. Read from cell metadata,
+      one extra API call per sheet.
 
   Phase 1 - Uniqueness Checks
       Ensures primary key columns contain no duplicates:
@@ -28,6 +34,8 @@ Validates Google Sheets data in several phases:
         - centers.cn_unique_key
         - services.cn_unique_key
         - prospects.ps_unique_key
+        - subscribers: prospect_email + prospect_engaged_campaign +
+          prospect_engaged_date together (the same engagement twice)
 
   Phase 2 - Referential Integrity
       Rule 1 - "account_global_legal_name"
@@ -43,6 +51,14 @@ Validates Google Sheets data in several phases:
           Source of truth : centers
           Validated in    : services, functions, tech
 
+      Rule 4 - "prospect_email"
+          Source of truth : prospects
+          Validated in    : subscribers (case-insensitive, like the ETL join)
+
+  Phase 2C - Engagement Flags (warning only)
+      prospects.prospect_engaged must be Yes exactly when the prospect's email
+      appears in subscribers.
+
   Phase 3 - Service Coverage
       Every row in services must have at least one service column filled
       (service_it, service_ai, service_erd, service_fna, service_hr,
@@ -57,6 +73,8 @@ Run with:
 
 Flags:
     --force              Keep going after a phase fails instead of stopping early.
+    --limit N            Rows shown in each detail table (default 20). The
+                         summary tables always show every sheet and rule.
     --exclude a,b,c      Skip the named sheets in every phase. A rule whose
                          source of truth is excluded is skipped with a warning.
     --highlight          Write the findings back into the spreadsheet: every row
@@ -76,6 +94,7 @@ import os
 import re
 import sys
 import time
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
@@ -86,10 +105,13 @@ sys.stderr.reconfigure(encoding="utf-8")
 import gspread
 from dotenv import load_dotenv
 from google.oauth2.service_account import Credentials
-from rich.console import Console
-from rich.panel import Panel
-from rich.table import Table
-from rich.theme import Theme
+
+import cell_meta
+
+# tui.py sits one level up in etl/, shared with the ETL in etl/V2.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+import tui  # noqa: E402
+from tui import console  # noqa: E402
 
 # -- Shared patterns ----------------------------------------------------------
 # Practical email validator (not full RFC 5322, but rejects the common bad
@@ -148,7 +170,7 @@ SERVICE_COVERAGE_RULES = [
     },
 ]
 
-ALL_SHEETS = ["accounts", "centers", "services", "prospects", "ticker", "alias", "functions", "tech"]
+ALL_SHEETS = ["accounts", "centers", "services", "prospects", "ticker", "alias", "functions", "tech", "subscribers"]
 
 # Sheets skipped in every phase. Populated from --exclude in main().
 EXCLUDED_SHEETS: set[str] = set()
@@ -163,6 +185,13 @@ UNIQUENESS_RULES = [
     {"sheet": "centers", "column": "cn_unique_key"},
     {"sheet": "services", "column": "cn_unique_key"},
     {"sheet": "prospects", "column": "ps_unique_key"},
+    # One row per engagement, so no single column is unique. The same
+    # prospect, campaign and date twice is the same engagement entered twice.
+    # Emails are compared case-insensitively, matching the ETL join.
+    {
+        "sheet": "subscribers",
+        "columns": ["prospect_email", "prospect_engaged_campaign", "prospect_engaged_date"],
+    },
 ]
 
 VALIDATION_RULES = [
@@ -180,6 +209,13 @@ VALIDATION_RULES = [
         "source_sheet": "centers",
         "column": "cn_unique_key",
         "target_sheets": ["services", "functions", "tech"],
+    },
+    # Not a foreign key in the DB (prospect emails are not unique), but an
+    # engagement whose email matches no prospect never shows up in the app.
+    {
+        "source_sheet": "prospects",
+        "column": "prospect_email",
+        "target_sheets": ["subscribers"],
     },
 ]
 
@@ -697,6 +733,16 @@ ALL_RULES = {
             "Can Have URL": "No",
             "Description": "should be valid country",
         },
+        "prospect_phone": {
+            "Can Be Nullable": "Yes",
+            "Can Have URL": "No",
+            "Description": "should be a 10 digit phone number",
+        },
+        "prospect_engaged": {
+            "Can Be Nullable": "No",
+            "Can Have URL": "No",
+            "Description": "should contain||Yes||No",
+        },
     },
     "accounts": {
         "uuid": {
@@ -1047,21 +1093,31 @@ ALL_RULES = {
             "Description": "string",
         },
     },
+    # One row per campaign engagement. uuid repeats and has no fixed shape
+    # (campaign-specific ids), so it is only required to be filled.
+    "subscribers": {
+        "uuid": {
+            "Can Be Nullable": "No",
+            "Can Have URL": "No",
+            "Description": "a non-empty identifier",
+        },
+        "prospect_engaged_date": {
+            "Can Be Nullable": "No",
+            "Can Have URL": "No",
+            "Description": "Should Contain Only Date In This Exact Format||i.e 6-May-2025 non abbreviated month it shouldnot bt 06-May-2025, 06-May-25 or 06-Jan-2025 or 06-Jan-25",
+        },
+        "prospect_email": {
+            "Can Be Nullable": "No",
+            "Can Have URL": "No",
+            "Description": "should contain valid email",
+        },
+        "prospect_engaged_campaign": {
+            "Can Be Nullable": "No",
+            "Can Have URL": "No",
+            "Description": "string",
+        },
+    },
 }
-
-# Define pastel colors for a softer, more pleasing aesthetic
-pastel_theme = Theme(
-    {
-        "success": "bold #A8E6CF",  # Pastel Green
-        "error": "bold #FF8B94",  # Pastel Red
-        "warning": "bold #FFD3B6",  # Pastel Orange/Yellow
-        "info": "bold #A4C8F0",  # Pastel Blue
-        "border": "bold #C8B6FF",  # Pastel Purple
-        "muted": "dim #E2E2E2",
-    }
-)
-
-console = Console(theme=pastel_theme)
 
 # -- Configuration ------------------------------------------------------------
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -1138,6 +1194,28 @@ class SheetCache:
             time.sleep(0.5)  # small buffer after a large read
         return self._cache[sheet_name]
 
+    def preload(self, sheet_names: list[str]) -> None:
+        """Read every sheet up front behind one progress bar, so the phases
+        run on cached data without pausing between them."""
+        timer = tui.Timer()
+        missing: list[str] = []
+        with tui.loading(len(sheet_names), "Loading sheets") as bar:
+            for name in sheet_names:
+                bar.start(f"Loading '{name}'")
+                try:
+                    self.get_data(name)
+                except gspread.exceptions.WorksheetNotFound:
+                    missing.append(name)
+                bar.done()
+        loaded = [n for n in sheet_names if n in self._cache]
+        total_rows = sum(len(self._cache[n][1]) for n in loaded)
+        tui.line(
+            "pass",
+            f"Loaded {tui.plural(len(loaded), 'sheet')}, {tui.plural(total_rows, 'row')} in {timer}",
+        )
+        if missing:
+            tui.line("warn", f"Not found: {', '.join(missing)}")
+
     def get_column_values(
         self, sheet_name: str, column_name: str
     ) -> list[tuple[int, str]]:
@@ -1208,14 +1286,12 @@ def apply_highlights(cache: SheetCache) -> None:
     if not HIGHLIGHT_MODE:
         return
 
-    console.print()
-    console.rule("[border]HIGHLIGHTING ISSUES IN SHEET[/border]")
-    console.print()
+    tui.section("Highlighting issues in the sheet")
 
     try:
         sheet_ids = {ws.title: ws.id for ws in safe_api_call(cache.spreadsheet.worksheets)}
     except gspread.exceptions.APIError as exc:
-        console.print(f"  [error][FAIL][/error] Could not list worksheets: {exc}")
+        tui.line("fail", f"Could not list worksheets: {exc}")
         return
 
     requests: list[dict] = []
@@ -1276,46 +1352,41 @@ def apply_highlights(cache: SheetCache) -> None:
                 )
 
     if not requests:
-        console.print("  [muted]Nothing to highlight.[/muted]")
+        tui.note("Nothing to highlight.", indent=2)
         return
 
     try:
         _batch_update(cache.spreadsheet, requests)
     except gspread.exceptions.APIError as exc:
-        console.print(
-            f"  [error][FAIL][/error] Could not write highlights: {exc}\n"
-            f"        Make sure the service account '{credentials.service_account_email}'\n"
-            f"        has Editor access to the sheet."
-        )
+        tui.line("fail", f"Could not write highlights: {exc}")
+        tui.note(f"Give the service account '{credentials.service_account_email}' Editor access to the sheet.")
         return
 
-    console.print(
-        f"  [success][OK][/success]  Cleared old highlights in {len(reset_sheets)} sheet(s); "
-        f"painted {row_count} row(s) yellow and {cell_count} cell(s) red."
+    tui.line(
+        "pass",
+        f"Cleared old highlights in {tui.plural(len(reset_sheets), 'sheet')}; painted "
+        f"{tui.plural(row_count, 'row')} yellow and {tui.plural(cell_count, 'cell')} red.",
     )
 
 
 # -- Phase 0: Table Format Validation -----------------------------------------
-def check_table_format(cache: SheetCache, table_name: str) -> bool:
+def check_table_format(cache: SheetCache, table_name: str) -> list[tuple[int, str, str]] | None:
+    """(row, column, message) for every format issue in one sheet, or None
+    when the sheet is missing or empty."""
     rules_map = ALL_RULES.get(table_name, {})
     if not rules_map:
-        return True
-
-    console.print(f"  [info][*][/info] Validating '{table_name}' format ...")
+        return []
 
     try:
         headers, rows = cache.get_data(table_name)
     except Exception:
-        console.print(f"  [error][FAIL][/error] Worksheet '{table_name}' not found.\n")
-        return False
+        return None
 
     if not headers:
-        console.print(f"  [error][FAIL][/error] '{table_name}' sheet is empty.\n")
-        return False
+        return None
 
     col_indices = {h.strip().lower(): i for i, h in enumerate(headers)}
 
-    all_ok = True
     errors = []
 
     id_patterns = {
@@ -1473,6 +1544,10 @@ def check_table_format(cache: SheetCache, table_name: str) -> bool:
                         (row_idx, col_name, f"Must be 6 digit pincode: {val}")
                     )
 
+            elif "10 digit phone" in desc_lower:
+                if not re.match(r"^\d{10}$", val):
+                    errors.append((row_idx, col_name, f"Must be a 10 digit phone number: {val}"))
+
             elif "iso code should be in" in desc_lower:
                 if val != "IN":
                     errors.append((row_idx, col_name, f"ISO code must be IN: {val}"))
@@ -1492,68 +1567,113 @@ def check_table_format(cache: SheetCache, table_name: str) -> bool:
                         (row_idx, col_name, f"Must be valid coordinate: {val}")
                     )
 
-    if errors:
-        all_ok = False
-        for r_idx, c_name, _msg in errors:
-            record_issue(table_name, r_idx, c_name, headers)
-        console.print(
-            f"  [error][FAIL][/error] Found {len(errors)} format issue(s) in '{table_name}'.\n"
+    for r_idx, c_name, _msg in errors:
+        record_issue(table_name, r_idx, c_name, headers)
+    return errors
+
+
+@dataclass
+class PhaseResult:
+    """What one phase found. errors fail the run; warnings do not."""
+
+    label: str
+    name: str
+    errors: int = 0
+    warnings: int = 0
+    detail: str = ""
+    # True when cleanup.py fixes this kind of issue, so the verdict can say so.
+    fixable: bool = False
+
+    @property
+    def status(self) -> str:
+        return tui.status_of(self.errors, self.warnings)
+
+
+# Every phase in run order, so the summary can list the ones a failing
+# phase stopped before they ran.
+PHASES = [
+    ("Phase 0", "Format"),
+    ("Phase 0B", "Invisible characters"),
+    ("Phase 0C", "Chips and dropdowns"),
+    ("Phase 1", "Uniqueness"),
+    ("Phase 2", "References"),
+    ("Phase 2B", "Completeness"),
+    ("Phase 2C", "Engagement flags"),
+    ("Phase 3", "Service coverage"),
+]
+
+# Rows shown per detail table. Set from --limit in main().
+DETAIL_LIMIT = 20
+
+
+def problem_kind(message: str) -> str:
+    """'Invalid email: x@y' -> 'Invalid email'. Groups issues for the
+    most-common breakdown."""
+    return message.split(":", 1)[0]
+
+
+def check_all_tables_format(cache: SheetCache) -> PhaseResult:
+    tui.section("Phase 0 · Format")
+    result = PhaseResult("Phase 0", "Format", fixable=True)
+
+    overview = tui.table("Sheet", "Rows#", "Issues#", "")
+    issues: list[tuple[str, int, str, str]] = []
+    checked_rows = 0
+    for table_name in [t for t in ALL_SHEETS if not is_excluded(t)]:
+        errors = check_table_format(cache, table_name)
+        if errors is None:
+            result.errors += 1
+            overview.add_row(table_name, "-", "-", f"{tui.ICONS['fail']} not found or empty")
+            continue
+        rows = len(cache.get_data(table_name)[1])
+        checked_rows += rows
+        issues.extend((table_name, r, c, m) for r, c, m in errors)
+        overview.add_row(
+            table_name,
+            tui.num(rows),
+            tui.num(len(errors)) if errors else "[muted]0[/muted]",
+            tui.ICONS["fail" if errors else "pass"],
         )
+    tui.print_table(overview)
 
-        err_table = Table(show_header=True, header_style="error", expand=False)
-        err_table.add_column("Row", style="muted")
-        err_table.add_column("Column")
-        err_table.add_column("Error Details")
+    result.errors += len(issues)
+    if not issues:
+        result.detail = f"{tui.num(checked_rows)} rows checked"
+        return result
 
-        for r_idx, c_name, msg in errors[:50]:
-            err_table.add_row(str(r_idx), c_name, msg)
+    sheets_hit = len({i[0] for i in issues})
+    result.detail = f"{tui.plural(len(issues), 'issue')} in {tui.plural(sheets_hit, 'sheet')}"
 
-        console.print(Panel(err_table, expand=False, border_style="#FF8B94"))
+    # With many issues, a breakdown says more than the first few rows do.
+    if len(issues) > DETAIL_LIMIT:
+        counts: dict[tuple[str, str, str], int] = {}
+        for sheet, _row, column, message in issues:
+            key = (sheet, column, problem_kind(message))
+            counts[key] = counts.get(key, 0) + 1
+        breakdown = tui.table("Sheet", "Column", "Problem", "Cells#", title="Most common")
+        top = sorted(counts.items(), key=lambda kv: -kv[1])
+        tui.capped(breakdown, [(s, c, p, tui.num(n)) for (s, c, p), n in top], DETAIL_LIMIT, "kind")
 
-        if len(errors) > 50:
-            console.print(f"  [muted]... and {len(errors) - 50} more issues.[/muted]\n")
-    else:
-        console.print(
-            f"  [success][OK][/success] '{table_name}' format validation passed ({len(rows)} rows)."
-        )
-
-    return all_ok
-
-
-def check_all_tables_format(cache: SheetCache) -> bool:
-    console.print()
-    console.rule("[border]PHASE 0: FORMAT VALIDATION[/border]")
-    console.print()
-
-    tables = [t for t in ALL_SHEETS if not is_excluded(t)]
-    all_ok = True
-    for t in tables:
-        if not check_table_format(cache, t):
-            all_ok = False
-
-    return all_ok
+    details = tui.table("Sheet", "Row#", "Column", "Problem~", title="Issues")
+    rows = [(s, r, c, tui.clip(m, 80)) for s, r, c, m in issues]
+    tui.capped(details, rows, DETAIL_LIMIT, "issue")
+    return result
 
 
 # -- Phase 0B: Invisible Characters --------------------------------------------
 
 
-def check_invisible_characters(cache: SheetCache) -> bool:
+def check_invisible_characters(cache: SheetCache) -> PhaseResult:
     """Flag cells containing zero-width or other invisible characters."""
-    console.print()
-    console.rule("[border]PHASE 0B: INVISIBLE CHARACTERS[/border]")
-    console.print()
+    tui.section("Phase 0B · Invisible characters")
+    result = PhaseResult("Phase 0B", "Invisible characters", fixable=True)
 
-    tables = [t for t in ALL_SHEETS if not is_excluded(t)]
     offenders: list[tuple[str, int, str, str, str]] = []
-
-    for table in tables:
-        console.print(f"  [info][*][/info] Scanning '{table}' for invisible characters ...")
+    for table in [t for t in ALL_SHEETS if not is_excluded(t)]:
         try:
             headers, rows = cache.get_data(table)
         except gspread.exceptions.WorksheetNotFound:
-            console.print(
-                f"  [warning][WARN][/warning] Worksheet '{table}' not found -- skipping.\n"
-            )
+            tui.line("skip", f"'{table}' not found, skipped.")
             continue
 
         for row_idx, row in enumerate(rows, start=2):
@@ -1564,476 +1684,385 @@ def check_invisible_characters(cache: SheetCache) -> bool:
                 column = headers[col_idx] if col_idx < len(headers) else f"col {col_idx + 1}"
                 kinds = ", ".join(sorted({INVISIBLE_CHARS[h] for h in hits}))
                 # Make the invisible characters visible in the report.
-                preview = INVISIBLE_CHARS_RE.sub("<?>", str(value))[:50]
+                preview = tui.clip(INVISIBLE_CHARS_RE.sub("<?>", str(value)), 50)
                 offenders.append((table, row_idx, column, kinds, preview))
                 record_issue(table, row_idx, col_idx)
 
     if not offenders:
-        console.print("\n  [success][OK][/success]  No invisible characters found.")
-        return True
+        tui.line("pass", "No invisible characters.")
+        result.detail = "none found"
+        return result
 
-    console.print()
-    report = Table(expand=False)
-    report.add_column("Sheet", style="bold")
-    report.add_column("Row")
-    report.add_column("Column")
-    report.add_column("Character(s)")
-    report.add_column("Value (invisible chars shown as <?>)")
-    shown_limit = 25
-    for table, row_idx, column, kinds, preview in offenders[:shown_limit]:
-        report.add_row(table, str(row_idx), column, kinds, preview)
-    console.print(report)
-    if len(offenders) > shown_limit:
-        console.print(f"  [muted]... and {len(offenders) - shown_limit} more cell(s).[/muted]")
+    result.errors = len(offenders)
+    result.detail = f"{tui.plural(len(offenders), 'cell')}"
+    tui.line("fail", f"{tui.plural(len(offenders), 'cell')} contain invisible characters.")
+    details = tui.table("Sheet", "Row#", "Column", "Character(s)", "Value (shown as <?>)~")
+    tui.capped(details, offenders, DETAIL_LIMIT, "cell")
+    return result
 
-    console.print(
-        f"\n  [error][FAIL][/error] {len(offenders)} cell(s) contain invisible characters.\n"
-        '        Fix in Sheets: Edit > Find and replace, enable "Search using regular\n'
-        '        expressions", find [\\x{200B}\\x{200C}\\x{200D}\\x{FEFF}\\x{00AD}] and\n'
-        "        replace with nothing (All sheets)."
-    )
-    return False
+
+# -- Phase 0C: Chips and dropdowns ----------------------------------------------
+
+
+def header_name(headers: list[str], col_idx: int) -> str:
+    return headers[col_idx] if col_idx < len(headers) else f"col {col_idx + 1}"
+
+
+def check_chips_and_dropdowns(cache: SheetCache) -> PhaseResult:
+    """
+    Every cell must be plain text: no smart chips, no dropdowns. A chip shows
+    the right text but is not text, so lookups (VLOOKUP, MATCH) skip it; a
+    dropdown restricts entry and can wrap values in chips. Neither is visible
+    in the values the other phases read, so this reads cell metadata, one
+    extra API call per sheet.
+    """
+    tui.section("Phase 0C · Chips and dropdowns")
+    result = PhaseResult("Phase 0C", "Chips and dropdowns", fixable=True)
+
+    chip_findings: list[tuple[str, int, str, str, str]] = []
+    dropdown_findings: list[tuple[str, int, str, str, str]] = []
+    sheets = [t for t in ALL_SHEETS if not is_excluded(t)]
+    with tui.loading(len(sheets), "Reading cell metadata") as bar:
+        for sheet in sheets:
+            bar.start(f"Reading chips and dropdowns in '{sheet}'")
+            try:
+                meta = safe_api_call(lambda: cell_meta.fetch(cache.spreadsheet, sheet))
+                headers, rows = cache.get_data(sheet)
+            except gspread.exceptions.WorksheetNotFound:
+                bar.done()
+                continue
+            for chip in meta.chips:
+                column = header_name(headers, chip.col)
+                chip_findings.append((sheet, chip.row, column, f"{chip.kind} chip", tui.clip(chip.text, 50)))
+                record_issue(sheet, chip.row, chip.col)
+            for dropdown in meta.dropdowns:
+                column = header_name(headers, dropdown.col)
+                data_row = rows[dropdown.row - 2] if dropdown.row - 2 < len(rows) else []
+                value = data_row[dropdown.col] if dropdown.col < len(data_row) else ""
+                dropdown_findings.append((sheet, dropdown.row, column, "dropdown", tui.clip(str(value), 50)))
+                record_issue(sheet, dropdown.row, dropdown.col)
+            bar.done()
+
+    # Chips first: they are the few cells that break lookups, while
+    # dropdowns tend to cover whole columns and would push them out of view.
+    findings = chip_findings + dropdown_findings
+    if not findings:
+        tui.line("pass", "Every cell is plain text: no chips, no dropdowns.")
+        result.detail = "none found"
+        return result
+
+    result.errors = len(findings)
+    parts = []
+    if chip_findings:
+        parts.append(tui.plural(len(chip_findings), "chip"))
+    if dropdown_findings:
+        parts.append(tui.plural(len(dropdown_findings), "dropdown cell"))
+    result.detail = ", ".join(parts)
+    tui.line("fail", f"{result.detail}. cleanup.py turns chips into text and removes dropdowns.")
+
+    # Dropdowns usually cover a whole column, so the per-column count is the
+    # useful view; the cell list follows for chips.
+    counts: dict[tuple[str, str, str], int] = {}
+    for sheet, _row, col, kind, _text in findings:
+        counts[(sheet, col, kind)] = counts.get((sheet, col, kind), 0) + 1
+    overview = tui.table("Sheet", "Column", "Kind", "Cells#")
+    for (sheet, col, kind), n in sorted(counts.items(), key=lambda kv: -kv[1]):
+        overview.add_row(sheet, col, kind, tui.num(n))
+    tui.print_table(overview)
+
+    details = tui.table("Sheet", "Row#", "Column", "Kind", "Shows~", title="Cells")
+    tui.capped(details, findings, DETAIL_LIMIT, "cell")
+    return result
 
 
 # -- Phase 1: Uniqueness -------------------------------------------------------
 
 
-def check_uniqueness(cache: SheetCache) -> bool:
-    """Check that primary key columns contain no duplicate values."""
-    console.print()
-    console.rule("[border]PHASE 1: UNIQUENESS CHECKS[/border]")
-    console.print()
+def get_combined_values(
+    cache: SheetCache, sheet_name: str, columns: list[str]
+) -> list[tuple[int, str]]:
+    """
+    (row, combined value) for a key made of several columns, values joined
+    with ' | ' and lowercased. Rows where every column is blank are skipped.
+    """
+    headers, rows = cache.get_data(sheet_name)
+    missing = [c for c in columns if c.lower() not in headers]
+    if missing:
+        console.print(
+            f"[error][ERROR][/error] Column(s) {', '.join(missing)} not found in sheet '{sheet_name}'."
+        )
+        sys.exit(1)
+    indices = [headers.index(c.lower()) for c in columns]
+    results: list[tuple[int, str]] = []
+    for idx, row in enumerate(rows, start=2):
+        parts = [str(row[i]).strip() if i < len(row) else "" for i in indices]
+        if any(parts):
+            results.append((idx, " | ".join(parts).lower()))
+    return results
 
-    all_ok = True
-    summary_rows = []
+
+def check_uniqueness(cache: SheetCache) -> PhaseResult:
+    """Check that primary key columns contain no duplicate values."""
+    tui.section("Phase 1 · Uniqueness")
+    result = PhaseResult("Phase 1", "Uniqueness")
+
+    overview = tui.table("Sheet", "Key", "Values#", "Duplicates#", "")
+    dup_rows: list[tuple[str, str, str, str]] = []
 
     for rule in UNIQUENESS_RULES:
         sheet_name = rule["sheet"]
-        column = rule["column"]
+        columns = rule.get("columns") or [rule["column"]]
+        column = " + ".join(columns)
         if is_excluded(sheet_name):
-            console.print(f"  [warning][SKIP][/warning] '{sheet_name}' excluded via --exclude.\n")
+            overview.add_row(sheet_name, column, "-", "-", f"{tui.ICONS['skip']} excluded")
             continue
-
-        console.print(
-            f"  [info][*][/info] Checking '{column}' is unique in '{sheet_name}' ..."
-        )
 
         try:
-            data = cache.get_column_values(sheet_name, column)
+            if len(columns) == 1:
+                data = cache.get_column_values(sheet_name, column)
+            else:
+                data = get_combined_values(cache, sheet_name, columns)
         except gspread.exceptions.WorksheetNotFound:
-            console.print(
-                f"  [warning][WARN][/warning] Worksheet '{sheet_name}' not found -- skipping.\n"
-            )
-            summary_rows.append(
-                [sheet_name, column, "-", "-", "[warning]NOT FOUND[/warning]"]
-            )
+            overview.add_row(sheet_name, column, "-", "-", f"{tui.ICONS['warn']} not found")
+            result.warnings += 1
             continue
-        total = len(data)
 
-        # Find duplicates: values that appear more than once
         seen: dict[str, list[int]] = {}
         for row, val in data:
-            key = val.strip()
-            seen.setdefault(key, []).append(row)
-
+            seen.setdefault(val.strip(), []).append(row)
         duplicates = {val: rows for val, rows in seen.items() if len(rows) > 1}
 
         if duplicates:
-            all_ok = False
             headers, _ = cache.get_data(sheet_name)
             for rows in duplicates.values():
                 for row in rows:
-                    record_issue(sheet_name, row, column, headers)
-            dup_count = sum(len(rows) for rows in duplicates.values())
-            console.print(
-                f"  [error][FAIL][/error] {len(duplicates)} duplicate value(s) "
-                f"({dup_count} total rows) in '{sheet_name}.{column}'"
-            )
-
-            dup_table = Table(show_header=True, header_style="error", expand=False)
-            dup_table.add_column("Duplicate Value")
-            dup_table.add_column("Count", style="muted")
-            dup_table.add_column("Rows", style="muted")
-
+                    for col in columns:
+                        record_issue(sheet_name, row, col, headers)
+            result.errors += len(duplicates)
             for val, rows in sorted(duplicates.items()):
-                rows_str = ", ".join(str(r) for r in rows[:10])
+                shown = ", ".join(str(r) for r in rows[:10])
                 if len(rows) > 10:
-                    rows_str += f" ... (+{len(rows) - 10} more)"
-                dup_table.add_row(val, str(len(rows)), rows_str)
+                    shown += f" (+{len(rows) - 10} more)"
+                dup_rows.append((sheet_name, column, tui.clip(val, 70), shown))
 
-            console.print(Panel(dup_table, expand=False, border_style="#FF8B94"))
-
-            summary_rows.append(
-                [
-                    sheet_name,
-                    column,
-                    str(total),
-                    f"[error]{len(duplicates)} duplicates ({dup_count} rows)[/error]",
-                    "[error]FAIL[/error]",
-                ]
-            )
-        else:
-            console.print(f"  [success][OK][/success]  {total} value(s) -- all unique.")
-            summary_rows.append(
-                [
-                    sheet_name,
-                    column,
-                    str(total),
-                    "[muted]0 duplicates[/muted]",
-                    "[success]PASS[/success]",
-                ]
-            )
-        console.print()
-
-    # Summary table
-    summary_table = Table(show_header=True, header_style="info", expand=False, box=None)
-    summary_table.add_column("Sheet")
-    summary_table.add_column("Column")
-    summary_table.add_column("Rows")
-    summary_table.add_column("Issues")
-    summary_table.add_column("Status")
-
-    for r in summary_rows:
-        summary_table.add_row(*r)
-
-    console.print(
-        Panel(
-            summary_table,
-            title="[bold]Uniqueness Summary[/bold]",
-            expand=False,
-            border_style="#A4C8F0",
+        overview.add_row(
+            sheet_name,
+            column,
+            tui.num(len(data)),
+            tui.num(len(duplicates)) if duplicates else "[muted]0[/muted]",
+            tui.ICONS["fail" if duplicates else "pass"],
         )
-    )
-    console.print()
 
-    return all_ok
+    tui.print_table(overview)
+    if dup_rows:
+        details = tui.table("Sheet", "Key", "Duplicate value~", "Rows", title="Duplicates")
+        tui.capped(details, dup_rows, DETAIL_LIMIT, "duplicate")
+        result.detail = tui.plural(result.errors, "duplicate value")
+    else:
+        result.detail = "every key unique"
+    return result
 
 
 # -- Phase 2: Referential Integrity --------------------------------------------
 
 
-def validate_column(
-    cache: SheetCache,
-    source_sheet: str,
-    column: str,
-    target_sheets: list[str],
-) -> tuple[int, int, bool]:
+def check_references(cache: SheetCache) -> PhaseResult:
     """
-    Validate that every value in *column* across *target_sheets*
-    exists in *source_sheet*.  Returns (total_mismatches,
-    total_case_warnings, had_failures).
+    For every rule in VALIDATION_RULES, every value of the column in the
+    target sheets must exist in the source sheet. A value that exists only
+    with different casing is a warning (cleanup.py fixes it), a value that
+    does not exist at all is an error.
     """
-    console.print()
-    console.rule(
-        f"[border]RULE: \"{column}\"  --  source of truth: '{source_sheet}'[/border]"
-    )
-    console.print()
+    tui.section("Phase 2 · References")
+    result = PhaseResult("Phase 2", "References", fixable=True)
 
-    # -- Read source of truth --------------------------------------------------
-    if is_excluded(source_sheet):
-        console.print(
-            f"  [warning][SKIP][/warning] Source of truth '{source_sheet}' excluded via --exclude, "
-            f"rule skipped.\n"
-        )
-        return 0, 0, False
+    overview = tui.table("Key", "Source → Sheet", "Values#", "Missing#", "Case#", "")
+    missing_rows: list[tuple[str, int, str, str, str]] = []
+    case_rows: list[tuple[str, int, str, str, str]] = []
 
-    target_sheets = [t for t in target_sheets if not is_excluded(t)]
-    if not target_sheets:
-        console.print("  [warning][SKIP][/warning] All target sheets excluded via --exclude.\n")
-        return 0, 0, False
-
-    console.print(f"  [info][*][/info] Reading '{source_sheet}' (source of truth) ...")
-    try:
-        source_data = cache.get_column_values(source_sheet, column)
-    except gspread.exceptions.WorksheetNotFound:
-        console.print(
-            f"  [error][FAIL][/error] Worksheet '{source_sheet}' not found -- cannot validate.\n"
-        )
-        return 0, 0, True
-
-    source_set = set(val.lower() for _, val in source_data)
-    source_canonical: dict[str, str] = {}
-    for _, val in source_data:
-        source_canonical.setdefault(val.lower(), val)
-    console.print(
-        f"  [success][OK][/success]  {len(source_data)} value(s) ({len(source_set)} unique)\n"
-    )
-
-    # -- Validate targets ------------------------------------------------------
-    has_failures = False
-    total_mismatches = 0
-    total_case_warnings = 0
-
-    sheet_summary_rows = []
-
-    for sheet_name in target_sheets:
-        console.print(
-            f"  [info][*][/info] Validating '{sheet_name}' --> '{source_sheet}' ..."
-        )
-        try:
-            sheet_data = cache.get_column_values(sheet_name, column)
-        except gspread.exceptions.WorksheetNotFound:
-            console.print(
-                f"  [warning][WARN][/warning] Worksheet '{sheet_name}' not found -- skipping.\n"
-            )
-            sheet_summary_rows.append(
-                [sheet_name, "-", "-", "[warning]NOT FOUND[/warning]"]
-            )
+    for rule in VALIDATION_RULES:
+        source_sheet, column = rule["source_sheet"], rule["column"]
+        if is_excluded(source_sheet):
+            overview.add_row(column, f"{source_sheet} (excluded)", "-", "-", "-", tui.ICONS["skip"])
             continue
-        sheet_unique = set(val.lower() for _, val in sheet_data)
-
-        mismatches: list[tuple[int, str]] = []
-        case_warnings: list[tuple[int, str, str]] = []
-
-        for row, val in sheet_data:
-            lower = val.lower()
-            if lower not in source_set:
-                mismatches.append((row, val))
-            elif val != source_canonical[lower]:
-                case_warnings.append((row, val, source_canonical[lower]))
-
-        unique_mismatch_names = set(m[1].lower() for m in mismatches)
-        unique_case_names = set(cw[1].lower() for cw in case_warnings)
-
-        total_mismatches += len(mismatches)
-        total_case_warnings += len(case_warnings)
-
-        status = "[success]PASS[/success]"
-
-        # Report case warnings
-        if case_warnings:
-            status = "[warning]WARN[/warning]"
-            console.print(
-                f"  [warning][WARN][/warning] Case mismatches: {len(unique_case_names)} unique ({len(case_warnings)} rows)"
-            )
-
-            cw_table = Table(show_header=True, header_style="border", expand=False)
-            cw_table.add_column("Row", style="muted")
-            cw_table.add_column(f"Value in '{sheet_name}'")
-            cw_table.add_column(f"Expected ('{source_sheet}')")
-
-            for row, src_name, canon_name in case_warnings:
-                cw_table.add_row(str(row), src_name, canon_name)
-
-            # Print table padded a bit
-            console.print(Panel(cw_table, expand=False, border_style="#C8B6FF"))
-            console.print(
-                f"  [info][INFO][/info] Casing should ideally match '{source_sheet}' (source of truth)."
-            )
-
-        # Report mismatches
-        if mismatches:
-            has_failures = True
-            status = "[error]FAIL[/error]"
-            target_headers, _ = cache.get_data(sheet_name)
-            for row, _name in mismatches:
-                record_issue(sheet_name, row, column, target_headers)
-            console.print(
-                f"  [error][FAIL][/error] Missing from '{source_sheet}': {len(unique_mismatch_names)} unique ({len(mismatches)} rows)"
-            )
-
-            mm_table = Table(show_header=True, header_style="error", expand=False)
-            mm_table.add_column("Row", style="muted")
-            mm_table.add_column("Value (not in source)")
-
-            for row, name in mismatches:
-                mm_table.add_row(str(row), name)
-
-            console.print(Panel(mm_table, expand=False, border_style="#FF8B94"))
-
-        if not mismatches and not case_warnings:
-            console.print(
-                f"  [success][OK][/success]  {len(sheet_data)} value(s) ({len(sheet_unique)} unique) -- all match."
-            )
-
-        # Formatting issues for summary table
-        issues_text = []
-        if mismatches:
-            issues_text.append(f"[error]{len(mismatches)} mismatches[/error]")
-        if case_warnings:
-            issues_text.append(f"[warning]{len(case_warnings)} case warns[/warning]")
-        if not issues_text:
-            issues_text.append("[muted]0 mismatches, 0 case warns[/muted]")
-
-        sheet_summary_rows.append(
-            [
-                sheet_name,
-                f"{len(sheet_data)} ({len(sheet_unique)} unique)",
-                ", ".join(issues_text),
-                status,
-            ]
-        )
-        console.print()
-
-    # Per-rule summary table
-    summary_table = Table(show_header=True, header_style="info", expand=False, box=None)
-    summary_table.add_column("Sheet")
-    summary_table.add_column("Values")
-    summary_table.add_column("Issues")
-    summary_table.add_column("Status")
-
-    for r in sheet_summary_rows:
-        summary_table.add_row(*r)
-
-    console.print(
-        Panel(
-            summary_table,
-            title="[bold]Per-Rule Summary[/bold]",
-            expand=False,
-            border_style="#A4C8F0",
-        )
-    )
-    console.print()
-
-    return total_mismatches, total_case_warnings, has_failures
-
-
-def check_completeness(cache: SheetCache) -> bool:
-    """Check that every source value appears at least once in the target sheet."""
-    console.print()
-    console.rule("[border]PHASE 2B: COMPLETENESS CHECKS[/border]")
-    console.print()
-
-    all_ok = True
-    summary_rows = []
-
-    for rule in COMPLETENESS_RULES:
-        source_sheet = rule["source_sheet"]
-        target_sheet = rule["target_sheet"]
-        column = rule["column"]
-
-        if is_excluded(source_sheet) or is_excluded(target_sheet):
-            skipped = source_sheet if is_excluded(source_sheet) else target_sheet
-            console.print(
-                f"  [warning][SKIP][/warning] '{skipped}' excluded via --exclude, "
-                f"'{source_sheet}' -> '{target_sheet}' completeness skipped.\n"
-            )
-            continue
-
-        console.print(
-            f"  [info][*][/info] Checking every '{source_sheet}.{column}' "
-            f"exists in '{target_sheet}' ..."
-        )
-
         try:
             source_data = cache.get_column_values(source_sheet, column)
         except gspread.exceptions.WorksheetNotFound:
-            console.print(
-                f"  [error][FAIL][/error] Worksheet '{source_sheet}' not found -- cannot validate.\n"
-            )
-            summary_rows.append(
-                [
-                    source_sheet,
-                    target_sheet,
-                    "-",
-                    "[error]SOURCE NOT FOUND[/error]",
-                    "[error]FAIL[/error]",
-                ]
-            )
-            all_ok = False
+            overview.add_row(column, f"{source_sheet} (not found)", "-", "-", "-", tui.ICONS["fail"])
+            result.errors += 1
             continue
 
+        source_canonical: dict[str, str] = {}
+        for _, val in source_data:
+            source_canonical.setdefault(val.lower(), val)
+
+        for sheet_name in [t for t in rule["target_sheets"] if not is_excluded(t)]:
+            try:
+                sheet_data = cache.get_column_values(sheet_name, column)
+            except gspread.exceptions.WorksheetNotFound:
+                overview.add_row(column, f"{source_sheet} → {sheet_name}", "-", "-", "-", f"{tui.ICONS['warn']} not found")
+                result.warnings += 1
+                continue
+
+            missing = 0
+            case = 0
+            target_headers, _ = cache.get_data(sheet_name)
+            for row, val in sheet_data:
+                expected = source_canonical.get(val.lower())
+                if expected is None:
+                    missing += 1
+                    missing_rows.append((sheet_name, row, column, tui.clip(val, 60), source_sheet))
+                    record_issue(sheet_name, row, column, target_headers)
+                elif val != expected:
+                    case += 1
+                    case_rows.append((sheet_name, row, column, tui.clip(val, 45), tui.clip(expected, 45)))
+
+            result.errors += missing
+            result.warnings += case
+            overview.add_row(
+                column,
+                f"{source_sheet} → {sheet_name}",
+                tui.num(len(sheet_data)),
+                tui.num(missing) if missing else "[muted]0[/muted]",
+                tui.num(case) if case else "[muted]0[/muted]",
+                tui.ICONS[tui.status_of(missing, case)],
+            )
+
+    tui.print_table(overview)
+    if missing_rows:
+        details = tui.table("Sheet", "Row#", "Column", "Value~", "Not found in", title="Missing from the source sheet")
+        tui.capped(details, missing_rows, DETAIL_LIMIT, "row")
+    if case_rows:
+        details = tui.table("Sheet", "Row#", "Column", "Value~", "Source spells it~", title="Case mismatches")
+        tui.capped(details, case_rows, DETAIL_LIMIT, "row")
+
+    parts = []
+    if result.errors:
+        parts.append(tui.plural(result.errors, "missing value"))
+    if result.warnings:
+        parts.append(tui.plural(result.warnings, "case mismatch", "case mismatches"))
+    result.detail = ", ".join(parts) or f"{len(VALIDATION_RULES)} rules, all match"
+    return result
+
+
+def check_completeness(cache: SheetCache) -> PhaseResult:
+    """Check that every source value appears at least once in the target sheet."""
+    tui.section("Phase 2B · Completeness")
+    result = PhaseResult("Phase 2B", "Completeness")
+
+    overview = tui.table("Source", "Target", "Values#", "Missing#", "")
+    missing_rows: list[tuple[str, int, str, str]] = []
+
+    for rule in COMPLETENESS_RULES:
+        source_sheet, target_sheet, column = rule["source_sheet"], rule["target_sheet"], rule["column"]
+        if is_excluded(source_sheet) or is_excluded(target_sheet):
+            overview.add_row(source_sheet, target_sheet, "-", "-", f"{tui.ICONS['skip']} excluded")
+            continue
         try:
+            source_data = cache.get_column_values(source_sheet, column)
             target_data = cache.get_column_values(target_sheet, column)
         except gspread.exceptions.WorksheetNotFound:
-            console.print(
-                f"  [error][FAIL][/error] Worksheet '{target_sheet}' not found -- cannot validate.\n"
-            )
-            summary_rows.append(
-                [
-                    source_sheet,
-                    target_sheet,
-                    "-",
-                    "[error]TARGET NOT FOUND[/error]",
-                    "[error]FAIL[/error]",
-                ]
-            )
-            all_ok = False
+            overview.add_row(source_sheet, target_sheet, "-", "-", f"{tui.ICONS['fail']} not found")
+            result.errors += 1
             continue
 
         target_values = {val.lower() for _, val in target_data}
-        missing = [
-            (row, val) for row, val in source_data if val.lower() not in target_values
-        ]
-
+        missing = [(row, val) for row, val in source_data if val.lower() not in target_values]
         if missing:
-            all_ok = False
             source_headers, _ = cache.get_data(source_sheet)
-            for row, _name in missing:
+            for row, val in missing:
                 record_issue(source_sheet, row, column, source_headers)
-            console.print(
-                f"  [error][FAIL][/error] Missing from '{target_sheet}': "
-                f"{len(missing)} account(s)"
-            )
-
-            missing_table = Table(show_header=True, header_style="error", expand=False)
-            missing_table.add_column(f"{source_sheet} Row", style="muted")
-            missing_table.add_column("Value missing from alias")
-
-            for row, name in missing:
-                missing_table.add_row(str(row), name)
-
-            console.print(Panel(missing_table, expand=False, border_style="#FF8B94"))
-            summary_rows.append(
-                [
-                    source_sheet,
-                    target_sheet,
-                    str(len(source_data)),
-                    f"[error]{len(missing)} missing[/error]",
-                    "[error]FAIL[/error]",
-                ]
-            )
-        else:
-            console.print(
-                f"  [success][OK][/success]  {len(source_data)} account(s) -- all present in '{target_sheet}'."
-            )
-            summary_rows.append(
-                [
-                    source_sheet,
-                    target_sheet,
-                    str(len(source_data)),
-                    "[muted]0 missing[/muted]",
-                    "[success]PASS[/success]",
-                ]
-            )
-        console.print()
-
-    summary_table = Table(show_header=True, header_style="info", expand=False, box=None)
-    summary_table.add_column("Source")
-    summary_table.add_column("Target")
-    summary_table.add_column("Source Values")
-    summary_table.add_column("Issues")
-    summary_table.add_column("Status")
-
-    for r in summary_rows:
-        summary_table.add_row(*r)
-
-    console.print(
-        Panel(
-            summary_table,
-            title="[bold]Completeness Summary[/bold]",
-            expand=False,
-            border_style="#A4C8F0",
+                missing_rows.append((source_sheet, row, tui.clip(val, 60), target_sheet))
+        result.errors += len(missing)
+        overview.add_row(
+            source_sheet,
+            target_sheet,
+            tui.num(len(source_data)),
+            tui.num(len(missing)) if missing else "[muted]0[/muted]",
+            tui.ICONS["fail" if missing else "pass"],
         )
-    )
-    console.print()
 
-    return all_ok
+    tui.print_table(overview)
+    if missing_rows:
+        details = tui.table("Sheet", "Row#", "Value~", "Missing from", title="Not present in the target sheet")
+        tui.capped(details, missing_rows, DETAIL_LIMIT, "row")
+        result.detail = tui.plural(result.errors, "missing row")
+    else:
+        result.detail = "every account in alias and ticker"
+    return result
+
+
+# -- Phase 2C: Engagement flags ------------------------------------------------
+
+
+def check_engagement_flags(cache: SheetCache) -> PhaseResult:
+    """
+    prospects.prospect_engaged should be 'Yes' exactly when the prospect's
+    email has a row in subscribers. The app's Engaged filter reads the flag
+    while the activity timeline reads subscribers, so a mismatch shows a
+    prospect as not engaged with a timeline, or engaged with none.
+
+    Warning only: mismatches never fail the run.
+    """
+    tui.section("Phase 2C · Engagement flags")
+    result = PhaseResult("Phase 2C", "Engagement flags")
+
+    if is_excluded("prospects") or is_excluded("subscribers"):
+        tui.line("skip", "prospects or subscribers excluded via --exclude.")
+        result.detail = "skipped"
+        return result
+
+    try:
+        engaged_emails = {val.lower() for _, val in cache.get_column_values("subscribers", "prospect_email")}
+        headers, rows = cache.get_data("prospects")
+    except gspread.exceptions.WorksheetNotFound:
+        tui.line("warn", "prospects or subscribers not found, skipped.")
+        result.warnings = 1
+        result.detail = "sheet not found"
+        return result
+
+    email_idx = headers.index("prospect_email") if "prospect_email" in headers else -1
+    flag_idx = headers.index("prospect_engaged") if "prospect_engaged" in headers else -1
+    if email_idx < 0 or flag_idx < 0:
+        tui.line("warn", "prospects lacks prospect_email or prospect_engaged, skipped.")
+        result.warnings = 1
+        result.detail = "column not found"
+        return result
+
+    mismatches: list[tuple[int, str, str, str]] = []
+    for row_num, row in enumerate(rows, start=2):
+        email = str(row[email_idx]).strip() if email_idx < len(row) else ""
+        flag = str(row[flag_idx]).strip() if flag_idx < len(row) else ""
+        if not email:
+            continue
+        expected = "Yes" if email.lower() in engaged_emails else "No"
+        if flag.lower() != expected.lower():
+            mismatches.append((row_num, email, flag or "(blank)", expected))
+            record_issue("prospects", row_num, "prospect_engaged", headers)
+
+    if not mismatches:
+        tui.line("pass", "Every prospect_engaged flag matches subscribers.")
+        result.detail = "all flags match"
+        return result
+
+    result.warnings = len(mismatches)
+    result.detail = tui.plural(len(mismatches), "prospect row")
+    tui.line("warn", f"{tui.plural(len(mismatches), 'prospect row')} disagree with subscribers.")
+    details = tui.table("Row#", "prospect_email", "prospect_engaged", "Expected")
+    tui.capped(details, mismatches, DETAIL_LIMIT, "row")
+    return result
 
 
 # -- Phase 3: Service Coverage -------------------------------------------------
 
 
-def check_service_coverage(cache: SheetCache) -> bool:
+def check_service_coverage(cache: SheetCache) -> PhaseResult:
     """
     For each row in the services sheet, verify that at least one
     service column is filled in (non-empty).
     """
-    console.print()
-    console.rule("[border]PHASE 3: SERVICE COVERAGE[/border]")
-    console.print()
-
-    all_ok = True
+    tui.section("Phase 3 · Service coverage")
+    result = PhaseResult("Phase 3", "Service coverage")
 
     for rule in SERVICE_COVERAGE_RULES:
         sheet_name = rule["sheet"]
@@ -2041,113 +2070,60 @@ def check_service_coverage(cache: SheetCache) -> bool:
         service_cols = rule["service_columns"]
 
         if is_excluded(sheet_name):
-            console.print(f"  [warning][SKIP][/warning] '{sheet_name}' excluded via --exclude.\n")
+            tui.line("skip", f"'{sheet_name}' excluded via --exclude.")
+            result.detail = "skipped"
             continue
-
-        console.print(
-            f"  [info][*][/info] Checking every row in '{sheet_name}' has at least one service ..."
-        )
 
         try:
             headers, rows = cache.get_data(sheet_name)
         except gspread.exceptions.WorksheetNotFound:
-            console.print(
-                f"  [warning][WARN][/warning] Worksheet '{sheet_name}' not found -- skipping.\n"
-            )
-            all_ok = False
+            tui.line("fail", f"'{sheet_name}' not found.")
+            result.errors += 1
             continue
 
-        # Map column names to indices
-        col_indices = {}
-        for col_name in service_cols + [label_col]:
-            key = col_name.strip().lower()
-            if key in headers:
-                col_indices[col_name] = headers.index(key)
-
+        col_indices = {
+            name: headers.index(name.strip().lower())
+            for name in service_cols + [label_col]
+            if name.strip().lower() in headers
+        }
         label_idx = col_indices.get(label_col)
         service_idxs = [col_indices[c] for c in service_cols if c in col_indices]
-
         if not service_idxs:
-            console.print(
-                f"  [error][FAIL][/error] No service columns found in sheet.\n"
-            )
-            all_ok = False
+            tui.line("fail", f"No service columns found in '{sheet_name}'.")
+            result.errors += 1
             continue
 
-        # Check each row
         empty_rows: list[tuple[int, str]] = []
         total_data_rows = 0
-
         for i, row in enumerate(rows, start=2):
-            label = ""
-            if label_idx is not None and label_idx < len(row):
-                label = row[label_idx].strip()
+            label = row[label_idx].strip() if label_idx is not None and label_idx < len(row) else ""
             if not label:
                 continue
-
             total_data_rows += 1
-
-            has_service = any(
-                idx < len(row) and row[idx].strip() for idx in service_idxs
-            )
-            if not has_service:
+            if not any(idx < len(row) and row[idx].strip() for idx in service_idxs):
                 empty_rows.append((i, label))
 
         with_service = total_data_rows - len(empty_rows)
-        coverage_pct = (with_service / total_data_rows * 100) if total_data_rows else 0
+        coverage = (with_service / total_data_rows * 100) if total_data_rows else 0
+        result.detail = f"{coverage:.1f}% of {tui.num(total_data_rows)} rows"
 
-        if empty_rows:
-            all_ok = False
-            for row_num, _label in empty_rows:
-                for idx in service_idxs:
-                    record_issue(sheet_name, row_num, idx)
-            console.print(
-                f"  [error][FAIL][/error] {len(empty_rows)}/{total_data_rows} rows "
-                f"have no services ({coverage_pct:.1f}% coverage)\n"
-            )
+        if not empty_rows:
+            tui.line("pass", f"All {tui.num(total_data_rows)} '{sheet_name}' rows have a service.")
+            continue
 
-            fail_table = Table(show_header=True, header_style="error", expand=False)
-            fail_table.add_column("Row", style="muted")
-            fail_table.add_column(label_col)
-
-            for row_num, label in empty_rows:
-                fail_table.add_row(str(row_num), label)
-
-            console.print(Panel(fail_table, expand=False, border_style="#FF8B94"))
-        else:
-            console.print(
-                f"  [success][OK][/success]  {total_data_rows} rows -- 100% coverage"
-            )
-
-        # Coverage summary
-        console.print()
-        cov_table = Table(show_header=False, expand=False, box=None)
-        cov_table.add_column("Metric", style="bold")
-        cov_table.add_column("Value")
-        cov_table.add_row("Total rows", str(total_data_rows))
-        cov_table.add_row("With service", f"[success]{with_service}[/success]")
-        cov_table.add_row(
-            "Without service",
-            f"[error]{len(empty_rows)}[/error]" if empty_rows else "[muted]0[/muted]",
+        result.errors += len(empty_rows)
+        for row_num, _label in empty_rows:
+            for idx in service_idxs:
+                record_issue(sheet_name, row_num, idx)
+        tui.line(
+            "fail",
+            f"{tui.plural(len(empty_rows), 'row')} of {tui.num(total_data_rows)} have no service "
+            f"({coverage:.1f}% coverage).",
         )
-        cov_table.add_row(
-            "Coverage",
-            f"[success]{coverage_pct:.1f}%[/success]"
-            if coverage_pct == 100
-            else f"[warning]{coverage_pct:.1f}%[/warning]",
-        )
+        details = tui.table("Row#", label_col)
+        tui.capped(details, empty_rows, DETAIL_LIMIT, "row")
 
-        console.print(
-            Panel(
-                cov_table,
-                title="[bold]Service Coverage[/bold]",
-                expand=False,
-                border_style="#A4C8F0",
-            )
-        )
-        console.print()
-
-    return all_ok
+    return result
 
 
 # -- Main ---------------------------------------------------------------------
@@ -2179,23 +2155,72 @@ def parse_excluded_sheets(argv: list[str]) -> set[str]:
     return names
 
 
-def main() -> None:
-    force_mode = "--force" in sys.argv
-    EXCLUDED_SHEETS.update(parse_excluded_sheets(sys.argv))
-    if EXCLUDED_SHEETS:
-        console.print(
-            f"[warning][*][/warning] Excluding sheet(s): {', '.join(sorted(EXCLUDED_SHEETS))}. "
-            f"Results below are partial.\n"
-        )
-    if HIGHLIGHT_MODE:
-        console.print(
-            "[warning][*][/warning] --highlight is on: issues will be written into the sheet "
-            "(rows yellow, cells red) and old highlights cleared.\n"
-        )
+def parse_limit(argv: list[str]) -> int:
+    """Read --limit N (or --limit=N): rows shown per detail table."""
+    for i, arg in enumerate(argv):
+        value = None
+        if arg == "--limit" and i + 1 < len(argv):
+            value = argv[i + 1]
+        elif arg.startswith("--limit="):
+            value = arg.split("=", 1)[1]
+        if value is not None:
+            if not value.isdigit() or int(value) < 1:
+                console.print("[error][ERROR][/error] --limit needs a whole number of at least 1.")
+                sys.exit(2)
+            return int(value)
+    return DETAIL_LIMIT
 
-    console.print("[info][*][/info] Opening spreadsheet ...")
+
+def print_summary(results: list[PhaseResult]) -> int:
+    """Phase-by-phase summary and the verdict panel. Returns the exit code."""
+    tui.section("Summary")
+    ran = {r.label: r for r in results}
+    rows = []
+    for label, name in PHASES:
+        r = ran.get(label)
+        if r is None:
+            rows.append((label, name, "skip", "[muted]not run[/muted]"))
+        else:
+            rows.append((label, name, r.status, r.detail))
+    tui.summary(rows)
+
+    errors = sum(r.errors for r in results)
+    warnings = sum(r.warnings for r in results)
+    stopped = len(results) < len(PHASES)
+    counts = f"{tui.plural(errors, 'error')}, {tui.plural(warnings, 'warning')}"
+
+    next_steps: list[str] = []
+    if any(r.fixable and (r.errors or r.warnings) for r in results):
+        next_steps.append(
+            "[bold]uv run cleanup.py[/bold] fixes formats, invisible characters, chips, "
+            "dropdowns and case mismatches it can resolve on its own. Re-run validate.py after."
+        )
+    if errors and not HIGHLIGHT_MODE:
+        next_steps.append("[bold]--highlight[/bold] colours the failing rows and cells in the sheet.")
+    if stopped:
+        next_steps.append("[bold]--force[/bold] runs every phase instead of stopping at the first failure.")
+
+    if errors:
+        failed = results[-1].label if stopped else None
+        headline = f"FAILED · {counts}" + (f" · stopped after {failed}" if failed else "")
+        tui.verdict("fail", headline, next_steps)
+        return 1
+    if warnings:
+        tui.verdict("warn", f"PASSED with {tui.plural(warnings, 'warning')}", next_steps)
+        return 0
+    tui.verdict("pass", "PASSED · every check is clean", [])
+    return 0
+
+
+def main() -> None:
+    global DETAIL_LIMIT
+    force_mode = "--force" in sys.argv
+    DETAIL_LIMIT = parse_limit(sys.argv)
+    EXCLUDED_SHEETS.update(parse_excluded_sheets(sys.argv))
+
     try:
-        spreadsheet = gc.open_by_key(SPREADSHEET_ID)
+        with console.status("Connecting to Google Sheets ...", spinner_style="info"):
+            spreadsheet = safe_api_call(lambda: gc.open_by_key(SPREADSHEET_ID))
     except gspread.exceptions.APIError as exc:
         console.print(
             f"[error][ERROR][/error] Could not open spreadsheet.\n"
@@ -2205,149 +2230,41 @@ def main() -> None:
         )
         sys.exit(1)
 
-    console.print("[success][OK][/success]  Connected.\n")
-
-    any_failure = False
+    options = []
+    if force_mode:
+        options.append("--force (every phase runs)")
+    if EXCLUDED_SHEETS:
+        options.append(f"--exclude {','.join(sorted(EXCLUDED_SHEETS))} (results are partial)")
+    header_rows = [
+        ("Spreadsheet", f"[bold]{spreadsheet.title}[/bold]"),
+        ("Mode", "[warning]writes highlights into the sheet[/warning]" if HIGHLIGHT_MODE else "read-only"),
+    ]
+    if options:
+        header_rows.append(("Options", "\n".join(options)))
+    tui.header("validate", header_rows)
 
     cache = SheetCache(spreadsheet)
+    cache.preload([t for t in ALL_SHEETS if not is_excluded(t)])
 
-    # -- Phase 0: Table Format Validation --------------------------------------
-    tables_format_ok = check_all_tables_format(cache)
-    if not tables_format_ok:
-        any_failure = True
-        if not force_mode:
-            console.print(
-                "\n[error][FAIL][/error] Phase 0 failed. Stopping early. (Use --force to continue anyway)"
-            )
-            apply_highlights(cache)
-            sys.exit(1)
-
-    # -- Phase 0B: Invisible Characters ----------------------------------------
-    invisible_ok = check_invisible_characters(cache)
-    if not invisible_ok:
-        any_failure = True
-        if not force_mode:
-            console.print(
-                "\n[error][FAIL][/error] Phase 0B failed. Stopping early. (Use --force to continue anyway)"
-            )
-            apply_highlights(cache)
-            sys.exit(1)
-
-    # -- Phase 1: Uniqueness Checks --------------------------------------------
-    uniqueness_ok = check_uniqueness(cache)
-    if not uniqueness_ok:
-        any_failure = True
-        if not force_mode:
-            console.print(
-                "\n[error][FAIL][/error] Phase 1 failed. Stopping early. (Use --force to continue anyway)"
-            )
-            apply_highlights(cache)
-            sys.exit(1)
-
-    # -- Phase 2: Referential Integrity ----------------------------------------
-    console.print()
-    console.rule("[border]PHASE 2: REFERENTIAL INTEGRITY[/border]")
-
-    grand_mismatches = 0
-    grand_case_warnings = 0
-
-    phase2_failed = False
-    for rule in VALIDATION_RULES:
-        m, cw, failed = validate_column(
-            cache,
-            source_sheet=rule["source_sheet"],
-            column=rule["column"],
-            target_sheets=rule["target_sheets"],
-        )
-        grand_mismatches += m
-        grand_case_warnings += cw
-        if failed:
-            any_failure = True
-            phase2_failed = True
-
-    if phase2_failed and not force_mode:
-        console.print(
-            "\n[error][FAIL][/error] Phase 2 failed. Stopping early. (Use --force to continue anyway)"
-        )
-        apply_highlights(cache)
-        sys.exit(1)
-
-    completeness_ok = check_completeness(cache)
-    if not completeness_ok:
-        any_failure = True
-        if not force_mode:
-            console.print(
-                "\n[error][FAIL][/error] Phase 2B failed. Stopping early. (Use --force to continue anyway)"
-            )
-            apply_highlights(cache)
-            sys.exit(1)
-
-    # -- Phase 3: Service Coverage -----------------------------------------------
-    service_coverage_ok = check_service_coverage(cache)
-    if not service_coverage_ok:
-        any_failure = True
-        if not force_mode:
-            console.print(
-                "\n[error][FAIL][/error] Phase 3 failed. Stopping early. (Use --force to continue anyway)"
-            )
-            apply_highlights(cache)
-            sys.exit(1)
+    checks = [
+        check_all_tables_format,
+        check_invisible_characters,
+        check_chips_and_dropdowns,
+        check_uniqueness,
+        check_references,
+        check_completeness,
+        check_engagement_flags,
+        check_service_coverage,
+    ]
+    results: list[PhaseResult] = []
+    for check in checks:
+        result = check(cache)
+        results.append(result)
+        if result.errors and not force_mode:
+            break
 
     apply_highlights(cache)
-
-    # -- Grand Summary ---------------------------------------------------------
-    console.print()
-    console.rule("[border]GRAND SUMMARY[/border]")
-
-    grand_table = Table(show_header=False, expand=False, box=None)
-    grand_table.add_column("Metric", style="bold")
-    grand_table.add_column("Value")
-
-    if EXCLUDED_SHEETS:
-        grand_table.add_row(
-            "Excluded sheets", "[warning]" + ", ".join(sorted(EXCLUDED_SHEETS)) + "[/warning]"
-        )
-
-    format_text = (
-        "[success]PASS[/success]" if tables_format_ok else "[error]FAIL[/error]"
-    )
-    grand_table.add_row("Phase 0: Table Format", format_text)
-    invisible_text = (
-        "[success]PASS[/success]" if invisible_ok else "[error]FAIL[/error]"
-    )
-    grand_table.add_row("Phase 0B: Invisible characters", invisible_text)
-    uniqueness_text = (
-        "[success]PASS[/success]" if uniqueness_ok else "[error]FAIL[/error]"
-    )
-    grand_table.add_row("Phase 1: Uniqueness", uniqueness_text)
-    grand_table.add_row(
-        "Phase 2: Referential integrity", str(len(VALIDATION_RULES)) + " rules"
-    )
-    grand_table.add_row("  Mismatches", f"{grand_mismatches} row(s)")
-    grand_table.add_row("  Case warnings", f"{grand_case_warnings} row(s)")
-    completeness_text = (
-        "[success]PASS[/success]" if completeness_ok else "[error]FAIL[/error]"
-    )
-    grand_table.add_row("Phase 2B: Completeness", completeness_text)
-    service_text = (
-        "[success]PASS[/success]" if service_coverage_ok else "[error]FAIL[/error]"
-    )
-    grand_table.add_row("Phase 3: Service coverage", service_text)
-
-    result_text = "[error]FAIL[/error]" if any_failure else "[success]PASS[/success]"
-    grand_table.add_row("Result", result_text)
-
-    console.print(Panel(grand_table, expand=False, border_style="#C8B6FF"))
-
-    if any_failure:
-        console.print(
-            "\n[error][FAIL][/error] Validation FAILED -- please fix the issues listed above."
-        )
-        sys.exit(1)
-    else:
-        console.print(
-            "\n[success][PASS][/success] All checks passed. Validation SUCCESSFUL!"
-        )
+    sys.exit(print_summary(results))
 
 
 if __name__ == "__main__":
@@ -2355,7 +2272,5 @@ if __name__ == "__main__":
         main()
     except KeyboardInterrupt:
         console.print()
-        console.print("[warning]Stopping...[/warning]", end=" ")
-        time.sleep(0.3)
-        console.print("[muted]Stopped.[/muted]")
+        console.print("[warning]Stopped.[/warning]")
         sys.exit(130)

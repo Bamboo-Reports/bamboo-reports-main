@@ -87,6 +87,8 @@ etl/V2/run.sh --table centers  # restrict any of the above to one table
 etl/V2/run.sh --verbose        # debug-level logging
 ```
 
+Every run opens with a header (database host, tables, whether it writes, the stages it will run, the log file), shows one compact table per stage (headers, per-table import results, snapshot, schema check) with progress bars while it works, and ends with a summary of every stage and a verdict panel. Routine progress messages go only to the log file; `--verbose` shows them on screen too. The look is shared with the sheet scripts through `etl/tui.py`.
+
 `run.sh` requires `uv` on `PATH` and executes `uv run --project etl/V2 --locked python etl/V2/main_cache_purge.py "$@"`. `--locked` means it will fail if `pyproject.toml` and the lockfile are out of sync; don't hand-edit dependencies without re-locking. To run the no-purge backup, invoke `main.py` with the same `uv run` command directly (see §1b).
 
 ### Env vars (loaded from `etl/V2/.env` or repo-root `.env`, whichever is found first)
@@ -160,7 +162,10 @@ Standalone pre-import validation of the source spreadsheet, copied from the `br-
 ```bash
 cd etl/data_validator && uv run validate.py            # all phases
 cd etl/data_validator && uv run validate.py --force    # continue past a failing phase
+cd etl/data_validator && uv run validate.py --limit 50 # more rows per detail table (default 20)
 ```
+
+The output is one compact table per phase (every sheet or rule with its counts and a ✓, ! or ✗), detail tables only for what failed, then a summary of every phase and a verdict panel that says what to run next. The ETL and both sheet scripts share this look through `etl/tui.py`.
 
 Config comes from `etl/data_validator/.env` (`SPREADSHEET_ID`, `GOOGLE_SA_FILE`; the latter is resolved relative to that directory and points at `etl/V2`'s existing service-account key rather than a duplicate, see `.env.example`).
 
@@ -168,13 +173,41 @@ Config comes from `etl/data_validator/.env` (`SPREADSHEET_ID`, `GOOGLE_SA_FILE`;
 
 | Phase | Check |
 |---|---|
-| 0 | Per-column format/enum/nullable rules (`ALL_RULES`) for all eight tables |
+| 0 | Per-column format/enum/nullable rules (`ALL_RULES`) for all nine tables, including `subscribers` and the prospects `prospect_phone` (10 digits) and `prospect_engaged` (Yes/No) columns |
 | 0B | Invisible characters: flags cells containing zero-width chars, BOM, or soft hyphen, with exact sheet/row/column |
-| 1 | Uniqueness of key columns: `accounts.account_global_legal_name`, `centers.cn_unique_key`, `services.cn_unique_key`, `prospects.ps_unique_key` |
-| 2 / 2B | Referential integrity (`account_global_legal_name` in child sheets, `center_name` in services, `cn_unique_key` in services/functions/tech) plus completeness (every accounts row present in alias and ticker) |
+| 0C | Every cell is plain text: no smart chips (a people chip holding an email looks like text but VLOOKUP and MATCH skip it) and no dropdowns. Read from cell metadata, one extra API call per sheet |
+| 1 | Uniqueness of key columns: `accounts.account_global_legal_name`, `centers.cn_unique_key`, `services.cn_unique_key`, `prospects.ps_unique_key`, and in `subscribers` the combination of email, campaign and date (the same engagement entered twice) |
+| 2 / 2B | Referential integrity (`account_global_legal_name` in child sheets, `center_name` in services, `cn_unique_key` in services/functions/tech, `prospect_email` in subscribers) plus completeness (every accounts row present in alias and ticker) |
+| 2C | Warning only: `prospects.prospect_engaged` is `Yes` exactly when the email has a `subscribers` row |
 | 3 | Every services row has at least one service column filled |
 
-`clean_sm_leading_dashes.py` is a one-off cleaner that removes leading `- ` markers from lines in given columns of the SM sheet (dry run by default; `--apply` writes). `requirements.txt` mirrors the dependencies for non-uv use.
+**Cleanup (`cleanup.py`).** A separate script that fixes what can be fixed mechanically, so `validate.py` only reports what needs a person. It reads every sheet once, runs its steps in a fixed order on the in-memory copy, and writes each sheet's net changes once. Dry run by default; `--apply` writes.
+
+| Step | What it fixes |
+|---|---|
+| `chips` | Smart chips turned into plain text (a link chip keeps its URL) and dropdowns removed, through the Sheets batchUpdate API |
+| `artifacts` | Spreadsheet error values typed as text (`#N/A`, `#REF!`) cleared; HTML entities (`&amp;`, `&nbsp;`) decoded |
+| `invisible` | Zero-width characters, BOM, soft hyphen, bidi controls in every cell (Phase 0B) |
+| `whitespace` | Leading/trailing spaces, double spaces, tabs, non-breaking and other exotic spaces, `\r` line breaks; line breaks themselves are kept |
+| `lists` | Services list columns and `account_hq_key_offerings`: one item per line, no bullets, no duplicates; services items also get title case and run-together regions split |
+| `links` | Link columns: one URL per line, bullets/quotes/separators removed, tracking parameters (`utm_*`, `trk`, `originalSubdomain`, `gclid`) and `#:~:text=` highlights dropped, LinkedIn links on one scheme and host; lines still not a URL are reported, never changed |
+| `formats` | Values Phase 0 would reject that have one obvious fix: dates to `6-May-2025`, full month names, `2015.0` years, allowed-value casing/spacing, ISO `IN`, email `mailto:`, domain case and Cyrillic/Greek lookalike letters, phones to 10 digits, ALL CAPS or all-lowercase prospect names capitalised |
+| `references` | Child-sheet keys that match the parent except for case, curly quotes or dash style take the parent's spelling; stale `cn_unique_key` prefixes are rebuilt and renamed in every key sheet (Phase 2 case warnings) |
+
+Formula cells are never written (many columns are formulas, such as `tech.account_global_legal_name` and the range columns); a fix a step wanted on one is listed at the end instead. Order matters: entities, invisible characters and whitespace go first so every later step sees clean text, and references run last because names only compare equal once both sheets are clean. Column rules (`ALL_RULES`, `VALIDATION_RULES`, `INVISIBLE_CHARS`) are read from `validate.py`'s source rather than copied, so a rule change there applies to both.
+
+```bash
+cd etl/data_validator && uv run cleanup.py                        # preview every step
+cd etl/data_validator && uv run cleanup.py --apply                # show the report, confirm y/N, then write
+cd etl/data_validator && uv run cleanup.py --apply --yes          # write without asking (required when not run from a terminal)
+cd etl/data_validator && uv run cleanup.py --steps formats        # one step (or --skip references)
+cd etl/data_validator && uv run cleanup.py --sheets centers       # only change these sheets
+cd etl/data_validator && uv run cleanup.py --report changes.csv   # full change list
+```
+
+Typical order: `cleanup.py`, then `cleanup.py --apply`, then `validate.py`.
+
+`requirements.txt` mirrors the dependencies for non-uv use.
 
 ---
 
@@ -188,7 +221,9 @@ Config comes from `etl/data_validator/.env` (`SPREADSHEET_ID`, `GOOGLE_SA_FILE`;
 | `etl/V2/pyproject.toml` | Python dependencies and `uv` project config |
 | `etl/V2/run.sh` | Entry point, wraps `uv run` around `main_cache_purge.py` |
 | `etl/data_validator/validate.py` | Pre-import sheet validation (§7) |
-| `etl/data_validator/clean_sm_leading_dashes.py` | One-off SM-sheet cleanup script |
+| `etl/data_validator/cleanup.py` | Ordered pre-import sheet cleanup (§7) |
+| `etl/data_validator/cell_meta.py` | Finds smart chips and dropdowns from cell metadata, for `validate.py` Phase 0C and the `cleanup.py` chips step |
+| `etl/tui.py` | Shared terminal output (theme, tables, progress bars, summary and verdict) for the ETL (`main_cache_purge.py`, `main.py`) and the sheet scripts (`validate.py`, `cleanup.py`); each puts `etl/` on `sys.path` to import it |
 | `etl/V2/import_logs/logs/` | Per-run text log files (`setup_logger`) |
 | `etl/V2/import_logs/snapshot/` | Per-run JSON DB snapshots (`run_snapshot`) |
 | `documentation/backend/table-relationships.md` | FK constraints, import order, table hierarchy |
