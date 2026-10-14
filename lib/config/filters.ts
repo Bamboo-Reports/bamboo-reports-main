@@ -396,6 +396,15 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
         column: "prospect_city",
         table: "prospects",
       },
+      {
+        key: "prospectEngagedValues",
+        label: "Engaged",
+        enabled: true,
+        type: "multi-select",
+        column: "prospect_engaged",
+        table: "prospects",
+        description: "Whether the prospect has engaged with a Bamboo Reports campaign",
+      },
     ],
   },
 ]

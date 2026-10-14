@@ -40,6 +40,7 @@ export const FACETS: FacetSpec[] = [
   { key: "prospectDepartmentValues", entity: "prospects", column: "prospect_department" },
   { key: "prospectHeadTypeValues", entity: "prospects", column: "head_type" },
   { key: "prospectLevelValues", entity: "prospects", column: "prospect_level" },
+  { key: "prospectEngagedValues", entity: "prospects", column: "prospect_engaged" },
   { key: "prospectCityValues", entity: "prospects", column: "prospect_city" },
 ]
 

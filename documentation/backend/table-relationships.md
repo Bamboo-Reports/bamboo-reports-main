@@ -15,6 +15,7 @@ accounts  (PK: account_global_legal_name)
   │                                    ├──[cn_unique_key]──► functions
   │                                    └──[cn_unique_key]──► tech
   └──[account_global_legal_name]──► prospects
+                                       └──[lower(prospect_email)]──► subscribers  (logical link, no FK)
 ```
 
 **Two hub keys govern all relationships:**
@@ -42,6 +43,7 @@ not database-enforced primary keys and should not be modelled as Prisma `@id` fi
 | `functions` | Business function rows linked to centers | *(none)* | `cn_unique_key`, `function_name` |
 | `tech` | Technology stack rows (software, vendors, categories) | *(none)* | `cn_unique_key` plus software fields |
 | `prospects` | Contact/lead rows linked to accounts | *(none)* | `ps_unique_key` |
+| `subscribers` | Campaign engagement rows (one per prospect per campaign), linked to prospects | *(none)* | `lower(prospect_email)` |
 
 ---
 
@@ -61,6 +63,8 @@ Defined in `etl/V2/main.py` → `CONSTRAINTS_SQL`. All child tables cascade on p
 
 > **Cascade rule:** Deleting a company (`accounts`) automatically deletes its aliases, centers, and prospects. Deleting a center automatically deletes its services, functions, and tech rows.
 
+> **`subscribers` has no FK.** It links to `prospects` by email, but `prospects.prospect_email` is not unique (the same email can appear on more than one prospect row) and some emails differ only by case, so a constraint is not possible. Join with `lower(s.prospect_email) = lower(p.prospect_email)`; both sides have a `lower(prospect_email)` expression index. A subscriber whose email is on several prospect rows matches all of them.
+
 ---
 
 ## ETL Import Order
@@ -68,7 +72,7 @@ Defined in `etl/V2/main.py` → `CONSTRAINTS_SQL`. All child tables cascade on p
 Tables are imported in dependency order so parent records always exist before child records are written:
 
 ```
-accounts → ticker → alias → centers → services → functions → tech → prospects
+accounts → ticker → alias → centers → services → functions → tech → prospects → subscribers
 ```
 
 ---

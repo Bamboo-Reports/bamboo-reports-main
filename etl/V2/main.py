@@ -209,16 +209,34 @@ TABLE_DEFS: Dict[str, Dict[str, Any]] = {
             "CREATE INDEX IF NOT EXISTS prospects_unique_key_idx ON public.prospects (ps_unique_key);",
             "CREATE INDEX IF NOT EXISTS prospects_department_idx ON public.prospects (prospect_department);",
             "CREATE INDEX IF NOT EXISTS prospects_level_idx ON public.prospects (prospect_level);",
+            "CREATE INDEX IF NOT EXISTS prospects_engaged_idx ON public.prospects (prospect_engaged);",
             "CREATE INDEX IF NOT EXISTS prospects_head_type_idx ON public.prospects (head_type);",
             "CREATE INDEX IF NOT EXISTS prospects_center_name_idx ON public.prospects (center_name);",
             "CREATE INDEX IF NOT EXISTS prospects_city_idx ON public.prospects (prospect_city);",
             "CREATE INDEX IF NOT EXISTS prospects_title_trgm_idx ON public.prospects USING gin (prospect_title gin_trgm_ops);",
             "CREATE INDEX IF NOT EXISTS prospects_account_name_idx ON public.prospects (account_global_legal_name);",
+            "CREATE INDEX IF NOT EXISTS prospects_email_lower_idx ON public.prospects (lower(prospect_email));",
+        ],
+    },
+    # One row per campaign engagement, so uuid repeats and there is no primary
+    # key. Linked to prospects by prospect_email, not a foreign key: prospect
+    # emails are not unique in the sheet and some differ only by case, so join
+    # on lower(prospect_email) (indexed on both sides).
+    "subscribers": {
+        "worksheet": "subscribers",
+        "primary_id": [],
+        "secondary_id": [],
+        "label_cols": ["prospect_email", "prospect_engaged_campaign"],
+        "track_changes": False,
+        "track_lifecycle": False,
+        "indexes": [
+            "CREATE INDEX IF NOT EXISTS subscribers_email_lower_idx ON public.subscribers (lower(prospect_email));",
+            "CREATE INDEX IF NOT EXISTS subscribers_campaign_idx ON public.subscribers (prospect_engaged_campaign);",
         ],
     },
 }
 
-IMPORT_ORDER = ["accounts", "ticker", "alias", "centers", "services", "functions", "tech", "prospects"]
+IMPORT_ORDER = ["accounts", "ticker", "alias", "centers", "services", "functions", "tech", "prospects", "subscribers"]
 
 CONSTRAINTS_SQL = [
     "ALTER TABLE accounts ADD PRIMARY KEY (account_global_legal_name);",
@@ -504,7 +522,7 @@ def normalize_change_value(value: Any) -> Optional[str]:
 
 
 INTEGER_FLOAT_TEXT_RE = re.compile(r"^([+-]?\d+)\.0+$")
-INTEGER_FLOAT_TEXT_COLUMNS = ("zip", "postal", "postcode", "year")
+INTEGER_FLOAT_TEXT_COLUMNS = ("zip", "postal", "postcode", "year", "phone")
 
 
 def normalize_text_value(value: Any, col_name: str) -> Optional[str]:

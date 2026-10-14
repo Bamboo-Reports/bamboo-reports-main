@@ -1272,6 +1272,22 @@
       },
       {
         "Table": "prospects",
+        "Column": "prospect_phone",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "prospects",
+        "Column": "prospect_engaged",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "prospects",
         "Column": "prospect_city",
         "Type": "TEXT",
         "Nullable": "YES",
@@ -1395,6 +1411,47 @@
     ],
     "statistics": {
       "Table": "ticker",
+      "Rows": 0,
+      "Size (MB)": 0
+    }
+  },
+  "subscribers": {
+    "columns": [
+      {
+        "Table": "subscribers",
+        "Column": "uuid",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "subscribers",
+        "Column": "prospect_engaged_date",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "subscribers",
+        "Column": "prospect_email",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "subscribers",
+        "Column": "prospect_engaged_campaign",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      }
+    ],
+    "statistics": {
+      "Table": "subscribers",
       "Rows": 0,
       "Size (MB)": 0
     }

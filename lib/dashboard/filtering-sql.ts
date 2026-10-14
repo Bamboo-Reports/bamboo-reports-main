@@ -226,6 +226,7 @@ function prospectPredicate(f: Filters, p: Params): string {
     valueClause("prospect_department", f.prospectDepartmentValues, p),
     valueClause("head_type", f.prospectHeadTypeValues, p),
     valueClause("prospect_level", f.prospectLevelValues, p),
+    valueClause("prospect_engaged", f.prospectEngagedValues, p),
     valueClause("prospect_city", f.prospectCityValues, p),
     keywordClause("prospect_title", f.prospectTitleKeywords, p),
   ])
@@ -299,6 +300,7 @@ function computeFlags(f: Filters, access: FilterAccess) {
     f.prospectDepartmentValues.length > 0 ||
     f.prospectHeadTypeValues.length > 0 ||
     f.prospectLevelValues.length > 0 ||
+    f.prospectEngagedValues.length > 0 ||
     f.prospectCityValues.length > 0 ||
     f.prospectTitleKeywords.length > 0
 

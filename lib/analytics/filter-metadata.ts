@@ -175,6 +175,11 @@ export const FILTER_METADATA = {
     group: "prospect",
     inputType: "multi_select",
   },
+  prospectEngagedValues: {
+    label: "Engaged",
+    group: "prospect",
+    inputType: "multi_select",
+  },
   prospectCityValues: {
     label: "City",
     group: "prospect",

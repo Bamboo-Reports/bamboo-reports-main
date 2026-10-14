@@ -14,6 +14,8 @@ import type { Prospect } from "@/lib/types"
 import { ensureAbsoluteUrl } from "@/lib/utils"
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard"
 import { formatProspectLocation } from "@/lib/utils/helpers"
+import { EngagedIcon } from "@/components/ui/engaged-badge"
+import { isEngagedProspect } from "@/lib/dashboard/engagements"
 
 interface ProspectGridCardProps {
   prospect: Prospect
@@ -77,6 +79,7 @@ export const ProspectGridCard = memo(({ prospect, onClick }: ProspectGridCardPro
                   HR Head
                 </Badge>
               )}
+              {isEngagedProspect(prospect) && <EngagedIcon className="mt-[3px]" />}
             </div>
             <div className="space-y-2 text-sm">
               <div className="flex items-center justify-between gap-3 min-w-0">

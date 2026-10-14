@@ -880,6 +880,22 @@ export function ProspectFiltersSection({
             />
           </div>
           )}
+          {isFilterEnabled("prospectEngagedValues") && (
+          <div className="space-y-2">
+            <Label className="text-xs font-medium">Engaged</Label>
+            <EnhancedMultiSelect
+              options={availableOptions.prospectEngagedValues || []}
+              selected={pendingFilters.prospectEngagedValues}
+              trackingKey="prospectEngagedValues"
+              onChange={(selected) => {
+                setPendingFilters((prev) => ({ ...prev, prospectEngagedValues: selected }))
+                setActiveFilter("prospectEngagedValues")
+              }}
+              placeholder="Select engagement..."
+              isApplying={isApplying && activeFilter === "prospectEngagedValues"}
+            />
+          </div>
+          )}
         </div>
       </div>
     </div>

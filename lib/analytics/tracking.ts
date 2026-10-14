@@ -108,6 +108,7 @@ export const buildTrackedFiltersSnapshot = (
   pushIfActive("prospectDepartmentValues", filters.prospectDepartmentValues.length > 0)
   pushIfActive("prospectHeadTypeValues", filters.prospectHeadTypeValues.length > 0)
   pushIfActive("prospectLevelValues", filters.prospectLevelValues.length > 0)
+  pushIfActive("prospectEngagedValues", filters.prospectEngagedValues.length > 0)
   pushIfActive("prospectCityValues", filters.prospectCityValues.length > 0)
   pushIfActive("prospectTitleKeywords", filters.prospectTitleKeywords.length > 0)
 
@@ -160,6 +161,7 @@ export const buildTrackedFiltersSnapshot = (
     prospect_departments: toTrackedFilterValueArray(filters.prospectDepartmentValues),
     prospect_head_types: toTrackedFilterValueArray(filters.prospectHeadTypeValues),
     prospect_levels: toTrackedFilterValueArray(filters.prospectLevelValues),
+    prospect_engaged: toTrackedFilterValueArray(filters.prospectEngagedValues),
     prospect_cities: toTrackedFilterValueArray(filters.prospectCityValues),
     prospect_title_keywords: toTrackedFilterValueArray(filters.prospectTitleKeywords),
   }
