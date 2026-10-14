@@ -24,6 +24,23 @@ python3 scripts/generate_work_summary.py
 
 Requires `openpyxl` (not a project-wide npm/Python dependency; install it in your local environment before running: `pip install openpyxl`).
 
+## 3. `scripts/benchmark/data-fetch.run.ts`
+
+Times the Neon warehouse work behind each dashboard read endpoint (summary, facets, charts, centers map, accounts/centers/prospects page 1). It calls the same lib functions the routes use, directly, so auth, rate limiting and the response cache are not part of the numbers (the bench config sets `DASHBOARD_CACHE_TTL_MS=0`). Queries run one at a time.
+
+Scenarios: the default filter state, `visibility=all` (the broad state), and two narrow states built from the most common HQ country and prospect department in the live data. It also reports the first-query time (a slow one means Neon compute was suspended) and a `select 1` network floor. Output is a markdown table of avg/p50/p95/min/max ms plus payload size (raw and gzipped).
+
+Runs under Vitest (for the `@/` alias) with its own config, `vitest.bench.config.ts`, so `npm test` never picks it up.
+
+**Run it:**
+
+```bash
+npm run bench                                   # 5 runs per query
+BENCH_ITERATIONS=10 BENCH_OUT=bench.json npm run bench
+```
+
+Needs `DATABASE_URL` in `.env`. Read-only.
+
 ---
 
 ## Related Files
@@ -31,4 +48,6 @@ Requires `openpyxl` (not a project-wide npm/Python dependency; install it in you
 | File | Purpose |
 |------|---------|
 | `scripts/generate_work_summary.py` | Git-history-driven `.xlsx` work summary generator |
+| `scripts/benchmark/data-fetch.run.ts` | Neon warehouse fetch-time benchmark (`npm run bench`) |
+| `vitest.bench.config.ts` | Vitest config used only by the benchmark |
 | `documentation/backend/etl-pipeline.md` | The other standalone script category: `etl/V2/` |
