@@ -168,6 +168,7 @@ const LIST_FILTER_KEYS = [
   "prospectDepartmentValues",
   "prospectHeadTypeValues",
   "prospectLevelValues",
+  "prospectEngagedValues",
   "prospectCityValues",
   "prospectTitleKeywords",
 ] as const satisfies ReadonlyArray<keyof Filters>

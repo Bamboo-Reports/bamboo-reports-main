@@ -19,6 +19,9 @@ import { PaginationControls } from "@/components/ui/pagination-controls"
 import { fetchAccountRelated } from "@/lib/dashboard/api-client"
 import { Skeleton } from "@/components/ui/skeleton"
 import { GridSkeletonCards } from "@/components/ui/data-skeletons"
+import { EngagedBadge } from "@/components/ui/engaged-badge"
+import { ProspectEngagementTimeline } from "@/components/dialogs/prospect-engagement-timeline"
+import { isEngagedProspect } from "@/lib/dashboard/engagements"
 
 interface ProspectDetailsDialogProps {
   prospect: Prospect | null
@@ -326,6 +329,7 @@ export function ProspectDetailsDialog({
                     HR Head
                   </Badge>
                 ) : null}
+                {isEngagedProspect(p) ? <EngagedBadge /> : null}
               </div>
             </div>
           </DialogTitle>
@@ -383,6 +387,10 @@ export function ProspectDetailsDialog({
               </div>
             </div>
           </section>
+
+          {open && isEngagedProspect(p) && p.ps_unique_key ? (
+            <ProspectEngagementTimeline psUniqueKey={p.ps_unique_key} />
+          ) : null}
 
           {relatedLoading && (
             <section className="space-y-4">

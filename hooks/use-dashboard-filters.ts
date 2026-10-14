@@ -294,6 +294,7 @@ export function useDashboardFilters({
       prospectDepartmentValues: filters.prospectDepartmentValues,
       prospectHeadTypeValues: filters.prospectHeadTypeValues,
       prospectLevelValues: filters.prospectLevelValues,
+      prospectEngagedValues: filters.prospectEngagedValues,
       prospectCityValues: filters.prospectCityValues,
       prospectTitleKeywords: filters.prospectTitleKeywords,
       accountGlobalLegalNameKeywords: filters.accountGlobalLegalNameKeywords,
@@ -348,6 +349,7 @@ export function useDashboardFilters({
       if (e("prospectDepartmentValues")) count += sourceFilters.prospectDepartmentValues.length
       if (e("prospectHeadTypeValues")) count += sourceFilters.prospectHeadTypeValues.length
       if (e("prospectLevelValues")) count += sourceFilters.prospectLevelValues.length
+      if (e("prospectEngagedValues")) count += sourceFilters.prospectEngagedValues.length
       if (e("prospectCityValues")) count += sourceFilters.prospectCityValues.length
       if (e("prospectTitleKeywords")) count += sourceFilters.prospectTitleKeywords.length
 

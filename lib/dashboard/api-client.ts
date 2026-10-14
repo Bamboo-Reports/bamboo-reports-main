@@ -8,6 +8,7 @@ import type {
   ChartData,
   Filters,
   Prospect,
+  ProspectEngagement,
   Service,
   Tech,
 } from "@/lib/types"
@@ -212,6 +213,9 @@ export function fetchAccountRelated(name: string, opts: FetchOpts = {}): Promise
 
 export const fetchCenterDetail = (key: string) =>
   request<CenterDetailResponse>(`/api/centers/${encodeURIComponent(key)}`)
+
+export const fetchProspectEngagements = (psUniqueKey: string) =>
+  request<{ engagements: ProspectEngagement[] }>(`/api/prospects/${encodeURIComponent(psUniqueKey)}/engagements`)
 
 export const fetchProspectById = (id: string) =>
   request<{ prospect: Prospect }>(`/api/prospects/${encodeURIComponent(id)}`)

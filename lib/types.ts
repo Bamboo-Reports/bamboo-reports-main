@@ -169,9 +169,18 @@ export interface Prospect {
   prospect_linkedin_url: string | null
   prospect_other_source_url?: string | null
   prospect_email: string | null
+  prospect_phone?: string | null
   prospect_city: string | null
   prospect_state: string | null
   prospect_country: string | null
+  /** "Yes" when the prospect has engaged with a Bamboo Reports campaign (see the subscribers table for their touchpoints). */
+  prospect_engaged?: string | null
+}
+
+/** One Bamboo Reports campaign engagement from the subscribers table. */
+export interface ProspectEngagement {
+  prospect_engaged_date: string | null
+  prospect_engaged_campaign: string | null
 }
 
 export interface Alias {
@@ -245,6 +254,7 @@ export interface Filters {
   prospectDepartmentValues: FilterValue[]
   prospectHeadTypeValues: FilterValue[]
   prospectLevelValues: FilterValue[]
+  prospectEngagedValues: FilterValue[]
   prospectCityValues: FilterValue[]
   prospectTitleKeywords: FilterValue[]
 }
@@ -278,6 +288,7 @@ export interface AvailableOptions {
   prospectDepartmentValues: FilterOption[]
   prospectHeadTypeValues: FilterOption[]
   prospectLevelValues: FilterOption[]
+  prospectEngagedValues: FilterOption[]
   prospectCityValues: FilterOption[]
 }
 

@@ -75,6 +75,7 @@ type AvailableOptionsFilterState = Pick<
   | "prospectDepartmentValues"
   | "prospectHeadTypeValues"
   | "prospectLevelValues"
+  | "prospectEngagedValues"
   | "prospectCityValues"
   | "prospectTitleKeywords"
   | "accountGlobalLegalNameKeywords"
@@ -186,6 +187,7 @@ export function getFilteredData(
   const matchProspectDepartment = createValueMatcher(filters.prospectDepartmentValues)
   const matchProspectHeadType = createValueMatcher(filters.prospectHeadTypeValues)
   const matchProspectLevel = createValueMatcher(filters.prospectLevelValues)
+  const matchProspectEngaged = createValueMatcher(filters.prospectEngagedValues)
   const matchProspectCity = createValueMatcher(filters.prospectCityValues)
   const matchProspectTitle = createKeywordMatcher(filters.prospectTitleKeywords)
   const hasExplicitAccountNameSearch = filters.accountGlobalLegalNameKeywords.length > 0 || filters.accountNameValues.length > 0
@@ -216,6 +218,7 @@ export function getFilteredData(
     filters.prospectDepartmentValues.length > 0 ||
     filters.prospectHeadTypeValues.length > 0 ||
     filters.prospectLevelValues.length > 0 ||
+    filters.prospectEngagedValues.length > 0 ||
     filters.prospectCityValues.length > 0 ||
     filters.prospectTitleKeywords.length > 0
 
@@ -297,6 +300,7 @@ export function getFilteredData(
         matchProspectDepartment(prospect.prospect_department) &&
         matchProspectHeadType(prospect.head_type) &&
         matchProspectLevel(prospect.prospect_level) &&
+        matchProspectEngaged(prospect.prospect_engaged) &&
         matchProspectCity(prospect.prospect_city) &&
         matchProspectTitle(prospect.prospect_title)
 
@@ -557,6 +561,9 @@ export function getAvailableOptions(
     ),
     prospectLevelValues: mapToSortedArray(
       countValues(getFacetData("prospectLevelValues").filteredProspects, (prospect) => prospect.prospect_level)
+    ),
+    prospectEngagedValues: mapToSortedArray(
+      countValues(getFacetData("prospectEngagedValues").filteredProspects, (prospect) => prospect.prospect_engaged)
     ),
     prospectCityValues: mapToSortedArray(
       countValues(getFacetData("prospectCityValues").filteredProspects, (prospect) => prospect.prospect_city)

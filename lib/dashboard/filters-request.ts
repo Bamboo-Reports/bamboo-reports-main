@@ -17,7 +17,7 @@ const VALUE_ARRAY_KEYS = [
   "accountGlobalLegalNameKeywords", "accountNameValues", "accountListValues", "centerTypeValues", "centerFocusValues", "centerCityValues",
   "centerStateValues", "centerCountryValues", "centerEmployeesRangeValues", "centerStatusValues",
   "functionNameValues", "techSoftwareInUseKeywords", "prospectDepartmentValues", "prospectHeadTypeValues",
-  "prospectLevelValues", "prospectCityValues", "prospectTitleKeywords",
+  "prospectLevelValues", "prospectEngagedValues", "prospectCityValues", "prospectTitleKeywords",
 ] as const
 
 function coerceFilterValues(input: unknown): FilterValue[] {

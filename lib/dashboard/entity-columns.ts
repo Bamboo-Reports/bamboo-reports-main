@@ -33,7 +33,7 @@ export const PROSPECT_COLUMNS = [
   "prospect_last_name", "prospect_title", "prospect_department", "prospect_level", "head_type",
   "prospect_linkedin_url", "prospect_email", "prospect_city", "prospect_state", "prospect_country",
   "prospect_in_company_year", "prospect_current_year", "center_name",
-  "last_review_date", "email_verification_date", "contact_status",
+  "last_review_date", "email_verification_date", "contact_status", "prospect_engaged",
 ]
 
 // Same columns as getDashboardServices / getDashboardTech in app/actions/data.ts.
