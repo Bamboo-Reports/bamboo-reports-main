@@ -23,6 +23,7 @@ import re
 import concurrent.futures
 import sys
 import threading
+import urllib.parse
 import time
 from decimal import Decimal
 from numbers import Integral, Real
@@ -33,12 +34,6 @@ import gspread
 from dotenv import load_dotenv
 from google.oauth2.service_account import Credentials
 from gspread_dataframe import get_as_dataframe
-from rich.console import Console
-from rich.logging import RichHandler
-from rich.panel import Panel
-from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TimeElapsedColumn
-from rich.table import Table
-from rich.theme import Theme
 from sqlalchemy import create_engine, text, inspect
 from sqlalchemy.engine import Engine
 from sqlalchemy.types import Integer, BigInteger, Text, Float, Boolean, TIMESTAMP
@@ -51,18 +46,21 @@ for _env_path in (os.path.join(BASE_DIR, ".env"), os.path.join(REPO_ROOT, ".env"
         load_dotenv(_env_path)
         break
 
-# ── Rich Console ─────────────────────────────────────────────────────────────
+# ── Terminal output ──────────────────────────────────────────────────────────
 
-theme = Theme({
-    "info": "cyan",
-    "success": "bold green",
-    "warning": "bold yellow",
-    "error": "bold red",
-    "header": "bold magenta",
-    "table_name": "bold cyan",
-    "dim": "dim white",
-})
-console = Console(theme=theme)
+# tui.py sits one level up in etl/ and is shared with the sheet scripts in
+# etl/data_validator, so every pipeline script looks the same.
+sys.path.insert(0, REPO_ROOT)
+import tui  # noqa: E402
+from tui import console  # noqa: E402
+
+# (stage, status, detail) for the closing summary, in the order stages run.
+STAGES: List[tuple] = []
+
+
+def record_stage(name: str, status: str, detail: str) -> None:
+    STAGES.append((name, status, detail))
+
 
 # ── Config ───────────────────────────────────────────────────────────────────
 
@@ -279,27 +277,44 @@ LIFECYCLE_EVENT_TABLES = [name for name, defn in TABLE_DEFS.items() if defn["tra
 # ── Logging ──────────────────────────────────────────────────────────────────
 
 
+class TuiLogHandler(logging.Handler):
+    """Shows log records as tui status lines. Tracebacks stay in the log
+    file; the console gets the message and the closing panel names the file."""
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            if record.levelno >= logging.ERROR:
+                status = "fail"
+            elif record.levelno >= logging.WARNING:
+                status = "warn"
+            elif record.levelno >= logging.INFO:
+                status = "info"
+            else:
+                status = "skip"
+            tui.line(status, record.getMessage())
+        except Exception:
+            self.handleError(record)
+
+
+LOG_FILE = ""
+
+
 def setup_logger(verbose: bool = False) -> logging.Logger:
+    global LOG_FILE
     os.makedirs(LOG_OUTPUT_DIR, exist_ok=True)
     os.makedirs(SNAPSHOT_OUTPUT_DIR, exist_ok=True)
 
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     log_file = os.path.join(LOG_OUTPUT_DIR, f"log_{timestamp}.txt")
+    LOG_FILE = log_file
 
     logger = logging.getLogger("data_manager")
     logger.setLevel(logging.DEBUG)
     logger.handlers.clear()
 
-    # Rich console handler
-    rich_handler = RichHandler(
-        console=console,
-        show_time=False,
-        show_path=False,
-        markup=True,
-        rich_tracebacks=True,
-        level=logging.DEBUG if verbose else logging.INFO,
-    )
-    logger.addHandler(rich_handler)
+    # Console: status lines in the shared look. Debug detail only with -v.
+    console_handler = TuiLogHandler(level=logging.DEBUG if verbose else logging.INFO)
+    logger.addHandler(console_handler)
 
     # File handler
     fmt = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
@@ -359,92 +374,94 @@ def get_tracked_table_fields(schema_def: Dict[str, Any], table: str) -> List[str
 
 
 def check_sheet_headers(schema_def: Dict[str, Any], target_tables: List[str] = None) -> bool:
-    console.print(Panel("[header]Validating Google Sheet Headers[/]", expand=False))
+    """Compare each worksheet's header row with the schema. Missing or
+    duplicated columns fail; extra sheet columns are only a warning (the
+    import ignores them)."""
+    tui.section("Headers · Google Sheet vs schema")
 
     try:
         gc = get_gspread_client()
         spreadsheet = gc.open_by_key(SPREADSHEET_ID)
     except Exception as e:
         logger.error(f"Could not connect to Google Sheets: {e}")
+        record_stage("Headers", "fail", "could not connect to Google Sheets")
         return False
 
     tables_to_check = target_tables or list(schema_def.keys())
-    all_ok = True
+    # Report in import order; tables the import does not know go last.
+    tables_to_check.sort(key=lambda t: IMPORT_ORDER.index(t) if t in IMPORT_ORDER else len(IMPORT_ORDER))
 
     def check_table(table_name):
+        """(worksheet, sheet columns, schema columns, missing, extra,
+        duplicates, error) for one table."""
         ws_name = WORKSHEET_MAP.get(table_name)
         if not ws_name:
-            logger.warning(f"No worksheet mapping for table '{table_name}'.")
-            return None, True
+            return table_name, 0, 0, [], [], {}, "no worksheet mapping"
         if table_name not in schema_def:
-            logger.warning(f"Table '{table_name}' not found in schema definition.")
-            return None, True
-
+            return ws_name, 0, 0, [], [], {}, "not in schema"
         try:
             ws = spreadsheet.worksheet(ws_name)
             sheet_headers = [h.strip() for h in ws.row_values(1) if h.strip()]
         except Exception as e:
-            logger.error(f"Could not read worksheet '{ws_name}': {e}")
-            return None, False
+            return ws_name, 0, 0, [], [], {}, f"could not read worksheet: {e}"
 
         schema_cols = {c["Column"] for c in schema_def[table_name].get("columns", [])}
         sheet_cols = set(sheet_headers)
-
-        # Check duplicates
         seen: Dict[str, int] = {}
         for h in sheet_headers:
             seen[h] = seen.get(h, 0) + 1
         duplicates = {h: cnt for h, cnt in seen.items() if cnt > 1}
-
         missing = sorted(schema_cols - sheet_cols)
         extra = sorted(sheet_cols - schema_cols)
+        return ws_name, len(sheet_headers), len(schema_cols), missing, extra, duplicates, None
 
-        # Build results table
-        result_table = Table(title=f"[table_name]{ws_name}[/] -> [table_name]{table_name}[/]", show_lines=True)
-        result_table.add_column("Check", style="bold")
-        result_table.add_column("Status", justify="center")
-        result_table.add_column("Details")
+    with console.status("Reading header rows ...", spinner_style="info"):
+        with concurrent.futures.ThreadPoolExecutor(max_workers=min(32, max(1, len(tables_to_check)))) as executor:
+            results = dict(zip(tables_to_check, executor.map(check_table, tables_to_check)))
 
-        table_ok = True
-        if duplicates:
-            table_ok = False
-            dup_str = ", ".join(f"'{h}' x{cnt}" for h, cnt in duplicates.items())
-            result_table.add_row("Duplicates", "[error]FAIL[/]", dup_str)
-        else:
-            result_table.add_row("Duplicates", "[success]OK[/]", "None")
-
-        if missing:
-            table_ok = False
-            result_table.add_row("Missing in Sheet", "[error]FAIL[/]", ", ".join(missing))
-        else:
-            result_table.add_row("Missing in Sheet", "[success]OK[/]", "None")
-
-        if extra:
-            result_table.add_row("Extra in Sheet", "[warning]WARN[/]", ", ".join(extra))
-        else:
-            result_table.add_row("Extra in Sheet", "[success]OK[/]", "None")
-
-        result_table.add_row(
-            "Column Count",
-            "[info]INFO[/]",
-            f"Sheet: {len(sheet_headers)} | Schema: {len(schema_cols)}",
+    overview = tui.table("Table", "Worksheet", "Columns", "Missing#", "Extra#", "Duplicates#", "")
+    problems: List[tuple] = []
+    failed = 0
+    for table in tables_to_check:
+        ws_name, n_sheet, n_schema, missing, extra, duplicates, error = results[table]
+        if error:
+            failed += 1
+            overview.add_row(table, ws_name, "-", "-", "-", "-", f"{tui.ICONS['fail']} {error}")
+            continue
+        ok = not missing and not duplicates
+        failed += 0 if ok else 1
+        overview.add_row(
+            table,
+            ws_name,
+            f"{n_sheet} / {n_schema}",
+            str(len(missing)) if missing else "[muted]0[/muted]",
+            str(len(extra)) if extra else "[muted]0[/muted]",
+            str(len(duplicates)) if duplicates else "[muted]0[/muted]",
+            tui.ICONS["fail" if not ok else "warn" if extra else "pass"],
         )
-        return result_table, table_ok
+        if missing:
+            problems.append(("fail", f"{table}: missing in the sheet: {', '.join(missing)}"))
+        if duplicates:
+            dup = ", ".join(f"'{h}' x{cnt}" for h, cnt in duplicates.items())
+            problems.append(("fail", f"{table}: duplicated headers: {dup}"))
+        if extra:
+            problems.append(("warn", f"{table}: extra in the sheet (not imported): {', '.join(extra)}"))
+    tui.print_table(overview)
+    tui.note("Columns: sheet / schema", indent=2)
+    for status, message in problems:
+        tui.line(status, message)
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=min(32, max(1, len(tables_to_check)))) as executor:
-        future_to_table = {executor.submit(check_table, t): t for t in tables_to_check}
-        for future in concurrent.futures.as_completed(future_to_table):
-            result_table, table_ok = future.result()
-            if not table_ok:
-                all_ok = False
-            if result_table:
-                console.print(result_table)
-
-    if all_ok:
-        console.print("[success]All sheet headers validated successfully.[/]")
-    else:
-        console.print("[error]Header validation found issues - see above.[/]")
-    return all_ok
+    if failed:
+        record_stage("Headers", "fail", f"{tui.plural(failed, 'table')} do not match the schema")
+        return False
+    warned = sum(1 for status, _ in problems if status == "warn")
+    record_stage(
+        "Headers",
+        "warn" if warned else "pass",
+        f"{tui.plural(len(tables_to_check), 'sheet')} match"
+        + (f", {tui.plural(warned, 'sheet')} with extra columns" if warned else ""),
+    )
+    return True
 
 
 # ── Data Processing ──────────────────────────────────────────────────────────
@@ -598,7 +615,7 @@ def prepare_table_identity_index(df: pd.DataFrame, table: str) -> pd.DataFrame:
 
 
 def ensure_notification_tables(engine: Engine):
-    logger.info("Ensuring notification/audit tables...")
+    logger.debug("Ensuring notification/audit tables...")
     ddl_statements = [
         f"CREATE SCHEMA IF NOT EXISTS {NOTIFICATION_SCHEMA};",
         f"""
@@ -729,7 +746,7 @@ def create_import_run(engine: Engine, source: str, target_tables: List[str]) -> 
             ).fetchone()
         if row:
             run_id = int(row[0])
-            logger.info(f"Started import run id={run_id}")
+            logger.debug(f"Started import run id={run_id}")
             return run_id
     except Exception as e:
         logger.warning(f"Could not create import_runs record: {e}")
@@ -769,7 +786,7 @@ def finalize_import_run(
                     "error_message": error_message, "run_id": run_id,
                 },
             )
-        logger.info(f"Import run id={run_id} finalized: status='{status}', tables={tables_loaded}, events={change_events_logged}")
+        logger.debug(f"Import run id={run_id} finalized: status='{status}', tables={tables_loaded}, events={change_events_logged}")
     except Exception as e:
         logger.warning(f"Could not finalize import run id={run_id}: {e}")
 
@@ -790,7 +807,7 @@ def fetch_existing_table_snapshot(engine: Engine, table: str, tracked_fields: Li
 
     inspector = inspect(engine)
     if not inspector.has_table(table):
-        logger.info(f"No existing '{table}' table; skipping pre-import snapshot.")
+        logger.debug(f"No existing '{table}' table; skipping pre-import snapshot.")
         return pd.DataFrame(columns=requested_cols)
 
     existing_cols = {c["name"] for c in inspector.get_columns(table)}
@@ -802,7 +819,7 @@ def fetch_existing_table_snapshot(engine: Engine, table: str, tracked_fields: Li
     try:
         with engine.connect() as conn:
             snapshot_df = pd.read_sql(text(sql), conn)
-        logger.info(f"Pre-import '{table}' snapshot: {len(snapshot_df)} rows")
+        logger.debug(f"Pre-import '{table}' snapshot: {len(snapshot_df)} rows")
         return snapshot_df
     except Exception as e:
         logger.warning(f"Could not read '{table}' snapshot: {e}")
@@ -941,7 +958,7 @@ def cleanup_old_change_events(engine: Engine):
             )
             deleted = result.rowcount
             if deleted > 0:
-                logger.info(f"Cleaned up {deleted} change events older than {RETENTION_DAYS} days.")
+                logger.debug(f"Cleaned up {deleted} change events older than {RETENTION_DAYS} days.")
     except Exception as e:
         logger.warning(f"Could not clean up old change events: {e}")
 
@@ -984,48 +1001,46 @@ def insert_change_events(engine: Engine, import_run_id: int, events: List[Dict[s
 
 
 def apply_constraints(engine: Engine):
-    console.print("\n[header]Applying Constraints[/]")
     with engine.connect() as conn:
         conn.execution_options(isolation_level="AUTOCOMMIT")
         for sql in CONSTRAINTS_SQL:
             conn.execute(text(sql))
             logger.debug(f"  Applied: {sql[:60]}...")
-    console.print("[success]Constraints applied.[/]")
+    tui.line("pass", "Constraints applied.")
 
 
 def apply_indexes(engine: Engine, target_tables: List[str] = None):
-    console.print("\n[header]Applying Indexes[/]")
     with engine.connect() as conn:
         conn.execution_options(isolation_level="AUTOCOMMIT")
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
 
     tables_to_run = target_tables or list(TABLE_DEFS.keys())
+    timer = tui.Timer()
 
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        BarColumn(bar_width=30),
-        TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-        TimeElapsedColumn(),
-        console=console,
-    ) as progress:
-        task = progress.add_task("Indexing...", total=len(tables_to_run))
+    def index_table(table):
+        defn = TABLE_DEFS.get(table)
+        if not defn or not defn.get("indexes"):
+            return 0
+        with engine.connect() as conn:
+            conn.execution_options(isolation_level="AUTOCOMMIT")
+            for sql in defn["indexes"]:
+                conn.execute(text(sql))
+        return len(defn["indexes"])
 
-        def index_table(table):
-            defn = TABLE_DEFS.get(table)
-            if not defn or not defn.get("indexes"):
-                return
-            with engine.connect() as conn:
-                conn.execution_options(isolation_level="AUTOCOMMIT")
-                for sql in defn["indexes"]:
-                    conn.execute(text(sql))
-
+    created = 0
+    with tui.progress() as progress:
+        task = progress.add_task("Building indexes", total=len(tables_to_run))
         with concurrent.futures.ThreadPoolExecutor(max_workers=min(32, max(1, len(tables_to_run)))) as executor:
             futures = [executor.submit(index_table, t) for t in tables_to_run]
-            for _ in concurrent.futures.as_completed(futures):
+            for future in concurrent.futures.as_completed(futures):
+                created += future.result()
                 progress.advance(task)
 
-    console.print("[success]Indexes applied.[/]")
+    tui.line(
+        "pass",
+        f"Indexes applied: {tui.plural(created, 'index', 'indexes')} on "
+        f"{tui.plural(len(tables_to_run), 'table')} in {timer}.",
+    )
 
 
 def run_import(
@@ -1035,6 +1050,8 @@ def run_import(
         gc = get_gspread_client()
     except Exception as e:
         raise RuntimeError(f"Google Sheets auth failed: {e}") from e
+
+    tui.section("Import · Google Sheets to database" + (" (dry run)" if dry_run else ""))
 
     loaded: List[str] = []
     total_change_events = 0
@@ -1049,51 +1066,40 @@ def run_import(
     old_snapshots: Dict[str, pd.DataFrame] = {}
     track_lifecycle = True
 
-    if dry_run:
-        console.print(Panel("[warning]DRY-RUN MODE[/] - No DB writes will be executed", expand=False))
-    else:
+    if not dry_run:
         ensure_notification_tables(engine)
         track_lifecycle = has_completed_import_baseline(engine)
         if not track_lifecycle:
-            logger.info("Lifecycle events skipped: no completed baseline import exists yet.")
+            logger.info("Added/removed rows are not logged this time: no completed baseline import exists yet.")
         import_run_id = create_import_run(engine, IMPORT_SOURCE, tables)
         if import_run_id is None:
             raise RuntimeError("Could not create import run record.")
 
     # Pre-capture old snapshots
-    for table in tables:
-        tracked_fields = get_tracked_table_fields(full_schema, table)
-        table_tracked_fields[table] = tracked_fields
-        if tracked_fields or table in LIFECYCLE_EVENT_TABLES:
-            old_snapshots[table] = fetch_existing_table_snapshot(engine, table, tracked_fields)
+    with console.status("Reading current tables for change tracking ...", spinner_style="info"):
+        for table in tables:
+            tracked_fields = get_tracked_table_fields(full_schema, table)
+            table_tracked_fields[table] = tracked_fields
+            if tracked_fields or table in LIFECYCLE_EVENT_TABLES:
+                old_snapshots[table] = fetch_existing_table_snapshot(engine, table, tracked_fields)
 
-    # Summary table for results
-    summary = Table(title="[header]Import Results[/]", show_lines=True)
-    summary.add_column("Table", style="table_name")
-    summary.add_column("Rows", justify="right")
-    summary.add_column("Time (s)", justify="right")
-    summary.add_column("Field Changes", justify="right")
-    summary.add_column("Added", justify="right", style="green")
-    summary.add_column("Removed", justify="right", style="red")
-    summary.add_column("Status", justify="center")
+    # One result row per table, printed in import order once all finish.
+    results: Dict[str, tuple] = {}
+    results_lock = threading.Lock()
+    timer = tui.Timer()
 
     try:
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            BarColumn(bar_width=30),
-            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-            TimeElapsedColumn(),
-            console=console,
-        ) as progress:
-            summary_lock = threading.Lock()
+        with tui.progress(counts=False) as progress:
             task_ids = {}
             for t in tables:
-                task_ids[t] = progress.add_task(f"[dim]Queued:[/] [table_name]{t}[/]", total=None, start=False)
+                task_ids[t] = progress.add_task(f"[muted]Queued[/]  {t}", total=None, start=False)
+
+            def stage(table, label):
+                progress.update(task_ids[table], description=f"{label:<12} {table}")
 
             def process_table(table):
                 task_id = task_ids[table]
-                progress.update(task_id, description=f"Downloading: [table_name]{table}[/]")
+                stage(table, "Downloading")
                 progress.start_task(task_id)
 
                 ws_name = WORKSHEET_MAP.get(table)
@@ -1110,22 +1116,20 @@ def run_import(
                 if df is None or df.empty:
                     raise RuntimeError(f"Worksheet '{ws_name}' is empty.")
 
-                progress.update(task_id, description=f"Cleaning: [table_name]{table}[/]")
+                stage(table, "Cleaning")
                 df_clean = clean_dataframe(df, full_schema[table])
                 tracked_fields = table_tracked_fields.get(table, [])
                 table_field_events: List[Dict] = []
                 table_lifecycle_events: List[Dict] = []
                 table_events: List[Dict] = []
-                common_count = 0
                 added_count = 0
                 removed_count = 0
                 old_snapshot = old_snapshots.get(table, pd.DataFrame())
 
                 if tracked_fields or (table in LIFECYCLE_EVENT_TABLES and track_lifecycle):
-                    progress.update(task_id, description=f"Diffing: [table_name]{table}[/]")
+                    stage(table, "Diffing")
 
                 if tracked_fields:
-                    common_count = get_common_record_count(old_snapshot, df_clean, table)
                     table_field_events = compute_table_field_changes(old_snapshot, df_clean, table, tracked_fields)
                     table_events.extend(table_field_events)
 
@@ -1140,20 +1144,15 @@ def run_import(
                     for c in full_schema[table]["columns"]
                 }
 
-                elapsed = round(time.perf_counter() - start_time, 2)
-
                 if dry_run:
-                    with summary_lock:
-                        summary.add_row(
-                            table, str(len(df_clean)), str(elapsed),
-                            str(len(table_field_events)), str(added_count), str(removed_count),
-                            "[warning]DRY-RUN[/]",
-                        )
+                    elapsed = time.perf_counter() - start_time
+                    with results_lock:
+                        results[table] = (len(df_clean), elapsed, len(table_field_events), added_count, removed_count)
                         loaded.append(table)
-                    progress.update(task_id, completed=1, total=1, description=f"[success]Done:[/] [table_name]{table}[/]")
+                    progress.update(task_id, completed=1, total=1, description=f"[success]Done[/]  {table}")
                     return 0
 
-                progress.update(task_id, description=f"Writing to DB: [table_name]{table}[/]")
+                stage(table, "Writing")
                 with engine.connect() as conn:
                     conn.execution_options(isolation_level="AUTOCOMMIT")
                     conn.execute(text(f"DROP TABLE IF EXISTS {table} CASCADE"))
@@ -1163,22 +1162,18 @@ def run_import(
                     method="multi", chunksize=CHUNKSIZE, dtype=dtypes,
                 )
 
-                elapsed = round(time.perf_counter() - start_time, 2)
+                elapsed = time.perf_counter() - start_time
 
                 inserted = 0
                 if table_events and import_run_id is not None:
-                    progress.update(task_id, description=f"Logging Events: [table_name]{table}[/]")
+                    stage(table, "Logging")
                     inserted = insert_change_events(engine, import_run_id, table_events)
 
-                with summary_lock:
+                with results_lock:
                     loaded.append(table)
-                    summary.add_row(
-                        table, str(len(df_clean)), str(elapsed),
-                        str(len(table_field_events)), str(added_count), str(removed_count),
-                        "[success]OK[/]",
-                    )
-                
-                progress.update(task_id, completed=1, total=1, description=f"[success]Done:[/] [table_name]{table}[/]")
+                    results[table] = (len(df_clean), elapsed, len(table_field_events), added_count, removed_count)
+
+                progress.update(task_id, completed=1, total=1, description=f"[success]Done[/]  {table}")
                 return inserted
 
             with concurrent.futures.ThreadPoolExecutor(max_workers=min(32, max(1, len(tables)))) as executor:
@@ -1186,14 +1181,38 @@ def run_import(
                 for future in concurrent.futures.as_completed(futures):
                     total_change_events += future.result()
 
-        console.print(summary)
+        summary = tui.table("Table", "Rows#", "Time#", "Field changes#", "Added#", "Removed#", "")
+        for table in tables:
+            if table not in results:
+                continue
+            rows, elapsed, changes, added, removed = results[table]
+            summary.add_row(
+                table,
+                tui.num(rows),
+                f"{elapsed:.1f}s",
+                tui.num(changes) if changes else "[muted]0[/muted]",
+                f"[success]{tui.num(added)}[/success]" if added else "[muted]0[/muted]",
+                f"[error]{tui.num(removed)}[/error]" if removed else "[muted]0[/muted]",
+                tui.ICONS["pass"],
+            )
+        tui.print_table(summary)
+
+        total_rows = sum(r[0] for r in results.values())
+        verb = "Read" if dry_run else "Loaded"
+        detail = f"{tui.plural(len(loaded), 'table')}, {tui.plural(total_rows, 'row')} in {timer}"
+        if not dry_run:
+            detail += f", {tui.plural(total_change_events, 'change event')} logged"
+        tui.line("pass", f"{verb} {detail}.")
+        record_stage("Import" + (" (dry run)" if dry_run else ""), "pass", detail)
 
         if dry_run:
             return loaded
 
         if loaded:
+            tui.section("Database · constraints and indexes")
             apply_constraints(engine)
             apply_indexes(engine, loaded)
+            record_stage("Indexes", "pass", f"constraints and indexes on {tui.plural(len(loaded), 'table')}")
 
         if import_run_id is not None:
             finalize_import_run(
@@ -1205,6 +1224,7 @@ def run_import(
         return loaded
     except Exception as e:
         logger.exception(f"Import aborted: {e}")
+        record_stage("Import", "fail", str(e)[:120])
         if import_run_id is not None and not dry_run:
             finalize_import_run(
                 engine, import_run_id, status="failed",
@@ -1215,91 +1235,92 @@ def run_import(
 
 
 def run_snapshot(engine: Engine, tables: List[str]):
-    console.print(Panel("[header]Schema Snapshot[/]", expand=False))
+    tui.section("Snapshot · database tables")
     os.makedirs(SNAPSHOT_OUTPUT_DIR, exist_ok=True)
 
     inspector = inspect(engine)
     snapshot = {}
 
-    snap_table = Table(title="[header]DB Table Stats[/]", show_lines=True)
-    snap_table.add_column("Table", style="table_name")
-    snap_table.add_column("Columns", justify="right")
-    snap_table.add_column("Rows", justify="right")
-    snap_table.add_column("Size (MB)", justify="right")
+    snap_table = tui.table("Table", "Columns#", "Rows#", "Size (MB)#")
 
-    for table in tables:
-        if not inspector.has_table(table):
-            continue
+    with console.status("Reading table stats ...", spinner_style="info"):
+        for table in tables:
+            if not inspector.has_table(table):
+                continue
 
-        cols = []
-        pk_response = inspector.get_pk_constraint(table)
-        pks = set(pk_response.get("constrained_columns", [])) if pk_response else set()
+            cols = []
+            pk_response = inspector.get_pk_constraint(table)
+            pks = set(pk_response.get("constrained_columns", [])) if pk_response else set()
 
-        for col in inspector.get_columns(table):
-            cols.append({
-                "Table": table,
-                "Column": col["name"],
-                "Type": str(col["type"]),
-                "Nullable": "YES" if col["nullable"] else "NO",
-                "Default": str(col["default"]) or "",
-                "PK": "YES" if col["name"] in pks else "",
-            })
+            for col in inspector.get_columns(table):
+                cols.append({
+                    "Table": table,
+                    "Column": col["name"],
+                    "Type": str(col["type"]),
+                    "Nullable": "YES" if col["nullable"] else "NO",
+                    "Default": str(col["default"]) or "",
+                    "PK": "YES" if col["name"] in pks else "",
+                })
 
-        try:
-            with engine.connect() as conn:
-                rows = conn.execute(text(f'SELECT COUNT(*) FROM "{table}"')).scalar() or 0
-                size_res = conn.execute(text(f"SELECT pg_total_relation_size('{table}')")).scalar() or 0
-                size_mb = round(size_res / (1024 ** 2), 3)
-        except Exception:
-            rows, size_mb = 0, 0
+            try:
+                with engine.connect() as conn:
+                    rows = conn.execute(text(f'SELECT COUNT(*) FROM "{table}"')).scalar() or 0
+                    size_res = conn.execute(text(f"SELECT pg_total_relation_size('{table}')")).scalar() or 0
+                    size_mb = round(size_res / (1024 ** 2), 3)
+            except Exception:
+                rows, size_mb = 0, 0
 
-        snapshot[table] = {
-            "columns": cols,
-            "statistics": {"Table": table, "Rows": rows, "Size (MB)": size_mb},
-        }
-        snap_table.add_row(table, str(len(cols)), str(rows), str(size_mb))
+            snapshot[table] = {
+                "columns": cols,
+                "statistics": {"Table": table, "Rows": rows, "Size (MB)": size_mb},
+            }
+            snap_table.add_row(table, str(len(cols)), tui.num(rows), f"{size_mb:,.1f}")
 
-    console.print(snap_table)
+    tui.print_table(snap_table)
 
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     path = os.path.join(SNAPSHOT_OUTPUT_DIR, f"schema_{timestamp}.json")
     with open(path, "w", encoding="utf-8") as f:
         json.dump(snapshot, f, indent=2, ensure_ascii=False)
-    console.print(f"[dim]Snapshot saved: {path}[/]")
+    tui.note(f"Saved to {os.path.relpath(path)}", indent=2)
+    total_mb = sum(s["statistics"]["Size (MB)"] for s in snapshot.values())
+    record_stage("Snapshot", "pass", f"{tui.plural(len(snapshot), 'table')}, {total_mb:,.0f} MB")
 
 
 def run_validate(engine: Engine, schema_def: Dict, target_tables: List[str] = None):
-    console.print(Panel("[header]Schema Validation[/]", expand=False))
+    """Compare the database's columns and types with master-schema.json.
+    A missing table or column fails; a type mismatch is a warning."""
+    tui.section("Schema check · database vs master-schema.json")
     inspector = inspect(engine)
     db_tables = set(inspector.get_table_names())
     all_ok = True
 
     tables_to_check = target_tables or list(schema_def.keys())
 
-    val_table = Table(title="[header]Validation Results[/]", show_lines=True)
-    val_table.add_column("Table", style="table_name")
-    val_table.add_column("Column")
-    val_table.add_column("Expected Type")
-    val_table.add_column("DB Type")
-    val_table.add_column("Status", justify="center")
+    overview = tui.table("Table", "Columns#", "Missing#", "Type mismatches#", "")
+    problems: List[tuple] = []
+    mismatches = 0
 
     for table, defs in schema_def.items():
         if table not in tables_to_check:
             continue
 
         if table not in db_tables:
-            val_table.add_row(table, "-", "-", "-", "[error]MISSING TABLE[/]")
+            overview.add_row(table, "-", "-", "-", f"{tui.ICONS['fail']} table missing")
             all_ok = False
             continue
 
         db_cols = {c["name"]: str(c["type"]).upper() for c in inspector.get_columns(table)}
+        missing = 0
+        wrong_type = 0
 
         for col_def in defs["columns"]:
             cname = col_def["Column"]
             ctype = col_def["Type"].upper()
 
             if cname not in db_cols:
-                val_table.add_row(table, cname, ctype, "-", "[error]MISSING[/]")
+                missing += 1
+                problems.append((table, cname, ctype, "[muted]missing[/muted]", tui.ICONS["fail"]))
                 all_ok = False
                 continue
 
@@ -1309,22 +1330,54 @@ def run_validate(engine: Engine, schema_def: Dict, target_tables: List[str] = No
                 or (ctype == "FLOAT" and "DOUBLE" in db_type)
                 or (ctype == "VARCHAR" and "TEXT" in db_type)
             )
+            if not match:
+                wrong_type += 1
+                problems.append((table, cname, ctype, db_type, tui.ICONS["warn"]))
 
-            if match:
-                val_table.add_row(table, cname, ctype, db_type, "[success]OK[/]")
-            else:
-                val_table.add_row(table, cname, ctype, db_type, "[warning]TYPE MISMATCH[/]")
+        mismatches += wrong_type
+        overview.add_row(
+            table,
+            str(len(defs["columns"])),
+            str(missing) if missing else "[muted]0[/muted]",
+            str(wrong_type) if wrong_type else "[muted]0[/muted]",
+            tui.ICONS[tui.status_of(missing, wrong_type)],
+        )
 
-    console.print(val_table)
+    tui.print_table(overview)
+    if problems:
+        details = tui.table("Table", "Column", "Expected", "In database", "", title="Columns that differ")
+        for row in problems:
+            details.add_row(*row)
+        tui.print_table(details)
 
     if all_ok:
-        console.print("[success]Schema validation passed.[/]")
+        record_stage(
+            "Schema check",
+            "warn" if mismatches else "pass",
+            f"{tui.plural(mismatches, 'type mismatch', 'type mismatches')}" if mismatches else "database matches the schema",
+        )
     else:
-        console.print("[error]Schema validation found issues.[/]")
+        record_stage("Schema check", "fail", "tables or columns missing from the database")
         raise RuntimeError("Schema validation failed.")
 
 
 # ── Main ─────────────────────────────────────────────────────────────────────
+
+
+def database_host() -> str:
+    """Host and database name from the connection string, without the
+    credentials, for the header."""
+    parsed = urllib.parse.urlparse(CONN_STRING)
+    name = parsed.path.lstrip("/")
+    return f"{parsed.hostname or '?'}" + (f" / {name}" if name else "")
+
+
+def finish(ok: bool, headline: str, next_steps: List[str]) -> None:
+    """Closing summary of every stage that ran, then the verdict panel."""
+    tui.section("Summary")
+    tui.summary([("", name, status, detail) for name, status, detail in STAGES])
+    worst = "fail" if not ok else "warn" if any(s == "warn" for _, s, _ in STAGES) else "pass"
+    tui.verdict(worst, headline, next_steps)
 
 
 def main():
@@ -1343,11 +1396,6 @@ def main():
         global logger
         logger = setup_logger(verbose=True)
 
-    console.print(Panel.fit(
-        "[header]Unified Data Manager[/]\n[dim]Import | Validate | Snapshot[/]",
-        border_style="cyan",
-    ))
-
     mode_selected = args.run_import or args.run_validate or args.run_snapshot or args.run_index or args.check_headers
 
     if not mode_selected and not args.dry_run:
@@ -1365,58 +1413,98 @@ def main():
             console.print(f"[error]Unknown table '{args.target_table}'. Available: {list(full_schema.keys())}[/]")
             sys.exit(1)
         target_tables = [args.target_table]
-        console.print(f"[info]Targeting single table:[/] [table_name]{args.target_table}[/]")
-
-    # --check-headers
-    if args.check_headers:
-        headers_ok = check_sheet_headers(full_schema, target_tables)
-        if not headers_ok:
-            sys.exit(1)
-        if not (args.run_import or args.run_validate or args.run_snapshot or args.run_index):
-            console.print("[success]Done.[/]")
-            return
 
     if args.dry_run and args.run_index and not args.run_import:
         console.print("[error]--dry-run cannot be combined with standalone --index.[/]")
         sys.exit(1)
 
+    # The stages this run will go through, for the header.
+    plan: List[str] = []
+    if args.check_headers or args.run_import:
+        plan.append("headers")
+    if args.run_import:
+        plan.append("import (dry run)" if args.dry_run else "import")
+    if args.run_import and not args.dry_run:
+        plan += ["indexes"]
+    elif args.run_index:
+        plan.append("indexes")
+    if args.run_snapshot or (args.run_import and not args.dry_run):
+        plan.append("snapshot")
+    if args.run_validate:
+        plan.append("schema check")
+    tui.header(
+        "ETL · import (no cache purge)",
+        [
+            ("Database", database_host()),
+            ("Tables", args.target_table or "all"),
+            (
+                "Mode",
+                "[warning]dry run: nothing is written to the database[/warning]"
+                if args.dry_run
+                else ("[error]writes to the database[/error]" if args.run_import or args.run_index else "read-only"),
+            ),
+            ("Stages", " → ".join(plan)),
+            ("Log file", os.path.relpath(LOG_FILE)),
+        ],
+    )
+
+    # --check-headers
+    if args.check_headers:
+        if not check_sheet_headers(full_schema, target_tables):
+            finish(False, "Header check failed", ["Fix the sheet headers listed above, then run again."])
+            sys.exit(1)
+        if not (args.run_import or args.run_validate or args.run_snapshot or args.run_index):
+            finish(True, "Headers match the schema", [])
+            return
+
     # DB connection
     try:
-        engine = get_engine()
-        with engine.connect():
-            pass
-        console.print("[success]Database connected.[/]")
+        with console.status("Connecting to the database ...", spinner_style="info"):
+            engine = get_engine()
+            with engine.connect():
+                pass
+        tui.line("pass", f"Connected to {database_host()}.")
     except Exception as e:
-        console.print(f"[error]Database connection failed: {e}[/]")
+        tui.line("fail", f"Database connection failed: {e}")
         sys.exit(1)
 
-    # Pre-flight header check
-    if args.run_import:
-        label = "Pre-flight (dry-run)" if args.dry_run else "Pre-flight"
-        console.print(f"\n[header]{label}: Validating headers...[/]")
-        if not check_sheet_headers(full_schema, target_tables):
-            console.print("[error]Aborting import - headers do not match schema.[/]")
-            engine.dispose()
-            sys.exit(1)
+    try:
+        # Pre-flight header check
+        if args.run_import and not args.check_headers:
+            if not check_sheet_headers(full_schema, target_tables):
+                finish(False, "Import not started · sheet headers do not match the schema",
+                       ["Fix the sheet headers listed above, then run again."])
+                engine.dispose()
+                sys.exit(1)
 
-    processed_tables = target_tables or list(full_schema.keys())
+        processed_tables = target_tables or list(full_schema.keys())
 
-    if args.run_import:
-        console.print(Panel("[header]MODE: IMPORT" + (" (DRY-RUN)" if args.dry_run else "") + "[/]", expand=False))
-        processed_tables = run_import(engine, full_schema, target_tables, dry_run=args.dry_run)
+        if args.run_import:
+            processed_tables = run_import(engine, full_schema, target_tables, dry_run=args.dry_run)
 
-    if args.run_index and not args.run_import:
-        console.print(Panel("[header]MODE: INDEX[/]", expand=False))
-        apply_indexes(engine, target_tables)
+        if args.run_index and not args.run_import:
+            tui.section("Database · indexes")
+            apply_indexes(engine, target_tables)
+            record_stage("Indexes", "pass", f"indexes on {tui.plural(len(target_tables or TABLE_DEFS), 'table')}")
 
-    if args.run_snapshot or (args.run_import and not args.dry_run):
-        run_snapshot(engine, processed_tables)
+        if args.run_snapshot or (args.run_import and not args.dry_run):
+            run_snapshot(engine, processed_tables)
 
-    if args.run_validate:
-        run_validate(engine, full_schema, target_tables)
+        if args.run_validate:
+            run_validate(engine, full_schema, target_tables)
+    except Exception as e:
+        engine.dispose()
+        logger.debug("Run failed", exc_info=True)
+        finish(False, f"Failed · {str(e)[:70]}", [f"Full details: {os.path.relpath(LOG_FILE)}"])
+        sys.exit(1)
 
     engine.dispose()
-    console.print("\n[success]All done.[/]")
+    if args.dry_run:
+        finish(True, "Dry run complete · nothing was written", ["Run without --dry-run to import."])
+    elif args.run_import:
+        finish(True, "Import complete", [])
+    else:
+        finish(True, f"Finished · {tui.plural(len(STAGES), 'stage')} passed", [])
 
 
 if __name__ == "__main__":
@@ -1424,10 +1512,10 @@ if __name__ == "__main__":
         main()
     except KeyboardInterrupt:
         console.print()
-        console.print("[warning]Stopping...[/]", end=" ")
-        time.sleep(0.3)
-        console.print("[dim]Stopped.[/]")
+        console.print("[warning]Stopped.[/warning]")
         sys.exit(130)
     except Exception as e:
-        console.print(f"\n[error]Unexpected error: {e}[/]")
+        tui.line("fail", f"Unexpected error: {e}")
+        tui.note(f"Full details: {os.path.relpath(LOG_FILE)}", indent=4)
+        logger.debug("Unexpected error", exc_info=True)
         sys.exit(1)
