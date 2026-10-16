@@ -4,16 +4,16 @@ function normalizeEnvValue(value: string | undefined): string | null {
   return normalized || null
 }
 
+export type DevEnvironment = "dev" | "preview"
+
 /**
- * Label for the header environment badge. NEXT_PUBLIC_ENVIRONMENT_LABEL wins
- * when set (e.g. PROD to hide the badge). Otherwise it is detected: DEV under
- * `next dev` and on Vercel preview deployments, nothing in production.
+ * Non-production environment for the header badge, detected rather than
+ * configured: "dev" under `next dev`, "preview" on Vercel preview
+ * deployments, null in production.
  */
-export function getEnvironmentLabel(): string | null {
-  const label = normalizeEnvValue(process.env.NEXT_PUBLIC_ENVIRONMENT_LABEL)
-  if (label) return label.toUpperCase()
-  if (process.env.NODE_ENV === "development") return "DEV"
-  if (process.env.NEXT_PUBLIC_VERCEL_ENV === "preview") return "DEV"
+export function getDevEnvironment(): DevEnvironment | null {
+  if (process.env.NODE_ENV === "development") return "dev"
+  if (process.env.NEXT_PUBLIC_VERCEL_ENV === "preview") return "preview"
   return null
 }
 
