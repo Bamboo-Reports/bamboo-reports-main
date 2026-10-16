@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useMemo, useState } from "react"
-import { RiAddLine, RiArrowDownSLine, RiArrowUpSLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiGroupLine, RiListCheck3, RiPencilLine, RiRefreshLine, RiShareLine, RiUploadLine } from "@remixicon/react"
+import { RiAddLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiGroupLine, RiListCheck3, RiPencilLine, RiRefreshLine, RiShareLine, RiUploadLine } from "@remixicon/react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -41,7 +41,6 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
   const [uploadTarget, setUploadTarget] = useState<AccountList | null>(null)
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState("")
-  const [expandedId, setExpandedId] = useState<string | null>(null)
   const [listToDelete, setListToDelete] = useState<AccountList | null>(null)
 
   const myLists = useMemo(() => lists.filter((l) => l.user_id === userId), [lists, userId])
@@ -127,7 +126,6 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
   )
 
   const renderList = (list: AccountList, own: boolean) => {
-                const expanded = expandedId === list.id
                 const renaming = renamingId === list.id
                 return (
                   <li key={list.id} className="px-3 py-2.5">
@@ -196,28 +194,8 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
                             </Button>
                           </>
                         )}
-                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setExpandedId(expanded ? null : list.id)} aria-label={expanded ? "Hide accounts" : "Show accounts"} aria-expanded={expanded}>
-                          {expanded ? <RiArrowUpSLine className="h-4 w-4" /> : <RiArrowDownSLine className="h-4 w-4" />}
-                        </Button>
                       </div>
                     </div>
-                    {expanded && (
-                      <div className="mt-2 space-y-2">
-                        <div className="flex max-h-40 flex-wrap gap-1 overflow-y-auto rounded-md border bg-muted/30 p-2">
-                          {list.accounts.map((name) => (
-                            <span key={name} className="rounded-full border bg-background px-2 py-0.5 text-xs" title={name}>
-                              {name}
-                            </span>
-                          ))}
-                        </div>
-                        {list.unmatched.length > 0 && (
-                          <details className="text-xs text-muted-foreground">
-                            <summary className="cursor-pointer">Unmatched names ({list.unmatched.length})</summary>
-                            <p className="mt-1 break-words">{list.unmatched.join(", ")}</p>
-                          </details>
-                        )}
-                      </div>
-                    )}
                   </li>
                 )
   }
