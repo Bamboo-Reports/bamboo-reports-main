@@ -450,7 +450,7 @@ export function AccountsTab({
             </div>
           </CardHeader>
           <CardContent className="p-0 flex flex-col flex-1 overflow-hidden">
-            <div ref={scrollContainerRef} key={dataLayout} className="flex-1 overflow-auto view-content">
+            <div ref={scrollContainerRef} key={dataLayout} className={cn("flex-1 overflow-auto view-content", dataLayout === "grid" && "border-t")}>
               {dataLayout === "table" ? (
                 <Table className="table-fixed">
                   <TableHeader>
@@ -504,7 +504,7 @@ export function AccountsTab({
                 </Table>
               ) : (
                   <div className="flex flex-col">
-                    <div className="flex items-center gap-2 px-6 py-3 sticky top-0 z-10 border-y [background:linear-gradient(hsl(var(--muted)/0.2),hsl(var(--muted)/0.2)),hsl(var(--background))]">
+                    <div className="flex items-center gap-2 px-6 py-3 border-b bg-muted/20">
                       <span className="text-xs font-medium text-muted-foreground">Sort</span>
                       <Button
                         type="button"
