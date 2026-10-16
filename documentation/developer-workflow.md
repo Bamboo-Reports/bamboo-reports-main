@@ -45,7 +45,7 @@ This guide is for developers maintaining or extending the Bamboo Reports applica
     - `NEXT_PUBLIC_BRANDFETCH_CLIENT_ID`: Company logos (Brandfetch)
     - `NEXT_PUBLIC_NOTIFICATIONS_ENABLED`: `enabled` (as in `.env.example`) or `disabled` to hide the bell and recently-updated dots
     - `NEXT_PUBLIC_MAINTENANCE_MODE`: set to `true` to show a maintenance page instead of the dashboard
-    - `NEXT_PUBLIC_ENVIRONMENT_LABEL`: Set to `DEV` or `PROD` for environment badge
+    - `NEXT_PUBLIC_ENVIRONMENT_LABEL`: Optional. Leave empty and the DEV badge shows automatically under `npm run dev` and on Vercel preview deployments; set `DEV` or `PROD` to force it on or off
 
 3. **Run Development Server:**
     ```bash

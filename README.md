@@ -399,7 +399,7 @@ bamboo-reports-nextjs/
 | `NEXT_PUBLIC_POSTHOG_DEBUG` | No | Set to `true` to enable PostHog debug logging. |
 | `NEXT_PUBLIC_NOTIFICATIONS_ENABLED` | No | Feature flag: `enabled` or `disabled`. |
 | `NEXT_PUBLIC_MAINTENANCE_MODE` | No | Set to `true` to show a maintenance page instead of the dashboard. |
-| `NEXT_PUBLIC_ENVIRONMENT_LABEL` | No | Environment tag displayed in the UI: `DEV`, `PROD`, or empty. |
+| `NEXT_PUBLIC_ENVIRONMENT_LABEL` | No | Override for the header DEV badge. Empty: auto-detect (shown under `npm run dev` and on Vercel preview deployments, hidden in production). `DEV` forces it on, `PROD` forces it off. |
 | `LOG_LEVEL` / `NEXT_PUBLIC_LOG_LEVEL` | No | `debug`, `info`, `warn` or `error`. Default: `debug` in dev, `info` otherwise. `NEXT_PUBLIC_LOG_LEVEL` wins. |
 
 ---

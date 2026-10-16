@@ -42,6 +42,29 @@ describe("config, auth, request, and ticker helpers", () => {
     expect(getBrandfetchClientId()).toBe("client-id")
   })
 
+  it("detects the environment label when it is not set", () => {
+    vi.stubEnv("NEXT_PUBLIC_ENVIRONMENT_LABEL", "")
+    vi.stubEnv("NEXT_PUBLIC_VERCEL_ENV", "")
+
+    vi.stubEnv("NODE_ENV", "development")
+    expect(getEnvironmentLabel()).toBe("DEV")
+
+    vi.stubEnv("NODE_ENV", "production")
+    expect(getEnvironmentLabel()).toBeNull()
+
+    vi.stubEnv("NEXT_PUBLIC_VERCEL_ENV", "preview")
+    expect(getEnvironmentLabel()).toBe("DEV")
+
+    vi.stubEnv("NEXT_PUBLIC_VERCEL_ENV", "production")
+    expect(getEnvironmentLabel()).toBeNull()
+  })
+
+  it("lets the explicit label override detection", () => {
+    vi.stubEnv("NODE_ENV", "development")
+    vi.stubEnv("NEXT_PUBLIC_ENVIRONMENT_LABEL", "prod")
+    expect(getEnvironmentLabel()).toBe("PROD")
+  })
+
   it("handles roles and bearer tokens", () => {
     expect(normalizeUserRole("admin")).toBe("admin")
     expect(normalizeUserRole("owner")).toBe("viewer")
