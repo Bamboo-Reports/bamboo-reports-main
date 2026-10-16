@@ -146,7 +146,7 @@ export function FiltersSidebar({
       className={cn(
         'bg-sidebar/90 backdrop-blur-sm overflow-hidden shrink-0 relative ml-6 mt-[var(--dashboard-content-top-gap)] mb-[var(--dashboard-content-bottom-gap)] rounded-2xl border border-sidebar-border shadow-[0_24px_60px_-45px_rgba(0,0,0,0.55)]',
         'transition-[width] duration-300 ease-[cubic-bezier(0.22_1_0.36_1)] motion-reduce:transition-none',
-        isCollapsed ? 'w-16' : 'w-[352px]'
+        isCollapsed ? 'w-16' : 'w-[320px]'
       )}
       aria-label="Filters sidebar"
     >
@@ -205,7 +205,7 @@ export function FiltersSidebar({
       <div
         ref={scrollRef}
         className={cn(
-          'absolute inset-y-0 left-0 w-[352px] overflow-y-auto p-4 space-y-3 transition-all duration-200 ease-out motion-reduce:transition-none',
+          'absolute inset-y-0 left-0 w-[320px] overflow-y-auto p-4 space-y-3 transition-all duration-200 ease-out motion-reduce:transition-none',
           isCollapsed ? 'opacity-0 translate-x-1 pointer-events-none' : 'opacity-100 translate-x-0 pointer-events-auto'
         )}
       >
@@ -392,7 +392,7 @@ export function FiltersSidebar({
       {/* Scroll down indicator */}
       <div
         className={cn(
-          'absolute bottom-0 left-0 w-[352px] flex justify-center pointer-events-none transition-opacity duration-300',
+          'absolute bottom-0 left-0 w-[320px] flex justify-center pointer-events-none transition-opacity duration-300',
           canScrollDown && !isCollapsed ? 'opacity-100' : 'opacity-0'
         )}
       >
