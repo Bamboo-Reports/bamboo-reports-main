@@ -38,7 +38,7 @@ Each step targets a `data-tour` attribute. `addStep` resolves the selector to th
 
 Note: the visibility check also walks the target's ancestors for `opacity: 0`. When the sidebar is collapsed, the expanded panel stays mounted and is only faded by an `opacity-0` wrapper, so this is what drops steps 5 and 6 (saved filters, export) instead of spotlighting an area the user cannot see. Covered by `tests/unit/tour-steps.test.ts`.
 
-`saved-filters-manager.tsx` also carries `account-lists-button` and `summary-report-button` attributes, but no step targets them yet.
+`export-button` is the Export menu trigger (Excel or Report). `saved-filters-manager.tsx` also carries `account-lists-button` (the upload button) and `summary-report-button` (the Report menu item), but no step targets them yet.
 
 ## 4. Completion Tracking (`useTourPersistence`)
 

@@ -30,7 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { RiArrowDownSLine, RiCloseLine, RiDeleteBinLine, RiDownloadLine, RiFolderOpenLine, RiGroupLine, RiSaveLine, RiSettings4Line, RiShareLine, RiShieldFlashLine, RiUploadLine } from "@remixicon/react"
+import { RiArrowDownSLine, RiCloseLine, RiDeleteBinLine, RiDownloadLine, RiFileExcel2Line, RiFileTextLine, RiFolderOpenLine, RiLoader4Line, RiGroupLine, RiSaveLine, RiSettings4Line, RiShareLine, RiShieldFlashLine, RiUploadLine } from "@remixicon/react"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { buildTrackedFiltersSnapshot, normalizeTrackedText, toTrackedStringArray } from "@/lib/analytics/tracking"
@@ -431,7 +431,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
 
       <AccountListsDialog open={accountListsOpen} onOpenChange={setAccountListsOpen} onApply={handleApplyAccountList} />
 
-      {(onReset || onExport) && (
+      {(onReset || onExport || onGenerateReport) && (
         <div className="grid grid-cols-2 gap-2 w-full">
           {onReset && (
             <Button
@@ -443,37 +443,48 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
               Reset
             </Button>
           )}
-          {onExport && (
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleExportAction}
-              className="w-full h-8 text-xs font-medium"
-              aria-label={canExport ? "Export data" : "Export data (admin only)"}
-              title={canExport ? "Export data" : "Only admins can export data"}
-              data-tour="export-button"
-            >
-              Export
-            </Button>
+          {(onExport || onGenerateReport) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="default"
+                  size="sm"
+                  disabled={isGeneratingReport}
+                  className="w-full h-8 text-xs font-medium"
+                  aria-label="Export as Excel or Report"
+                  data-tour="export-button"
+                >
+                  {isGeneratingReport ? (
+                    <RiLoader4Line className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" />
+                  ) : (
+                    <RiDownloadLine className="h-3.5 w-3.5" />
+                  )}
+                  {isGeneratingReport ? "Preparing..." : "Export"}
+                  {!isGeneratingReport && <RiArrowDownSLine className="h-3.5 w-3.5 opacity-80" />}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-[160px]">
+                {onExport && (
+                  <DropdownMenuItem
+                    onSelect={handleExportAction}
+                    title={canExport ? undefined : "Only admins can export data"}
+                  >
+                    <RiFileExcel2Line className="h-4 w-4" />
+                    Excel
+                  </DropdownMenuItem>
+                )}
+                {onGenerateReport && (
+                  <DropdownMenuItem onSelect={onGenerateReport} data-tour="summary-report-button">
+                    <RiFileTextLine className="h-4 w-4" />
+                    Report
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
       )}
 
-      {onGenerateReport && (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onGenerateReport}
-          disabled={isGeneratingReport}
-          className="w-full h-8 text-xs font-medium"
-          aria-label="Download summary report as PDF"
-          title="Download a PDF with the current counts and applied filters"
-          data-tour="summary-report-button"
-        >
-          <RiDownloadLine className="h-3.5 w-3.5" />
-          {isGeneratingReport ? "Preparing report..." : "Report"}
-        </Button>
-      )}
 
       {exportAccessError ? (
         <div

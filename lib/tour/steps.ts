@@ -102,9 +102,9 @@ export function getDashboardTourSteps(options: { hasMapView: boolean; isSidebarC
 
   addStep("[data-tour='export-button']", {
     popover: {
-      title: "Export to Excel",
+      title: "Export",
       description:
-        "Download filtered data as a multi-sheet Excel workbook. Choose which datasets to include.",
+        "Download this view as an Excel workbook, or as a PDF report with the counts, charts and applied filters.",
       side: "right",
       align: "start",
     },

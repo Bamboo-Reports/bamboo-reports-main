@@ -87,7 +87,7 @@ Bamboo Reports provides a unified view of business entities (**Accounts**, **Cen
 - **Audit Log + Re-Download:** Every export is archived to a private Supabase Storage bucket and logged in `public.user_exports` with IP, user-agent, filters snapshot, and row counts. Users re-download past exports from the **My exports** dialog via short-lived signed URLs.
 - **Logo Integration:** Automated company logo fetching via the Brandfetch Logo API with monogram fallbacks.
 - **Financial Data:** Stock information and financial metrics via Yahoo Finance integration.
-- **Summary PDF:** The sidebar **Report** button (download icon) produces a one-click A4 report of the current dashboard state (key metrics, applied filters, chart breakdowns), rendered client-side with jsPDF from `lib/reports/`.
+- **Summary PDF:** **Export → Report** in the sidebar produces a one-click A4 report of the current dashboard state (key metrics, applied filters, chart breakdowns), rendered client-side with jsPDF from `lib/reports/`.
 
 > **Details:** See [User Exports & Audit Log](documentation/backend/user-exports.md) for the architecture, setup steps, and troubleshooting.
 

@@ -262,7 +262,7 @@ If UI alignment needs tuning:
 | **Map not rendering** | Basemap or local boundary request | Check browser requests to `basemaps.cartocdn.com` and confirm `public/data/admin-1.geojson` is available. |
 | **Notifications not appearing** | Feature flag | Set `NEXT_PUBLIC_NOTIFICATIONS_ENABLED=enabled` in `.env`. Restart dev server. |
 | **Unexpected map boundaries** | Basemap boundary layers remain visible | Verify `hideBasemapBoundaries` runs after map load and the local boundary overlay loads. See `documentation/frontend/map-disputed-boundaries.md`. |
-| **Export button disabled** | User role | Only `admin` role can export. Update the `role` column in `public.profiles`. |
+| **Export → Excel shows "only admins can export"** | User role | Only the `admin` role can export Excel. Update the `role` column in `public.profiles`. Export → Report (PDF) works for every role. |
 | **PostHog events missing** | Environment variables | Verify `NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_POSTHOG_HOST` are set. Check that `providers.tsx` is wrapping the app. |
 | **Company logos not loading** | Brandfetch client ID | Set `NEXT_PUBLIC_BRANDFETCH_CLIENT_ID`. If Brandfetch has no logo for the domain, the monogram fallback is expected. |
 | **Financial data missing** | Yahoo Finance | The Yahoo Finance API can be rate-limited. Check the `/api/financials` route logs for errors. |

@@ -64,7 +64,7 @@ Zod schemas used by the auth forms (`app/(auth)/*/page.tsx`, framed by `componen
 
 | Location | Check |
 |----------|-------|
-| `app/page.tsx` | Computes `canExport = canExportData(userRole)` and passes it down: the sidebar export button in `components/filters/saved-filters-manager.tsx` is blocked ("Export data (admin only)") and the table row-selection download is hidden unless it is `true`. |
+| `app/page.tsx` | Computes `canExport = canExportData(userRole)` and passes it down: the **Excel** option of the sidebar Export menu in `components/filters/saved-filters-manager.tsx` shows an admin-only notice instead of exporting (the **Report** PDF option stays available to everyone) and the table row-selection download is hidden unless it is `true`. |
 | `app/api/exports/generate/route.ts` | Re-reads `profiles.role` server-side and returns 403 unless `canExportData()`; never trust a client-disabled button as the only guard. |
 | `app/api/exports/route.ts`, `app/api/exports/[id]/download/route.ts` | No role check: listing and re-download are scoped to the caller's own `user_exports` rows by `user_id`. |
 | `hooks/use-auth-guard.ts` | Redirects unauthenticated sessions before any protected UI mounts. |
