@@ -158,12 +158,22 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
                             {list.name}
                           </p>
                         )}
-                        <p className="mt-0.5 text-xs text-muted-foreground">
-                          {list.accounts.length} account{list.accounts.length === 1 ? "" : "s"}
-                          {list.unmatched.length > 0 ? `, ${list.unmatched.length} unmatched` : ""}
-                          {list.updated_at ? ` , updated ${formatDate(list.updated_at)}` : ""}
-                          {list.source_file ? ` , from ${list.source_file}` : ""}
-                          {!own && list.owner_email ? ` , shared by ${list.owner_email}` : ""}
+                        <p className="mt-0.5 flex min-w-0 items-center text-xs text-muted-foreground">
+                          <span className="shrink-0">
+                            {list.accounts.length} Account{list.accounts.length === 1 ? "" : "s"}
+                          </span>
+                          {list.updated_at && formatDate(list.updated_at) && (
+                            <>
+                              <span aria-hidden="true" className="mx-1.5 shrink-0">•</span>
+                              <span className="shrink-0">{formatDate(list.updated_at)}</span>
+                            </>
+                          )}
+                          {!own && list.owner_email && (
+                            <>
+                              <span aria-hidden="true" className="mx-1.5 shrink-0">•</span>
+                              <span className="truncate" title={list.owner_email}>{list.owner_email}</span>
+                            </>
+                          )}
                         </p>
                       </div>
                       <div className="flex shrink-0 items-center gap-0.5">
