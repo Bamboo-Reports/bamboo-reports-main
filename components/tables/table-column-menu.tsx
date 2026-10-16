@@ -33,7 +33,7 @@ export function TableColumnMenu<ColumnKey extends string>({
           type="button"
           variant="outline"
           size="sm"
-          className="h-10 w-10 rounded-full px-0"
+          className="h-10 w-10 px-0"
           aria-label="Customise table columns"
           title="Customise table columns"
         >
