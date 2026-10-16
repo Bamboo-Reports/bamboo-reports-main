@@ -129,6 +129,7 @@ Why Redis: the counter gates every data response, including cache hits. The Supa
 Without Redis credentials the original Supabase path is used. Migration: [`sql/rate-limits-migration.sql`](sql/rate-limits-migration.sql).
 
 - Table `public.rate_limit_counters` with PK `(user_id, bucket_key, window_start)`, RLS enabled, all access revoked from `anon` and `authenticated`. Only the service role touches it.
+- Expired rows are pruned daily at 03:17 UTC by the pg_cron job `prune-rate-limit-counters` (deletes windows older than 1 day; the longest window is 1 hour). Migration: [`sql/rate-limits-prune-cron-migration.sql`](sql/rate-limits-prune-cron-migration.sql).
 - Function `increment_rate_limit(user, bucket, window_start)`: `security definer`, empty `search_path`, executable by `service_role` only. Atomic upsert-increment returning the new count.
 - Stale windows are never read once passed; an optional scheduled `DELETE` prunes rows older than a day.
 
@@ -159,6 +160,7 @@ Export **generation** (`POST /api/exports/generate`) uses a separate mechanism: 
 | `lib/dashboard/entity-query-route.ts` | Shared entity-query handler (cache + rate limit) |
 | `lib/rate-limit/server.ts` | `enforceRateLimit`, fixed windows in Upstash Redis (Supabase fallback) |
 | `documentation/backend/sql/rate-limits-migration.sql` | `rate_limit_counters` table + `increment_rate_limit` RPC |
+| `documentation/backend/sql/rate-limits-prune-cron-migration.sql` | Enables pg_cron and schedules the daily prune of expired counters |
 | `app/api/financials/route.ts` | Authed, rate-limited Yahoo Finance proxy |
 | `app/api/exports/generate/route.ts` | Hourly export cap via `user_exports` row counts |
 | `etl/V2/main_cache_purge.py` | ETL import variant with post-import `dash:*` purge |
