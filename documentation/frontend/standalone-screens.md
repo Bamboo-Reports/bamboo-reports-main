@@ -67,7 +67,7 @@ Reference dimensions, taken from the real components:
 | `CompanyLogo size="md"` (grid cards) | `h-12 w-12 rounded-xl` |
 | Prospect avatar (table / card) | `h-8 w-8` / `h-10 w-10`, `rounded-full` |
 | Grid card title (`text-base`) and subtitle (`text-sm`) | `h-5` and `h-4` |
-| Grid card `Button size="sm"` | `h-9 rounded-md` |
+| Grid card `Button size="sm"` | `h-9 rounded-lg` (the button radius) |
 | Summary card count | Invisible copy of the real typography with a `Skeleton` overlaid, see `summary-cards.tsx` |
 
 Dialog sections that load related data have their own inline skeletons, and each mirrors the loaded section: the centre dialog's services list (including the AI Services row) is a bordered list of label-plus-pills rows, the prospect dialog's "More Contacts From" section is three filter rows above a framed `GridSkeletonCards` grid, and the prospect campaign activity timeline (`components/dialogs/prospect-engagement-timeline.tsx`) shows one ghost row (date, icon tile, two text lines) with a Try again button if the load fails.
