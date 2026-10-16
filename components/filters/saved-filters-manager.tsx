@@ -30,7 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { RiArrowDownSLine, RiCloseLine, RiDeleteBinLine, RiFileTextLine, RiFolderOpenLine, RiGroupLine, RiListCheck3, RiSaveLine, RiSettings4Line, RiShareLine, RiShieldFlashLine } from "@remixicon/react"
+import { RiArrowDownSLine, RiCloseLine, RiDeleteBinLine, RiFileTextLine, RiFolderOpenLine, RiGroupLine, RiSaveLine, RiSettings4Line, RiShareLine, RiShieldFlashLine, RiUploadLine } from "@remixicon/react"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { buildTrackedFiltersSnapshot, normalizeTrackedText, toTrackedStringArray } from "@/lib/analytics/tracking"
@@ -421,11 +421,11 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
           size="icon"
           className="h-9 w-9 rounded-full shrink-0"
           title="Account lists: upload a client account list and apply it as a filter"
-          aria-label="Account lists"
+          aria-label="Upload or manage account lists"
           onClick={() => setAccountListsOpen(true)}
           data-tour="account-lists-button"
         >
-          <RiListCheck3 className="h-4 w-4" />
+          <RiUploadLine className="h-4 w-4" />
         </Button>
       </div>
 
