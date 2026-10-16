@@ -50,11 +50,8 @@ Supabase-backed user data (auth, profiles, saved filters, favorites, export audi
 
 ### 2.1 `app/` (Routes & Actions)
 
--   **`actions.ts`**: Central re-export point for all server action modules.
 -   **`api/**`**: Warehouse reads (Route Handlers): `dashboard/{summary,facets,charts}`, `<entity>/query`, `centers/map`, `accounts/[name]/related`, `search`, `accounts/autocomplete`, built on `lib/dashboard/filtering-sql.ts` and `lib/db/warehouse.ts`. See [Server-Mode Dashboard](backend/server-dashboard-mode.md).
--   **`actions/financial.ts`**: Financial data queries (Yahoo Finance integration for stock data).
 -   **`actions/notifications.ts`**: Notification tracking — recently updated accounts and records, read status.
--   **`actions/system.ts`**: System diagnostics and health checks.
 -   **`page.tsx`**: Main dashboard entry point and UI orchestrator. Wires auth, data loading, filtering hooks, and layout composition.
 -   **`providers.tsx`**: Application-level providers (PostHog analytics).
 -   **`(auth)/`**: Auth route group containing `signin/` and `signup/` pages.
@@ -224,9 +221,9 @@ Alias rows power alias-aware account search: the global search (`components/layo
 -   **Fallback:** Renders a monogram badge if the image fails to load or no client ID is configured. See [Logo Integration](frontend/logo-integration.md).
 
 ### 5.3 Yahoo Finance
--   Used in `app/actions/financial.ts` and `lib/finance/`.
+-   Used in `app/api/financials/route.ts` and `lib/finance/`.
 -   **Purpose:** Fetches stock prices and financial metrics for account entities with stock tickers.
--   **Integration:** Server-side only (via server actions).
+-   **Integration:** Server-side only (via the authed, rate-limited `/api/financials` route).
 
 ### 5.4 PostHog Analytics
 -   Initialized in `app/providers.tsx` and `lib/analytics/client.ts`.
@@ -267,10 +264,8 @@ app/layout.tsx (Root Layout)
             │   ├── CentersTab
             │   │   ├── CentersMap / CentersChoroplethMap (map view)
             │   │   └── DataTable with CenterRow (data view)
-            │   ├── ProspectsTab
-            │   │   └── DataTable with ProspectRow (data view)
-            │   └── ServicesTab
-            │       └── DataTable with ServiceRow (data view)
+            │   └── ProspectsTab
+            │       └── DataTable with ProspectRow (data view)
             ├── ExportDialog
             └── Detail Dialogs
                 ├── AccountDetailsTabbedDialog

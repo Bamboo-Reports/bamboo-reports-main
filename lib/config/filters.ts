@@ -470,18 +470,6 @@ export function isSectionVisible(sectionId: string): boolean {
   return section.filters.some((f) => f.enabled)
 }
 
-/** Get the config for a specific section */
-export function getSectionConfig(sectionId: string): FilterSectionConfig | undefined {
-  return FILTER_SECTIONS.find((s) => s.id === sectionId)
-}
-
-/** Get all enabled filter keys for a specific section */
-export function getEnabledFiltersForSection(sectionId: string): string[] {
-  const section = FILTER_SECTIONS.find((s) => s.id === sectionId)
-  if (!section || !section.enabled) return []
-  return section.filters.filter((f) => f.enabled).map((f) => f.key)
-}
-
 export function sanitizeFilters(sourceFilters: Filters): Filters {
   const defaults = createDefaultFilters()
   const sanitized: Filters = { ...sourceFilters }

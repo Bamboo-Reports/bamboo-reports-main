@@ -193,8 +193,6 @@ await vi.runAllTimersAsync()
 vi.useRealTimers()
 ```
 
-Source: `tests/api/dashboard-route.test.ts`.
-
 ## 4. React Component Tests (React Testing Library)
 
 Requirements for any file that renders JSX:

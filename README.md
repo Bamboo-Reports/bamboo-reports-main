@@ -128,7 +128,7 @@ graph TD
 ### Data Fetching Strategy
 1. **Initial Load:** The client fetches the full dashboard dataset from the `GET /api/dashboard` Route Handler, which wraps the underlying Server Action with an in-memory SWR cache and gzip compression.
 2. **Filtering:** User actions update React state; client-side filtering and chart aggregation run locally for responsiveness.
-3. **Route Handlers and Server Actions:** Warehouse reads go through `app/api/**` Route Handlers built on `lib/dashboard/filtering-sql.ts`; user-data operations use action files (`app/actions/notifications.ts`, `app/actions/system.ts`) and the Supabase client directly.
+3. **Route Handlers and Server Actions:** Warehouse reads go through `app/api/**` Route Handlers built on `lib/dashboard/filtering-sql.ts`; user-data operations use `app/actions/notifications.ts` and the Supabase client directly.
 4. **Runtime Behavior (#249):** Filters are translated to SQL on the server and the client reads paginated/aggregated slices from dedicated endpoints (`/api/dashboard/summary`, `/api/dashboard/facets`, `/api/dashboard/charts`, `/api/{accounts,centers,prospects}/query`, `/api/search`, `/api/centers/map`). Responses are cached in a two-tier cache (in-memory L1 + Upstash Redis L2) keyed on the filter state and purged by the ETL after each import. See [Server-Mode Dashboard](documentation/backend/server-dashboard-mode.md) and [Caching and Rate Limiting](documentation/backend/caching-and-rate-limiting.md).
 
 ---
@@ -273,7 +273,7 @@ bamboo-reports-nextjs/
 │   ├── pyproject.toml              # Python project and dependencies (uv)
 │   ├── uv.lock                     # Locked Python dependencies
 │   └── run.sh                      # ETL runner script
-│                                    # See documentation/etl-pipeline.md for the full process
+│                                    # See documentation/backend/etl-pipeline.md for the full process
 │
 ├── documentation/                  # Technical documentation
 │   ├── tech-stack.md               # Detailed tech stack reference (whole app)
@@ -534,7 +534,6 @@ Detailed documentation for specific subsystems lives in the `documentation/` fol
 | [**Testing Guide**](documentation/testing-guide.md) | Vitest setup, mocking patterns, and how to add a new test |
 | [**Server-Mode Dashboard**](documentation/backend/server-dashboard-mode.md) | The #249 server-backed data path: endpoints, SQL filter translation, rollout state |
 | [**Caching and Rate Limiting**](documentation/backend/caching-and-rate-limiting.md) | Two-tier response cache (L1 + Upstash Redis L2), cache purges, per-user rate limits |
-| [**API Caching (SWR)**](documentation/backend/api-caching-swr.md) | Stale-while-revalidate cache behavior for the `/api/dashboard` route |
 | [**Filtering SQL Parity Report**](documentation/backend/filtering-sql-parity-report.md) | Real-data verification that server-side SQL filtering matches the client engine |
 | [**Supabase Auth**](documentation/backend/supabase-auth-setup.md) | Setting up the `profiles` table, RLS policies, and auth triggers |
 | [**RBAC & Auth Guards**](documentation/backend/rbac-and-auth-guards.md) | Role enforcement, client-side session guard, server-side token verification |

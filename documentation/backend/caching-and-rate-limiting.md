@@ -148,7 +148,6 @@ Export **generation** (`POST /api/exports/generate`) uses a separate mechanism: 
 | File | Role |
 |------|------|
 | `lib/cache/memory.ts` | Two-tier `getOrCompute` cache (L1 Map + Upstash L2) |
-| `app/api/dashboard/route.ts` | Route-local SWR payload cache, POST purge handler |
 | `lib/dashboard/entity-query-route.ts` | Shared entity-query handler (cache + rate limit) |
 | `lib/rate-limit/server.ts` | `enforceRateLimit`, fixed windows in Upstash Redis (Supabase fallback) |
 | `documentation/backend/sql/rate-limits-migration.sql` | `rate_limit_counters` table + `increment_rate_limit` RPC |

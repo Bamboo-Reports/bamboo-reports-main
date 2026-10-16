@@ -143,9 +143,9 @@ Columns:
 
 ## 4. Developer Notes for Maintainers
 
-### 4.1 Data Fetching (`app/actions/data.ts`)
+### 4.1 Data Fetching (`lib/dashboard/filtering-sql.ts`)
 - Queries use `snake_case` column names.
-- When adding a new filter, update both query and in-memory filtering paths.
+- When adding a new filter, update both the SQL path (`lib/dashboard/filtering-sql.ts`) and the client parity engine (`lib/dashboard/filtering.ts`).
 
 ### 4.2 Type Definitions (`lib/types.ts`)
 - Keep interfaces aligned with `etl/V2/master-schema.json`.

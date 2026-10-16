@@ -18,8 +18,6 @@ A complete reference mapping every user-facing label in the application to its s
   - [2.1 Accounts Table](#21-accounts-table)
   - [2.2 Centers Table](#22-centers-table)
   - [2.3 Prospects Table](#23-prospects-table)
-  - [2.4 Services Table](#24-services-table)
-  - [2.5 Functions Table](#25-functions-table)
 - [3. Detail Dialogs (Popups)](#3-detail-dialogs-popups)
   - [3.1 Account Details Dialog](#31-account-details-dialog)
   - [3.2 Center Details Dialog](#32-center-details-dialog)
@@ -167,33 +165,7 @@ Each tab in the dashboard displays a paginated data table. Tables show 50 rows p
 | UUID | `uuid` | Recently-updated tracking |
 | Account | `account_global_legal_name` | Linking to parent account |
 
-### 2.4 Services Table
-
-**Source files:** `components/tabs/services-tab.tsx`, `components/tables/service-row.tsx`
-
-| Column Header | Database Column | Table | Display Type | Notes |
-|---------------|----------------|-------|-------------|-------|
-| CN Unique Key | `cn_unique_key` | `services` | Muted text | Identifier linking to parent center |
-| Center Name | `center_name` | `services` | Text | Denormalized from `centers` table |
-| Primary Service | `primary_service` | `services` | Text | — |
-| Focus Region | `focus_region` | `services` | Text | — |
-| IT | `service_it` | `services` | Boolean indicator | Service capability flag |
-| ER&D | `service_erd` | `services` | Boolean indicator | Service capability flag |
-| FnA | `service_fna` | `services` | Boolean indicator | Service capability flag |
-| HR | `service_hr` | `services` | Boolean indicator | Service capability flag |
-| Procurement | `service_procurement` | `services` | Boolean indicator | Service capability flag |
-| Sales & Marketing | `service_sales_marketing` | `services` | Boolean indicator | Service capability flag |
-| Customer Support | `service_customer_support` | `services` | Boolean indicator | Service capability flag |
-| Others | `service_others` | `services` | Boolean indicator | Service capability flag |
-| Software Vendor | `software_vendor` | `services` | Text | — |
-| Software In Use | `software_in_use` | `services` | Text | — |
-
-### 2.5 Functions Table
-
-**Source file:** `components/tables/function-row.tsx`
-
-| Column Header | Database Column | Table | Display Type | Notes |
-|---------------|----------------|-------|-------------|-------|
+---------------|----------------|-------|-------------|-------|
 | CN Unique Key | `cn_unique_key` | `functions` | Muted text | Identifier linking to parent center |
 | Function Name | `function_name` | `functions` | Text | — |
 
