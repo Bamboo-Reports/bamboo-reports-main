@@ -470,7 +470,8 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
                   size="sm"
                   disabled={isGeneratingReport}
                   className="w-full h-8 text-xs font-medium"
-                  aria-label="Export as Excel or Report"
+                  aria-label={isGeneratingReport ? "Preparing report" : "Export as Excel or Report"}
+                  aria-busy={isGeneratingReport || undefined}
                   data-tour="export-button"
                 >
                   {isGeneratingReport && (
