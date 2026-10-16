@@ -36,7 +36,7 @@ Each step targets a `data-tour` attribute. `addStep` resolves the selector to th
 | 8 | `[data-tour='map-view']` | `components/tabs/accounts-tab.tsx`, `components/tabs/centers-tab.tsx` | Only when `hasMapView` |
 | 9 | (none) | | Centered "You're All Set!" closing popover |
 
-Note: the visibility check reads only the target's own computed style. When the sidebar is collapsed, the expanded panel stays mounted and is faded by an `opacity-0` on a parent, so steps 5 and 6 are still included and spotlight an area the user cannot see.
+Note: the visibility check also walks the target's ancestors for `opacity: 0`. When the sidebar is collapsed, the expanded panel stays mounted and is only faded by an `opacity-0` wrapper, so this is what drops steps 5 and 6 (saved filters, export) instead of spotlighting an area the user cannot see. Covered by `tests/unit/tour-steps.test.ts`.
 
 `saved-filters-manager.tsx` also carries `account-lists-button` and `summary-report-button` attributes, but no step targets them yet.
 
