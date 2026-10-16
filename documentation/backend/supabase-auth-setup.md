@@ -8,7 +8,7 @@ This guide details the authentication setup using Supabase, including the necess
 
 ## 1. Environment Variables
 
-Ensure these are set in your `.env.local` (for local development) and your deployment environment (Vercel).
+Ensure these are set in your `.env` (for local development) and your deployment environment (Vercel).
 
 | Variable | Description | Required |
 | :--- | :--- | :--- |

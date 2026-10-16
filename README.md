@@ -344,7 +344,7 @@ bamboo-reports-nextjs/
 3. **Environment Setup:**
     Duplicate the example file and fill in your secrets.
     ```bash
-    cp .env.example .env.local
+    cp .env.example .env
     ```
 
 4. **Run Development Server:**

@@ -22,9 +22,9 @@ This guide is for developers maintaining or extending the Bamboo Reports applica
     ```
 
 2. **Environment Variables:**
-    Copy `.env.example` to `.env.local` and fill in the secrets.
+    Copy `.env.example` to `.env` and fill in the secrets.
     ```bash
-    cp .env.example .env.local
+    cp .env.example .env
     ```
 
     Required variables:
@@ -243,7 +243,7 @@ If UI alignment needs tuning:
 | **Auth redirect loop** | Supabase config | Verify `NEXT_PUBLIC_SUPABASE_URL` and `ANON_KEY`. Check `useAuthGuard` hook behavior. |
 | **Slow queries** | `lib/dashboard/filtering-sql.ts` | Run `EXPLAIN ANALYZE` on the generated SQL in the Neon console; the range clause shape matters (see the comment on `rangeClause`). |
 | **Map not rendering** | Basemap or local boundary request | Check browser requests to `basemaps.cartocdn.com` and confirm `public/data/admin-1.geojson` is available. |
-| **Notifications not appearing** | Feature flag | Set `NEXT_PUBLIC_NOTIFICATIONS_ENABLED=enabled` in `.env.local`. Restart dev server. |
+| **Notifications not appearing** | Feature flag | Set `NEXT_PUBLIC_NOTIFICATIONS_ENABLED=enabled` in `.env`. Restart dev server. |
 | **Unexpected map boundaries** | Basemap boundary layers remain visible | Verify `hideBasemapBoundaries` runs after map load and the local boundary overlay loads. See `documentation/frontend/map-disputed-boundaries.md`. |
 | **Export button disabled** | User role | Only `admin` role can export. Update the `role` column in `public.profiles`. |
 | **PostHog events missing** | Environment variables | Verify `NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_POSTHOG_HOST` are set. Check that `providers.tsx` is wrapping the app. |
