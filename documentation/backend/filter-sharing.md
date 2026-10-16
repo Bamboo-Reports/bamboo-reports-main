@@ -6,7 +6,7 @@
 
 ## Retired: User Favorites
 
-The favorites feature (star an account, center or prospect and revisit it from a list) was removed from the app on 2026-10-16. The `public.user_favorites` table and `sql/user-favorites-migration.sql` are kept only because `sql/supabase-security-hardening-migration.sql` still references the table; nothing in the app reads or writes it. Drop the table once you no longer need the old rows.
+The favorites feature (star an account, center or prospect and revisit it from a list) was removed from the app on 2026-10-16. The `public.user_favorites` table was dropped the same day with `sql/drop-user-favorites-migration.sql` (510 rows from one user, added during testing in May and June 2026). `sql/user-favorites-migration.sql` stays only because `sql/supabase-security-hardening-migration.sql` still references the table.
 
 ---
 
@@ -48,7 +48,7 @@ Account list sharing (`account_list_shares`, see [Account Lists](account-lists.m
 
 ### Reading This as a Migration Order Dependency
 
-`filter-shares-migration.sql` assumes `public.saved_filters` and `public.profiles` already exist (see [Supabase Auth Setup](supabase-auth-setup.md) and [Saved Filters](supabase-saved-filters.md)). Apply migrations in this order for a fresh project: `supabase-auth-setup`, then `supabase-saved-filters`, then `filter-shares-migration` and `user-favorites-migration` (independent of each other; the latter only because the hardening migration references `user_favorites`), then `account-lists-migration` followed by `account-list-shares-migration` (which needs `lookup_profile_by_email` from the filter-shares migration). Run `supabase-security-hardening-migration` last.
+`filter-shares-migration.sql` assumes `public.saved_filters` and `public.profiles` already exist (see [Supabase Auth Setup](supabase-auth-setup.md) and [Saved Filters](supabase-saved-filters.md)). Apply migrations in this order for a fresh project: `supabase-auth-setup`, then `supabase-saved-filters`, then `filter-shares-migration` and `user-favorites-migration` (independent of each other; the latter only because the hardening migration references `user_favorites`), then `account-lists-migration` followed by `account-list-shares-migration` (which needs `lookup_profile_by_email` from the filter-shares migration). Run `supabase-security-hardening-migration`, then `drop-user-favorites-migration` last.
 
 ---
 
@@ -58,6 +58,7 @@ Account list sharing (`account_list_shares`, see [Account Lists](account-lists.m
 |------|---------|
 | `hooks/use-saved-filters.ts` | Saved filters CRUD plus share, unshare and "Shared with me" loading (calls both lookup RPCs) |
 | `sql/user-favorites-migration.sql` | Retired `user_favorites` table (still referenced by the hardening migration) |
+| `sql/drop-user-favorites-migration.sql` | Drops `user_favorites` (applied 2026-10-16) |
 | `sql/filter-shares-migration.sql` | `filter_shares` table, RLS policies, lookup functions |
 | `sql/supabase-security-hardening-migration.sql` | Grant tightening and RLS re-enable across the user-data tables |
 | `documentation/backend/supabase-saved-filters.md` | Base `saved_filters` JSON structure |
