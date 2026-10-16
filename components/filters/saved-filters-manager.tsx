@@ -111,6 +111,26 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
     [savedFilters, userId]
   )
 
+  // The saved filter last loaded, shown in the dropdown trigger while the
+  // applied filters still match what loading it produced. `applied` is filled
+  // on the first render after the load (loading sanitizes and expands account
+  // lists, so the result can differ from the stored filters); any later
+  // change to the filters clears it. Uses the "adjust state while rendering"
+  // pattern instead of an effect.
+  const [activeSaved, setActiveSaved] = useState<{ id: string; before: Filters; applied: Filters | null } | null>(null)
+  if (activeSaved) {
+    if (activeSaved.applied === null) {
+      if (currentFilters !== activeSaved.before) setActiveSaved({ ...activeSaved, applied: currentFilters })
+    } else if (
+      currentFilters !== activeSaved.applied &&
+      JSON.stringify(currentFilters) !== JSON.stringify(activeSaved.applied)
+    ) {
+      setActiveSaved(null)
+    }
+  }
+  // Looked up by id so a rename shows straight away and a deleted filter drops out.
+  const activeSavedName = activeSaved ? savedFilters.find((f) => f.id === activeSaved.id)?.name ?? null : null
+
   const handleSaveFilter = useCallback(async () => {
     const success = await saveFilter(filterName, currentFilters)
     if (success) {
@@ -131,6 +151,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
   )
 
   const handleLoadFilter = useCallback((savedFilter: SavedFilter) => {
+    setActiveSaved({ id: savedFilter.id, before: currentFilters, applied: null })
     onLoadFilters(savedFilter.filters)
     captureEvent(ANALYTICS_EVENTS.SAVED_FILTER_LOADED, {
       saved_filter_id: savedFilter.id,
@@ -138,7 +159,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
       loaded_active_filters_count: calculateActiveFilters(savedFilter.filters),
       loaded_filters_snapshot: buildTrackedFiltersSnapshot(savedFilter.filters),
     })
-  }, [onLoadFilters])
+  }, [currentFilters, onLoadFilters])
 
   const handleDeleteFilter = useCallback((filter: SavedFilter) => {
     setFilterToDelete(filter)
@@ -284,7 +305,9 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
             >
               <div className="flex items-center gap-2 truncate">
                 <RiFolderOpenLine className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <span className="truncate">Saved Filters</span>
+                <span className="truncate" title={activeSavedName ?? undefined}>
+                  {activeSavedName ?? "Saved Filters"}
+                </span>
               </div>
               <RiArrowDownSLine className="h-3.5 w-3.5 opacity-50 ml-2 shrink-0" />
             </Button>

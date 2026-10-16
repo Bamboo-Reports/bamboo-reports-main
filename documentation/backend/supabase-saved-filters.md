@@ -158,6 +158,8 @@ for each row execute function public.set_updated_at();
 - **Saving:** The frontend serializes the entire `filters` state object to JSON and sends it to Supabase.
 - **Loading:** The frontend fetches the JSON, parses it, runs it through `withFilterDefaults` to ensure required keys and range defaults are present, and then sanitizes disabled keys before applying it to the dashboard state.
 
+After a saved filter is loaded, the sidebar's Saved Filters dropdown shows its name. The name stays until the applied filters change (any edit, Reset or another load), and it is looked up by id, so a rename shows straight away and a deleted filter falls back to "Saved Filters". See `activeSaved` in `components/filters/saved-filters-manager.tsx`.
+
 ### 4.3 Deployment Access and Premium Filter Sanitization
 
 Saved filters are intentionally forward-compatible with deployment packaging changes.
