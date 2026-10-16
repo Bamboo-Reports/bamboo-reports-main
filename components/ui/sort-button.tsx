@@ -20,11 +20,13 @@ export function SortButton<T extends string = string>({
 }: SortButtonProps<T>) {
   const isActive = currentKey === sortKey && direction !== null
   return (
+    // uppercase is set here because Tailwind's preflight resets text-transform
+    // on buttons, so the TableHead's uppercase would not reach the label.
     <button
       type="button"
       onClick={() => onClick(sortKey)}
       className={cn(
-        "inline-flex items-center gap-1 rounded-md font-medium transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "inline-flex items-center gap-1 rounded-md font-medium uppercase tracking-wider transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         isActive ? "text-primary" : "text-foreground"
       )}
       aria-pressed={isActive}
