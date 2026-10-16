@@ -22,14 +22,16 @@ accounts  (PK: account_global_legal_name)
 
 | Key | Lives in | Referenced by |
 |-----|----------|---------------|
-| `account_global_legal_name` | `accounts` (PK) | `ticker`, `alias`, `centers`, `prospects` |
+| `account_global_legal_name` | `accounts` (PK) | `ticker`, `alias`, `centers`, `prospects`, `tech` (denormalized, no FK) |
 | `cn_unique_key` | `centers` (PK) | `services`, `functions`, `tech` |
+
+`subscribers` hangs off `prospects` by `lower(prospect_email)`, outside the two hub keys (see below).
 
 ---
 
 ## Core Tables
 
-Only `accounts`, `ticker`, and `centers` currently have database primary-key constraints in `etl/V2/main.py`.
+Only `accounts`, `ticker`, and `centers` currently have database primary-key constraints in `etl/V2/main_cache_purge.py` (and its backup `etl/V2/main.py`).
 The remaining child tables are linked through the hub keys below, but their ETL/logical identifiers are
 not database-enforced primary keys and should not be modelled as Prisma `@id` fields.
 
@@ -49,7 +51,7 @@ not database-enforced primary keys and should not be modelled as Prisma `@id` fi
 
 ## ETL Foreign Key Constraints
 
-Defined in `etl/V2/main.py` → `CONSTRAINTS_SQL`. All child tables cascade on parent delete.
+Defined in `etl/V2/main_cache_purge.py` (mirrored in `etl/V2/main.py`) → `CONSTRAINTS_SQL`. All child tables cascade on parent delete.
 
 | Child Table | Parent Table | Linking Column | Behaviour |
 |-------------|--------------|----------------|-----------|
@@ -61,7 +63,7 @@ Defined in `etl/V2/main.py` → `CONSTRAINTS_SQL`. All child tables cascade on p
 | `tech` | `centers` | `cn_unique_key` | `ON DELETE CASCADE` |
 | `prospects` | `accounts` | `account_global_legal_name` | `ON DELETE CASCADE` |
 
-> **Cascade rule:** Deleting a company (`accounts`) automatically deletes its aliases, centers, and prospects. Deleting a center automatically deletes its services, functions, and tech rows.
+> **Cascade rule:** Deleting a company (`accounts`) automatically deletes its ticker, aliases, centers, and prospects. Deleting a center automatically deletes its services, functions, and tech rows.
 
 > **`subscribers` has no FK.** It links to `prospects` by email, but `prospects.prospect_email` is not unique (the same email can appear on more than one prospect row) and some emails differ only by case, so a constraint is not possible. Join with `lower(s.prospect_email) = lower(p.prospect_email)`; both sides have a `lower(prospect_email)` expression index. A subscriber whose email is on several prospect rows matches all of them.
 
@@ -81,18 +83,24 @@ accounts → ticker → alias → centers → services → functions → tech �
 
 The dashboard honours the same linking columns at every layer. No discrepancies found.
 
-### DB-Level Queries (`lib/dashboard/filtering-sql.ts`, `lib/dashboard/account-related.ts`, `lib/exports/server-builder.ts`)
+### DB-Level Queries (`lib/dashboard/filtering-sql.ts`, `lib/dashboard/account-related.ts`, `lib/exports/server-builder.ts`, `app/api/prospects/[id]/engagements/route.ts`)
 
-| Join | Column | Source |
+The filter cascade in `filtering-sql.ts` builds CTEs (`acc0`, `func_centers`, `prospect_accounts`, `surviving_centers`, `final_accounts`) and links them with set membership (`col in (select col from cte)`) rather than joins:
+
+| Link | Column | Source |
 |------|--------|--------|
-| `centers` → `accounts` | `account_global_legal_name` | Summary metrics SQL — `LEFT JOIN accounts a ON a.account_global_legal_name = c.account_global_legal_name` |
-| `prospects` → `accounts` | `account_global_legal_name` | Summary metrics SQL — `LEFT JOIN accounts a ON a.account_global_legal_name = p.account_global_legal_name` |
-| Services export filter | `cn_unique_key` | `WHERE cn_unique_key = ANY(${centerKeys})` |
-| Prospects export filter | `account_global_legal_name` | `WHERE account_global_legal_name = ANY(${names})` |
+| `centers` ↔ `accounts` | `account_global_legal_name` | `surviving_centers` keeps centers whose account is in `acc0`; `final_accounts` keeps accounts with a surviving center |
+| `prospects` → `accounts` | `account_global_legal_name` | `prospect_accounts` CTE (distinct accounts with a matching prospect) |
+| `functions` → `centers` | `cn_unique_key` | `func_centers` CTE (Services Offered filter) |
+| `tech` → `centers` | `cn_unique_key` | `cn_unique_key in (select cn_unique_key from tech where ...)` (Software In Use filter) |
+| Account dialog related rows | `account_global_legal_name`, `cn_unique_key` | `account-related.ts`: centers, tech and prospects by account name; services by `cn_unique_key in (select cn_unique_key from centers where account_global_legal_name = $1)` |
+| Services export | `cn_unique_key` | `WHERE cn_unique_key = ANY(${centerKeys})`, or `cn_unique_key in (<filtered centers query>)` |
+| Prospects export | `ps_unique_key` / `account_global_legal_name` | `WHERE ps_unique_key = ANY(${keys})` for a row selection, `WHERE account_global_legal_name = ANY(${names})` for an account selection |
+| Prospect activity timeline | `lower(prospect_email)` | `select ... from subscribers where lower(prospect_email) = (select lower(prospect_email) from prospects where ps_unique_key = $1 limit 1)` |
 
-### Client-Side Filtering (`lib/dashboard/filtering.ts`)
+### Reference Engine (`lib/dashboard/filtering.ts`)
 
-Data is fetched flat (no DB-level joins for the main dashboard payload) and linked in-memory using Sets:
+The dashboard is server-backed (the full-payload route was retired in `43e95a7`). `getFilteredData` in `lib/dashboard/filtering.ts` is kept as the in-memory reference engine that the SQL parity tests compare against (`documentation/backend/filtering-sql-parity-report.md`). It links flat arrays in memory using Sets:
 
 | Filter logic | Linking column |
 |--------------|----------------|
@@ -104,7 +112,7 @@ Data is fetched flat (no DB-level joins for the main dashboard payload) and link
 
 ### Prisma Schema (`prisma/schema.prisma`)
 
-Only `AccountWarehouse` (`accounts`) and `CenterWarehouse` (`centers`) are modelled as Prisma models. The remaining tables (`services`, `functions`, `tech`, `prospects`, `alias`, `ticker`) are queried via raw SQL (`$queryRaw`). Prisma does not define `@relation` fields between them — joins and linking happen in query logic and client-side filters instead, which is appropriate for a read-only BI warehouse.
+Only `AccountWarehouse` (`accounts`) and `CenterWarehouse` (`centers`) are modelled as Prisma models. The remaining tables (`services`, `functions`, `tech`, `prospects`, `alias`, `ticker`, `subscribers`) are queried via raw SQL (`$queryRaw` or `queryWarehouse` in `lib/db/warehouse.ts`). Prisma does not define `@relation` fields between them: joins and linking happen in query logic instead, which is appropriate for a read-only BI warehouse.
 
 ---
 
@@ -123,9 +131,11 @@ Only `AccountWarehouse` (`accounts`) and `CenterWarehouse` (`centers`) are model
 
 | File | Purpose |
 |------|---------|
-| `etl/V2/main.py` | Single source of truth for `CONSTRAINTS_SQL`, `TABLE_DEFS`, and `IMPORT_ORDER` |
+| `etl/V2/main_cache_purge.py` | ETL entry point (via `run.sh`); defines `CONSTRAINTS_SQL`, `TABLE_DEFS`, and `IMPORT_ORDER`, kept in sync with `etl/V2/main.py` |
 | `prisma/schema.prisma` | Prisma models for `accounts` and `centers` |
-| `lib/dashboard/filtering-sql.ts` | Server-side filter cascade with DB-level joins (accounts, centers, functions, tech, prospects) |
-| `lib/dashboard/filtering.ts` | Client-side in-memory linking and filter propagation |
-| `lib/exports/server-builder.ts` | Export queries filtered by `account_global_legal_name` / `cn_unique_key` |
+| `lib/dashboard/filtering-sql.ts` | Server-side filter cascade as CTEs (accounts, centers, functions, tech, prospects) |
+| `lib/dashboard/filtering.ts` | In-memory reference engine for the SQL parity tests |
+| `lib/dashboard/account-related.ts` | Account dialog related rows (centers, services, tech, prospects) |
+| `lib/exports/server-builder.ts` | Export queries filtered by `account_global_legal_name` / `cn_unique_key` / `ps_unique_key` |
+| `app/api/prospects/[id]/engagements/route.ts` | Prospect to subscribers lookup by `lower(prospect_email)` |
 | `documentation/backend/schema-migration-guide.md` | Full column definitions and migration history |

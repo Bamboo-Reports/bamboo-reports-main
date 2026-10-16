@@ -16,13 +16,13 @@ The path shipped behind `NEXT_PUBLIC_DASHBOARD_SERVER_MODE` and was flipped on i
 
 ## Endpoint catalog
 
-All endpoints require a Supabase bearer token (`extractBearerToken` + `resolveAuthenticatedUserId`, 401 otherwise) and are per-user rate limited (`enforceRateLimit`, 429 + `Retry-After`). All are `dynamic = "force-dynamic"`; the filter-driven ones set `maxDuration = 60` and cache responses via `getOrCompute` (L1 in-process + L2 Upstash Redis, `x-no-cache: 1` bypasses reads). Filter bodies are `{ filters }`, coerced by `parseFilters`.
+All endpoints require a Supabase bearer token (`extractBearerToken` + `resolveAuthenticatedUserId`, 401 otherwise) and are per-user rate limited (`enforceRateLimit`, 429 + `Retry-After`). All are `dynamic = "force-dynamic"`; the filter-driven ones set `maxDuration = 60`, and most cache responses via `getOrCompute` (L1 in-process + L2 Upstash Redis, `x-no-cache: 1` bypasses reads). Filter bodies are `{ filters }`, coerced by `parseFilters`.
 
 | Endpoint | Method | Purpose | Params / body | Response |
 |---|---|---|---|---|
 | `/api/dashboard/summary` | POST | Filtered + full counts: accounts, centers, upcoming centers, prospects, headcount, services | `{ filters }` | `{ filtered, full }` count objects |
-| `/api/dashboard/facets` | POST | 23 facet option lists (value + count, facet-excludes-itself) plus base min/max ranges for revenue, years-in-India, center inc year | `{ filters }` | `{ options, ranges }` |
-| `/api/dashboard/charts` | POST | Grouped counts per section (top-10; center city as top-5 + "Others"); null/empty grouped as "Unknown" | `{ filters }` | `{ account, center, prospect }` chart arrays |
+| `/api/dashboard/facets` | POST | 24 facet option lists (value + count, facet-excludes-itself) plus base min/max ranges for revenue, years-in-India, center inc year | `{ filters }` | `{ options, ranges }` |
+| `/api/dashboard/charts` | POST | Grouped counts per section (top-10; center city as top-5 + "Others"); null/empty grouped as "Unknown". `full: true` returns every bucket uncapped (summary PDF report, `fetchDashboardChartsFull`) | `{ filters, full? }` | `{ account, center, prospect }` chart arrays |
 | `/api/accounts/query` | POST | Paginated filtered account rows. A page and its filtered total come from one statement (`withTotal`: an uncorrelated `count(*)` over the cascade as `__total`, stripped before the response); only an empty page past the first falls back to the count query | `{ filters, page, pageSize, sort }` | `{ rows, total, page, pageSize }` |
 | `/api/centers/query` | POST | Paginated filtered center rows | same | same |
 | `/api/prospects/query` | POST | Paginated filtered prospect rows | same | same |
@@ -33,11 +33,12 @@ All endpoints require a Supabase bearer token (`extractBearerToken` + `resolveAu
 | `/api/accounts/[name]/related` | GET | Account detail dialog payload: account row + its centers, services, tech, prospects (each gated by section entitlement) | path param | `{ account, centers, services, tech, prospects }` |
 | `/api/centers/[key]` | GET | One center by `cn_unique_key` with services and tech (center dialog, favorites) | path param | `{ center, services, tech }` |
 | `/api/prospects/[id]` | GET | One prospect by `ps_unique_key` (favorites, recent items) | path param | `{ prospect }` |
+| `/api/prospects/[id]/engagements` | GET | Bamboo Reports campaign touchpoints for one prospect (prospect dialog timeline): `subscribers` rows joined to the prospect by case-insensitive email, sorted oldest first by `sortEngagements` (`lib/dashboard/engagements.ts`). Not cached | path param (`ps_unique_key`) | `{ engagements }` (`prospect_engaged_date`, `prospect_engaged_campaign`) |
 
 Notes:
 
 - The three `/query` routes are 9-line wrappers around `handleEntityQuery` in `lib/dashboard/entity-query-route.ts`. Page size defaults to 51 and is clamped to 100 (`MAX_PAGE_SIZE`), so no single call returns the dataset.
-- The rate-limit RPC is fired before body parsing and awaited after the (usually cached) compute, so the round trips overlap.
+- The rate-limit check is fired before body parsing and awaited after the (usually cached) compute, so the round trips overlap.
 - `/api/search` and `/api/accounts/autocomplete` cache for 24h keyed on the term only (warehouse data is weekly-static); the ETL purges `dash:*` keys after import.
 - `/api/accounts/match` caches the raw account + alias name rows (plain JSON, Redis-safe) for 24h under `account-match:index-rows` and builds the lookup index from them and resolves every name in memory (`lib/accounts/account-match.ts`); it is rate limited to 20 calls per minute per user.
 - Row shapes come from `lib/dashboard/entity-columns.ts` (`ACCOUNT_PROJECTION`, `CENTER_COLUMNS`, `PROSPECT_COLUMNS`, ...), mirroring the legacy fetchers so components render server rows unchanged. `ACCOUNT_PROJECTION` casts `account_hq_revenue::float8` and pulls `account_hq_stock_ticker` from the ticker table via a correlated subquery.
@@ -70,7 +71,7 @@ final_accounts    acc0 restricted by prospect_accounts and surviving_centers
 
 `buildWith` resolves only the CTEs a query transitively needs (driven by `computeFlags`, which mirrors the engine's `hasAccountFilters` / `hasProspectFilters` flags and section entitlements) and emits them `AS MATERIALIZED`: a pure planner hint that avoids a nested-loop blow-up from under-estimated CTE cardinalities (`materialized: false` for pg-mem, which does not parse the keyword). Predicates are built at emit time so parameter order always matches SQL text order.
 
-Public builders: `buildAccountsQuery` / `buildCentersQuery` / `buildProspectsQuery` (+ `...CountQuery` variants) with `columns` / `orderBy` / `limit` / `offset` options, and `buildEntityAggregateQuery(entity, filters, access, select, { groupBy, where })`, which reuses the same cascade for the summary, charts, and map endpoints. `buildFacetCountsQuery(specs, filters, access)` emits the cascade once and one `union all` branch per facet, so the 23 sidebar lists are one statement when no facet is active (one extra statement per active facet, which excludes itself). A disabled section returns a `where false` query. `buildEntityUnionQuery(entity, filters, access, branches)` is the many-branch form (one cascade, `union all` members that must share a column list); `lib/dashboard/centers-map.ts` uses it to fetch the city and state map aggregates as one statement (`buildCentersMapQuery`, rows split by `kind`).
+Public builders: `buildAccountsQuery` / `buildCentersQuery` / `buildProspectsQuery` (+ `...CountQuery` variants) with `columns` / `orderBy` / `limit` / `offset` options, and `buildEntityAggregateQuery(entity, filters, access, select, { groupBy, where })`, which reuses the same cascade for the summary, charts, and map endpoints. `buildFacetCountsQuery(specs, filters, access)` emits the cascade once and one `union all` branch per facet, so the 24 sidebar lists are one statement when no facet is active (one extra statement per active facet, which excludes itself). A disabled section returns a `where false` query. `buildEntityUnionQuery(entity, filters, access, branches)` is the many-branch form (one cascade, `union all` members that must share a column list); `lib/dashboard/centers-map.ts` uses it to fetch the city and state map aggregates as one statement (`buildCentersMapQuery`, rows split by `kind`).
 
 ### Parity guarantee
 
@@ -96,14 +97,14 @@ Order behavior is covered by `tests/unit/entity-query-order.test.ts`.
 
 ## Client side
 
-`lib/dashboard/api-client.ts` is the typed fetch layer: every call attaches the current Supabase session token, `cache: "no-store"`, optionally `x-no-cache: 1`, and throws `ApiClientError` (with a friendlier message on 429). One fetcher per endpoint (`fetchDashboardSummary`, `fetchDashboardFacets`, `fetchDashboardCharts`, `fetchCentersMap`, `fetchEntityPage`, `fetchSearch`, `fetchAccountAutocomplete`, `fetchAccountRelated`, `fetchCenterDetail`, `fetchProspectById`).
+`lib/dashboard/api-client.ts` is the typed fetch layer: every call attaches the current Supabase session token, `cache: "no-store"`, optionally `x-no-cache: 1`, and throws `ApiClientError` (with a friendlier message on 429). One fetcher per endpoint (`fetchDashboardSummary`, `fetchDashboardFacets`, `fetchDashboardCharts`, `fetchCentersMap`, `fetchEntityPage`, `fetchSearch`, `fetchAccountAutocomplete`, `fetchAccountMatches`, `fetchAccountRelated`, `fetchCenterDetail`, `fetchProspectById`, `fetchProspectEngagements`), plus `fetchDashboardChartsFull` for the uncapped charts the summary PDF needs. `fetchAccountRelated` keeps its own small client cache (`clearAccountRelatedCache`).
 
 `hooks/use-server-dashboard-data.ts` orchestrates everything the dashboard renders:
 
 - **Canonical wire key.** Filters are normalized (`normalizeFiltersForServer`: a range still spanning the known base range is sent wide-open `[0, MAX_SAFE_INTEGER]` so results do not depend on when base ranges loaded) and serialized to `effectiveKey`. All fetches and caches key off it.
 - **Debounce.** Filter changes debounce 350ms before becoming effective; a state already in the client cache applies immediately (removing a filter snaps back).
 - **What fetches when.**
-  - Summary + facets: always (cards and sidebar are always visible). Two parallel requests applied independently, so the cards (a few counts) update before the sidebar (23 lists in one statement).
+  - Summary + facets: always (cards and sidebar are always visible). Two parallel requests applied independently, so the cards (a few counts) update before the sidebar (24 lists in one statement).
   - Charts: only while a chart view is visible.
   - Map aggregates: only while a map view is visible; plus one unfiltered `fetchCentersMap` for the choropleth color scale, fetched once after a map is first shown.
   - Entity pages: only the active tab fetches, keyed by `entity:filters:page:sort`.
@@ -111,16 +112,16 @@ Order behavior is covered by `tests/unit/entity-query-order.test.ts`.
 - **Client cache.** Per-response LRU maps (40 entries, session lifetime) keyed on the wire filters; revisited filter states restore with zero network calls. `reload()` clears them and sets a 5s `x-no-cache` window so refresh actually recomputes from the warehouse.
 - **Staleness signalling.** `appliedKeys` records which key each piece of state was rendered for; the derived `pending` flags mean "showing the previous state while a newer one loads" and drive per-section skeletons. Request ids guard against out-of-order responses.
 
-In legacy mode (`lib/dashboard/charts.ts` and friends) the same chart shapes are computed in the browser over the filtered arrays; server mode replaces them with `/api/dashboard/charts` responses of the same shape.
+`lib/dashboard/charts.ts` (the in-browser chart computation of the retired legacy path) defines the same chart shapes; `/api/dashboard/charts` responses match them.
 
 ## Export by filter
 
-In server mode there is no client-side list of every filtered key, so "export all filtered" sends the **filter state** instead of key lists (#249 Phase 4):
+There is no client-side list of every filtered key, so "export all filtered" sends the **filter state** instead of key lists (#249 Phase 4):
 
 - `POST /api/exports/generate` accepts a `filters` body field. When present it takes precedence: the route runs it through `parseFilters` + `resolveAccess` and calls `buildServerExport({ datasets, filters, access })`; the legacy `accountNames` / `centerKeys` / `prospectKeys` / `keylessProspectIds` lists are ignored.
 - `lib/exports/server-builder.ts` then fetches each dataset through the proven SQL builders with `columns: "*"` (`buildAccountsQuery` / `buildCentersQuery` / `buildProspectsQuery` via `queryWarehouse`). Services have no filter engine of their own: they are wrapped as `where cn_unique_key in (<centers subquery>)` over the surviving centers, matching the filtered services count on `/api/dashboard/summary`.
 - Without `filters`, the builder keeps the legacy Prisma key-list path (used by precise row-selection exports, which are unchanged).
-- The admin role gate, hourly export rate limit, Storage upload, and audit logging are identical in both modes; see [user-exports.md](user-exports.md).
+- The admin role gate, hourly export rate limit, Storage upload, and audit logging are identical for both request shapes; see [user-exports.md](user-exports.md).
 
 ## Adding a new filter in server mode
 
@@ -138,7 +139,7 @@ Keyword filters on new columns should stay as raw-column `ILIKE` and get a pg_tr
 
 Per [security-249-progress.md](../reports/security-249-progress.md):
 
-- Server mode is fully built and user-verified behind the flag; counts match the parity report. The legacy `/api/dashboard` full-payload path still exists and is what runs whenever the flag is unset.
+- Server mode is the only data path; counts match the parity report.
 - The legacy path was retired on 2026-09-05 (see [No flag any more](#no-flag-any-more)).
 - Known trade-offs in server mode: filter changes round-trip to the server (mitigated by the client/server caches), and cross-page "select all" is limited to the visible page (export-by-filter covers the whole-filtered-set workflow).
 - Response caching (L1 memory + L2 Upstash Redis, ETL purge) is documented in [caching-and-rate-limiting.md](caching-and-rate-limiting.md).
@@ -165,8 +166,9 @@ Per [security-249-progress.md](../reports/security-249-progress.md):
 | `app/api/search/route.ts`, `app/api/accounts/autocomplete/route.ts` | Server-backed search and autocomplete |
 | `app/api/accounts/match/route.ts`, `lib/accounts/account-match.ts`, `lib/accounts/account-list-parser.ts` | Account lists: list parsing (CSV/TSV/XLSX/paste), name matching and candidate scoring (see `account-lists.md`) |
 | `app/api/accounts/[name]/related/route.ts`, `app/api/centers/[key]/route.ts`, `app/api/prospects/[id]/route.ts` | Lookup endpoints (dialogs, favorites) |
+| `app/api/prospects/[id]/engagements/route.ts`, `lib/dashboard/engagements.ts` | Prospect campaign timeline endpoint and its sort/format helpers |
 | `app/api/exports/generate/route.ts`, `lib/exports/server-builder.ts` | Export-by-filter |
 | `tests/unit/filtering-sql-parity.test.ts` | pg-mem golden-parity suite (engine vs SQL) |
-| `tests/api/dashboard-summary-route.test.ts` | Example route test (auth, 429, metrics, failure) |
+| `tests/api/*.test.ts` | Route tests (auth, 429, payloads, failures), e.g. `dashboard-summary-route.test.ts`, `prospect-engagements-route.test.ts` |
 | `documentation/backend/filtering-sql-parity-report.md` | Real-data parity verification |
 | `documentation/reports/security-249-progress.md` | Phased #249 plan, rollout and retirement state |

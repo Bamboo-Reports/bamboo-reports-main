@@ -48,19 +48,19 @@ Key points:
 
 ```
 tests/
-  api/          API route handlers (app/api/**/route.ts)
+  api/          API route handlers (app/api/**/route.ts), 13 files
   fixtures/     Shared fixture builders, no assertions here
-  integration/  Multiple internal modules composed together; includes the
-                *-realdata.test.ts suites gated on DATABASE_URL (section 6)
+  integration/  Multiple internal modules composed together, 11 files; includes
+                the suites gated on DATABASE_URL (section 6)
   stubs/        Module stand-ins wired via resolve.alias (server-only)
-  unit/         Single function/module/component in isolation
+  unit/         Single function/module/component in isolation, 42 files
 ```
 
 | Directory | What goes here | Example |
 |---|---|---|
-| `tests/unit/` | One function, hook, or component tested in isolation with mocked dependencies. Largest folder by count. Includes the pg-mem-backed SQL suites (section 6). | `tests/unit/filter-helpers.test.ts`, `tests/unit/card.test.tsx`, `tests/unit/filtering-sql-parity.test.ts` |
+| `tests/unit/` | One function, hook, or component tested in isolation with mocked dependencies. Largest folder by count. Includes the pg-mem-backed SQL suites (section 6). | `tests/unit/filter-helpers.test.ts`, `tests/unit/card.test.tsx`, `tests/unit/filtering-sql-parity.test.ts`, `tests/unit/account-lists.test.ts` |
 | `tests/integration/` | Several real (unmocked) internal modules exercised together, e.g. filtering + search index + a builder pipeline. External I/O (fetch, Supabase) is still mocked, but internal app logic is not. `*-realdata.test.ts` files additionally hit the live Neon warehouse when `DATABASE_URL` is set (section 6). | `tests/integration/dashboard-filtering.test.ts`, `tests/integration/filtering-sql-realdata.test.ts` |
-| `tests/api/` | Next.js route handlers (`GET`/`POST`/etc. exported from `app/api/**/route.ts`), invoked directly with a `Request` object. Mocks auth, rate limiting, the warehouse/data layer, Supabase, and logger. | `tests/api/dashboard-route.test.ts`, `tests/api/dashboard-summary-route.test.ts` |
+| `tests/api/` | Next.js route handlers (`GET`/`POST`/etc. exported from `app/api/**/route.ts`), invoked directly with a `Request` object. Mocks auth, rate limiting, the warehouse/data layer, Supabase, and logger. | `tests/api/dashboard-summary-route.test.ts`, `tests/api/prospect-engagements-route.test.ts` |
 | `tests/fixtures/` | Reusable builder functions for domain objects. No `describe`/`it` blocks. | `tests/fixtures/domain.ts` |
 | `tests/stubs/` | Empty or minimal modules substituted for real packages via `resolve.alias` in `vitest.config.ts`. Not test files. | `tests/stubs/server-only.ts` |
 
@@ -182,16 +182,24 @@ Source: `tests/integration/export-request-client.test.ts`, including the pattern
 
 ### Fake timers
 
-For cache TTL / stale-while-revalidate logic, use `vi.useFakeTimers()` / `vi.advanceTimersByTime()` / `vi.runAllTimersAsync()` / `vi.useRealTimers()`:
+For cache TTL and token-cache expiry logic, use `vi.useFakeTimers()` / `vi.setSystemTime()` / `vi.advanceTimersByTime()` / `vi.useRealTimers()`:
 
 ```ts
-vi.useFakeTimers()
-await GET(request) // populate cache
-vi.advanceTimersByTime(3600001) // past 1h TTL
-const res = await GET(request) // served STALE, revalidation kicked off in background
-await vi.runAllTimersAsync()
-vi.useRealTimers()
+beforeEach(() => {
+  clearCache()
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date("2026-07-03T00:00:00Z"))
+})
+afterEach(() => vi.useRealTimers())
+
+it("recomputes after the TTL expires", async () => {
+  expect(await getOrCompute("k", 1000, fn)).toBe("value-1")
+  vi.advanceTimersByTime(1001)
+  expect(await getOrCompute("k", 1000, fn)).toBe("value-2")
+})
 ```
+
+Source: `tests/unit/memory-cache.test.ts`; also `tests/unit/redis-cache.test.ts` and `tests/unit/auth-server.test.ts` (60s token validation cache).
 
 ## 4. React Component Tests (React Testing Library)
 
@@ -286,27 +294,30 @@ Two categories exist specifically to prove the SQL filter builders (`lib/dashboa
 
 - `tests/unit/pgmem-smoke.test.ts`: proves the pg-mem adapter handles the SQL primitives the builders emit (`= ANY($1::text[])`, exclude-with-null passthrough, `LIKE` on `lower(coalesce(...))`, range buckets, chained CTE + `IN`).
 - `tests/unit/filtering-sql-parity.test.ts`: the parity suite. Seeds a fixed fixture set (nulls, exclude visibility, keyless rows), runs a list of named filter scenarios plus a seeded-LCG fuzz loop of random filter combinations, and asserts the SQL result equals the client engine's result for each. Deterministic: the fuzz seed is fixed, so failures reproduce.
+- `tests/unit/filtering-sql-aggregate.test.ts`, `filtering-sql-facets.test.ts`, `filtering-sql-charts.test.ts`, `filtering-sql-null-safety.test.ts`: execute the aggregate, facet, chart-bucket and null-handling SQL the dashboard endpoints issue.
+- `tests/unit/search-sql.test.ts`: executes the global search / autocomplete SQL (`lib/search/search-sql.ts`).
 
 Pattern: `newDb()` from `pg-mem`, `db.adapters.createPg()` for a `Pool`, create tables and insert fixtures with plain SQL, then execute the builder output. No mocking, no network, runs in the normal `npm run test` pass.
 
 ### Real-data suites (gated on `DATABASE_URL`)
 
-`tests/integration/*-realdata*.test.ts` run the same parity checks against the live Neon warehouse. Gating is a describe-level switch, not an env flag:
+`tests/integration/*-realdata*.test.ts` (plus `filtering-sql-report.test.ts` and `filtering-sql-thorough.test.ts`) run the same parity checks against the live Neon warehouse. Gating is a describe-level switch, not an env flag:
 
 ```ts
-loadEnv() // dotenv: vitest does not read .env automatically
+import { config as loadEnv } from "dotenv" // transitive dependency (via prisma), not listed in package.json
+loadEnv() // vitest does not read .env automatically
 const DATABASE_URL = process.env.DATABASE_URL
 const gated = DATABASE_URL ? describe : describe.skip
 
 gated("filtering-sql parity against the real Neon warehouse", () => { ... })
 ```
 
-With no `DATABASE_URL` in `.env` (or the environment) the whole file reports as skipped; with one set, `npm run test` includes them automatically. There is no separate script or `--` flag. Current files: `filtering-sql-realdata.test.ts`, `export-workbook-realdata.test.ts` (full xlsx build via `buildServerExport` with per-sheet row-count parity), `export-workbook-realdata-more.test.ts`, `export-filters-realdata.test.ts`, `centers-map-realdata.test.ts`. They read the warehouse only (selects), derive scenario values (most common country, industry, etc.) from live data, and compare SQL results against the client engine over the same rows. Expect them to be slower; run one file at a time while iterating.
+With no `DATABASE_URL` in `.env` (or the environment) the whole file reports as skipped; with one set, `npm run test` includes them automatically. There is no separate script or `--` flag. Current files: `filtering-sql-realdata.test.ts`, `export-workbook-realdata.test.ts` (full xlsx build via `buildServerExport` with per-sheet row-count parity), `export-workbook-realdata-more.test.ts`, `export-filters-realdata.test.ts`, `centers-map-realdata.test.ts`, `filtering-sql-report.test.ts` and `filtering-sql-thorough.test.ts` (these two also write a JSON report when `REPORT_OUT` is set). They read the warehouse only (selects), derive scenario values (most common country, industry, etc.) from live data, and compare SQL results against the client engine over the same rows. Expect them to be slower; run one file at a time while iterating.
 
 ## 7. Naming and Organization Conventions
 
 - File name: `kebab-case`, `<subject>.test.ts` or `.test.tsx`, mirroring the source module's name where reasonable (`chart-helpers.test.ts` for `lib/utils/chart-helpers.ts`, `auth-server.test.ts` for `lib/auth/server.ts`).
-- One `describe` block per module/route/component, named after the subject in plain English (`"dashboard API route"`, `"dashboard filtering"`, `"summary-cards"`).
+- One `describe` block per module/route/component, named after the subject in plain English (`"dashboard summary route"`, `"dashboard filtering"`, `"summary-cards"`).
 - Nested `describe` per exported function when a module exports several (see `tests/unit/actions-notifications.test.ts`: `describe("getUnreadCount")`, `describe("markAllAsRead")`, etc.).
 - `it` descriptions are full sentences describing behavior, not implementation (`"rejects with 401 if token is invalid or expires"`, not `"calls resolveAuthenticatedUserId"`).
 - Group happy-path and edge-case tests explicitly when a module has many of each, e.g. a trailing `describe("happy paths for query functions")` after several error-path `describe` blocks.

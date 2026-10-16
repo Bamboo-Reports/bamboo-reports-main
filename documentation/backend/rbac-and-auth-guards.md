@@ -45,7 +45,7 @@ resolveAuthenticatedUserId(accessToken: string): Promise<string>
 
 `extractBearerToken` parses `Authorization: Bearer <token>` headers. `resolveAuthenticatedUserId` calls `supabase.auth.getUser(token)` with a module-level, non-persisting Supabase client (`persistSession: false`) and returns the verified `user.id`, throwing if the token is missing, malformed, or rejected by Supabase.
 
-Successful validations are cached in-process for 60 seconds (`TOKEN_CACHE_TTL_MS`, max 500 entries with oldest-entry eviction) so warm dashboard requests skip the Supabase auth round trip. The accepted tradeoff: a revoked token keeps working for up to 60 seconds on instances that saw it recently, which is acceptable for read-only dashboard data. Failed validations are never cached.
+Successful validations are cached in-process for 60 seconds (`TOKEN_CACHE_TTL_MS`, max 500 entries with oldest-entry eviction) so warm dashboard requests skip the Supabase auth round trip. The accepted tradeoff: a revoked token keeps working for up to 60 seconds on instances that saw it recently, which is acceptable for read-only dashboard data. Failed validations are never cached. Concurrent requests carrying the same uncached token (a page load fires several at once) share one in-flight validation instead of each calling Supabase.
 
 Route handlers that need to know who's calling (for example, the exports and server-mode data routes) use this pair to turn a raw header into a trusted user ID before doing anything else. There is no separate role check baked into this helper: routes that need `admin` (exports) fetch the caller's `profiles.role` themselves and call `canExportData()`.
 
@@ -64,8 +64,9 @@ Zod schemas used by the auth forms (`app/(auth)/*/page.tsx`, framed by `componen
 
 | Location | Check |
 |----------|-------|
-| `components/exports/*` | Export button disabled unless `canExportData(userRole)`. |
-| `app/api/exports/*` route handlers | Re-check role server-side; never trust a client-disabled button as the only guard. |
+| `app/page.tsx` | Computes `canExport = canExportData(userRole)` and passes it down: the sidebar export button in `components/filters/saved-filters-manager.tsx` is blocked ("Export data (admin only)") and the table row-selection download is hidden unless it is `true`. |
+| `app/api/exports/generate/route.ts` | Re-reads `profiles.role` server-side and returns 403 unless `canExportData()`; never trust a client-disabled button as the only guard. |
+| `app/api/exports/route.ts`, `app/api/exports/[id]/download/route.ts` | No role check: listing and re-download are scoped to the caller's own `user_exports` rows by `user_id`. |
 | `hooks/use-auth-guard.ts` | Redirects unauthenticated sessions before any protected UI mounts. |
 
 The rule for new admin-only features: enforce the check in the route handler or Server Action, not only in the component. The UI check is a convenience, not the security boundary.

@@ -48,7 +48,7 @@ const sortOptions = (rows: FilterOption[]) =>
   rows.sort((a, b) => b.count - a.count || (a.value < b.value ? -1 : a.value > b.value ? 1 : 0))
 
 /**
- * All 23 facet option lists. Facets are grouped by their effective filters
+ * All 24 facet option lists. Facets are grouped by their effective filters
  * (facet-excludes-itself: an active facet does not constrain its own list),
  * and each group runs as ONE union-all statement over a single cascade, so
  * the common case (no active facets) is one warehouse query.

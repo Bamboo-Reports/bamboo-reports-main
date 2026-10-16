@@ -19,8 +19,8 @@ The warehouse is not touched. Lists live next to saved filters in the Supabase u
 
 ## Flow
 
-1. **Upload** (`components/filters/account-list-upload-dialog.tsx`): drop a CSV/TSV/TXT/XLSX or paste names. The name column is auto-detected (`lib/accounts/account-list-parser.ts`) and names are de-duplicated.
-2. **Match** (`POST /api/accounts/match`, `lib/accounts/account-match.ts`): each name is resolved to a warehouse account by exact name, alias, suffix-insensitive key, or offered fuzzy candidates. Statuses: matched, review, not found.
+1. **Upload** (`components/filters/account-list-upload-dialog.tsx`): drop a CSV/TSV/TXT/XLSX/XLS or paste names (spreadsheets are read client-side with ExcelJS). The name column is auto-detected (`lib/accounts/account-list-parser.ts`) and names are de-duplicated.
+2. **Match** (`POST /api/accounts/match`, `lib/accounts/account-match.ts`): each name is resolved to a warehouse account by exact name, alias, suffix-insensitive key, or offered fuzzy candidates. Statuses: matched, review, not found. At most 1000 names per call (`MAX_MATCH_NAMES`), 20 calls per minute per user (`accounts:match` bucket); the account and alias name rows behind the index are cached for 24 h under `account-match:index-rows` (see [Caching and Rate Limiting](caching-and-rate-limiting.md)).
 3. **Review**: per-row picker (`components/filters/account-picker.tsx`) to confirm, change or clear the mapping. Unmapped rows go to `unmatched`.
 4. **Save list**: creates a row in `account_lists`, or replaces the accounts of an existing list when opened from "Update from a new file". "Save and apply" also adds the list to the current filters.
 
@@ -35,17 +35,17 @@ Expansion happens whenever the sidebar selection changes (`withAccountLists`) an
 
 ## UI
 
-- Sidebar, account section: "Account List" picker (`components/filters/account-list-picker.tsx`) with the selected lists as chips and the account count.
-- Saved filters panel: the list icon button opens "Account Lists" (`components/filters/account-lists-dialog.tsx`) to upload, apply, rename, update from a file, inspect accounts and unmatched names, or delete.
+- Sidebar, account section: "Account List" picker (`components/filters/account-list-picker.tsx`), rendered with the shared `EnhancedMultiSelect` (chips, include/exclude, search) and showing the account count.
+- Saved filters panel: the list icon button opens "Account Lists" (`components/filters/account-lists-dialog.tsx`) to upload, apply, rename, update from a file, inspect accounts and unmatched names, share, or delete. Lists shared with the caller appear in a separate "Shared with me" section.
 - Saved filter cards and the summary PDF show the list as a count ("2 lists, 340 accounts") rather than every name.
 
 ## Provider
 
-`contexts/account-lists-context.tsx` loads the caller's lists once and exposes create, update and delete. It is mounted in `app/providers.tsx` so the sidebar picker, the upload dialog, the manage dialog and the filters hook all see the same state.
+`contexts/account-lists-context.tsx` loads the caller's own lists plus the lists shared with them once, and exposes `refresh`, `createList`, `updateList`, `deleteList`, `shareList`, `unshareList` and `getListShares`. If the shares query fails (for example the shares migration is not applied yet) the error is logged and the caller's own lists still load. It is mounted in `app/providers.tsx` so the sidebar picker, the upload dialog, the manage dialog and the filters hook all see the same state.
 
 ## Sharing
 
-`account_list_shares` (migration: `sql/account-list-shares-migration.sql`) mirrors `filter_shares`: owners share a list by email (`lookup_profile_by_email`), recipients get read-only SELECT on the list through an RLS policy, and owner emails for the "Shared with me" section come from `lookup_shared_account_list_owner_emails`. Shared lists appear in the sidebar picker and can be applied, inspected and used in saved filters; only the owner can rename, update, share or delete.
+`account_list_shares` (migration: `sql/account-list-shares-migration.sql`) mirrors `filter_shares`: owners share a list by email (`lookup_profile_by_email`; sharing with yourself or sharing twice is rejected, the latter via the `UNIQUE(list_id, shared_with_user_id)` constraint), recipients get read-only SELECT on the list through an RLS policy, and owner emails for the "Shared with me" section come from `lookup_shared_account_list_owner_emails` (falling back to "a teammate"). Shared lists appear in the sidebar picker and can be applied, inspected and used in saved filters; only the owner can rename, update, share or delete.
 
 ## Follow-ups
 

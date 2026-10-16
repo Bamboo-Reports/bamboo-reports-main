@@ -22,7 +22,7 @@ Lets a signed-in user star an account, center, or prospect and revisit it later.
 
 `UNIQUE (user_id, entity_type, entity_id)` prevents duplicate favorites; the hook relies on this constraint via `upsert(..., ignoreDuplicates: true)` instead of checking existence first.
 
-RLS: every policy scopes to `auth.uid() = user_id`. Full CRUD, no cross-user visibility. Migration: `sql/user-favorites-migration.sql`.
+RLS: every policy scopes to `auth.uid() = user_id`. Full CRUD, no cross-user visibility. Migration: `sql/user-favorites-migration.sql` (also adds the `user_favorites_user_created_idx` index on `(user_id, created_at desc)`).
 
 ### Client Hook: `useFavorites`
 
@@ -30,9 +30,11 @@ RLS: every policy scopes to `auth.uid() = user_id`. Full CRUD, no cross-user vis
 
 - Tracks the current Supabase session internally (does not take `userId` as a prop) via `getSession()` + `onAuthStateChange`.
 - `loadFavorites()` fetches all rows for the current user, newest first. **Fails open**: a query error (for example, the migration hasn't been applied yet) logs via `devError` and leaves `favorites` as an empty array rather than throwing, so the rest of the app keeps working.
-- `isFavorite(type, id)` — O(1) lookup against a `Set` built from `favoriteKeys` (`useMemo`).
-- `toggleFavorite(item)` — the primary entry point for star/unstar UI. Guards against a double-click race with `togglingRef` (a `Set` of in-flight keys): a second toggle on the same entity while one is still in flight is ignored rather than double-adding or double-removing.
-- `addFavorites(items)` / `removeFavorite(type, id)` / `removeFavorites(items)` / `clearFavorites()` — bulk and single operations, each firing a PostHog event (`FAVORITE_ADDED` / `FAVORITE_REMOVED`) with `bulk: items.length > 1` on multi-item calls.
+- `isFavorite(type, id)`: O(1) lookup against a `Set` built from `favoriteKeys` (`useMemo`).
+- `toggleFavorite(item)`: the primary entry point for star/unstar UI. Guards against a double-click race with `togglingRef` (a `Set` of in-flight keys): a second toggle on the same entity while one is still in flight is ignored rather than double-adding or double-removing.
+- `addFavorites(items)` / `removeFavorite(type, id)` / `removeFavorites(items)` / `clearFavorites()`: bulk and single operations. `addFavorites` fires `FAVORITE_ADDED`, `removeFavorite` / `removeFavorites` fire `FAVORITE_REMOVED` (PostHog), with `bulk: items.length > 1` on the multi-item calls.
+
+The hook is used once in `app/page.tsx`, which passes the state to the favorites dialog (`components/dialogs/favorites-dialog.tsx`) and the star buttons.
 
 All mutation methods return `boolean` (or `{ ok, added } | null` for `toggleFavorite`) instead of throwing, so callers can show a toast on failure without a try/catch.
 
@@ -53,9 +55,9 @@ Lets the owner of a saved filter share it with a specific teammate by email. The
 | `shared_with_email` | `text` | Denormalized, so the owner's UI can show who a share was sent to without a join |
 | `created_at` | `timestamptz` | |
 
-`UNIQUE (filter_id, shared_with_user_id)` — a filter can only be shared with the same user once.
+`UNIQUE (filter_id, shared_with_user_id)`: a filter can only be shared with the same user once.
 
-Migration: `sql/filter-shares-migration.sql`.
+Migration: `sql/filter-shares-migration.sql` (also adds `profiles_email_lower_idx` on `lower(email)` for the lookup below).
 
 ### RLS Model
 
@@ -70,9 +72,13 @@ Both are `REVOKE ALL ... FROM PUBLIC, anon` then `GRANT EXECUTE ... TO authentic
 
 `saved_filters` gets one added policy: a recipient can `SELECT` a filter if a matching row exists in `filter_shares` for them. This is additive; it does not touch the owner's existing full-access policy on their own filters.
 
+Account list sharing (`account_list_shares`, see [Account Lists](account-lists.md)) reuses this model: the same `lookup_profile_by_email` for the share input, a recipient `SELECT` policy on `account_lists`, and its own scoped `lookup_shared_account_list_owner_emails()` RPC.
+
+`sql/supabase-security-hardening-migration.sql` re-creates both lookup functions, revokes all `anon` table access on `profiles`, `saved_filters`, `filter_shares`, `user_favorites` and `user_exports`, and re-grants `select, insert, update, delete` on `saved_filters`, `filter_shares` and `user_favorites` to `authenticated`.
+
 ### Reading This as a Migration Order Dependency
 
-`filter-shares-migration.sql` assumes `public.saved_filters` and `public.profiles` already exist (see [Supabase Auth Setup](supabase-auth-setup.md) and [Saved Filters](supabase-saved-filters.md)). Apply migrations in this order for a fresh project: `supabase-auth-setup` → `supabase-saved-filters` → `filter-shares-migration` → `user-favorites-migration` (the last two are independent of each other).
+`filter-shares-migration.sql` assumes `public.saved_filters` and `public.profiles` already exist (see [Supabase Auth Setup](supabase-auth-setup.md) and [Saved Filters](supabase-saved-filters.md)). Apply migrations in this order for a fresh project: `supabase-auth-setup`, then `supabase-saved-filters`, then `filter-shares-migration` and `user-favorites-migration` (independent of each other), then `account-lists-migration` followed by `account-list-shares-migration` (which needs `lookup_profile_by_email` from the filter-shares migration). Run `supabase-security-hardening-migration` last.
 
 ---
 
@@ -81,8 +87,11 @@ Both are `REVOKE ALL ... FROM PUBLIC, anon` then `GRANT EXECUTE ... TO authentic
 | File | Purpose |
 |------|---------|
 | `hooks/use-favorites.ts` | Favorites state, CRUD, toggle-race guard |
+| `hooks/use-saved-filters.ts` | Saved filters CRUD plus share, unshare and "Shared with me" loading (calls both lookup RPCs) |
+| `components/dialogs/favorites-dialog.tsx` | Favorites list UI |
 | `sql/user-favorites-migration.sql` | `user_favorites` table, index, RLS policies |
 | `sql/filter-shares-migration.sql` | `filter_shares` table, RLS policies, lookup functions |
+| `sql/supabase-security-hardening-migration.sql` | Grant tightening and RLS re-enable across the user-data tables |
 | `documentation/backend/supabase-saved-filters.md` | Base `saved_filters` JSON structure |
 | `documentation/backend/supabase-auth-setup.md` | `profiles` table and auth setup |
 | `lib/analytics/events.ts` | `FAVORITE_ADDED` / `FAVORITE_REMOVED` event definitions |
