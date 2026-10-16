@@ -185,7 +185,7 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
       <div className="mx-auto w-full px-6 py-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-primary/20 bg-background">
+            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-background">
               <Image
                 src="/logo.svg"
                 alt="Bamboo Reports logo"

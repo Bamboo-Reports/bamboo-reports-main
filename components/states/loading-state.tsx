@@ -33,7 +33,7 @@ export function LoadingState() {
         <div className="mx-auto w-full px-6 py-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
-              <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-primary/20 bg-background">
+              <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-background">
                 <BrandMark />
               </div>
               <p className="truncate text-lg font-bold text-foreground">Bamboo Reports</p>
