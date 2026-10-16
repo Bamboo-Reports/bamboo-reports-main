@@ -420,8 +420,8 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
           variant="outline"
           size="icon"
           className="h-9 w-9 rounded-full shrink-0"
-          title="Account lists: upload a client account list and apply it as a filter"
-          aria-label="Upload or manage account lists"
+          title="Upload Accounts"
+          aria-label="Upload Accounts"
           onClick={() => setAccountListsOpen(true)}
           data-tour="account-lists-button"
         >
