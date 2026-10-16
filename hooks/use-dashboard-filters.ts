@@ -79,7 +79,7 @@ const serializeFilterValues = (values: FilterValue[]) =>
 // Lets consumers tell these apart from changes the user made.
 const autoAdjustedSources = new WeakMap<Filters, Filters>()
 
-function markAutoAdjusted(source: Filters, next: Filters): Filters {
+export function markAutoAdjusted(source: Filters, next: Filters): Filters {
   autoAdjustedSources.set(next, source)
   return next
 }

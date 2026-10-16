@@ -4,6 +4,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import type { Filters } from "@/lib/types"
 import { createDefaultFilters } from "@/lib/dashboard/defaults"
+import { markAutoAdjusted } from "@/hooks/use-dashboard-filters"
 
 const savedFilter = {
   id: "f1",
@@ -51,6 +52,27 @@ function Harness({ active = 1 }: { active?: number }) {
       <button type="button" onClick={() => setFilters((f) => ({ ...f, accountHqCountryValues: [] }))}>
         edit filters
       </button>
+      {/* Mirrors the hook narrowing the revenue range after new server ranges arrive. */}
+      <button
+        type="button"
+        onClick={() =>
+          setFilters((f) => markAutoAdjusted(f, { ...f, accountHqRevenueRange: [f.accountHqRevenueRange[0] + 1, f.accountHqRevenueRange[1]] }))
+        }
+      >
+        auto clamp
+      </button>
+      {/* A user edit and an automatic clamp landing in the same render. */}
+      <button
+        type="button"
+        onClick={() =>
+          setFilters((f) => {
+            const edited = { ...f, accountHqCountryValues: [] }
+            return markAutoAdjusted(edited, { ...edited, accountHqRevenueRange: [edited.accountHqRevenueRange[0] + 1, edited.accountHqRevenueRange[1]] })
+          })
+        }
+      >
+        edit then auto clamp
+      </button>
     </>
   )
 }
@@ -77,6 +99,33 @@ describe("saved filters menu", () => {
     expect(trigger().textContent).toContain("Q4 BFSI GCCs")
 
     await act(async () => fireEvent.click(screen.getByText("edit filters")))
+    expect(trigger().textContent).toContain("Saved Filters")
+  })
+
+  async function loadSavedFilter() {
+    fireEvent.keyDown(trigger(), { key: "Enter" })
+    const item = await screen.findByTitle("Q4 BFSI GCCs")
+    await act(async () => fireEvent.click(item))
+    expect(trigger().textContent).toContain("Q4 BFSI GCCs")
+  }
+
+  it("keeps the name through automatic range clamps, then clears on a user edit", async () => {
+    render(<Harness />)
+    await loadSavedFilter()
+
+    await act(async () => fireEvent.click(screen.getByText("auto clamp")))
+    await act(async () => fireEvent.click(screen.getByText("auto clamp")))
+    expect(trigger().textContent).toContain("Q4 BFSI GCCs")
+
+    await act(async () => fireEvent.click(screen.getByText("edit filters")))
+    expect(trigger().textContent).toContain("Saved Filters")
+  })
+
+  it("clears the name when a clamp lands on top of a user edit", async () => {
+    render(<Harness />)
+    await loadSavedFilter()
+
+    await act(async () => fireEvent.click(screen.getByText("edit then auto clamp")))
     expect(trigger().textContent).toContain("Saved Filters")
   })
 
