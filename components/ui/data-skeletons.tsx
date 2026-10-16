@@ -87,7 +87,7 @@ export function GridSkeletonCards({ cards = 6, statRows = 2, avatar = false }: G
                   </div>
                 ))}
               </div>
-              <Skeleton className="h-9 w-full rounded-button" />
+              <Skeleton className="h-9 w-full rounded-[var(--radius-button)]" />
             </div>
           </CardContent>
         </Card>

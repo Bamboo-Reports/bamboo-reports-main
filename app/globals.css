@@ -43,7 +43,7 @@
     --chart-5: 35 92% 48%;
     --treemap-border-color: #ffffff;
     --radius: 0.5rem;
-    /* Buttons and tab buttons (class rounded-button). */
+    /* Buttons and tab buttons: rounded-[var(--radius-button)]. */
     --radius-button: 7px;
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 214 45% 15%;
