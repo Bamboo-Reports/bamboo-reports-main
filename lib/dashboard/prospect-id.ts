@@ -8,7 +8,7 @@ export function getProspectDisplayName(prospect: Prospect): string {
   )
 }
 
-/** Stable identity for a prospect row, used for selection and favorites. */
+/** Stable identity for a prospect row, used for row selection. */
 export function getProspectRecordId(prospect: Prospect): string {
   if (prospect.ps_unique_key) return prospect.ps_unique_key
   // No stable server key: build the most-discriminating composite we can so two

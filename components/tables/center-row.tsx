@@ -1,5 +1,5 @@
 import { memo } from "react"
-import { RiExternalLinkLine, RiEyeLine, RiGlobalLine, RiStarLine, RiStarOffLine } from "@remixicon/react"
+import { RiExternalLinkLine, RiEyeLine, RiGlobalLine } from "@remixicon/react"
 import { TableRow, TableCell } from "@/components/ui/table"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -23,11 +23,9 @@ interface CenterRowProps {
   selectable?: boolean
   isSelected?: boolean
   onSelectChange?: (center: Center, checked: boolean) => void
-  isFavorite?: boolean
-  onToggleFavorite?: (center: Center) => void
 }
 
-export const CenterRow = memo(({ center, onOpen, visibleColumns, selectable, isSelected, onSelectChange, isFavorite, onToggleFavorite }: CenterRowProps) => {
+export const CenterRow = memo(({ center, onOpen, visibleColumns, selectable, isSelected, onSelectChange }: CenterRowProps) => {
   const handleOpen = () => onOpen(center)
   const location = formatCenterLocation(center.center_city, center.center_state)
 
@@ -114,12 +112,6 @@ export const CenterRow = memo(({ center, onOpen, visibleColumns, selectable, isS
           <RiEyeLine className="h-4 w-4" />
           View Details
         </ContextMenuItem>
-        {onToggleFavorite && (
-          <ContextMenuItem onClick={() => onToggleFavorite(center)}>
-            {isFavorite ? <RiStarOffLine className="h-4 w-4" /> : <RiStarLine className="h-4 w-4" />}
-            {isFavorite ? "Remove from Favourites" : "Add to Favourites"}
-          </ContextMenuItem>
-        )}
         {center.center_website && (
           <>
             <ContextMenuSeparator />

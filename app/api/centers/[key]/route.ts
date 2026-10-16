@@ -12,7 +12,7 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } })
 }
 
-/** One center by cn_unique_key, with its services and tech rows (for the center dialog and favorites). */
+/** One center by cn_unique_key, with its services and tech rows (for the center dialog and recent-item opens). */
 export async function GET(request: Request, { params }: { params: Promise<{ key: string }> }) {
   const token = extractBearerToken(request.headers.get("authorization"))
   if (!token) return json({ error: "Missing authorization token" }, 401)

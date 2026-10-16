@@ -98,11 +98,10 @@ Bamboo Reports provides a unified view of business entities (**Accounts**, **Cen
 - **Feature Flag:** Toggle via `NEXT_PUBLIC_NOTIFICATIONS_ENABLED` environment variable.
 
 ### Personalization
-- **Favorites:** Star any account, center, or prospect and revisit it from a dedicated list, private per user.
 - **Recently Viewed History:** Automatic tracking of recently opened detail dialogs.
 - **Guided Product Tour:** Auto-starting, replayable `driver.js` walkthrough for first-time users, with per-browser and per-account completion tracking.
 
-> **Details:** See [Favorites & Filter Sharing](documentation/backend/favorites-and-filter-sharing.md), [Account Lists](documentation/backend/account-lists.md) and [Product Tour](documentation/frontend/product-tour.md).
+> **Details:** See [Filter Sharing](documentation/backend/filter-sharing.md), [Account Lists](documentation/backend/account-lists.md) and [Product Tour](documentation/frontend/product-tour.md).
 
 ---
 
@@ -134,7 +133,7 @@ graph TD
 ### Data Fetching Strategy
 1. **Server-Backed Reads (#249):** There is no full-payload endpoint. `hooks/use-server-dashboard-data.ts` reads paginated and aggregated slices from dedicated endpoints (`/api/dashboard/summary`, `/api/dashboard/facets`, `/api/dashboard/charts`, `/api/{accounts,centers,prospects}/query`, `/api/search`, `/api/centers/map`).
 2. **Filtering:** Filter state lives in React (`hooks/use-dashboard-filters.ts`) and is sent with each request; the server translates it to parameterized SQL via `lib/dashboard/filtering-sql.ts`. Account lists are expanded to exact account names on the client before the request, so the server only sees names.
-3. **Route Handlers and Server Actions:** Warehouse reads go through `app/api/**` Route Handlers; notifications use `app/actions/notifications.ts`; saved filters, favorites and account lists use the Supabase client directly.
+3. **Route Handlers and Server Actions:** Warehouse reads go through `app/api/**` Route Handlers; notifications use `app/actions/notifications.ts`; saved filters and account lists use the Supabase client directly.
 4. **Caching:** Responses are cached in a two-tier cache (in-memory L1 + Upstash Redis L2) keyed on the filter state and purged by the ETL after each import. See [Server-Mode Dashboard](documentation/backend/server-dashboard-mode.md) and [Caching and Rate Limiting](documentation/backend/caching-and-rate-limiting.md).
 
 ---
@@ -219,7 +218,7 @@ bamboo-reports-nextjs/
 │   ├── cards/                      # Card component variants
 │   ├── charts/                     # Recharts + Highcharts visualizations
 │   ├── dashboard/                  # Summary cards
-│   ├── dialogs/                    # Detail views (Account, Center, Prospect), engagement timeline, History and Favorites dialogs
+│   ├── dialogs/                    # Detail views (Account, Center, Prospect), engagement timeline, History dialog
 │   ├── exports/                    # Excel export dialog and My exports dialog (audit log re-download)
 │   ├── filters/                    # Sidebar filter UI, multi-select, saved filters manager, account list upload/picker/dialog
 │   ├── layout/                     # Header, global search, notification bell
@@ -234,7 +233,6 @@ bamboo-reports-nextjs/
 │   ├── use-auth-guard.ts           # Authentication guard
 │   ├── use-copy-to-clipboard.ts    # Copy-to-clipboard with reset timeout
 │   ├── use-dashboard-filters.ts    # Complex filter state management
-│   ├── use-favorites.ts            # Favorites CRUD (accounts/centers/prospects)
 │   ├── use-global-search.ts        # Alias-aware global search
 │   ├── use-notifications.ts        # Notification tracking
 │   ├── use-product-tour.ts         # Guided product tour orchestration (driver.js)
@@ -309,7 +307,7 @@ bamboo-reports-nextjs/
 │   │   ├── supabase-auth-setup.md       # Auth setup guide
 │   │   ├── rbac-and-auth-guards.md      # Role enforcement and request authentication
 │   │   ├── supabase-saved-filters.md    # Saved filters spec
-│   │   ├── favorites-and-filter-sharing.md  # Favorites and filter-sharing tables/RLS
+│   │   ├── filter-sharing.md            # Filter-sharing table/RLS (favorites retired)
 │   │   ├── account-lists.md             # Account list upload, matching, filtering, sharing
 │   │   ├── user-exports.md              # Export audit log and Storage archive
 │   │   ├── server-dashboard-mode.md     # Server-mode dashboard (#249): endpoints and SQL filters
@@ -557,7 +555,7 @@ Detailed documentation for specific subsystems lives in the `documentation/` fol
 | [**Supabase Auth**](documentation/backend/supabase-auth-setup.md) | Setting up the `profiles` table, RLS policies, and auth triggers |
 | [**RBAC & Auth Guards**](documentation/backend/rbac-and-auth-guards.md) | Role enforcement, client-side session guard, server-side token verification |
 | [**Saved Filters**](documentation/backend/supabase-saved-filters.md) | Technical spec for the saved filters JSON structure |
-| [**Favorites & Filter Sharing**](documentation/backend/favorites-and-filter-sharing.md) | Favorites and filter-sharing tables, RLS model, and hooks |
+| [**Filter Sharing**](documentation/backend/filter-sharing.md) | Filter-sharing table, RLS model, and hook |
 | [**Account Lists**](documentation/backend/account-lists.md) | Account list upload, name matching, exact-match filtering, and sharing |
 | [**User Exports & Audit Log**](documentation/backend/user-exports.md) | Server-side export generation, Storage archive, and audit table |
 | [**Product Tour**](documentation/frontend/product-tour.md) | Guided onboarding walkthrough, completion tracking, and versioning |

@@ -31,8 +31,8 @@ All endpoints require a Supabase bearer token (`extractBearerToken` + `resolveAu
 | `/api/accounts/autocomplete` | GET | Account name suggestions, including "Known as" alias matches and visibility metadata | `?q=` | `{ suggestions }` |
 | `/api/accounts/match` | POST | Maps an uploaded client account list onto warehouse accounts: exact name, then alias, then a suffix-insensitive normalized key, then fuzzy candidates for review (max 500 names) | `{ names }` | `{ results }` with `status` matched / review / not_found, `match`, `candidates` |
 | `/api/accounts/[name]/related` | GET | Account detail dialog payload: account row + its centers, services, tech, prospects (each gated by section entitlement) | path param | `{ account, centers, services, tech, prospects }` |
-| `/api/centers/[key]` | GET | One center by `cn_unique_key` with services and tech (center dialog, favorites) | path param | `{ center, services, tech }` |
-| `/api/prospects/[id]` | GET | One prospect by `ps_unique_key` (favorites, recent items) | path param | `{ prospect }` |
+| `/api/centers/[key]` | GET | One center by `cn_unique_key` with services and tech (center dialog, recent items) | path param | `{ center, services, tech }` |
+| `/api/prospects/[id]` | GET | One prospect by `ps_unique_key` (recent items) | path param | `{ prospect }` |
 | `/api/prospects/[id]/engagements` | GET | Bamboo Reports campaign touchpoints for one prospect (prospect dialog timeline): `subscribers` rows joined to the prospect by case-insensitive email, sorted oldest first by `sortEngagements` (`lib/dashboard/engagements.ts`). Not cached | path param (`ps_unique_key`) | `{ engagements }` (`prospect_engaged_date`, `prospect_engaged_campaign`) |
 
 Notes:
@@ -165,7 +165,7 @@ Per [security-249-progress.md](../reports/security-249-progress.md):
 | `app/api/centers/map/route.ts` | Map aggregates endpoint |
 | `app/api/search/route.ts`, `app/api/accounts/autocomplete/route.ts` | Server-backed search and autocomplete |
 | `app/api/accounts/match/route.ts`, `lib/accounts/account-match.ts`, `lib/accounts/account-list-parser.ts` | Account lists: list parsing (CSV/TSV/XLSX/paste), name matching and candidate scoring (see `account-lists.md`) |
-| `app/api/accounts/[name]/related/route.ts`, `app/api/centers/[key]/route.ts`, `app/api/prospects/[id]/route.ts` | Lookup endpoints (dialogs, favorites) |
+| `app/api/accounts/[name]/related/route.ts`, `app/api/centers/[key]/route.ts`, `app/api/prospects/[id]/route.ts` | Lookup endpoints (dialogs, recent items) |
 | `app/api/prospects/[id]/engagements/route.ts`, `lib/dashboard/engagements.ts` | Prospect campaign timeline endpoint and its sort/format helpers |
 | `app/api/exports/generate/route.ts`, `lib/exports/server-builder.ts` | Export-by-filter |
 | `tests/unit/filtering-sql-parity.test.ts` | pg-mem golden-parity suite (engine vs SQL) |

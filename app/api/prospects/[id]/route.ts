@@ -12,7 +12,7 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } })
 }
 
-/** One prospect by ps_unique_key (for favorites and recent-item opens). */
+/** One prospect by ps_unique_key (for recent-item opens). */
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const token = extractBearerToken(request.headers.get("authorization"))
   if (!token) return json({ error: "Missing authorization token" }, 401)

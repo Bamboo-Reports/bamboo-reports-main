@@ -11,7 +11,6 @@ import { ProspectRow } from "@/components/tables/prospect-row"
 import { SelectionActionBar } from "@/components/tables/selection-action-bar"
 import { useTableRowSelection } from "@/hooks/use-table-row-selection"
 import { getProspectDisplayName as getProspectDisplayNameUtil, getProspectRecordId as getProspectRecordIdUtil } from "@/lib/dashboard/prospect-id"
-import type { FavoriteInput } from "@/hooks/use-favorites"
 import { ProspectGridCard } from "@/components/cards/prospect-grid-card"
 import {
   PieChartCard,
@@ -55,24 +54,11 @@ interface ProspectsTabProps {
   itemsPerPage: number
   onRecordOpened?: (item: { type: "prospect" | "account"; id: string; title: string; subtitle: string }) => void
   onDownloadSelection?: (scope: { dataset: "prospects"; prospectIds: string[] }) => void
-  favoriteKeys?: Set<string>
-  onToggleFavorite?: (item: FavoriteInput) => void
-  onFavoriteMany?: (items: FavoriteInput[]) => void
-  onUnfavoriteMany?: (items: FavoriteInput[]) => void
   server?: TabServerProps | null
   chartsLoading?: boolean
 }
 
 // Module-level so the reference is stable across renders (passed to memo'd rows).
-function buildProspectFavorite(prospect: Prospect): FavoriteInput {
-  return {
-    entity_type: "prospect",
-    entity_id: getProspectRecordIdUtil(prospect),
-    title: getProspectDisplayNameUtil(prospect),
-    subtitle: prospect.prospect_title || prospect.prospect_department || prospect.account_global_legal_name || null,
-  }
-}
-
 export function ProspectsTab({
   accounts,
   centers,
@@ -90,10 +76,6 @@ export function ProspectsTab({
   itemsPerPage,
   onRecordOpened,
   onDownloadSelection,
-  favoriteKeys,
-  onToggleFavorite,
-  onFavoriteMany,
-  onUnfavoriteMany,
   server,
   chartsLoading = false,
 }: ProspectsTabProps) {
@@ -303,18 +285,11 @@ export function ProspectsTab({
     pageKeys,
     allPageSelected,
     somePageSelected,
-    allSelectedFavorited,
-    selectedFavoriteInputs,
     handleRowSelectChange,
-    handleRowToggleFavorite,
   } = useTableRowSelection({
     items: server ? pageProspects : prospects,
     pageItems: pageProspects,
     getKey: getProspectRecordIdUtil,
-    favoritePrefix: "prospect",
-    favoriteKeys,
-    buildFavorite: buildProspectFavorite,
-    onToggleFavorite,
   })
 
   // Tab-specific open handler kept stable so memo'd rows don't re-render.
@@ -480,8 +455,6 @@ export function ProspectsTab({
                           selectable
                           isSelected={selectedKeys.has(getProspectRecordId(prospect))}
                           onSelectChange={handleRowSelectChange}
-                          isFavorite={favoriteKeys?.has(`prospect:${getProspectRecordId(prospect)}`)}
-                          onToggleFavorite={onToggleFavorite ? handleRowToggleFavorite : undefined}
                         />
                       ))}
                     </TableBody>
@@ -559,16 +532,6 @@ export function ProspectsTab({
         count={selectedKeys.size}
         onClear={clearSelection}
         onExport={handleExportSelection}
-        onFavorite={
-          onFavoriteMany || onUnfavoriteMany
-            ? () => {
-                const items = selectedFavoriteInputs()
-                if (allSelectedFavorited) onUnfavoriteMany?.(items)
-                else onFavoriteMany?.(items)
-              }
-            : undefined
-        }
-        favoriteActive={allSelectedFavorited}
       />
     </TabsContent>
   )

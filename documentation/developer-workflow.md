@@ -212,7 +212,7 @@ If UI alignment needs tuning:
 
 ### Performance Best Practices
 - **Neon warehouse reads:** Build parameterized SQL in `lib/dashboard/filtering-sql.ts` (or a sibling builder) and run it with `queryWarehouse` from `lib/db/warehouse.ts` inside an authed, rate-limited route handler. Prisma code (`lib/db/prisma.ts`) should wrap calls with `queryWithRetry`.
-- **Supabase user data:** Keep Auth, profiles, saved filters, favorites, account lists, export metadata, and Storage on the existing Supabase clients so RLS and Storage behavior remain intact.
+- **Supabase user data:** Keep Auth, profiles, saved filters, account lists, export metadata, and Storage on the existing Supabase clients so RLS and Storage behavior remain intact.
 - **Client Components:** Use `useMemo` for derived data; do not reintroduce client-side filtering of full datasets (filtering belongs in SQL since #249).
 - **Row Components:** Wrap table row components with `React.memo` to prevent unnecessary re-renders.
 - **Search Inputs:** Always debounce requests that hit the server.

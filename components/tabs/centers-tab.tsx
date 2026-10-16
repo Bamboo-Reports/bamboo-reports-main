@@ -11,7 +11,6 @@ import { RiExpandUpDownLine, RiLayoutGridLine, RiMapLine, RiMapPinLine, RiPieCha
 import { CenterRow } from "@/components/tables"
 import { SelectionActionBar } from "@/components/tables/selection-action-bar"
 import { useTableRowSelection } from "@/hooks/use-table-row-selection"
-import type { FavoriteInput } from "@/hooks/use-favorites"
 import { CenterGridCard } from "@/components/cards/center-grid-card"
 import {
   PieChartCard,
@@ -60,10 +59,6 @@ interface CentersTabProps {
   itemsPerPage: number
   onRecordOpened?: (item: { type: "center" | "account"; id: string; title: string; subtitle: string }) => void
   onDownloadSelection?: (scope: { dataset: "centers"; centerKeys: string[] }) => void
-  favoriteKeys?: Set<string>
-  onToggleFavorite?: (item: FavoriteInput) => void
-  onFavoriteMany?: (items: FavoriteInput[]) => void
-  onUnfavoriteMany?: (items: FavoriteInput[]) => void
   server?: TabServerProps | null
   mapData?: { cities: CityAggregate[]; states: StateAggregate[]; scaleStates?: StateAggregate[] | null } | null
   chartsLoading?: boolean
@@ -72,15 +67,6 @@ interface CentersTabProps {
 
 // Module-level so the references are stable across renders (passed to memo'd rows).
 const getCenterKey = (center: Center) => center.cn_unique_key ?? ""
-
-function buildCenterFavorite(center: Center): FavoriteInput {
-  return {
-    entity_type: "center",
-    entity_id: center.cn_unique_key ?? "",
-    title: center.center_name || "Unknown Centre",
-    subtitle: formatCenterLocation(center.center_city, center.center_state) || center.account_global_legal_name || null,
-  }
-}
 
 export function CentersTab({
   accounts,
@@ -99,10 +85,6 @@ export function CentersTab({
   itemsPerPage,
   onRecordOpened,
   onDownloadSelection,
-  favoriteKeys,
-  onToggleFavorite,
-  onFavoriteMany,
-  onUnfavoriteMany,
   server,
   mapData,
   chartsLoading = false,
@@ -315,18 +297,11 @@ export function CentersTab({
     pageKeys,
     allPageSelected,
     somePageSelected,
-    allSelectedFavorited,
-    selectedFavoriteInputs,
     handleRowSelectChange,
-    handleRowToggleFavorite,
   } = useTableRowSelection({
     items: server ? pageCenters : centers,
     pageItems: pageCenters,
     getKey: getCenterKey,
-    favoritePrefix: "center",
-    favoriteKeys,
-    buildFavorite: buildCenterFavorite,
-    onToggleFavorite,
   })
 
   // Tab-specific open handler kept stable so memo'd rows don't re-render.
@@ -555,8 +530,6 @@ export function CentersTab({
                             selectable
                             isSelected={selectedKeys.has(center.cn_unique_key ?? "")}
                             onSelectChange={getCenterKey(center) ? handleRowSelectChange : undefined}
-                            isFavorite={favoriteKeys?.has(`center:${center.cn_unique_key ?? ""}`)}
-                            onToggleFavorite={onToggleFavorite && getCenterKey(center) ? handleRowToggleFavorite : undefined}
                           />
                         )
                       )}
@@ -638,16 +611,6 @@ export function CentersTab({
         count={selectedKeys.size}
         onClear={clearSelection}
         onExport={() => onDownloadSelection?.({ dataset: "centers", centerKeys: Array.from(selectedKeys) })}
-        onFavorite={
-          onFavoriteMany || onUnfavoriteMany
-            ? () => {
-                const items = selectedFavoriteInputs()
-                if (allSelectedFavorited) onUnfavoriteMany?.(items)
-                else onFavoriteMany?.(items)
-              }
-            : undefined
-        }
-        favoriteActive={allSelectedFavorited}
       />
     </TabsContent>
   )

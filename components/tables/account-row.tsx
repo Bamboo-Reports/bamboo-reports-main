@@ -1,5 +1,5 @@
 import { memo } from "react"
-import { RiCheckboxCircleLine, RiExternalLinkLine, RiEyeLine, RiGlobalLine, RiStarLine, RiStarOffLine } from "@remixicon/react"
+import { RiCheckboxCircleLine, RiExternalLinkLine, RiEyeLine, RiGlobalLine } from "@remixicon/react"
 import { TableRow, TableCell } from "@/components/ui/table"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -22,11 +22,9 @@ interface AccountRowProps {
   selectable?: boolean
   isSelected?: boolean
   onSelectChange?: (account: Account, checked: boolean) => void
-  isFavorite?: boolean
-  onToggleFavorite?: (account: Account) => void
 }
 
-export const AccountRow = memo(({ account, onOpen, visibleColumns, selectable, isSelected, onSelectChange, isFavorite, onToggleFavorite }: AccountRowProps) => {
+export const AccountRow = memo(({ account, onOpen, visibleColumns, selectable, isSelected, onSelectChange }: AccountRowProps) => {
   const handleOpen = () => onOpen(account)
   const isNasscomVerified = account.account_nasscom_status?.toLowerCase() === "yes"
   const visibilityNote =
@@ -131,12 +129,6 @@ export const AccountRow = memo(({ account, onOpen, visibleColumns, selectable, i
           <RiEyeLine className="h-4 w-4" />
           View Details
         </ContextMenuItem>
-        {onToggleFavorite && (
-          <ContextMenuItem onClick={() => onToggleFavorite(account)}>
-            {isFavorite ? <RiStarOffLine className="h-4 w-4" /> : <RiStarLine className="h-4 w-4" />}
-            {isFavorite ? "Remove from Favourites" : "Add to Favourites"}
-          </ContextMenuItem>
-        )}
         {account.account_hq_website && (
           <>
             <ContextMenuSeparator />
