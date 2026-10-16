@@ -69,7 +69,7 @@ Search and autocomplete use a fixed 24 h TTL but are disabled entirely when `DAS
 
 Warehouse data updates once a week (Friday ETL). The recommended `DASHBOARD_CACHE_TTL_MS=691200000` (8 days = weekly cadence plus one day of slack) keeps hits warm between imports; the ETL purge, not TTL expiry, is the real invalidation. Rationale and the session that set it: [`../reports/2026-07-29-perf-and-data-hygiene.md`](../reports/2026-07-29-perf-and-data-hygiene.md). The code default without the env var is 10 minutes.
 
-Latency numbers for compute vs Redis-served requests: [`redis-cache-benchmark.md`](redis-cache-benchmark.md).
+Measured during #249: facets p95 dropped from about 5.1s (compute) to about 0.7s (Redis-served).
 
 ## Cache invalidation
 
@@ -118,7 +118,7 @@ Per-user, per-bucket fixed-window counters, shared across all serverless instanc
 
 When the Upstash REST credentials are set (the same pair the response cache uses), the counter lives in Redis: key `rl:<user>:<bucket>:<windowStartMs>`, bumped with `INCR` plus `PEXPIRE` (window + 1 s) in one pipelined round trip (about 20 ms). The `rl:` prefix sits outside the `dash:*` namespace, so the ETL's post-import purge never resets a budget. A Redis failure fails open; it does not fall back to Supabase.
 
-Why Redis: the counter gates every data response, including cache hits. The Supabase RPC cost a few hundred milliseconds per request and was the fixed latency floor measured in [`redis-cache-benchmark.md`](redis-cache-benchmark.md).
+Why Redis: the counter gates every data response, including cache hits. The Supabase RPC cost a few hundred milliseconds per request and was the fixed latency floor in the #249 cache measurements.
 
 Without Redis credentials the original Supabase path is used. Migration: [`sql/rate-limits-migration.sql`](sql/rate-limits-migration.sql).
 
@@ -157,5 +157,4 @@ Export **generation** (`POST /api/exports/generate`) uses a separate mechanism: 
 | `etl/V2/main_cache_purge.py` | ETL import variant with post-import `dash:*` purge |
 | `tests/unit/memory-cache.test.ts`, `tests/unit/redis-cache.test.ts` | Cache behavior tests |
 | `tests/unit/rate-limit.test.ts`, `tests/unit/rate-limits-migration.test.ts` | Rate limit behavior and migration tests |
-| `documentation/backend/redis-cache-benchmark.md` | Compute vs Redis latency benchmark (#249) |
 | `documentation/reports/2026-07-29-perf-and-data-hygiene.md` | Session log: 8-day TTL decision, purge-as-invalidation |

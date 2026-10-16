@@ -280,7 +280,7 @@ bamboo-reports-nextjs/
 │   ├── project-architecture.md     # Architecture and data flow (whole app)
 │   ├── developer-workflow.md       # Developer guide and coding standards (whole app)
 │   ├── testing-guide.md            # Vitest setup, mocking patterns, how to add tests (whole app)
-│   ├── scripts-and-tooling.md      # Standalone dev scripts (benchmark, work summary)
+│   ├── scripts-and-tooling.md      # Standalone dev scripts (work summary)
 │   │
 │   ├── reports/                    # Audits, progress logs and dated session write-ups
 │   │   ├── security-249-progress.md        # Living log of the #249 data-exposure work
@@ -300,8 +300,7 @@ bamboo-reports-nextjs/
 │   │   ├── user-exports.md              # Export audit log and Storage archive
 │   │   ├── server-dashboard-mode.md     # Server-mode dashboard (#249): endpoints and SQL filters
 │   │   ├── caching-and-rate-limiting.md # Two-tier response cache and per-user rate limits
-│   │   ├── filtering-sql-parity-report.md  # Real-data parity verification for server-side filtering
-│   │   └── redis-cache-benchmark.md     # Upstash Redis cache benchmark (#249)
+│   │   └── filtering-sql-parity-report.md  # Real-data parity verification for server-side filtering
 │   │
 │   └── frontend/                   # UI-facing feature docs
 │       ├── product-tour.md              # Guided onboarding tour
@@ -311,7 +310,7 @@ bamboo-reports-nextjs/
 │       ├── map-disputed-boundaries.md   # Choropleth boundary handling
 │       └── standalone-screens.md        # Auth/error/404/maintenance frame, loading skeleton conventions
 │
-├── scripts/                        # Standalone scripts (load benchmark, work summary report)
+├── scripts/                        # Standalone scripts (work summary report)
 ├── tests/                          # Vitest test suite (unit, integration, and API route tests)
 ├── types/                          # Additional type definitions
 ├── public/                         # Static assets (logos, images, data)
@@ -541,7 +540,6 @@ Detailed documentation for specific subsystems lives in the `documentation/` fol
 | [**Caching and Rate Limiting**](documentation/backend/caching-and-rate-limiting.md) | Two-tier response cache (L1 + Upstash Redis L2), cache purges, per-user rate limits |
 | [**API Caching (SWR)**](documentation/backend/api-caching-swr.md) | Stale-while-revalidate cache behavior for the `/api/dashboard` route |
 | [**Filtering SQL Parity Report**](documentation/backend/filtering-sql-parity-report.md) | Real-data verification that server-side SQL filtering matches the client engine |
-| [**Redis Cache Benchmark**](documentation/backend/redis-cache-benchmark.md) | Timing comparison for the Upstash Redis cache over the 60-scenario filter matrix |
 | [**Supabase Auth**](documentation/backend/supabase-auth-setup.md) | Setting up the `profiles` table, RLS policies, and auth triggers |
 | [**RBAC & Auth Guards**](documentation/backend/rbac-and-auth-guards.md) | Role enforcement, client-side session guard, server-side token verification |
 | [**Saved Filters**](documentation/backend/supabase-saved-filters.md) | Technical spec for the saved filters JSON structure |
@@ -549,7 +547,7 @@ Detailed documentation for specific subsystems lives in the `documentation/` fol
 | [**User Exports & Audit Log**](documentation/backend/user-exports.md) | Server-side export generation, Storage archive, and audit table |
 | [**Product Tour**](documentation/frontend/product-tour.md) | Guided onboarding walkthrough, completion tracking, and versioning |
 | [**Logo Integration**](documentation/frontend/logo-integration.md) | Setup and usage guide for the Brandfetch logo integration |
-| [**Scripts & Tooling**](documentation/scripts-and-tooling.md) | Standalone dev scripts: load benchmark and git-history work summary |
+| [**Scripts & Tooling**](documentation/scripts-and-tooling.md) | Standalone dev scripts: git-history work summary |
 | [**Map Boundaries**](documentation/frontend/map-disputed-boundaries.md) | Carto basemap and local Survey of India boundary behavior |
 | [**Standalone Screens**](documentation/frontend/standalone-screens.md) | Brand frame for auth, error, 404 and maintenance screens; full-page loading skeleton; skeleton conventions |
 
