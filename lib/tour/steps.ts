@@ -1,17 +1,5 @@
 import type { DriveStep } from "driver.js"
 
-// Opacity is not inherited in computed styles, so a target inside a faded-out
-// container (the expanded sidebar panel while the sidebar is collapsed) still
-// reports opacity 1. Walk the ancestors so those targets count as hidden.
-function hasTransparentAncestor(element: HTMLElement): boolean {
-  for (let node: HTMLElement | null = element; node; node = node.parentElement) {
-    if (window.getComputedStyle(node).opacity === "0") {
-      return true
-    }
-  }
-  return false
-}
-
 function getVisibleTourElement(selector: string): Element | null {
   if (typeof document === "undefined") {
     return null
@@ -28,7 +16,10 @@ function getVisibleTourElement(selector: string): Element | null {
         !htmlElement.hidden &&
         style.display !== "none" &&
         style.visibility !== "hidden" &&
-        !hasTransparentAncestor(htmlElement) &&
+        style.opacity !== "0" &&
+        // The sidebar marks its faded-out panel as soon as it toggles; reading
+        // opacity would catch the 200ms fade half way.
+        !htmlElement.closest("[data-tour-hidden]") &&
         htmlElement.getClientRects().length > 0
       )
     }) ?? null

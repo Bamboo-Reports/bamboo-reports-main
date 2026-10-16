@@ -153,6 +153,7 @@ export function FiltersSidebar({
           'absolute inset-y-0 left-0 z-10 w-16 px-2 py-4 transition-all duration-200 ease-out motion-reduce:transition-none',
           isCollapsed ? 'opacity-100 translate-x-0 pointer-events-auto' : 'opacity-0 -translate-x-1 pointer-events-none'
         )}
+        data-tour-hidden={isCollapsed ? undefined : true}
       >
         <div className="flex h-full flex-col items-center gap-2">
           <Button
@@ -209,6 +210,7 @@ export function FiltersSidebar({
           'absolute inset-y-0 left-0 w-[320px] overflow-y-auto [scrollbar-gutter:stable] py-4 pl-4 pr-2.5 space-y-3 transition-all duration-200 ease-out motion-reduce:transition-none',
           isCollapsed ? 'opacity-0 translate-x-1 pointer-events-none' : 'opacity-100 translate-x-0 pointer-events-auto'
         )}
+        data-tour-hidden={isCollapsed ? true : undefined}
       >
         <div className="flex flex-col gap-2 mb-3 pb-3 border-b border-sidebar-border">
           <div className="flex items-center justify-between gap-2">
