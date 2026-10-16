@@ -15,6 +15,9 @@ interface ViewSwitcherProps<V extends string> {
   onValueChange: (value: V) => void
   options: SwitcherOption<V>[]
   className?: string
+  /** Stretch the options evenly across the full width (e.g. the sidebar). */
+  fullWidth?: boolean
+  "aria-label"?: string
   "data-tour"?: string
 }
 
@@ -23,11 +26,21 @@ export function ViewSwitcher<V extends string>({
   onValueChange,
   options,
   className,
+  fullWidth = false,
+  "aria-label": ariaLabel,
   "data-tour": dataTour,
 }: ViewSwitcherProps<V>) {
   return (
-    <Tabs value={value} onValueChange={(v) => onValueChange(v as V)} className={cn("w-fit", className)} data-tour={dataTour}>
-      <TabsList className="gap-2 bg-secondary/80 shadow-sm">
+    <Tabs
+      value={value}
+      onValueChange={(v) => onValueChange(v as V)}
+      className={cn(fullWidth ? "w-full" : "w-fit", className)}
+      data-tour={dataTour}
+    >
+      <TabsList
+        aria-label={ariaLabel}
+        className={cn("gap-2 bg-secondary/80 shadow-sm", fullWidth && "flex w-full [&>*]:flex-1")}
+      >
         {options.map(({ value: optionValue, label, icon }) => (
           <TabsTrigger
             key={optionValue}

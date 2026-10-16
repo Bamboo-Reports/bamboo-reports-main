@@ -51,7 +51,7 @@ The filter sidebar is located on the left side of the dashboard. The Account Vis
 
 | UI Label | Filter State Key | Database Column | Table | Filter Type |
 |----------|-----------------|-----------------|-------|-------------|
-| Account Visibility | `accountVisibilityMode` | `account_visibility` | `accounts` | Single-select (`ALL`, `GCCs`, `NON-GCCs`; values `all`, `gcc`, `nonGcc`; default `gcc`) |
+| Account Visibility | `accountVisibilityMode` | `account_visibility` | `accounts` | Single-select (`All`, `GCCs`, `Non-GCCs`; values `all`, `gcc`, `nonGcc`; default `gcc`) |
 | Account Name | `accountGlobalLegalNameKeywords` | `account_global_legal_name` | `accounts` | Keyword (include/exclude), alias-aware autocomplete |
 | Account List | `accountListValues` | `account_lists.id` (Supabase) | `account_lists` | Multi-select (include/exclude) of uploaded lists |
 | *(no control; derived)* | `accountNameValues` | `account_global_legal_name` | `accounts` | Exact names expanded from the selected account lists on the client |
@@ -106,7 +106,7 @@ The filter sidebar is located on the left side of the dashboard. The Account Vis
 
 | Filter Type | UI Control | Data Structure | Behavior |
 |-------------|-----------|----------------|----------|
-| **Single-select** | Segmented control (`filters-sidebar.tsx`) | `AccountVisibilityMode` (`"all" \| "gcc" \| "nonGcc"`) | Applies immediately. |
+| **Single-select** | `ViewSwitcher` (`components/ui/view-switcher.tsx`, full width in `filters-sidebar.tsx`, the same control as Chart / Data / Map) | `AccountVisibilityMode` (`"all" \| "gcc" \| "nonGcc"`) | Applies immediately. |
 | **Multi-select (include/exclude)** | `EnhancedMultiSelect` dropdown (Account List uses `AccountListPicker` on the same control) | `FilterValue[]`: `{ value: string, mode: 'include' \| 'exclude' }` | Green badge = include, Red badge = exclude. Options show count of matching records. |
 | **Keyword (include/exclude)** | `TitleKeywordInput` text field (Account Name uses `AccountAutocomplete`) | `FilterValue[]`: `{ value: string, mode: 'include' \| 'exclude' }` | Keyword added on Enter. Matches partial strings (case-insensitive) in the target column. |
 | **Range slider** | `Slider` with min/max handles plus Min/Max inputs | `[number, number]` tuple | Linear steps. Filters records where the column value falls within the range. |

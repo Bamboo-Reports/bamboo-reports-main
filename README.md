@@ -63,7 +63,7 @@ Bamboo Reports provides a unified view of business entities (**Accounts**, **Cen
 ### Advanced Filtering Engine
 - **Multi-Select Filters:** Country, Region, Industry, Category, Nature, Technology, Functions, and more.
 - **Server-Side Filtering (#249):** Filters are translated to parameterized SQL on the server and the client reads paginated slices and pre-computed aggregates; no endpoint returns the whole dataset. See [Server-Mode Dashboard](documentation/backend/server-dashboard-mode.md).
-- **Account Visibility Filter:** `ALL` / `GCCs` / `NON-GCCs` toggle (default `GCCs`) constrains tables, charts, and exports to the chosen account set, while summary cards still report the full universe.
+- **Account Visibility Filter:** `All` / `GCCs` / `Non-GCCs` switcher (same style as the Chart / Data / Map switcher) (default `GCCs`) constrains tables, charts, and exports to the chosen account set, while summary cards still report the full universe.
 - **Alias-Aware Account Search:** Global search and the account filter autocomplete match accounts by alternate names (short legal name, brand, abbreviation, flagship products, "currently known as") and show a "Known as" hint on alias matches.
 - **Precision Slicing:** "Include" vs. "Exclude" toggle per filter group.
 - **Range Sliders:** Revenue, Employee count, and Years in India sliders with logarithmic scaling.
