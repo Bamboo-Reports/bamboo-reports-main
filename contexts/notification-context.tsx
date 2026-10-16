@@ -64,6 +64,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const [loadingRecords, setLoadingRecords] = useState<Record<string, boolean>>({})
   const [error, setError] = useState<string | null>(null)
 
+  const clearNotifications = useCallback(() => {
+    setUnreadCount(0)
+    setSummaries([])
+    setRecordSummaries({})
+    setError(null)
+  }, [])
+
   // --- Auth state (single listener for the whole app) ---
   useEffect(() => {
     if (!NOTIFICATIONS_ENABLED) return
@@ -80,28 +87,35 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!isMounted) return
       setAccessToken(session?.access_token ?? null)
-      if (!session?.access_token) {
-        setUnreadCount(0)
-        setSummaries([])
-        setRecordSummaries({})
-        setError(null)
-      }
+      if (!session?.access_token) clearNotifications()
     })
 
     return () => {
       isMounted = false
       authListener.subscription.unsubscribe()
     }
-  }, [])
+  }, [clearNotifications])
 
   // The token in state only changes on auth events, so it goes stale when a
   // background tab misses Supabase's auto-refresh. Each request asks
   // getSession() for the current token instead (it refreshes an expired one),
-  // like lib/dashboard/api-client.ts does.
+  // like lib/dashboard/api-client.ts does. Never throws: a session that has
+  // quietly ended clears the bell like a sign-out, and a failed lookup (for
+  // example a refresh on a flaky network) shows an error. Both return null.
   const getFreshAccessToken = useCallback(async () => {
-    const { data } = await getSupabaseBrowserClient().auth.getSession()
-    return data.session?.access_token ?? null
-  }, [])
+    try {
+      const { data } = await getSupabaseBrowserClient().auth.getSession()
+      const token = data.session?.access_token ?? null
+      if (!token) {
+        setAccessToken(null)
+        clearNotifications()
+      }
+      return token
+    } catch {
+      setError("Could not check your session. Try again shortly.")
+      return null
+    }
+  }, [clearNotifications])
 
   // --- Refresh unread count ---
   const refreshUnreadCount = useCallback(async () => {
