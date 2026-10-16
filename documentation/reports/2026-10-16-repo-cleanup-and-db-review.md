@@ -50,7 +50,7 @@ All docs were audited against the code and the commits since early September.
 |------|--------|
 | Account list upload | `.xls` is rejected with a "save as .xlsx or CSV" message (ExcelJS cannot read it). The limit is now 500 names (was 1000), and larger lists are blocked with a request to split the file instead of being silently cut. |
 | Account Lists manager | The row reads "20 Accounts • 12 Oct 2026". Apply is now a "+" button (tooltip "Include"). The header button reads "Upload". The expand panel is gone. See [Account Lists](../backend/account-lists.md). |
-| Sidebar | The account lists button shows an upload icon, with the tooltip "Upload Accounts". |
+| Sidebar | The account lists button shows an upload icon, with the tooltip "Upload Accounts". The "Summary PDF" button is renamed **Report**, with a download icon. Its toast reads "Report downloaded." |
 | Product tour | Steps whose target is inside a faded-out container are skipped (saved filters and export when the sidebar is collapsed). The tour animates out when it ends. See [Product Tour](../frontend/product-tour.md). |
 | Header | A solid amber **DEV** badge under `npm run dev`, **PREVIEW** on Vercel previews, and nothing in production (`getDevEnvironment()`). The blue outline around the logo is removed from the header, the loading skeleton and the standalone screens. |
 | Favorites | The feature is removed entirely: hook, dialog, menu entry, right-click items, the selection-bar button and the analytics events. |

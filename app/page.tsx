@@ -829,7 +829,7 @@ function DashboardContent(): React.JSX.Element | null {
       })
       const { downloadSummaryReportPdf } = await import("@/lib/reports/summary-report-pdf")
       await downloadSummaryReportPdf(model)
-      toast.success("Summary PDF downloaded.")
+      toast.success("Report downloaded.")
       captureEvent(ANALYTICS_EVENTS.SUMMARY_REPORT_DOWNLOADED, {
         active_filters_count: activeFiltersCount,
         active_view: activeSection,
