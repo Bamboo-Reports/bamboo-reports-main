@@ -26,8 +26,6 @@ import { MapErrorBoundary } from "@/components/maps/map-error-boundary"
 import { ViewSwitcher } from "@/components/ui/view-switcher"
 import { SortButton } from "@/components/ui/sort-button"
 import { PaginationControls } from "@/components/ui/pagination-controls"
-import { TableColumnMenu } from "@/components/tables/table-column-menu"
-import { useTableColumnPreferences } from "@/hooks/use-table-column-preferences"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { fetchAccountRelated, type CityAggregate, type StateAggregate } from "@/lib/dashboard/api-client"
@@ -103,13 +101,6 @@ export function CentersTab({
   })
   const [dataLayout, setDataLayout] = useState<"table" | "grid">("table")
   const [mapMode, setMapMode] = useState<"city" | "state">("state")
-  const {
-    columns,
-    visibleColumnSet,
-    isColumnVisible,
-    setColumnVisible,
-    resetColumns,
-  } = useTableColumnPreferences("centers")
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -451,14 +442,6 @@ export function CentersTab({
              <div className="flex flex-wrap items-center gap-3">
                <CardTitle className="text-base">Centres Data</CardTitle>
                <div className="ml-auto flex items-center gap-2">
-                 {dataLayout === "table" && (
-                   <TableColumnMenu
-                     columns={columns}
-                     visibleColumnSet={visibleColumnSet}
-                     onToggleColumn={setColumnVisible}
-                     onReset={resetColumns}
-                   />
-                 )}
                  <ViewSwitcher
                    value={dataLayout}
                    onValueChange={(value) => setDataLayout(value as "table" | "grid")}
@@ -495,38 +478,29 @@ export function CentersTab({
                             aria-label="Select all centres on this page"
                           />
                         </TableHead>
-                        {isColumnVisible("name") && (
                         <TableHead className="w-[260px]">
                           <SortButton label="Centre Name" sortKey="name" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
-                        )}
-                        {isColumnVisible("location") && (
                         <TableHead className="w-[200px]">
                           <SortButton label="Location" sortKey="location" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
-                        )}
-                        {isColumnVisible("type") && (
                         <TableHead className="w-[200px]">
                           <SortButton label="Centre Type" sortKey="type" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
-                        )}
-                        {isColumnVisible("employees") && (
                         <TableHead className="w-[160px]">
                           <SortButton label="Centre Headcount" sortKey="employees" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
-                        )}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {server?.loading ? (
-                        <TableSkeletonRows columns={1 + (["name", "location", "type", "employees"] as const).filter(isColumnVisible).length} />
+                        <TableSkeletonRows columns={5} />
                       ) : pageCenters.map(
                         (center) => (
                           <CenterRow
                             key={center.cn_unique_key}
                             center={center}
                             onOpen={handleRowOpen}
-                            visibleColumns={visibleColumnSet}
                             selectable
                             isSelected={selectedKeys.has(center.cn_unique_key ?? "")}
                             onSelectChange={getCenterKey(center) ? handleRowSelectChange : undefined}

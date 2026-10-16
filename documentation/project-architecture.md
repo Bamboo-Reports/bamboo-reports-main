@@ -100,7 +100,6 @@ Key components:
 | `use-row-selection.ts` | Generic multi-row selection state |
 | `use-saved-filters.ts` | Saved filter CRUD with Supabase |
 | `use-server-dashboard-data.ts` | Server-mode data orchestration: fetches summary/facets/charts, map and paginated entity slices with debounce, a client cache and loading state (see [Server-Mode Dashboard](backend/server-dashboard-mode.md)) |
-| `use-table-column-preferences.ts` | Per-user table column visibility preferences |
 | `use-table-row-selection.ts` | Wires `use-row-selection.ts` into a specific data table |
 | `use-tour-persistence.ts` | Tour completion tracking (localStorage + Supabase) |
 

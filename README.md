@@ -240,7 +240,6 @@ bamboo-reports-nextjs/
 │   ├── use-row-selection.ts        # Generic row selection state
 │   ├── use-saved-filters.ts        # Saved filter persistence
 │   ├── use-server-dashboard-data.ts  # Server-mode data orchestration (paginated endpoints)
-│   ├── use-table-column-preferences.ts  # Table column visibility prefs
 │   ├── use-table-row-selection.ts  # Table-specific row selection wiring
 │   └── use-tour-persistence.ts     # Tour completion tracking (localStorage + Supabase)
 │

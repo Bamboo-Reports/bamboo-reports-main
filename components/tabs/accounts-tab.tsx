@@ -25,8 +25,6 @@ import { MapErrorBoundary } from "@/components/maps/map-error-boundary"
 import { ViewSwitcher } from "@/components/ui/view-switcher"
 import { SortButton } from "@/components/ui/sort-button"
 import { PaginationControls } from "@/components/ui/pagination-controls"
-import { TableColumnMenu } from "@/components/tables/table-column-menu"
-import { useTableColumnPreferences } from "@/hooks/use-table-column-preferences"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { canAccessAccountsMapView } from "@/lib/config/dashboard-access"
@@ -108,13 +106,6 @@ export function AccountsTab({
   })
   const [dataLayout, setDataLayout] = useState<"table" | "grid">("table")
   const [mapMode, setMapMode] = useState<"city" | "state">("state")
-  const {
-    columns,
-    visibleColumnSet,
-    isColumnVisible,
-    setColumnVisible,
-    resetColumns,
-  } = useTableColumnPreferences("accounts")
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -418,14 +409,6 @@ export function AccountsTab({
             <div className="flex flex-wrap items-center gap-3">
               <CardTitle className="text-base">Accounts Data</CardTitle>
               <div className="ml-auto flex items-center gap-2">
-                {dataLayout === "table" && (
-                  <TableColumnMenu
-                    columns={columns}
-                    visibleColumnSet={visibleColumnSet}
-                    onToggleColumn={setColumnVisible}
-                    onReset={resetColumns}
-                  />
-                )}
                 <ViewSwitcher
                   value={dataLayout}
                   onValueChange={(value) => setDataLayout(value as "table" | "grid")}
@@ -462,38 +445,29 @@ export function AccountsTab({
                           aria-label="Select all accounts on this page"
                         />
                       </TableHead>
-                      {isColumnVisible("name") && (
                       <TableHead className="w-[280px]">
                         <SortButton label="Account Name" sortKey="name" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                       </TableHead>
-                      )}
-                      {isColumnVisible("industry") && (
                       <TableHead className="w-[220px]">
                         <SortButton label="Sub Industry" sortKey="industry" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                       </TableHead>
-                      )}
-                      {isColumnVisible("revenue") && (
                       <TableHead className="w-[140px]">
                         <SortButton label="Revenue Range" sortKey="revenue" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                       </TableHead>
-                      )}
-                      {isColumnVisible("employees") && (
                       <TableHead className="w-[200px]">
                         <SortButton label="GCC Aggregate Headcount (India)" sortKey="employees" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                       </TableHead>
-                      )}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {server?.loading ? (
-                      <TableSkeletonRows columns={1 + (["name", "industry", "revenue", "employees"] as const).filter(isColumnVisible).length} />
+                      <TableSkeletonRows columns={5} />
                     ) : pageAccounts.map(
                       (account) => (
                         <AccountRow
                           key={account.account_global_legal_name}
                           account={account}
                           onOpen={handleRowOpen}
-                          visibleColumns={visibleColumnSet}
                           selectable
                           isSelected={selectedNames.has(account.account_global_legal_name ?? "")}
                           onSelectChange={getAccountKey(account) ? handleRowSelectChange : undefined}

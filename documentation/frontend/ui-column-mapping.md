@@ -116,7 +116,7 @@ The filter sidebar is located on the left side of the dashboard. The Account Vis
 
 ## 2. Data Tables
 
-Each tab in the dashboard displays a paginated data table (or a card grid, toggled per tab). Pages hold 51 rows (`itemsPerPage` in `app/page.tsx`). Optional columns can be hidden per user through the column menu (`lib/dashboard/table-column-preferences.ts`, `components/tables/table-column-menu.tsx`); columns marked required always show.
+Each tab in the dashboard displays a paginated data table (or a card grid, toggled per tab). Pages hold 51 rows (`itemsPerPage` in `app/page.tsx`). Every column always shows; the per-user column menu was removed on 2026-10-16.
 
 ### 2.1 Accounts Table
 
