@@ -74,6 +74,20 @@ const isNumberRange = (value: unknown): value is [number, number] =>
 const serializeFilterValues = (values: FilterValue[]) =>
   values.map(({ value, mode }) => `${mode}:${value}`).sort()
 
+// Filters objects the hook produced on its own (range resets and clamps after
+// new data or ranges arrive), mapped to the filters they were derived from.
+// Lets consumers tell these apart from changes the user made.
+const autoAdjustedSources = new WeakMap<Filters, Filters>()
+
+function markAutoAdjusted(source: Filters, next: Filters): Filters {
+  autoAdjustedSources.set(next, source)
+  return next
+}
+
+export function getAutoAdjustedSource(filters: Filters): Filters | undefined {
+  return autoAdjustedSources.get(filters)
+}
+
 export function useDashboardFilters({
   accounts,
   centers,
@@ -126,14 +140,14 @@ export function useDashboardFilters({
     const baseYears: [number, number] = [baseRanges.yearsInIndiaRange.min, baseRanges.yearsInIndiaRange.max]
     const baseCenterInc: [number, number] = [baseRanges.centerIncYearRange.min, baseRanges.centerIncYearRange.max]
 
-    setFilters((prev) => ({
+    setFilters((prev) => markAutoAdjusted(prev, {
       ...prev,
       accountHqRevenueRange: baseRevenue,
       accountYearsInIndiaRange: baseYears,
       centerIncYearRange: baseCenterInc,
     }))
 
-    setPendingFilters((prev) => ({
+    setPendingFilters((prev) => markAutoAdjusted(prev, {
       ...prev,
       accountHqRevenueRange: baseRevenue,
       accountYearsInIndiaRange: baseYears,
@@ -241,10 +255,10 @@ export function useDashboardFilters({
           prev.accountHqRevenueRange[0] !== dynamicRevenueRange.min ||
           prev.accountHqRevenueRange[1] !== dynamicRevenueRange.max
         ) {
-          return {
+          return markAutoAdjusted(prev, {
             ...prev,
             accountHqRevenueRange: [dynamicRevenueRange.min, dynamicRevenueRange.max] as [number, number],
-          }
+          })
         }
 
         return prev
@@ -254,10 +268,10 @@ export function useDashboardFilters({
       const newMax = Math.min(prev.accountHqRevenueRange[1], dynamicRevenueRange.max)
 
       if (newMin !== prev.accountHqRevenueRange[0] || newMax !== prev.accountHqRevenueRange[1]) {
-        return {
+        return markAutoAdjusted(prev, {
           ...prev,
           accountHqRevenueRange: [newMin, newMax] as [number, number],
-        }
+        })
       }
 
       return prev

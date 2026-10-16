@@ -39,6 +39,7 @@ import type { Filters } from "@/lib/types"
 import { calculateActiveFilters } from "@/lib/dashboard/filter-summary"
 import { SavedFilterCard, type SavedFilter } from "@/components/filters/saved-filter-card"
 import { useSavedFilters, type FilterShare } from "@/hooks/use-saved-filters"
+import { getAutoAdjustedSource } from "@/hooks/use-dashboard-filters"
 import { AccountListsDialog } from "@/components/filters/account-lists-dialog"
 import { useAccountLists } from "@/contexts/account-lists-context"
 import { withAccountLists, type AccountList } from "@/lib/accounts/account-lists"
@@ -115,17 +116,21 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
   // applied filters still match what loading it produced. `applied` is filled
   // on the first render after the load (loading sanitizes and expands account
   // lists, so the result can differ from the stored filters); any later
-  // change to the filters clears it. Uses the "adjust state while rendering"
-  // pattern instead of an effect.
+  // change the user makes clears it. Range clamps the dashboard hook makes on
+  // its own after new ranges arrive keep it, and move `applied` forward. Uses
+  // the "adjust state while rendering" pattern instead of an effect.
   const [activeSaved, setActiveSaved] = useState<{ id: string; before: Filters; applied: Filters | null } | null>(null)
   if (activeSaved) {
     if (activeSaved.applied === null) {
       if (currentFilters !== activeSaved.before) setActiveSaved({ ...activeSaved, applied: currentFilters })
-    } else if (
-      currentFilters !== activeSaved.applied &&
-      JSON.stringify(currentFilters) !== JSON.stringify(activeSaved.applied)
-    ) {
-      setActiveSaved(null)
+    } else if (currentFilters !== activeSaved.applied) {
+      let source: Filters | undefined = currentFilters
+      while (source && source !== activeSaved.applied) source = getAutoAdjustedSource(source)
+      if (source || JSON.stringify(currentFilters) === JSON.stringify(activeSaved.applied)) {
+        setActiveSaved({ ...activeSaved, applied: currentFilters })
+      } else {
+        setActiveSaved(null)
+      }
     }
   }
   // Looked up by id so a rename shows straight away and a deleted filter drops out.
