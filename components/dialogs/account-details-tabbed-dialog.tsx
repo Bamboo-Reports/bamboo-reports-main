@@ -12,7 +12,7 @@ import { CentersMap } from "@/components/maps/centers-map"
 import {
   Tabs,
   TabsContent,
-  TabsList,
+  SlidingTabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
 import { RiBox3Line, RiBriefcaseLine, RiBuilding2Line, RiBuildingLine, RiCalendarLine, RiGlobalLine, RiGroupLine, RiLineChartLine, RiLinkedinBoxLine, RiMapPinLine, RiMoneyDollarCircleLine } from "@remixicon/react"
@@ -480,7 +480,7 @@ export function AccountDetailsDialog({
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
-            <TabsList className={`grid w-full ${relatedLoading ? `grid-cols-${1 + (canViewCenters ? 1 : 0) + (canViewProspects ? 1 : 0)}` : accountCenters.length > 0 && accountProspects.length > 0 ? "grid-cols-3" : accountCenters.length > 0 || accountProspects.length > 0 ? "grid-cols-2" : "grid-cols-1"}`}>
+            <SlidingTabsList className={`grid w-full ${relatedLoading ? `grid-cols-${1 + (canViewCenters ? 1 : 0) + (canViewProspects ? 1 : 0)}` : accountCenters.length > 0 && accountProspects.length > 0 ? "grid-cols-3" : accountCenters.length > 0 || accountProspects.length > 0 ? "grid-cols-2" : "grid-cols-1"}`}>
               <TabsTrigger value="info" className="flex items-center gap-2">
                 <RiBuildingLine className="h-4 w-4" />
                 Account Info
@@ -513,7 +513,7 @@ export function AccountDetailsDialog({
                 </Badge>
               </TabsTrigger>
               )}
-            </TabsList>
+            </SlidingTabsList>
 
             {/* Account Info Tab */}
             <TabsContent value="info" className="space-y-8 mt-4">
