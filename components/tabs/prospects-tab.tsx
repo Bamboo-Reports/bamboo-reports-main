@@ -461,7 +461,7 @@ export function ProspectsTab({
                   </Table>
                 ) : (
                   <div className="flex flex-col">
-                    <div className="flex items-center gap-2 px-6 py-3 border-b bg-muted/20">
+                    <div className="flex items-center gap-2 px-6 py-3 border-y bg-muted/20">
                       <span className="text-xs font-medium text-muted-foreground">Sort</span>
                       <Button
                         type="button"
