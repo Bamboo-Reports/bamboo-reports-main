@@ -55,7 +55,7 @@ interface FiltersSidebarProps {
   handleCenterIncYearRangeChange: (value: [number, number]) => void
 
   getTotalActiveFilters: () => number
-  handleLoadSavedFilters: (savedFilters: Filters) => void
+  handleLoadSavedFilters: (savedFilters: Filters) => Filters
   formatRevenueInMillions: (value: number) => string
 }
 

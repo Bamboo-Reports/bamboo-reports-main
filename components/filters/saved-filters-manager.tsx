@@ -46,7 +46,7 @@ import { withAccountLists, type AccountList } from "@/lib/accounts/account-lists
 
 interface SavedFiltersManagerProps {
   currentFilters: Filters
-  onLoadFilters: (filters: Filters) => void
+  onLoadFilters: (filters: Filters) => Filters
   totalActiveFilters: number
   onReset?: () => void
   onExport?: () => void
@@ -113,24 +113,20 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
   )
 
   // The saved filter last loaded, shown in the dropdown trigger while the
-  // applied filters still match what loading it produced. `applied` is filled
-  // on the first render after the load (loading sanitizes and expands account
-  // lists, so the result can differ from the stored filters); any later
-  // change the user makes clears it. Range clamps the dashboard hook makes on
-  // its own after new ranges arrive keep it, and move `applied` forward. Uses
-  // the "adjust state while rendering" pattern instead of an effect.
-  const [activeSaved, setActiveSaved] = useState<{ id: string; before: Filters; applied: Filters | null } | null>(null)
-  if (activeSaved) {
-    if (activeSaved.applied === null) {
-      if (currentFilters !== activeSaved.before) setActiveSaved({ ...activeSaved, applied: currentFilters })
-    } else if (currentFilters !== activeSaved.applied) {
-      let source: Filters | undefined = currentFilters
-      while (source && source !== activeSaved.applied) source = getAutoAdjustedSource(source)
-      if (source || JSON.stringify(currentFilters) === JSON.stringify(activeSaved.applied)) {
-        setActiveSaved({ ...activeSaved, applied: currentFilters })
-      } else {
-        setActiveSaved(null)
-      }
+  // applied filters still match what loading it produced (`applied`, as
+  // returned by onLoadFilters). Any change the user makes clears it. Range
+  // clamps the dashboard hook makes on its own after new ranges arrive keep
+  // it, and move `applied` forward, so each filters object is compared at
+  // most once. Uses the "adjust state while rendering" pattern instead of an
+  // effect.
+  const [activeSaved, setActiveSaved] = useState<{ id: string; applied: Filters } | null>(null)
+  if (activeSaved && currentFilters !== activeSaved.applied) {
+    let source: Filters | undefined = currentFilters
+    while (source && source !== activeSaved.applied) source = getAutoAdjustedSource(source)
+    if (source || JSON.stringify(currentFilters) === JSON.stringify(activeSaved.applied)) {
+      setActiveSaved({ ...activeSaved, applied: currentFilters })
+    } else {
+      setActiveSaved(null)
     }
   }
   // Looked up by id so a rename shows straight away and a deleted filter drops out.
@@ -156,15 +152,14 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
   )
 
   const handleLoadFilter = useCallback((savedFilter: SavedFilter) => {
-    setActiveSaved({ id: savedFilter.id, before: currentFilters, applied: null })
-    onLoadFilters(savedFilter.filters)
+    setActiveSaved({ id: savedFilter.id, applied: onLoadFilters(savedFilter.filters) })
     captureEvent(ANALYTICS_EVENTS.SAVED_FILTER_LOADED, {
       saved_filter_id: savedFilter.id,
       saved_filter_name: normalizeTrackedText(savedFilter.name),
       loaded_active_filters_count: calculateActiveFilters(savedFilter.filters),
       loaded_filters_snapshot: buildTrackedFiltersSnapshot(savedFilter.filters),
     })
-  }, [currentFilters, onLoadFilters])
+  }, [onLoadFilters])
 
   const handleDeleteFilter = useCallback((filter: SavedFilter) => {
     setFilterToDelete(filter)

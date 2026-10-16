@@ -41,7 +41,11 @@ function Harness({ active = 1 }: { active?: number }) {
     <>
       <SavedFiltersManager
         currentFilters={filters}
-        onLoadFilters={(next) => setFilters({ ...next })}
+        onLoadFilters={(next) => {
+          const applied = { ...next }
+          setFilters(applied)
+          return applied
+        }}
         totalActiveFilters={active}
       />
       <button type="button" onClick={() => setFilters((f) => ({ ...f, accountHqCountryValues: [] }))}>

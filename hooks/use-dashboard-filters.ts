@@ -420,13 +420,15 @@ export function useDashboardFilters({
     }
   }, [baseRanges, filters, getActiveFilterCountFor])
 
-  const handleLoadSavedFilters = useCallback((savedFilters: Filters) => {
+  // Returns the filters as applied, so callers can recognise them later.
+  const handleLoadSavedFilters = useCallback((savedFilters: Filters): Filters => {
     // Re-derive exact names from the current account lists so edits to a list
     // reach saved filters that reference it.
     const sanitizedSavedFilters = expandAccountLists(sanitizeFilters(savedFilters), accountLists)
     isRevenueRangeAutoRef.current = false
     setPendingFilters(sanitizedSavedFilters)
     setFilters(sanitizedSavedFilters)
+    return sanitizedSavedFilters
   }, [accountLists])
 
   const handleMinRevenueChange = useCallback(
