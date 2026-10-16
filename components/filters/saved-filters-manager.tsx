@@ -31,7 +31,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { RiArrowDownSLine, RiCloseLine, RiDeleteBinLine, RiDownloadLine, RiFileExcel2Line, RiFileTextLine, RiFolderOpenLine, RiLoader4Line, RiLockLine, RiGroupLine, RiResetLeftLine, RiSaveLine, RiSettings4Line, RiShareLine, RiShieldFlashLine, RiUploadLine } from "@remixicon/react"
+import { RiArrowDownSLine, RiCloseLine, RiDeleteBinLine, RiFileExcel2Line, RiFileTextLine, RiFolderOpenLine, RiLoader4Line, RiLockLine, RiGroupLine, RiSaveLine, RiSettings4Line, RiShareLine, RiShieldFlashLine, RiUploadLine } from "@remixicon/react"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { buildTrackedFiltersSnapshot, normalizeTrackedText, toTrackedStringArray } from "@/lib/analytics/tracking"
@@ -441,7 +441,6 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
               onClick={onReset}
               className="w-full h-8 text-xs font-medium"
             >
-              <RiResetLeftLine className="h-3.5 w-3.5" />
               Reset
             </Button>
           )}
@@ -456,10 +455,8 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
                   aria-label="Export as Excel or Report"
                   data-tour="export-button"
                 >
-                  {isGeneratingReport ? (
+                  {isGeneratingReport && (
                     <RiLoader4Line className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" />
-                  ) : (
-                    <RiDownloadLine className="h-3.5 w-3.5" />
                   )}
                   {isGeneratingReport ? "Preparing..." : "Export"}
                   {!isGeneratingReport && <RiArrowDownSLine className="h-3.5 w-3.5 opacity-80" />}
