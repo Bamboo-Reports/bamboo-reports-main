@@ -397,7 +397,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
               onClick={(e) => {
                 if (totalActiveFilters === 0) e.preventDefault()
               }}
-              className="h-9 w-9 shrink-0 aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
+              className="h-9 w-9 shrink-0 rounded-full aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
               title={totalActiveFilters === 0 ? "Apply a filter to save" : "Save current filters"}
               aria-label={totalActiveFilters === 0 ? "Save current filters (apply a filter first)" : "Save current filters"}
             >
@@ -438,7 +438,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
           type="button"
           variant="outline"
           size="icon"
-          className="h-9 w-9 shrink-0"
+          className="h-9 w-9 shrink-0 rounded-full"
           title="Upload Accounts"
           aria-label="Upload Accounts"
           onClick={() => setAccountListsOpen(true)}
