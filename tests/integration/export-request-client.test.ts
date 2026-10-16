@@ -4,9 +4,10 @@ import { requestServerExport, resolveExportDownloadUrl } from "@/lib/exports/req
 const getSession = vi.hoisted(() => vi.fn())
 
 vi.mock("@/lib/supabase/client", () => ({
-  getSupabaseBrowserClient: () => ({
-    auth: { getSession },
-  }),
+  getBrowserAccessToken: async () => {
+    const { data } = await getSession()
+    return data.session?.access_token ?? null
+  },
 }))
 
 describe("export request client", () => {

@@ -7,12 +7,13 @@ const tourTargets = (steps: ReturnType<typeof getDashboardTourSteps>) =>
     .map((step) => (step.element as HTMLElement | undefined)?.dataset.tour)
     .filter(Boolean)
 
-// Mirrors filters-sidebar.tsx: the expanded panel stays mounted and is faded
-// out with opacity 0 on a wrapper while the sidebar is collapsed.
-function renderSidebar(collapsed: boolean) {
+// Mirrors filters-sidebar.tsx: the expanded panel stays mounted and is marked
+// data-tour-hidden while the sidebar is collapsed. `opacity` lets a test
+// render the panel part way through its fade.
+function renderSidebar(collapsed: boolean, opacity = collapsed ? 0 : 1) {
   document.body.innerHTML = `
     <aside data-tour="filters-sidebar">
-      <div style="opacity: ${collapsed ? 0 : 1}">
+      <div style="opacity: ${opacity}"${collapsed ? " data-tour-hidden" : ""}>
         <div data-tour="saved-filters">
           <button data-tour="export-button">Export</button>
         </div>
@@ -38,10 +39,22 @@ describe("getDashboardTourSteps", () => {
     expect(tourTargets(steps)).toEqual(["filters-sidebar", "saved-filters", "export-button"])
   })
 
-  it("skips steps whose target sits inside a faded-out container", () => {
+  it("skips steps whose target sits inside the hidden panel", () => {
     renderSidebar(true)
     const steps = getDashboardTourSteps({ hasMapView: false, isSidebarCollapsed: true })
     expect(tourTargets(steps)).toEqual(["filters-sidebar"])
+  })
+
+  it("follows the toggle, not the opacity, while the panel is still fading", () => {
+    renderSidebar(true, 1)
+    expect(tourTargets(getDashboardTourSteps({ hasMapView: false, isSidebarCollapsed: true }))).toEqual(["filters-sidebar"])
+
+    renderSidebar(false, 0.2)
+    expect(tourTargets(getDashboardTourSteps({ hasMapView: false, isSidebarCollapsed: false }))).toEqual([
+      "filters-sidebar",
+      "saved-filters",
+      "export-button",
+    ])
   })
 
   it("always ends with the closing step", () => {

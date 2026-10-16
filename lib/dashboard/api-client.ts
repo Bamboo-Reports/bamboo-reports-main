@@ -1,4 +1,4 @@
-import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { getBrowserAccessToken } from "@/lib/supabase/client"
 import type { AccountMatchResult } from "@/lib/accounts/account-match"
 import type {
   Account,
@@ -30,9 +30,7 @@ export class ApiClientError extends Error {
 }
 
 async function getAccessToken(): Promise<string> {
-  const supabase = getSupabaseBrowserClient()
-  const { data: sessionData } = await supabase.auth.getSession()
-  const token = sessionData.session?.access_token
+  const token = await getBrowserAccessToken()
   if (!token) throw new ApiClientError("Not authenticated. Please sign in.", 401)
   return token
 }

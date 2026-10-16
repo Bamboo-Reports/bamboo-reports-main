@@ -78,3 +78,11 @@ export function getSupabaseBrowserClient(storagePreference?: "local" | "session"
   }
   return client
 }
+
+// The current access token, or null without a session. getSession() refreshes
+// an expired token, so this stays valid when a background tab missed
+// Supabase's auto-refresh.
+export async function getBrowserAccessToken(): Promise<string | null> {
+  const { data } = await getSupabaseBrowserClient().auth.getSession()
+  return data.session?.access_token ?? null
+}

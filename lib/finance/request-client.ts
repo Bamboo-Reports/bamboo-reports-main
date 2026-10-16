@@ -1,4 +1,4 @@
-import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { getBrowserAccessToken } from "@/lib/supabase/client"
 import type { AccountFinancialInfoResponse } from "@/lib/types"
 
 /**
@@ -9,9 +9,7 @@ import type { AccountFinancialInfoResponse } from "@/lib/types"
 export async function requestAccountFinancialInfo(
   ticker: string
 ): Promise<AccountFinancialInfoResponse> {
-  const supabase = getSupabaseBrowserClient()
-  const { data: sessionData } = await supabase.auth.getSession()
-  const token = sessionData.session?.access_token
+  const token = await getBrowserAccessToken()
   if (!token) {
     return { success: false, error: "Not authenticated. Please sign in.", data: null }
   }

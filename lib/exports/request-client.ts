@@ -1,4 +1,4 @@
-import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { getBrowserAccessToken } from "@/lib/supabase/client"
 import type { ExportDatasetKey } from "@/lib/utils/export-helpers"
 
 export type ServerExportRequest = {
@@ -37,12 +37,10 @@ async function resolveClientPublicIp(): Promise<string | null> {
 export async function requestServerExport(
   input: ServerExportRequest
 ): Promise<ServerExportResponse> {
-  const supabase = getSupabaseBrowserClient()
-  const [{ data: sessionData }, publicIp] = await Promise.all([
-    supabase.auth.getSession(),
+  const [token, publicIp] = await Promise.all([
+    getBrowserAccessToken(),
     resolveClientPublicIp(),
   ])
-  const token = sessionData.session?.access_token
   if (!token) {
     throw new Error("No active session; cannot start export.")
   }
@@ -81,9 +79,7 @@ export async function requestServerExport(
 }
 
 export async function resolveExportDownloadUrl(exportId: string): Promise<string> {
-  const supabase = getSupabaseBrowserClient()
-  const { data: sessionData } = await supabase.auth.getSession()
-  const token = sessionData.session?.access_token
+  const token = await getBrowserAccessToken()
   if (!token) {
     throw new Error("No active session; cannot download export.")
   }
