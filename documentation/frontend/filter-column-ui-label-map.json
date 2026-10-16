@@ -20,7 +20,7 @@
                 }
             ],
             "status": "active",
-            "note": "View switcher (shared ViewSwitcher): All / GCCs / Non-GCCs (values all, gcc, nonGcc; default gcc)"
+            "note": "View switcher (shared ViewSwitcher): ALL / GCCs / NON-GCCs (values all, gcc, nonGcc; default gcc)"
         },
         {
             "filterKey": "accountGlobalLegalNameKeywords",

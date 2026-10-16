@@ -18,9 +18,9 @@ import type { AccountVisibilityInfo } from '@/components/filters/account-autocom
 import type { AccountVisibilityMode, Alias, AvailableOptions, Filters } from '@/lib/types'
 
 const ACCOUNT_VISIBILITY_OPTIONS: Array<{ value: AccountVisibilityMode; label: string }> = [
-  { value: "all", label: "All" },
+  { value: "all", label: "ALL" },
   { value: "gcc", label: "GCCs" },
-  { value: "nonGcc", label: "Non-GCCs" },
+  { value: "nonGcc", label: "NON-GCCs" },
 ]
 
 interface FiltersSidebarProps {
