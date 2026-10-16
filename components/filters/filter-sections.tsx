@@ -48,6 +48,21 @@ interface CenterFilterSectionProps extends FilterSectionBaseProps {
 
 interface ProspectFilterSectionProps extends FilterSectionBaseProps {}
 
+// Explains why a typed range value was clamped on blur: it either crossed the
+// other end of the range, or fell outside what the data covers.
+function rangeClampMessage(
+  label: string,
+  side: "min" | "max",
+  value: number,
+  otherEnd: number,
+  bounds: { min: number; max: number },
+  unit = ""
+): string {
+  if (side === "min" && value > otherEnd) return `Min can't be above the max (${otherEnd}${unit})`
+  if (side === "max" && value < otherEnd) return `Max can't be below the min (${otherEnd}${unit})`
+  return `${label} data ranges from ${bounds.min}${unit} to ${bounds.max}${unit}`
+}
+
 export function AccountFiltersSection({
   pendingFilters,
   availableOptions,
@@ -148,7 +163,7 @@ export function AccountFiltersSection({
                     const val = pendingFilters.accountHqRevenueRange[0]
                     const clamped = Math.max(revenueRange.min, Math.min(val, pendingFilters.accountHqRevenueRange[1]))
                     if (clamped !== val) {
-                      toast.info(`Revenue data ranges from ${revenueRange.min}M to ${revenueRange.max}M`)
+                      toast.info(rangeClampMessage("Revenue", "min", val, pendingFilters.accountHqRevenueRange[1], revenueRange, "M"))
                       setPendingFilters((prev) => ({ ...prev, accountHqRevenueRange: [clamped, prev.accountHqRevenueRange[1]] }))
                     }
                   }}
@@ -169,7 +184,7 @@ export function AccountFiltersSection({
                     const val = pendingFilters.accountHqRevenueRange[1]
                     const clamped = Math.min(revenueRange.max, Math.max(val, pendingFilters.accountHqRevenueRange[0]))
                     if (clamped !== val) {
-                      toast.info(`Revenue data ranges from ${revenueRange.min}M to ${revenueRange.max}M`)
+                      toast.info(rangeClampMessage("Revenue", "max", val, pendingFilters.accountHqRevenueRange[0], revenueRange, "M"))
                       setPendingFilters((prev) => ({ ...prev, accountHqRevenueRange: [prev.accountHqRevenueRange[0], clamped] }))
                     }
                   }}
@@ -252,7 +267,7 @@ export function AccountFiltersSection({
                     const val = pendingFilters.accountYearsInIndiaRange[0]
                     const clamped = Math.max(yearsInIndiaRange.min, Math.min(val, pendingFilters.accountYearsInIndiaRange[1]))
                     if (clamped !== val) {
-                      toast.info(`Years in India data ranges from ${yearsInIndiaRange.min} to ${yearsInIndiaRange.max}`)
+                      toast.info(rangeClampMessage("Years in India", "min", val, pendingFilters.accountYearsInIndiaRange[1], yearsInIndiaRange))
                       setPendingFilters((prev) => ({ ...prev, accountYearsInIndiaRange: [clamped, prev.accountYearsInIndiaRange[1]] }))
                     }
                   }}
@@ -273,7 +288,7 @@ export function AccountFiltersSection({
                     const val = pendingFilters.accountYearsInIndiaRange[1]
                     const clamped = Math.min(yearsInIndiaRange.max, Math.max(val, pendingFilters.accountYearsInIndiaRange[0]))
                     if (clamped !== val) {
-                      toast.info(`Years in India data ranges from ${yearsInIndiaRange.min} to ${yearsInIndiaRange.max}`)
+                      toast.info(rangeClampMessage("Years in India", "max", val, pendingFilters.accountYearsInIndiaRange[0], yearsInIndiaRange))
                       setPendingFilters((prev) => ({ ...prev, accountYearsInIndiaRange: [prev.accountYearsInIndiaRange[0], clamped] }))
                     }
                   }}
@@ -294,8 +309,8 @@ export function AccountFiltersSection({
               />
             </div>
             <div className="flex justify-between text-xs text-muted-foreground px-2">
-              <span>{yearsInIndiaRange.min.toLocaleString()}</span>
-              <span>{yearsInIndiaRange.max.toLocaleString()}</span>
+              <span>{yearsInIndiaRange.min}</span>
+              <span>{yearsInIndiaRange.max}</span>
             </div>
           </div>
           )}
@@ -626,7 +641,7 @@ export function CenterFiltersSection({
                     const val = pendingFilters.centerIncYearRange[0]
                     const clamped = Math.max(centerIncYearRange.min, Math.min(val, pendingFilters.centerIncYearRange[1]))
                     if (clamped !== val) {
-                      toast.info(`Incorporation year data ranges from ${centerIncYearRange.min} to ${centerIncYearRange.max}`)
+                      toast.info(rangeClampMessage("Incorporation year", "min", val, pendingFilters.centerIncYearRange[1], centerIncYearRange))
                     }
                     setPendingFilters((prev) => ({ ...prev, centerIncYearRange: [clamped, prev.centerIncYearRange[1]] }))
                   }}
@@ -647,7 +662,7 @@ export function CenterFiltersSection({
                     const val = pendingFilters.centerIncYearRange[1]
                     const clamped = Math.min(centerIncYearRange.max, Math.max(val, pendingFilters.centerIncYearRange[0]))
                     if (clamped !== val) {
-                      toast.info(`Incorporation year data ranges from ${centerIncYearRange.min} to ${centerIncYearRange.max}`)
+                      toast.info(rangeClampMessage("Incorporation year", "max", val, pendingFilters.centerIncYearRange[0], centerIncYearRange))
                     }
                     setPendingFilters((prev) => ({ ...prev, centerIncYearRange: [prev.centerIncYearRange[0], clamped] }))
                   }}
@@ -668,8 +683,8 @@ export function CenterFiltersSection({
               />
             </div>
             <div className="flex justify-between text-xs text-muted-foreground px-2">
-              <span>{centerIncYearRange.min.toLocaleString()}</span>
-              <span>{centerIncYearRange.max.toLocaleString()}</span>
+              <span>{centerIncYearRange.min}</span>
+              <span>{centerIncYearRange.max}</span>
             </div>
           </div>
           )}
