@@ -21,7 +21,9 @@ const TableHeader = React.forwardRef<
   <thead
     ref={ref}
     className={cn(
-      "sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 [&_tr]:border-b",
+      // The bottom line is a box-shadow, not a row border: with border-collapse a
+      // row border scrolls away under a sticky header, a shadow stays with it.
+      "sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 shadow-[0_1px_0_hsl(var(--border))]",
       className
     )}
     {...props}
