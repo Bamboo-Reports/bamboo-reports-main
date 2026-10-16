@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect, useMemo, memo } from "react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
@@ -36,7 +37,7 @@ import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { buildTrackedFiltersSnapshot, normalizeTrackedText, toTrackedStringArray } from "@/lib/analytics/tracking"
 import type { Filters } from "@/lib/types"
-import { calculateActiveFilters } from "@/lib/dashboard/filter-summary"
+import { calculateActiveFilters, type FilterRangeBounds } from "@/lib/dashboard/filter-summary"
 import { SavedFilterCard, type SavedFilter } from "@/components/filters/saved-filter-card"
 import { useSavedFilters, type FilterShare } from "@/hooks/use-saved-filters"
 import { getAutoAdjustedSource } from "@/hooks/use-dashboard-filters"
@@ -55,6 +56,8 @@ interface SavedFiltersManagerProps {
   /** Downloads a PDF of the summary counts plus the filters that produced them. */
   onGenerateReport?: () => void
   isGeneratingReport?: boolean
+  /** The data's range bounds, used when counting each saved filter's filters. */
+  rangeBounds?: FilterRangeBounds
 }
 
 export const SavedFiltersManager = memo(function SavedFiltersManager({
@@ -67,6 +70,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
   exportBlockedMessage = "You are not allowed to export data. Please contact an admin.",
   onGenerateReport,
   isGeneratingReport = false,
+  rangeBounds,
 }: SavedFiltersManagerProps) {
   const {
     savedFilters,
@@ -133,11 +137,16 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
   const activeSavedName = activeSaved ? savedFilters.find((f) => f.id === activeSaved.id)?.name ?? null : null
 
   const handleSaveFilter = useCallback(async () => {
-    const success = await saveFilter(filterName, currentFilters)
-    if (success) {
-      setSaveDialogOpen(false)
-      setFilterName("")
+    const id = await saveFilter(filterName, currentFilters)
+    if (!id) {
+      toast.error("Could not save the filter. Try again.")
+      return
     }
+    // The filters just saved are the ones applied, so the dropdown shows its name.
+    setActiveSaved({ id, applied: currentFilters })
+    toast.success(`Saved "${filterName.trim()}".`)
+    setSaveDialogOpen(false)
+    setFilterName("")
   }, [currentFilters, filterName, saveFilter])
 
   // Adds the list to whatever is applied now (it does not reset other filters).
@@ -408,7 +417,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
             <DialogHeader>
               <DialogTitle>Save Filter Configuration</DialogTitle>
               <DialogDescription>
-                Save your current layout of {totalActiveFilters} active filters to easily access them later.
+                Save your current layout of {totalActiveFilters} active {totalActiveFilters === 1 ? "filter" : "filters"} to easily access {totalActiveFilters === 1 ? "it" : "them"} later.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-2">
@@ -428,7 +437,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
                 Cancel
               </Button>
               <Button onClick={handleSaveFilter} disabled={!filterName.trim() || loading}>
-                {loading ? "Saving..." : "Save List"}
+                {loading ? "Saving..." : "Save Filter"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -573,6 +582,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
                         onEdit={handleEdit}
                         onDelete={handleDeleteFilter}
                         onShare={handleOpenShareDialog}
+                        rangeBounds={rangeBounds}
                       />
                     ))}
                   </>
@@ -594,6 +604,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
                         }}
                         onEdit={handleEdit}
                         onDelete={handleDeleteFilter}
+                        rangeBounds={rangeBounds}
                       />
                     ))}
                   </>

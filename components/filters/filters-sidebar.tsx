@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { RiArrowDownSLine, RiArrowLeftSLine, RiArrowRightSLine, RiBriefcaseLine, RiBuildingLine, RiFilterLine, RiGroupLine } from "@remixicon/react"
 import { SavedFiltersManager } from '@/components/filters/saved-filters-manager'
 import {
@@ -95,6 +95,10 @@ export function FiltersSidebar({
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
   const [openSection, setOpenSection] = useState<string>('accounts')
   const totalActiveFilters = getTotalActiveFilters()
+  const rangeBounds = useMemo(
+    () => ({ revenue: revenueRange, yearsInIndia: yearsInIndiaRange, centerIncYear: centerIncYearRange }),
+    [revenueRange, yearsInIndiaRange, centerIncYearRange]
+  )
   const scrollRef = useRef<HTMLDivElement>(null)
   const [canScrollDown, setCanScrollDown] = useState(false)
   const [optimisticVisibilityMode, setOptimisticVisibilityMode] = useState(pendingFilters.accountVisibilityMode)
@@ -244,6 +248,7 @@ export function FiltersSidebar({
               exportBlockedMessage="You are not allowed to export data. Please contact an admin."
               onGenerateReport={handleGenerateReport}
               isGeneratingReport={isGeneratingReport}
+              rangeBounds={rangeBounds}
             />
           </div>
         </div>

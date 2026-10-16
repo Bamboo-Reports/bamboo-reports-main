@@ -78,14 +78,14 @@ export const buildTrackedFiltersSnapshot = (
       ? hasRangeChanged(filters.accountHqRevenueRange, baselineRanges.accountHqRevenueRange)
       : false
   )
-  pushIfActive("accountHqRevenueIncludeNull", filters.accountHqRevenueIncludeNull)
+  pushIfActive("accountHqRevenueIncludeNull", !filters.accountHqRevenueIncludeNull)
   pushIfActive(
     "accountYearsInIndiaRange",
     baselineRanges.accountYearsInIndiaRange
       ? hasRangeChanged(filters.accountYearsInIndiaRange, baselineRanges.accountYearsInIndiaRange)
       : false
   )
-  pushIfActive("yearsInIndiaIncludeNull", filters.yearsInIndiaIncludeNull)
+  pushIfActive("yearsInIndiaIncludeNull", !filters.yearsInIndiaIncludeNull)
   pushIfActive("accountGlobalLegalNameKeywords", filters.accountGlobalLegalNameKeywords.length > 0)
   pushIfActive("accountNameValues", filters.accountNameValues.length > 0)
   pushIfActive("accountListValues", filters.accountListValues.length > 0)
@@ -102,7 +102,7 @@ export const buildTrackedFiltersSnapshot = (
       ? hasRangeChanged(filters.centerIncYearRange, baselineRanges.centerIncYearRange)
       : false
   )
-  pushIfActive("centerIncYearIncludeNull", filters.centerIncYearIncludeNull)
+  pushIfActive("centerIncYearIncludeNull", !filters.centerIncYearIncludeNull)
   pushIfActive("functionNameValues", filters.functionNameValues.length > 0)
   pushIfActive("techSoftwareInUseKeywords", filters.techSoftwareInUseKeywords.length > 0)
   pushIfActive("prospectDepartmentValues", filters.prospectDepartmentValues.length > 0)

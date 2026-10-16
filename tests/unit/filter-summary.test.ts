@@ -34,49 +34,48 @@ describe("withFilterDefaults", () => {
 })
 
 describe("calculateActiveFilters", () => {
-  // The three include-null toggles default to true, so a freshly created
-  // filter set already counts as 3 active filters.
-  const cleanFilters = () =>
-    createDefaultFilters({
-      accountHqRevenueIncludeNull: false,
-      yearsInIndiaIncludeNull: false,
-      centerIncYearIncludeNull: false,
-    })
-
-  it("returns 0 once the default include-null toggles are cleared", () => {
-    expect(calculateActiveFilters(cleanFilters())).toBe(0)
-  })
-
-  it("counts the default include-null toggles", () => {
-    expect(calculateActiveFilters(createDefaultFilters())).toBe(3)
+  it("returns 0 for a freshly created filter set", () => {
+    expect(calculateActiveFilters(createDefaultFilters())).toBe(0)
   })
 
   it("counts each selected multi-value filter entry", () => {
-    const filters = {
-      ...cleanFilters(),
+    const filters = createDefaultFilters({
       accountHqCountryValues: [fv("India"), fv("USA")],
       centerCityValues: [fv("Bangalore")],
-    }
+    })
     expect(calculateActiveFilters(filters)).toBe(3)
   })
 
   it("counts a non-default visibility mode as one active filter", () => {
-    const filters = { ...cleanFilters(), accountVisibilityMode: "all" as const }
-    expect(calculateActiveFilters(filters)).toBe(1)
+    expect(calculateActiveFilters(createDefaultFilters({ accountVisibilityMode: "all" }))).toBe(1)
   })
 
   it("counts a narrowed revenue range as one active filter", () => {
-    const filters = { ...cleanFilters(), accountHqRevenueRange: [100, 500] as [number, number] }
-    expect(calculateActiveFilters(filters)).toBe(1)
+    expect(calculateActiveFilters(createDefaultFilters({ accountHqRevenueRange: [100, 500] }))).toBe(1)
   })
 
   it("does not count a revenue range that equals the default", () => {
-    const filters = { ...cleanFilters(), accountHqRevenueRange: [...DEFAULT_REVENUE_RANGE] as [number, number] }
+    const filters = createDefaultFilters({ accountHqRevenueRange: [...DEFAULT_REVENUE_RANGE] as [number, number] })
     expect(calculateActiveFilters(filters)).toBe(0)
   })
 
-  it("counts a single include-null toggle", () => {
-    const filters = { ...cleanFilters(), accountHqRevenueIncludeNull: true }
-    expect(calculateActiveFilters(filters)).toBe(1)
+  it("does not count ranges that span the data's bounds", () => {
+    const filters = createDefaultFilters({
+      accountHqRevenueRange: [1, 716924],
+      accountYearsInIndiaRange: [1, 76],
+      centerIncYearRange: [1913, 2030],
+    })
+    const bounds = {
+      revenue: { min: 1, max: 716924 },
+      yearsInIndia: { min: 1, max: 76 },
+      centerIncYear: { min: 1913, max: 2030 },
+    }
+    expect(calculateActiveFilters(filters, bounds)).toBe(0)
+    expect(calculateActiveFilters({ ...filters, accountYearsInIndiaRange: [10, 76] }, bounds)).toBe(1)
+  })
+
+  it("counts an include-null toggle only once it is turned off", () => {
+    expect(calculateActiveFilters(createDefaultFilters({ accountHqRevenueIncludeNull: true }))).toBe(0)
+    expect(calculateActiveFilters(createDefaultFilters({ accountHqRevenueIncludeNull: false }))).toBe(1)
   })
 })
