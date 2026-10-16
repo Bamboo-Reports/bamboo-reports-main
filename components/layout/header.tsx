@@ -218,7 +218,7 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
                 onClick={onOpenSearch}
                 title="Search (⌘K)"
                 aria-label="Open search"
-                className="hidden sm:inline-flex items-center gap-2 rounded-lg border border-border/60 bg-muted/30 px-3 py-1.5 text-sm text-muted-foreground/70 transition-colors hover:bg-muted/60 hover:text-muted-foreground hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 w-56"
+                className="hidden sm:inline-flex items-center gap-2 rounded-md border border-border/60 bg-muted/30 px-3 py-1.5 text-sm text-muted-foreground/70 transition-colors hover:bg-muted/60 hover:text-muted-foreground hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 w-56"
               >
                 <RiSearchLine className="h-3.5 w-3.5 shrink-0" />
                 <span className="flex-1 text-left text-xs">Search…</span>

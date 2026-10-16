@@ -41,7 +41,7 @@ export function SelectionActionBar({ show, count, onClear, onExport }: Selection
     <div className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4">
       <div
         className={
-          "pointer-events-auto flex items-center gap-3 rounded-full border bg-background/70 px-4 py-2 shadow-lg backdrop-blur-md supports-[backdrop-filter]:bg-background/60 ease-out " +
+          "pointer-events-auto flex items-center gap-3 rounded-xl border bg-background/70 px-4 py-2 shadow-lg backdrop-blur-md supports-[backdrop-filter]:bg-background/60 ease-out " +
           (exiting
             ? "animate-out fade-out slide-out-to-bottom-4 duration-200"
             : "animate-in fade-in slide-in-from-bottom-4 duration-300")
@@ -50,14 +50,14 @@ export function SelectionActionBar({ show, count, onClear, onExport }: Selection
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 rounded-full"
+          className="h-8 w-8"
           onClick={onClear}
           aria-label="Clear selection"
         >
           <RiCloseLine className="h-4 w-4" />
         </Button>
         <span className="text-sm font-medium">{displayCount} selected</span>
-        <Button size="sm" className="h-8 gap-2 rounded-full px-4 text-xs" onClick={onExport}>
+        <Button size="sm" className="h-8 gap-2 px-4 text-xs" onClick={onExport}>
           <RiDownloadLine className="h-3.5 w-3.5" />
           Export
         </Button>
