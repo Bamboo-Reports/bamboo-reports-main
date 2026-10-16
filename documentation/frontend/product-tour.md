@@ -62,6 +62,7 @@ Bump `TOUR_VERSION` in `lib/tour/constants.ts` when the tour content changes eno
 - `startTour()` is the manual replay entry point: `app/page.tsx` passes it to `Header` as `onStartTour`, which renders the "Tour" item in the profile menu (`components/layout/header.tsx`). It is a no-op while a tour is running and tears down any stale instance first, so double-invocation can't create two overlays.
 - Closing the tour early also calls `markCompleted()`, so a skipped tour does not auto-start again.
 - While running, the hook adds a `tour-active` class to `<html>` and removes it on close or unmount.
+- **Exit animation:** when the tour ends (Done, close button, Escape or overlay click), the hook adds a `tour-exiting` class to `<html>`. The overlay fades out and the popover fades and scales down (keyframes in `app/globals.css`). After `TOUR_EXIT_ANIMATION_MS` (240ms, `lib/tour/constants.ts`) it calls `destroy()`. Further close attempts during the exit are ignored. With `prefers-reduced-motion: reduce` the tour closes instantly. Rebuilding the tour after a layout change skips the animation.
 
 ## 7. Analytics
 

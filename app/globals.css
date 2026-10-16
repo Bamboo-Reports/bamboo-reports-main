@@ -776,3 +776,34 @@
 .driver-popover.br-tour-popover .driver-popover-arrow-side-bottom .driver-popover-arrow {
   background: hsl(var(--popover)) !important;
 }
+
+/* Product tour exit: fade the overlay and settle the popover before driver.js
+   tears them down (see TOUR_EXIT_ANIMATION_MS in lib/tour/constants.ts). */
+@keyframes tour-overlay-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes tour-popover-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+  }
+}
+
+html.tour-exiting .driver-overlay {
+  animation: tour-overlay-out 240ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+html.tour-exiting .driver-popover.br-tour-popover {
+  animation: tour-popover-out 200ms cubic-bezier(0.4, 0, 1, 1) forwards;
+  pointer-events: none;
+}

@@ -3,7 +3,7 @@ import { driver, type Driver } from "driver.js"
 import "driver.js/dist/driver.css"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
-import { TOUR_AUTO_START_DELAY_MS } from "@/lib/tour/constants"
+import { TOUR_AUTO_START_DELAY_MS, TOUR_EXIT_ANIMATION_MS } from "@/lib/tour/constants"
 import { getDashboardTourSteps } from "@/lib/tour/steps"
 import { useTourPersistence } from "@/hooks/use-tour-persistence"
 
@@ -21,6 +21,8 @@ export function useProductTour({ userId, dataLoaded, hasMapView, isSidebarCollap
   const hasAutoStartedRef = useRef(false)
   const stepIndexRef = useRef(0)
   const isRefreshingRef = useRef(false)
+  const isExitingRef = useRef(false)
+  const exitTimerRef = useRef<number | null>(null)
   const tourLayoutRef = useRef<{ hasMapView: boolean; isSidebarCollapsed: boolean } | null>(null)
 
   const createDriver = useCallback(() => {
@@ -54,6 +56,12 @@ export function useProductTour({ userId, dataLoaded, hasMapView, isSidebarCollap
           return
         }
 
+        // A second close (Escape, overlay click) while the exit animation runs.
+        if (isExitingRef.current) {
+          return
+        }
+        isExitingRef.current = true
+
         const totalSteps = steps.length
         const isLastStep = (opts.state.activeIndex ?? 0) === totalSteps - 1
 
@@ -68,10 +76,24 @@ export function useProductTour({ userId, dataLoaded, hasMapView, isSidebarCollap
           })
         }
 
-        document.documentElement.classList.remove("tour-active")
         markCompleted()
-        setIsRunning(false)
-        instance.destroy()
+
+        const finishExit = () => {
+          exitTimerRef.current = null
+          isExitingRef.current = false
+          document.documentElement.classList.remove("tour-active", "tour-exiting")
+          setIsRunning(false)
+          instance.destroy()
+        }
+
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          finishExit()
+          return
+        }
+
+        // Let the overlay and popover animate out before driver.js removes them.
+        document.documentElement.classList.add("tour-exiting")
+        exitTimerRef.current = window.setTimeout(finishExit, TOUR_EXIT_ANIMATION_MS)
       },
     })
 
@@ -147,7 +169,10 @@ export function useProductTour({ userId, dataLoaded, hasMapView, isSidebarCollap
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      document.documentElement.classList.remove("tour-active")
+      if (exitTimerRef.current !== null) {
+        window.clearTimeout(exitTimerRef.current)
+      }
+      document.documentElement.classList.remove("tour-active", "tour-exiting")
       if (driverRef.current) {
         driverRef.current.destroy()
       }
