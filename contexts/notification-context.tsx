@@ -94,6 +94,15 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  // The token in state only changes on auth events, so it goes stale when a
+  // background tab misses Supabase's auto-refresh. Each request asks
+  // getSession() for the current token instead (it refreshes an expired one),
+  // like lib/dashboard/api-client.ts does.
+  const getFreshAccessToken = useCallback(async () => {
+    const { data } = await getSupabaseBrowserClient().auth.getSession()
+    return data.session?.access_token ?? null
+  }, [])
+
   // --- Refresh unread count ---
   const refreshUnreadCount = useCallback(async () => {
     if (!NOTIFICATIONS_ENABLED || !accessToken) {
@@ -102,7 +111,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     }
     setLoadingCount(true)
     try {
-      const result = await getUnreadCount(accessToken)
+      const token = await getFreshAccessToken()
+      if (!token) return
+      const result = await getUnreadCount(token)
       if (!result.success) {
         setError(result.error ?? "Failed to fetch unread count.")
         return
@@ -112,7 +123,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoadingCount(false)
     }
-  }, [accessToken])
+  }, [accessToken, getFreshAccessToken])
 
   // --- Load notification summaries (for the bell dropdown) ---
   const loadSummaries = useCallback(async () => {
@@ -122,7 +133,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     }
     setLoadingSummaries(true)
     try {
-      const result = await getUnreadSummaries({ accessToken })
+      const token = await getFreshAccessToken()
+      if (!token) return
+      const result = await getUnreadSummaries({ accessToken: token })
       if (!result.success) {
         setError(result.error ?? "Failed to fetch summaries.")
         return
@@ -132,7 +145,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoadingSummaries(false)
     }
-  }, [accessToken])
+  }, [accessToken, getFreshAccessToken])
 
   // --- Load per-record summaries for a table (for recently-updated indicators) ---
   const loadRecordSummaries = useCallback(
@@ -143,11 +156,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       }
       setLoadingRecords((prev) => ({ ...prev, [tableName]: true }))
       try {
+        const token = await getFreshAccessToken()
+        if (!token) return
         const merged: RecordUpdateSummary[] = []
         let cursor: { changedAt: string; recordKey: string } | null = null
         for (let page = 0; page < MAX_RECORD_SUMMARY_PAGES; page++) {
           const result = await getUnreadRecordSummaries({
-            accessToken,
+            accessToken: token,
             tableName,
             limit: RECORD_SUMMARIES_PAGE_SIZE,
             cursorChangedAt: cursor?.changedAt ?? null,
@@ -167,7 +182,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         setLoadingRecords((prev) => ({ ...prev, [tableName]: false }))
       }
     },
-    [accessToken]
+    [accessToken, getFreshAccessToken]
   )
 
   // --- Refresh everything (count + all loaded record tables) ---
@@ -181,7 +196,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const markAllAsRead = useCallback(async () => {
     if (!NOTIFICATIONS_ENABLED || !accessToken) return false
 
-    const result = await markAllAsReadAction(accessToken)
+    const token = await getFreshAccessToken()
+    if (!token) return false
+    const result = await markAllAsReadAction(token)
     if (!result.success) {
       setError(result.error ?? "Failed to mark all as read.")
       return false
@@ -198,7 +215,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     })
     setError(null)
     return true
-  }, [accessToken])
+  }, [accessToken, getFreshAccessToken])
 
   // --- Initial load + polling ---
   useEffect(() => {
