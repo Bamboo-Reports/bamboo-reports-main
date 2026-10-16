@@ -29,9 +29,20 @@ export default function ResetPasswordPage() {
     defaultValues: { password: "", confirmPassword: "" },
   })
 
-  // The recovery link carries the token in the URL; the browser client parses it
-  // (detectSessionInUrl) and establishes a recovery session. We accept either the
-  // PASSWORD_RECOVERY event or an already-present session as proof the link is valid.
+  // The recovery link carries the token in the URL (#...type=recovery, or ?code=
+  // with PKCE); the browser client parses it (detectSessionInUrl), clears it and
+  // establishes a recovery session. Read it on the first render, before that
+  // happens: an ordinary signed-in session must not unlock the form, or anyone
+  // at a signed-in browser could change the password without the emailed link.
+  const [hasRecoveryToken] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      (/(^#|&)type=recovery(&|$)/.test(window.location.hash) ||
+        new URLSearchParams(window.location.search).has("code"))
+  )
+
+  // We accept the PASSWORD_RECOVERY event, or a session alongside a recovery
+  // token in the URL, as proof the link is valid.
   useEffect(() => {
     const supabase = getSupabaseBrowserClient()
     let resolved = false
@@ -42,11 +53,11 @@ export default function ResetPasswordPage() {
     }
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "PASSWORD_RECOVERY" || session) markReady()
+      if (event === "PASSWORD_RECOVERY" || (hasRecoveryToken && session)) markReady()
     })
 
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) markReady()
+      if (hasRecoveryToken && data.session) markReady()
     })
 
     // If no recovery session materializes shortly, the link is missing or expired.
@@ -58,7 +69,7 @@ export default function ResetPasswordPage() {
       authListener.subscription.unsubscribe()
       clearTimeout(timeout)
     }
-  }, [])
+  }, [hasRecoveryToken])
 
   const onSubmit = async (values: UpdatePasswordValues) => {
     setSubmitError(null)
