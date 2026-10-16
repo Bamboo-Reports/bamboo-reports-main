@@ -158,6 +158,10 @@ export function FiltersSidebar({
           isCollapsed ? 'opacity-100 translate-x-0 pointer-events-auto' : 'opacity-0 -translate-x-1 pointer-events-none'
         )}
         data-tour-hidden={isCollapsed ? undefined : true}
+        // The faded-out panel stays mounted; inert keeps its controls out of
+        // the tab order and screen readers. Focusing one would scroll the
+        // sidebar sideways and leave it showing a blank strip.
+        inert={!isCollapsed}
       >
         <div className="flex h-full flex-col items-center gap-2">
           <Button
@@ -215,6 +219,7 @@ export function FiltersSidebar({
           isCollapsed ? 'opacity-0 translate-x-1 pointer-events-none' : 'opacity-100 translate-x-0 pointer-events-auto'
         )}
         data-tour-hidden={isCollapsed ? true : undefined}
+        inert={isCollapsed}
       >
         <div className="flex flex-col gap-2 mb-3 pb-3 border-b border-sidebar-border">
           <div className="flex items-center justify-between gap-2">
