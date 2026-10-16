@@ -10,7 +10,7 @@
  *
  * Run: npm run bench
  *
- * Env (read from .env / .env.local, or set inline):
+ * Env (read from .env, or set inline):
  *   DATABASE_URL       required
  *   BENCH_ITERATIONS   timed runs per endpoint per scenario (default 5)
  *   BENCH_OUT          optional path to write the raw results as JSON (in ms)
@@ -25,7 +25,7 @@ import { queryEntity } from "@/lib/dashboard/entity-query"
 import { buildCentersMapQuery } from "@/lib/dashboard/centers-map"
 import { queryWarehouse } from "@/lib/db/warehouse"
 
-loadEnv({ path: [".env.local", ".env"], quiet: true })
+loadEnv({ quiet: true })
 
 const ITERATIONS = Math.max(1, Number.parseInt(process.env.BENCH_ITERATIONS ?? "", 10) || 5)
 
