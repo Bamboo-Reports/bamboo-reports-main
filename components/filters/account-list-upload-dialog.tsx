@@ -40,7 +40,8 @@ type ReviewRow = {
 
 type Step = "input" | "review"
 
-const ACCEPTED_EXTENSIONS = [".csv", ".tsv", ".txt", ".xlsx", ".xls"]
+// ExcelJS only reads .xlsx, so the legacy binary .xls format is rejected up front.
+const ACCEPTED_EXTENSIONS = [".csv", ".tsv", ".txt", ".xlsx"]
 
 async function readSpreadsheet(file: File): Promise<ParsedAccountTable> {
   const ExcelJS = (await import("exceljs")).default
@@ -150,12 +151,16 @@ export function AccountListUploadDialog({ open, onOpenChange, existingList = nul
   const handleFile = useCallback(async (file: File) => {
     setParseError(null)
     const lower = file.name.toLowerCase()
+    if (lower.endsWith(".xls")) {
+      setParseError("Older .xls files are not supported. Save the file as .xlsx or CSV and upload it again.")
+      return
+    }
     if (!ACCEPTED_EXTENSIONS.some((ext) => lower.endsWith(ext))) {
       setParseError("Unsupported file type. Upload a CSV, TSV, TXT or XLSX file.")
       return
     }
     try {
-      const parsed = lower.endsWith(".xlsx") || lower.endsWith(".xls") ? await readSpreadsheet(file) : parseDelimitedText(await file.text())
+      const parsed = lower.endsWith(".xlsx") ? await readSpreadsheet(file) : parseDelimitedText(await file.text())
       if (parsed.rows.length === 0) {
         setParseError("The file has no rows to import.")
         return
