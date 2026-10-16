@@ -100,7 +100,7 @@ export function DebugLocationSearch({ mapRef }: DebugLocationSearchProps) {
             type="button"
             onClick={handleSearch}
             disabled={searching}
-            className="rounded-lg px-2 py-1 text-sm font-medium text-primary hover:bg-accent disabled:opacity-50"
+            className="rounded-button px-2 py-1 text-sm font-medium text-primary hover:bg-accent disabled:opacity-50"
           >
             {searching ? "..." : "Search"}
           </button>

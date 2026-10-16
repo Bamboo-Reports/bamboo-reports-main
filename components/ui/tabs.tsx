@@ -82,7 +82,7 @@ const SlidingTabsList = React.forwardRef<
       <span
         ref={indicatorRef}
         aria-hidden="true"
-        className="pointer-events-none absolute inset-y-1 left-0 rounded-lg bg-background opacity-0 shadow-sm ring-1 ring-black/10 data-[ready=true]:transition-[transform,width] data-[ready=true]:duration-200 data-[ready=true]:ease-out motion-reduce:!transition-none dark:ring-white/15"
+        className="pointer-events-none absolute inset-y-1 left-0 rounded-button bg-background opacity-0 shadow-sm ring-1 ring-black/10 data-[ready=true]:transition-[transform,width] data-[ready=true]:duration-200 data-[ready=true]:ease-out motion-reduce:!transition-none dark:ring-white/15"
       />
       {children}
     </TabsPrimitive.List>
@@ -97,7 +97,7 @@ const TabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      "inline-flex h-full items-center justify-center whitespace-nowrap rounded-lg px-3 text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm hover:bg-accent/40 interactive transition-all duration-150",
+      "inline-flex h-full items-center justify-center whitespace-nowrap rounded-button px-3 text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm hover:bg-accent/40 interactive transition-all duration-150",
       className
     )}
     {...props}

@@ -40,10 +40,10 @@ export function LoadingState() {
             </div>
 
             <div className="flex items-center gap-2" aria-hidden="true">
-              <Skeleton className="hidden h-8 w-56 rounded-lg sm:block" />
-              <Skeleton className="h-8 w-20 rounded-lg" />
-              <Skeleton className="h-8 w-8 rounded-lg" />
-              <Skeleton className="h-8 w-8 rounded-lg" />
+              <Skeleton className="hidden h-8 w-56 rounded-button sm:block" />
+              <Skeleton className="h-8 w-20 rounded-button" />
+              <Skeleton className="h-8 w-8 rounded-button" />
+              <Skeleton className="h-8 w-8 rounded-button" />
             </div>
           </div>
         </div>

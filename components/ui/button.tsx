@@ -4,9 +4,9 @@ import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 
-// rounded-lg (var(--radius), 8px) matches the tab switcher triggers in ui/tabs.tsx.
+// rounded-button (var(--radius-button), 5px) is shared with the tab triggers in ui/tabs.tsx.
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium leading-none ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 interactive button-press ripple",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-button text-sm font-medium leading-none ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 interactive button-press ripple",
   {
     variants: {
       variant: {
