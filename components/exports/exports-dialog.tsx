@@ -31,6 +31,15 @@ import {
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { resolveExportDownloadUrl } from "@/lib/exports/request-client"
 
+// Export records store dataset keys ("centers"); show them in the app's spelling.
+const DATASET_LABELS: Record<string, string> = {
+  accounts: "Accounts",
+  centers: "Centres",
+  services: "Services",
+  prospects: "Prospects",
+}
+const datasetLabel = (key: string) => DATASET_LABELS[key] ?? key
+
 type ExportRow = {
   id: string
   created_at: string
@@ -222,7 +231,7 @@ export function ExportsDialog({ open, onOpenChange }: ExportsDialogProps) {
                                 variant="secondary"
                                 className="text-[10px] capitalize"
                               >
-                                {d}
+                                {datasetLabel(d)}
                               </Badge>
                             ))}
                           </div>
@@ -348,7 +357,7 @@ function ExportDetailsDialog({
                     className="rounded-lg border border-border/50 bg-background/50 px-3 py-2 dark:bg-white/5"
                   >
                     <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground capitalize">
-                      {d}
+                      {datasetLabel(d)}
                     </p>
                     <p className="text-lg font-semibold tabular-nums">
                       {(row.row_counts?.[d] ?? 0).toLocaleString()}
