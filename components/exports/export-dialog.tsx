@@ -518,9 +518,6 @@ export function ExportDialog({
             <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <p className="text-sm font-semibold text-foreground">Export readiness summary</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {selectedRowCount.toLocaleString()} rows will be included in this export.
-                </p>
               </div>
             </div>
             <div className="mt-3 grid gap-2 sm:grid-cols-4">
@@ -552,7 +549,6 @@ export function ExportDialog({
           <div className="grid gap-3 sm:grid-cols-2">
             {visibleDatasetMeta.map((item) => {
               const Icon = item.icon
-              const count = data[item.key].length
               const isChecked = selection[item.key]
               const isAccessible = isDatasetEnabled(item.key)
 
@@ -587,9 +583,6 @@ export function ExportDialog({
                             Not Procured
                           </Badge>
                         )}
-                        <Badge variant="outline" className="text-[10px]">
-                          {count.toLocaleString()} rows
-                        </Badge>
                       </div>
                     </div>
                     <p className="text-xs text-muted-foreground">
