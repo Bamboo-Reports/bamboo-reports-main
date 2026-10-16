@@ -280,7 +280,6 @@ bamboo-reports-nextjs/
 │   ├── project-architecture.md     # Architecture and data flow (whole app)
 │   ├── developer-workflow.md       # Developer guide and coding standards (whole app)
 │   ├── testing-guide.md            # Vitest setup, mocking patterns, how to add tests (whole app)
-│   ├── scripts-and-tooling.md      # Standalone dev scripts (work summary)
 │   │
 │   ├── reports/                    # Audits, progress logs and dated session write-ups
 │   │   ├── security-249-progress.md        # Living log of the #249 data-exposure work
@@ -310,11 +309,8 @@ bamboo-reports-nextjs/
 │       ├── map-disputed-boundaries.md   # Choropleth boundary handling
 │       └── standalone-screens.md        # Auth/error/404/maintenance frame, loading skeleton conventions
 │
-├── scripts/                        # Standalone scripts (work summary report)
 ├── tests/                          # Vitest test suite (unit, integration, and API route tests)
-├── types/                          # Additional type definitions
-├── public/                         # Static assets (logos, images, data)
-└── styles/                         # Additional stylesheets
+└── public/                         # Static assets (logos, images, data)
 ```
 
 ---
@@ -547,7 +543,6 @@ Detailed documentation for specific subsystems lives in the `documentation/` fol
 | [**User Exports & Audit Log**](documentation/backend/user-exports.md) | Server-side export generation, Storage archive, and audit table |
 | [**Product Tour**](documentation/frontend/product-tour.md) | Guided onboarding walkthrough, completion tracking, and versioning |
 | [**Logo Integration**](documentation/frontend/logo-integration.md) | Setup and usage guide for the Brandfetch logo integration |
-| [**Scripts & Tooling**](documentation/scripts-and-tooling.md) | Standalone dev scripts: git-history work summary |
 | [**Map Boundaries**](documentation/frontend/map-disputed-boundaries.md) | Carto basemap and local Survey of India boundary behavior |
 | [**Standalone Screens**](documentation/frontend/standalone-screens.md) | Brand frame for auth, error, 404 and maintenance screens; full-page loading skeleton; skeleton conventions |
 
