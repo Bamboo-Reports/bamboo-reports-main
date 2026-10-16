@@ -36,7 +36,7 @@ Expansion happens whenever the sidebar selection changes (`withAccountLists`) an
 ## UI
 
 - Sidebar, account section: "Account List" picker (`components/filters/account-list-picker.tsx`), rendered with the shared `EnhancedMultiSelect` (chips, include/exclude, search) and showing the account count.
-- Saved filters panel: the upload icon button (next to Save) opens "Account Lists" (`components/filters/account-lists-dialog.tsx`) to upload, apply, rename, update from a file, inspect accounts and unmatched names, share, or delete. Lists shared with the caller appear in a separate "Shared with me" section.
+- Saved filters panel: the upload icon button (next to Save) opens "Account Lists" (`components/filters/account-lists-dialog.tsx`) to upload, include (the "+" button adds the list to the Account List filter in include mode), rename, update from a file, inspect accounts and unmatched names, share, or delete. Lists shared with the caller appear in a separate "Shared with me" section.
 - Saved filter cards and the summary PDF show the list as a count ("2 lists, 340 accounts") rather than every name.
 
 ## Provider

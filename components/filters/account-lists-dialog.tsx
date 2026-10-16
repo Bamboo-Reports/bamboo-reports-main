@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useMemo, useState } from "react"
-import { RiArrowDownSLine, RiArrowUpSLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiGroupLine, RiListCheck3, RiPencilLine, RiPlayLine, RiRefreshLine, RiShareLine, RiUploadLine } from "@remixicon/react"
+import { RiAddLine, RiArrowDownSLine, RiArrowUpSLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiGroupLine, RiListCheck3, RiPencilLine, RiRefreshLine, RiShareLine, RiUploadLine } from "@remixicon/react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -177,9 +177,8 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
                         </p>
                       </div>
                       <div className="flex shrink-0 items-center gap-0.5">
-                        <Button size="sm" variant="outline" className="h-8" onClick={() => handleApply(list)} title="Apply this list to the dashboard">
-                          <RiPlayLine className="h-3.5 w-3.5" />
-                          Apply
+                        <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => handleApply(list)} aria-label={`Include ${list.name}`} title="Include">
+                          <RiAddLine className="h-4 w-4" />
                         </Button>
                         {own && (
                           <>
@@ -241,7 +240,7 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
             </p>
             <Button size="sm" onClick={() => openUpload(null)}>
               <RiUploadLine className="h-4 w-4" />
-              Upload list
+              Upload
             </Button>
           </div>
 
