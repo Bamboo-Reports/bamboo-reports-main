@@ -29,7 +29,7 @@ export function BrandPage({ children, className, homeHref = "/" }: BrandPageProp
             href={homeHref}
             className="mb-6 inline-flex items-center gap-3 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/20 bg-background">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-background">
               <BrandMark />
             </span>
             <span className="text-lg font-bold text-foreground">Bamboo Reports</span>

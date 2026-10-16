@@ -4,9 +4,17 @@ function normalizeEnvValue(value: string | undefined): string | null {
   return normalized || null
 }
 
-export function getEnvironmentLabel(): string | null {
-  const label = normalizeEnvValue(process.env.NEXT_PUBLIC_ENVIRONMENT_LABEL)
-  return label ? label.toUpperCase() : null
+export type DevEnvironment = "dev" | "preview"
+
+/**
+ * Non-production environment for the header badge, detected rather than
+ * configured: "dev" under `next dev`, "preview" on Vercel preview
+ * deployments, null in production.
+ */
+export function getDevEnvironment(): DevEnvironment | null {
+  if (process.env.NODE_ENV === "development") return "dev"
+  if (process.env.NEXT_PUBLIC_VERCEL_ENV === "preview") return "preview"
+  return null
 }
 
 export function getBrandfetchClientId(): string | null {

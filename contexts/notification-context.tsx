@@ -18,7 +18,7 @@ import {
   type RecordUpdateSummary,
 } from "@/app/actions/notifications"
 import { NOTIFICATIONS_ENABLED } from "@/lib/config/notifications"
-import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { getBrowserAccessToken, getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 const REFRESH_INTERVAL_MS = 60_000
 const RECORD_SUMMARIES_PAGE_SIZE = 100
@@ -55,7 +55,8 @@ const NotificationContext = createContext<NotificationContextValue | null>(null)
 // ---------------------------------------------------------------------------
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
-  const [accessToken, setAccessToken] = useState<string | null>(null)
+  // Only gates requests; each request reads a fresh token (see getFreshAccessToken).
+  const [signedIn, setSignedIn] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
   const [summaries, setSummaries] = useState<NotificationSummary[]>([])
   const [recordSummaries, setRecordSummaries] = useState<Record<string, RecordUpdateSummary[]>>({})
@@ -63,6 +64,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const [loadingSummaries, setLoadingSummaries] = useState(false)
   const [loadingRecords, setLoadingRecords] = useState<Record<string, boolean>>({})
   const [error, setError] = useState<string | null>(null)
+
+  const clearNotifications = useCallback(() => {
+    setUnreadCount(0)
+    setSummaries([])
+    setRecordSummaries({})
+    setError(null)
+  }, [])
 
   // --- Auth state (single listener for the whole app) ---
   useEffect(() => {
@@ -74,35 +82,51 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
     supabase.auth.getSession().then(({ data }) => {
       if (!isMounted) return
-      setAccessToken(data.session?.access_token ?? null)
+      setSignedIn(Boolean(data.session?.access_token))
     })
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!isMounted) return
-      setAccessToken(session?.access_token ?? null)
-      if (!session?.access_token) {
-        setUnreadCount(0)
-        setSummaries([])
-        setRecordSummaries({})
-        setError(null)
-      }
+      setSignedIn(Boolean(session?.access_token))
+      if (!session?.access_token) clearNotifications()
     })
 
     return () => {
       isMounted = false
       authListener.subscription.unsubscribe()
     }
-  }, [])
+  }, [clearNotifications])
+
+  // A token kept from auth events goes stale when a background tab misses
+  // Supabase's auto-refresh, so each request reads a fresh one. Never throws:
+  // a session that has quietly ended clears the bell like a sign-out, and a
+  // failed lookup (for example a refresh on a flaky network) shows an error.
+  // Both return null.
+  const getFreshAccessToken = useCallback(async () => {
+    try {
+      const token = await getBrowserAccessToken()
+      if (!token) {
+        setSignedIn(false)
+        clearNotifications()
+      }
+      return token
+    } catch {
+      setError("Could not check your session. Try again shortly.")
+      return null
+    }
+  }, [clearNotifications])
 
   // --- Refresh unread count ---
   const refreshUnreadCount = useCallback(async () => {
-    if (!NOTIFICATIONS_ENABLED || !accessToken) {
+    if (!NOTIFICATIONS_ENABLED || !signedIn) {
       setUnreadCount(0)
       return
     }
     setLoadingCount(true)
     try {
-      const result = await getUnreadCount(accessToken)
+      const token = await getFreshAccessToken()
+      if (!token) return
+      const result = await getUnreadCount(token)
       if (!result.success) {
         setError(result.error ?? "Failed to fetch unread count.")
         return
@@ -112,17 +136,19 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoadingCount(false)
     }
-  }, [accessToken])
+  }, [signedIn, getFreshAccessToken])
 
   // --- Load notification summaries (for the bell dropdown) ---
   const loadSummaries = useCallback(async () => {
-    if (!NOTIFICATIONS_ENABLED || !accessToken) {
+    if (!NOTIFICATIONS_ENABLED || !signedIn) {
       setSummaries([])
       return
     }
     setLoadingSummaries(true)
     try {
-      const result = await getUnreadSummaries({ accessToken })
+      const token = await getFreshAccessToken()
+      if (!token) return
+      const result = await getUnreadSummaries({ accessToken: token })
       if (!result.success) {
         setError(result.error ?? "Failed to fetch summaries.")
         return
@@ -132,22 +158,24 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoadingSummaries(false)
     }
-  }, [accessToken])
+  }, [signedIn, getFreshAccessToken])
 
   // --- Load per-record summaries for a table (for recently-updated indicators) ---
   const loadRecordSummaries = useCallback(
     async (tableName: string) => {
-      if (!NOTIFICATIONS_ENABLED || !accessToken) {
+      if (!NOTIFICATIONS_ENABLED || !signedIn) {
         setRecordSummaries((prev) => ({ ...prev, [tableName]: [] }))
         return
       }
       setLoadingRecords((prev) => ({ ...prev, [tableName]: true }))
       try {
+        const token = await getFreshAccessToken()
+        if (!token) return
         const merged: RecordUpdateSummary[] = []
         let cursor: { changedAt: string; recordKey: string } | null = null
         for (let page = 0; page < MAX_RECORD_SUMMARY_PAGES; page++) {
           const result = await getUnreadRecordSummaries({
-            accessToken,
+            accessToken: token,
             tableName,
             limit: RECORD_SUMMARIES_PAGE_SIZE,
             cursorChangedAt: cursor?.changedAt ?? null,
@@ -167,7 +195,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         setLoadingRecords((prev) => ({ ...prev, [tableName]: false }))
       }
     },
-    [accessToken]
+    [signedIn, getFreshAccessToken]
   )
 
   // --- Refresh everything (count + all loaded record tables) ---
@@ -179,9 +207,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   // --- Mark all as read ---
   const markAllAsRead = useCallback(async () => {
-    if (!NOTIFICATIONS_ENABLED || !accessToken) return false
+    if (!NOTIFICATIONS_ENABLED || !signedIn) return false
 
-    const result = await markAllAsReadAction(accessToken)
+    const token = await getFreshAccessToken()
+    if (!token) return false
+    const result = await markAllAsReadAction(token)
     if (!result.success) {
       setError(result.error ?? "Failed to mark all as read.")
       return false
@@ -198,7 +228,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     })
     setError(null)
     return true
-  }, [accessToken])
+  }, [signedIn, getFreshAccessToken])
 
   // --- Initial load + polling ---
   useEffect(() => {
@@ -207,14 +237,14 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   }, [refreshUnreadCount])
 
   useEffect(() => {
-    if (!NOTIFICATIONS_ENABLED || !accessToken) return
+    if (!NOTIFICATIONS_ENABLED || !signedIn) return
     const intervalId = window.setInterval(() => {
       void refreshAll()
     }, REFRESH_INTERVAL_MS)
     return () => window.clearInterval(intervalId)
-  }, [accessToken, refreshAll])
+  }, [signedIn, refreshAll])
 
-  const hasSession = NOTIFICATIONS_ENABLED && Boolean(accessToken)
+  const hasSession = NOTIFICATIONS_ENABLED && signedIn
 
   const value = useMemo<NotificationContextValue>(
     () => ({

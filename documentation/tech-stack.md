@@ -2,7 +2,7 @@
 
 A comprehensive breakdown of every technology used in the Bamboo Reports project, organized by category. This document is designed to give both technical and non-technical stakeholders a clear understanding of what powers the application and why each technology was chosen.
 
-> **Last Updated:** September 2026
+> **Last Updated:** October 2026
 > **Audience:** Engineering leads, project managers, and stakeholders
 
 ---
@@ -33,12 +33,13 @@ A comprehensive breakdown of every technology used in the Bamboo Reports project
 |----------|-------------|
 | **Frontend** | Next.js 16, React 19, TypeScript 5, Tailwind CSS |
 | **Component Library** | shadcn/ui (built on Radix UI primitives) |
+| **Icons** | Remix Icon (`@remixicon/react`) |
 | **Charts** | Highcharts, Recharts |
 | **Maps** | MapLibre GL, Carto Positron, local GeoJSON |
 | **Database** | Neon PostgreSQL (data warehouse), Supabase PostgreSQL (auth/user data) |
 | **Authentication** | Supabase Auth |
 | **Analytics** | PostHog, Vercel Analytics, Vercel Speed Insights |
-| **Export** | ExcelJS |
+| **Export** | ExcelJS (Excel workbooks), jsPDF (summary PDF report) |
 | **Caching** | In-memory L1 + Upstash Redis L2 response cache |
 | **Deployment** | Vercel |
 
@@ -54,7 +55,7 @@ These are the foundational technologies that the entire application is built on.
 |---|---|
 | **What it is** | A React framework for building full-stack web applications |
 | **Version** | 16.2.x |
-| **Why we use it** | Provides the App Router for file-based routing, Server Actions for secure server-side data fetching without a separate API layer, server-side rendering (SSR) for initial page loads, and automatic code splitting for performance |
+| **Why we use it** | Provides the App Router for file-based routing, Route Handlers for authenticated warehouse reads, a Server Action for notifications, server-side rendering (SSR) for initial page loads, and automatic code splitting for performance |
 | **Key features used** | App Router, Server Actions, Server Components, Route Handlers, file-based routing, Turbopack |
 | **Package** | `next` |
 
@@ -91,7 +92,7 @@ Technologies responsible for how the application looks and feels.
 | **What it is** | A utility-first CSS framework |
 | **Version** | 3.4.17 |
 | **Why we use it** | Enables rapid UI development with consistent spacing, colors, and responsive design. Eliminates CSS naming conflicts and dead code through tree-shaking |
-| **Key features used** | Custom theme with HSL color variables, dark mode (class-based), custom animations (accordion, fade-in, slide-in, shimmer, pulse), responsive breakpoints |
+| **Key features used** | Custom theme with HSL color variables, dark mode (class-based, light by default), custom animations (accordion, fade-in, slide-in, scale-in, slide-up/down, badge-in/out, shimmer), responsive breakpoints |
 | **Fonts** | DM Sans (with system fallbacks) |
 | **Plugins** | `tailwindcss-animate` for animation utilities |
 | **Package** | `tailwindcss`, `tailwind-merge`, `tailwindcss-animate`, `autoprefixer`, `postcss` |
@@ -102,17 +103,18 @@ Technologies responsible for how the application looks and feels.
 |---|---|
 | **What it is** | A collection of accessible, unstyled UI components (Radix UI) with pre-built styled variants (shadcn/ui) |
 | **Why we use it** | Provides production-ready, accessible (WCAG-compliant) components without vendor lock-in. Components are copied into the project and fully customizable |
-| **Components used** | Accordion, AlertDialog, Avatar, Checkbox, Collapsible, Dialog, DropdownMenu, HoverCard, Label, Popover, Progress, ScrollArea, Select, Separator, Slider, Switch, Tabs, Toast, Toggle, Tooltip, and more |
-| **Package** | `@radix-ui/react-*` (25+ individual packages) |
+| **Components used** | Accordion, AlertDialog, Checkbox, ContextMenu, Dialog, DropdownMenu, Label, Popover, Slider, Slot, Tabs (plus `cmdk` for the Command component) |
+| **Package** | `@radix-ui/react-*` (11 individual packages) |
 
-### Lucide React
+### Remix Icon
 
 | | |
 |---|---|
-| **What it is** | A modern icon library with 1500+ icons |
-| **Version** | 0.454.0 |
-| **Why we use it** | Consistent, tree-shakeable SVG icons that match the shadcn/ui design language |
-| **Package** | `lucide-react` |
+| **What it is** | An open-source icon set (line and fill variants) with React components |
+| **Version** | 4.9.x |
+| **Why we use it** | Consistent, tree-shakeable SVG icons; every icon in the app was switched from `lucide-react` to Remix Icon in September 2026 |
+| **Usage** | Named `Ri*` components, mostly the `Line` variants (e.g. `RiFilterLine`, `RiMapPinLine`) |
+| **Package** | `@remixicon/react` |
 
 ### next-themes
 
@@ -126,9 +128,9 @@ Technologies responsible for how the application looks and feels.
 
 | | |
 |---|---|
-| **What it is** | Low-contrast geometric sans-serif designed by Colophon Foundry, served from Google Fonts |
+| **What it is** | Low-contrast geometric sans-serif designed by Colophon Foundry, from Google Fonts |
 | **Why we use it** | Clean, modern typography with good legibility at small sizes; variable font provides fine-grained weight and optical-size control in a single file |
-| **Loaded via** | `<link>` to `fonts.googleapis.com` in `app/layout.tsx`; applied as the first entry in the Tailwind `sans` stack and the `body` font-family in `app/globals.css` |
+| **Loaded via** | `next/font/google` (`DM_Sans`) in `app/layout.tsx`, exposed as the `--font-dm-sans` CSS variable; first entry in the Tailwind `sans` stack and used by `app/globals.css` |
 
 ### Class Variance Authority (CVA)
 
@@ -144,13 +146,8 @@ Technologies responsible for how the application looks and feels.
 | Package | Purpose |
 |---------|---------|
 | `clsx` (2.1.1) | Conditional classname joining |
-| `cmdk` | Command palette component |
-| `embla-carousel-react` | Carousel/slider component |
-| `input-otp` | OTP input component |
-| `react-day-picker` | Date picker component |
-| `react-resizable-panels` | Resizable panel layouts |
+| `cmdk` | Command palette component (`components/ui/command.tsx`) |
 | `sonner` | Toast notification component |
-| `vaul` | Drawer/sheet component |
 | `driver.js` (1.4.0) | Guided product tours and onboarding walkthroughs |
 
 ---
@@ -215,13 +212,13 @@ Technologies for storing and querying data.
 | | |
 |---|---|
 | **What it is** | A serverless PostgreSQL platform with autoscaling and branching |
-| **Version** | Accessed through Prisma ORM 7.x with `@prisma/adapter-neon` |
+| **Version** | Neon HTTP driver (`@neondatabase/serverless` 1.x) for dashboard reads; Prisma ORM 7.x with `@prisma/adapter-neon` for the rest |
 | **Why we use it** | Acts as the primary Business Intelligence data warehouse. Serverless architecture supports Vercel deployments and Neon connection pooling |
-| **Access pattern** | Prisma model reads for `accounts` and `centers`; Prisma tagged raw SQL for linked child tables, analytical queries, and computed-selection queries |
+| **Access pattern** | Dashboard read endpoints run parameterized SQL from `lib/dashboard/filtering-sql.ts` through `queryWarehouse` (`lib/db/warehouse.ts`, Neon HTTP driver, which binds array parameters cleanly). Prisma tagged raw SQL backs the notifications Server Action and parts of the export builder |
 | **Key features** | Connection pooling, generated TypeScript client, parameterized queries |
-| **Tables** | `accounts`, `ticker`, `centers`, `alias`, `services`, `functions`, `tech`, `prospects`, plus audit tables |
-| **Retry logic** | Exponential retry wrapper in `lib/db/prisma.ts` |
-| **Package** | `prisma`, `@prisma/client`, `@prisma/adapter-neon`, `ws` (WebSocket driver required by `@prisma/adapter-neon` outside edge runtimes) |
+| **Tables** | `accounts`, `ticker`, `centers`, `alias`, `services`, `functions`, `tech`, `prospects`, `subscribers` (campaign engagements), plus audit tables |
+| **Retry logic** | Exponential retry wrapper (`queryWithRetry`) in `lib/db/prisma.ts` |
+| **Package** | `@neondatabase/serverless`, `prisma`, `@prisma/client`, `@prisma/adapter-neon`, `ws` (WebSocket driver required by `@prisma/adapter-neon` outside edge runtimes) |
 
 ### Dashboard read endpoints (`/api/dashboard/*`, `/api/<entity>/query`, `/api/centers/map`, ...)
 
@@ -230,7 +227,7 @@ Technologies for storing and querying data.
 | **What they are** | Next.js Route Handlers that translate the dashboard's filter state to parameterized SQL and return paginated rows and pre-computed aggregates; no endpoint can return the whole dataset |
 | **Caching** | Shared two-tier response cache (in-memory L1 + Upstash Redis L2) keyed on the canonical filter state, 8-day TTL, purged by the ETL after each import; see [Caching and Rate Limiting](backend/caching-and-rate-limiting.md) |
 | **Authentication** | Supabase JWT bearer token, validated server-side (cached 60s, one validation shared by concurrent requests) |
-| **Rate limiting** | Per-user fixed windows in Upstash Redis |
+| **Rate limiting** | Per-user fixed windows in Upstash Redis (Supabase `increment_rate_limit` RPC fallback); non-production environments get their own counters so dev traffic does not spend production budgets |
 | **History** | Until 2026-09-05 a `GET /api/dashboard` route served the full warehouse to the browser behind an in-memory SWR cache; it was retired with #249 |
 
 ### Supabase PostgreSQL
@@ -239,8 +236,8 @@ Technologies for storing and querying data.
 |---|---|
 | **What it is** | An open-source Firebase alternative built on PostgreSQL |
 | **Version** | 2.106.x (JS client) |
-| **Why we use it** | Provides authentication, user profiles, saved filter/favorite storage, export audit metadata, and private export Storage. Built-in Row-Level Security (RLS) ensures data isolation between users without custom middleware |
-| **Tables managed** | `public.profiles`, `public.saved_filters`, `public.filter_shares`, `public.user_favorites`, `public.user_exports` |
+| **Why we use it** | Provides authentication, user profiles, saved filter storage, account lists, export audit metadata, and private export Storage. Built-in Row-Level Security (RLS) ensures data isolation between users without custom middleware |
+| **Tables managed** | `public.profiles`, `public.saved_filters`, `public.filter_shares`, `public.account_lists`, `public.account_list_shares`, `public.user_exports` |
 | **Access pattern** | Supabase JS client/service-role APIs; not Prisma |
 | **Package** | `@supabase/supabase-js` |
 
@@ -256,8 +253,8 @@ Technologies for managing user identity and access control.
 |---|---|
 | **What it is** | An authentication service built into Supabase |
 | **Why we use it** | Handles user registration, login, session management, and JWT token generation. Integrates natively with Supabase's Row-Level Security for zero-trust data access |
-| **Auth flow** | Email/Password registration and login |
-| **Session management** | HTTP-only cookies (server-side) |
+| **Auth flow** | Email/Password registration and login, forgot/reset password |
+| **Session management** | Held browser-side by `@supabase/supabase-js` in `localStorage` ("remember me") or `sessionStorage`; route handlers verify the Bearer access token in `lib/auth/server.ts` |
 | **Roles** | `viewer` (read-only), `admin` (read + export) |
 | **Security features** | Row-Level Security (RLS) on all user-specific tables, JWT-based sessions |
 
@@ -276,6 +273,16 @@ Technologies for generating downloadable reports.
 | **Why we use it** | Builds native `.xlsx` workbooks on the server (`lib/exports/server-builder.ts`) against a full-schema `SELECT *`, so exports include every database column. Supports multiple sheets, styling, and large datasets |
 | **Used for** | Exporting filtered dashboard data (Accounts, Centers, Prospects) into multi-sheet Excel workbooks, archived to Supabase Storage and logged in `public.user_exports` |
 | **Package** | `exceljs` |
+
+### jsPDF
+
+| | |
+|---|---|
+| **What it is** | A client-side PDF generation library, with the `jspdf-autotable` table plugin |
+| **Version** | 3.0.x (`jspdf`), 5.0.x (`jspdf-autotable`) |
+| **Why we use it** | Renders the downloadable summary report (headline metrics, applied filters, breakdown charts) in the browser; imported lazily so it stays out of the main bundle |
+| **Used for** | `lib/reports/summary-report-pdf.ts`, fed by the pure model in `lib/reports/summary-report.ts` |
+| **Package** | `jspdf`, `jspdf-autotable` |
 
 ---
 
@@ -332,7 +339,7 @@ Technologies for managing form state and validating user input.
 |---|---|
 | **What it is** | A TypeScript-first schema validation library |
 | **Version** | 3.24.1 |
-| **Why we use it** | Validates external inputs (form submissions, saved filter JSON) at runtime. Provides type inference so validation schemas and TypeScript types stay in sync |
+| **Why we use it** | Validates external inputs (auth forms in `lib/validators/auth.ts`, the export request body) at runtime. Provides type inference so validation schemas and TypeScript types stay in sync |
 | **Package** | `zod` |
 
 ---
@@ -343,7 +350,6 @@ General-purpose libraries used across the application.
 
 | Library | Version | Purpose |
 |---------|---------|---------|
-| **date-fns** | 4.1.0 | Date manipulation and formatting (lightweight alternative to Moment.js) |
 | **Yahoo Finance 2** | 3.13.2 | Fetching stock prices and financial metrics for account entities |
 
 ---
@@ -356,6 +362,9 @@ Tools used during development but not shipped to production.
 |------|---------|---------|
 | **Vitest** | 4.1.x | Fast unit and integration testing framework |
 | **React Testing Library** | 16.3.x | UI component testing |
+| **jsdom** | 29.x | Browser-like environment for component tests (`// @vitest-environment jsdom`) |
+| **@vitest/coverage-v8** | 4.1.x | Ad hoc coverage (`npx vitest run --coverage`) |
+| **TypeScript** | 5.x | `npm run typecheck` (`tsc --noEmit`) |
 | **pg-mem** | 3.0.x | In-memory Postgres used to execute the server-mode SQL filter suites without a live database |
 | **ESLint** | 9.39.2 | JavaScript/TypeScript linting for code quality |
 | **eslint-config-next** | 16.2.6 | Next.js-specific ESLint rules (accessibility, best practices) |
@@ -384,9 +393,9 @@ How the application is built, deployed, and served.
 
 | Setting | Value | Why |
 |---------|-------|-----|
-| TypeScript errors during builds | Ignored (`typescript.ignoreBuildErrors`) | Allows deployment while type issues are being resolved |
-| Image optimization | Disabled (`images.unoptimized: true`) | Avoids the optimizer; `cdn.brandfetch.io` is the only allowed remote pattern |
+| Image optimization | Enabled, `images.minimumCacheTTL` 90 days | `cdn.brandfetch.io` is the only allowed remote pattern |
 | Response compression | Enabled (`compress: true`) | Gzip-compresses HTTP responses |
+| Browser logs | `logging.browserToTerminal: true` | Forwards browser console output to the dev server terminal |
 
 ---
 
@@ -397,10 +406,10 @@ Third-party services the application communicates with at runtime.
 | Service | Purpose | Required | Environment Variable |
 |---------|---------|----------|---------------------|
 | **Neon PostgreSQL** | Primary BI data warehouse | Yes | `DATABASE_URL`; `DIRECT_URL` optional for Prisma CLI |
-| **Supabase** | Authentication, profiles, saved filters, favorites, export Storage | Yes | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` for server-side Storage/export operations |
+| **Supabase** | Authentication, profiles, saved filters, account lists, export Storage | Yes | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` for server-side Storage/export operations |
 | **Carto Positron** | Basemap tiles for geospatial views | Yes | None |
 | **Brandfetch** | Company logo images | No | `NEXT_PUBLIC_BRANDFETCH_CLIENT_ID` |
-| **Upstash Redis** | L2 response cache (optional; L1-only without it) | No | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` (or `KV_REST_API_*`) |
+| **Upstash Redis** | L2 response cache and rate-limit counters (optional; L1-only cache and Supabase RPC rate limiting without it) | No | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` (or `KV_REST_API_*`) |
 | **PostHog** | Product analytics | No | `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST` |
 | **Yahoo Finance** | Stock prices and financial data | No | None (public API) |
 
@@ -410,11 +419,11 @@ Third-party services the application communicates with at runtime.
 
 A summary of key technology choices and the reasoning behind them.
 
-### Why Route Handlers for warehouse reads, Server Actions for the rest?
-Warehouse reads go through explicit Route Handlers (`app/api/**`) because they need bearer-token auth, per-user rate limiting and a shared response cache, and because every one of them must be reviewable as a data-exposure surface (#249). User-data operations (notifications, financials) stay on Server Actions, which keep that code co-located with the UI without a separate API layer.
+### Why Route Handlers for warehouse reads, a Server Action for notifications?
+Warehouse reads (and the Yahoo Finance proxy) go through explicit Route Handlers (`app/api/**`) because they need bearer-token auth, per-user rate limiting and a shared response cache, and because every one of them must be reviewable as a data-exposure surface (#249). Notifications are the one remaining Server Action (`app/actions/notifications.ts`), which keeps that code co-located with the UI without a separate API layer.
 
-### Why Prisma with some raw SQL?
-Prisma provides a typed server-side client for straightforward warehouse reads while preserving parameterized raw SQL for joins, aggregations, and tables that do not expose stable Prisma identifiers. This keeps the common data path typed without forcing analytical queries into awkward ORM shapes.
+### Why the Neon HTTP driver plus Prisma?
+The dashboard read path is generated SQL (filters, aggregates, pagination) with array parameters, which the Neon HTTP driver (`queryWarehouse`) runs directly with no ORM layer in the way. Prisma stays for the notifications action and parts of the export builder, where its typed client and tagged raw SQL fit.
 
 ### Why two databases (Neon + Supabase)?
 Each database serves a distinct purpose:
@@ -429,5 +438,5 @@ Highcharts renders the dashboard donut charts and the Technology treemap, where 
 ### Why MapLibre instead of Google Maps or Mapbox?
 MapLibre is open-source (no per-load pricing), supports WebGL rendering for large point datasets (5000+ centers), and works with any tile provider. The application uses the keyless Carto Positron basemap with a local administrative boundary overlay, avoiding vendor-specific SDKs and credentials.
 
-### Why client-side filtering instead of server-side?
-After the initial data load, filtering happens client-side in React state. This provides instant UI feedback without network latency. The dataset sizes (typically under 10,000 rows per entity) are well within browser memory limits, making this approach both fast and practical.
+### Why server-side filtering?
+Until #249 the full warehouse was shipped to the browser and filtered in React state. That exposed the whole dataset to any signed-in user, so filtering now runs in SQL on the server and only paginated rows and aggregates are returned. A debounce, a per-filter-state client cache and the two-tier server cache keep the UI responsive. The old client engine (`lib/dashboard/filtering.ts`) survives as the reference for the SQL parity tests.

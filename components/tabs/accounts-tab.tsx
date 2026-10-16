@@ -1,18 +1,16 @@
 "use client"
 
 import React, { useEffect, useRef, useState } from "react"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TabsContent } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Checkbox } from "@/components/ui/checkbox"
 import { GridSkeletonCards, MapUpdatingPill, TableSkeletonRows } from "@/components/ui/data-skeletons"
 import { cn } from "@/lib/utils"
-import { RiExpandUpDownLine, RiLayoutGridLine, RiMapLine, RiMapPinLine, RiPieChartLine, RiSortAlphabetAsc, RiSortAlphabetDesc, RiStackLine, RiTableLine } from "@remixicon/react"
+import { RiLayoutGridLine, RiMapLine, RiMapPinLine, RiPieChartLine, RiStackLine, RiTableLine } from "@remixicon/react"
 import { AccountRow } from "@/components/tables"
 import { SelectionActionBar } from "@/components/tables/selection-action-bar"
 import { useTableRowSelection } from "@/hooks/use-table-row-selection"
-import type { FavoriteInput } from "@/hooks/use-favorites"
 import { AccountGridCard } from "@/components/cards/account-grid-card"
 import {
   PieChartCard,
@@ -26,8 +24,6 @@ import { MapErrorBoundary } from "@/components/maps/map-error-boundary"
 import { ViewSwitcher } from "@/components/ui/view-switcher"
 import { SortButton } from "@/components/ui/sort-button"
 import { PaginationControls } from "@/components/ui/pagination-controls"
-import { TableColumnMenu } from "@/components/tables/table-column-menu"
-import { useTableColumnPreferences } from "@/hooks/use-table-column-preferences"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { canAccessAccountsMapView } from "@/lib/config/dashboard-access"
@@ -67,10 +63,6 @@ interface AccountsTabProps {
   itemsPerPage: number
   onRecordOpened?: (item: { type: "account"; id: string; title: string; subtitle: string }) => void
   onDownloadSelection?: (scope: { dataset: "accounts"; accountNames: string[] }) => void
-  favoriteKeys?: Set<string>
-  onToggleFavorite?: (item: FavoriteInput) => void
-  onFavoriteMany?: (items: FavoriteInput[]) => void
-  onUnfavoriteMany?: (items: FavoriteInput[]) => void
   server?: TabServerProps | null
   mapData?: { cities: CityAggregate[]; states: StateAggregate[] } | null
   chartsLoading?: boolean
@@ -79,15 +71,6 @@ interface AccountsTabProps {
 
 // Module-level so the references are stable across renders (passed to memo'd rows).
 const getAccountKey = (account: Account) => account.account_global_legal_name ?? ""
-
-function buildAccountFavorite(account: Account): FavoriteInput {
-  return {
-    entity_type: "account",
-    entity_id: account.account_global_legal_name ?? "",
-    title: account.account_global_legal_name || "Unknown Account",
-    subtitle: [account.account_hq_city, account.account_hq_country].filter(Boolean).join(", ") || null,
-  }
-}
 
 export function AccountsTab({
   accounts,
@@ -105,10 +88,6 @@ export function AccountsTab({
   itemsPerPage,
   onRecordOpened,
   onDownloadSelection,
-  favoriteKeys,
-  onToggleFavorite,
-  onFavoriteMany,
-  onUnfavoriteMany,
   server,
   mapData,
   chartsLoading = false,
@@ -126,13 +105,6 @@ export function AccountsTab({
   })
   const [dataLayout, setDataLayout] = useState<"table" | "grid">("table")
   const [mapMode, setMapMode] = useState<"city" | "state">("state")
-  const {
-    columns,
-    visibleColumnSet,
-    isColumnVisible,
-    setColumnVisible,
-    resetColumns,
-  } = useTableColumnPreferences("accounts")
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -287,18 +259,11 @@ export function AccountsTab({
     pageKeys: pageNames,
     allPageSelected,
     somePageSelected,
-    allSelectedFavorited,
-    selectedFavoriteInputs,
     handleRowSelectChange,
-    handleRowToggleFavorite,
   } = useTableRowSelection({
     items: server ? pageAccounts : accounts,
     pageItems: pageAccounts,
     getKey: getAccountKey,
-    favoritePrefix: "account",
-    favoriteKeys,
-    buildFavorite: buildAccountFavorite,
-    onToggleFavorite,
   })
 
   // Tab-specific open handler kept stable so memo'd rows don't re-render.
@@ -443,14 +408,6 @@ export function AccountsTab({
             <div className="flex flex-wrap items-center gap-3">
               <CardTitle className="text-base">Accounts Data</CardTitle>
               <div className="ml-auto flex items-center gap-2">
-                {dataLayout === "table" && (
-                  <TableColumnMenu
-                    columns={columns}
-                    visibleColumnSet={visibleColumnSet}
-                    onToggleColumn={setColumnVisible}
-                    onReset={resetColumns}
-                  />
-                )}
                 <ViewSwitcher
                   value={dataLayout}
                   onValueChange={(value) => setDataLayout(value as "table" | "grid")}
@@ -475,7 +432,7 @@ export function AccountsTab({
             </div>
           </CardHeader>
           <CardContent className="p-0 flex flex-col flex-1 overflow-hidden">
-            <div ref={scrollContainerRef} key={dataLayout} className="flex-1 overflow-auto view-content">
+            <div ref={scrollContainerRef} key={dataLayout} className={cn("flex-1 overflow-auto view-content", dataLayout === "grid" && "border-t")}>
               {dataLayout === "table" ? (
                 <Table className="table-fixed">
                   <TableHeader>
@@ -487,43 +444,32 @@ export function AccountsTab({
                           aria-label="Select all accounts on this page"
                         />
                       </TableHead>
-                      {isColumnVisible("name") && (
                       <TableHead className="w-[280px]">
                         <SortButton label="Account Name" sortKey="name" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                       </TableHead>
-                      )}
-                      {isColumnVisible("industry") && (
                       <TableHead className="w-[220px]">
                         <SortButton label="Sub Industry" sortKey="industry" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                       </TableHead>
-                      )}
-                      {isColumnVisible("revenue") && (
                       <TableHead className="w-[140px]">
                         <SortButton label="Revenue Range" sortKey="revenue" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                       </TableHead>
-                      )}
-                      {isColumnVisible("employees") && (
                       <TableHead className="w-[200px]">
                         <SortButton label="GCC Aggregate Headcount (India)" sortKey="employees" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                       </TableHead>
-                      )}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {server?.loading ? (
-                      <TableSkeletonRows columns={1 + (["name", "industry", "revenue", "employees"] as const).filter(isColumnVisible).length} />
+                      <TableSkeletonRows columns={5} />
                     ) : pageAccounts.map(
                       (account) => (
                         <AccountRow
                           key={account.account_global_legal_name}
                           account={account}
                           onOpen={handleRowOpen}
-                          visibleColumns={visibleColumnSet}
                           selectable
                           isSelected={selectedNames.has(account.account_global_legal_name ?? "")}
                           onSelectChange={getAccountKey(account) ? handleRowSelectChange : undefined}
-                          isFavorite={favoriteKeys?.has(`account:${account.account_global_legal_name ?? ""}`)}
-                          onToggleFavorite={onToggleFavorite && getAccountKey(account) ? handleRowToggleFavorite : undefined}
                         />
                       )
                     )}
@@ -531,26 +477,6 @@ export function AccountsTab({
                 </Table>
               ) : (
                   <div className="flex flex-col">
-                    <div className="flex items-center gap-2 px-6 py-3 border-b bg-muted/20">
-                      <span className="text-xs font-medium text-muted-foreground">Sort</span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleSort("name")}
-                        className="h-8 w-8 px-0"
-                        aria-label="Sort by account name"
-                        aria-pressed={sort.key === "name" && sort.direction !== null}
-                      >
-                        {sort.key !== "name" || sort.direction === null ? (
-                          <RiExpandUpDownLine className="h-3.5 w-3.5 text-muted-foreground" />
-                        ) : sort.direction === "asc" ? (
-                          <RiSortAlphabetAsc className="h-3.5 w-3.5 text-primary" />
-                        ) : (
-                          <RiSortAlphabetDesc className="h-3.5 w-3.5 text-primary" />
-                        )}
-                      </Button>
-                    </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
                       {server?.loading ? <GridSkeletonCards /> : pageAccounts.map(
                         (account) => (
@@ -584,16 +510,6 @@ export function AccountsTab({
         count={selectedNames.size}
         onClear={clearSelection}
         onExport={() => onDownloadSelection?.({ dataset: "accounts", accountNames: Array.from(selectedNames) })}
-        onFavorite={
-          onFavoriteMany || onUnfavoriteMany
-            ? () => {
-                const items = selectedFavoriteInputs()
-                if (allSelectedFavorited) onUnfavoriteMany?.(items)
-                else onFavoriteMany?.(items)
-              }
-            : undefined
-        }
-        favoriteActive={allSelectedFavorited}
       />
 
       {/* Account Details Dialog */}

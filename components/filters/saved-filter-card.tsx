@@ -14,7 +14,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion"
 import type { Filters } from "@/lib/types"
-import { calculateActiveFilters } from "@/lib/dashboard/filter-summary"
+import { calculateActiveFilters, type FilterRangeBounds } from "@/lib/dashboard/filter-summary"
 import {
   DEFAULT_CENTER_INC_YEAR_RANGE,
   DEFAULT_REVENUE_RANGE,
@@ -45,6 +45,8 @@ interface SavedFilterCardProps {
   onEdit: (filter: SavedFilter) => void
   onDelete: (filter: SavedFilter) => void
   onShare?: (filter: SavedFilter) => void
+  /** The data's range bounds, so untouched ranges are not counted as filters. */
+  rangeBounds?: FilterRangeBounds
 }
 
 export const SavedFilterCard = memo(({
@@ -54,8 +56,9 @@ export const SavedFilterCard = memo(({
   onEdit,
   onDelete,
   onShare,
+  rangeBounds,
 }: SavedFilterCardProps) => {
-  const filterCount = calculateActiveFilters(filter.filters)
+  const filterCount = calculateActiveFilters(filter.filters, rangeBounds)
 
   const [minRevenue, maxRevenue] = filter.filters.accountHqRevenueRange || DEFAULT_REVENUE_RANGE
   const revenueFilterActive = minRevenue !== DEFAULT_REVENUE_RANGE[0] || maxRevenue !== DEFAULT_REVENUE_RANGE[1]
@@ -87,7 +90,7 @@ export const SavedFilterCard = memo(({
               <div className="flex items-start justify-between gap-2">
                 <span className="truncate text-sm font-semibold text-foreground">{filter.name}</span>
                 <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                  {filterCount} filters
+                  {filterCount} {filterCount === 1 ? "filter" : "filters"}
                 </span>
               </div>
               <div className="mt-0.5 flex flex-wrap items-center gap-2">

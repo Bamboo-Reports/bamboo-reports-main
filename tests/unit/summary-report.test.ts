@@ -82,7 +82,7 @@ describe("buildReportFilterRows", () => {
     expect(revenue?.excluded).toEqual(["Accounts with no recorded value"])
 
     const incYear = rows.find((row) => row.label === "Incorporation Timeline")
-    expect(incYear?.included).toEqual(["2015 to 2026", "Centers with no recorded value"])
+    expect(incYear?.included).toEqual(["2015 to 2026", "Centres with no recorded value"])
     expect(incYear?.excluded).toEqual([])
   })
 
@@ -97,7 +97,7 @@ describe("buildReportFilterRows", () => {
       accountHqRegionValues: [inc("North America")],
     })
     const groups = buildReportFilterRows(filters, baselineRanges).map((row) => row.group)
-    expect(groups).toEqual(["Scope", "Account", "Center", "Prospect"])
+    expect(groups).toEqual(["Scope", "Account", "Centre", "Prospect"])
   })
 })
 
@@ -197,7 +197,7 @@ describe("buildReportChartGroups", () => {
     const groups = buildReportChartGroups(sources, allSections, counts)
     expect(groups.map((group) => [group.title, group.charts.length])).toEqual([
       ["Accounts", 4],
-      ["Centers", 4],
+      ["Centres", 4],
       ["Prospects", 2],
     ])
     expect(groups.map((group) => [group.matching, group.databaseTotal])).toEqual([

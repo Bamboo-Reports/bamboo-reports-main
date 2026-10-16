@@ -286,7 +286,7 @@ export function ProspectDetailsDialog({
                       <button
                         type="button"
                         onClick={() => onAccountOpen(p.account_global_legal_name)}
-                        className="ml-1.5 inline-flex h-5 w-5 translate-y-0.5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        className="ml-1.5 inline-flex h-5 w-5 translate-y-0.5 items-center justify-center rounded-[var(--radius-button)] text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         aria-label={`Open account details for ${p.account_global_legal_name}`}
                         title={`Open account details for ${p.account_global_legal_name}`}
                       >
@@ -363,7 +363,7 @@ export function ProspectDetailsDialog({
                             setCopied(true)
                             setTimeout(() => setCopied(false), 1500)
                           }}
-                          className="p-1 rounded text-muted-foreground hover:bg-background/60 hover:text-foreground transition-colors shrink-0"
+                          className="p-1 rounded-[var(--radius-button)] text-muted-foreground hover:bg-background/60 hover:text-foreground transition-colors shrink-0"
                           title={copied ? "Copied!" : "Copy email"}
                           aria-label="Copy email"
                         >

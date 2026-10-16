@@ -6,7 +6,7 @@ configuration, component usage, and troubleshooting.
 
 > **Context:** Used to enhance the visual identity of Accounts and Centers
 > in tables and dialogs. Replaced the earlier Logo.dev integration on
-> 2026-07-29 (see `documentation/2026-07-29-perf-and-data-hygiene.md`).
+> 2026-07-29 (see `documentation/reports/2026-07-29-perf-and-data-hygiene.md`).
 
 ---
 
@@ -16,20 +16,20 @@ configuration, component usage, and troubleshooting.
 
 | Variable | Required | Description |
 | :--- | :--- | :--- |
-| `NEXT_PUBLIC_BRANDFETCH_CLIENT_ID` | **Yes** | Client ID from the [Brandfetch developer portal](https://developers.brandfetch.com/register). Public by design; it ships in every image URL. Without it the UI renders monogram fallbacks. |
-| `BRANDFETCH_API_KEY` | No | Server-side key for Brandfetch's separate Brand API (vector originals, brand metadata). Stored for future use; the logo embed does not use it. |
+| `NEXT_PUBLIC_BRANDFETCH_CLIENT_ID` | **Yes** | Client ID from the [Brandfetch developer portal](https://developers.brandfetch.com/register). Public by design; it ships in every image URL. Read (and trimmed) by `getBrandfetchClientId()` in `lib/config/environment.ts`. Without it the UI renders monogram fallbacks. |
 
 ### 1.2 Data Requirements
 
 The component relies on specific database columns to extract the domain
 name for the logo lookup.
 
-- **Accounts:** Uses `account_hq_website` (mapped from `ACCOUNT WEBSITE`).
-- **Centers:** Uses `center_account_website` (mapped from `CENTER ACCOUNT WEBSITE`).
+- **Accounts:** Uses `account_hq_website`.
+- **Centers:** Uses `center_account_website`.
 
-> **Note:** The component includes a helper to strip protocols
-> (`https://`) and paths (`/about`) to extract the raw hostname
-> (e.g. `microsoft.com`).
+> **Note:** The component's `getCleanDomain` helper lowercases the value and
+> strips a leading `www.`, the protocol (`https://`) and any path, query or
+> hash to extract the raw hostname (e.g. `microsoft.com`). A value without a
+> dot is treated as no domain and renders the fallback.
 
 ### 1.3 URL Format
 
@@ -94,7 +94,7 @@ interface CompanyLogoProps {
 | Variant | Container Size | Requested Size (retina) | Use Case |
 | :--- | :--- | :--- | :--- |
 | `sm` | 32px | 160px | Data Tables (`AccountRow`, `CenterRow`) |
-| `md` | 48px | 200px | Detail Dialog Headers |
+| `md` | 48px | 200px | Detail Dialog Headers, Grid Cards |
 | `lg` | 64px | 256px | Large Summary Cards (Future) |
 | `xl` | 96px | 300px | Profile / Hero Pages (Future) |
 
@@ -114,7 +114,7 @@ interface CompanyLogoProps {
 
 1. **Lazy Loading:** Images use `loading="lazy"` unless `priority` is set.
 2. **Fallback Strategy:**
-   - **State 1 (Loading):** Building icon placeholder while the image loads.
+   - **State 1 (Loading):** Building icon (Remix `RiBuilding2Line`) placeholder while the image loads.
    - **State 2 (Success):** Displays the fetched PNG logo.
    - **State 3 (Error/404):** If Brandfetch has no logo for the domain,
      the request 404s and the component renders the monogram (or building
@@ -135,8 +135,7 @@ interface CompanyLogoProps {
 
 ## 5. Security & Rate Limits
 
-- **Security:** The client ID is public by design. The `BRANDFETCH_API_KEY`
-  is secret; keep it server-side only.
+- **Security:** The client ID is public by design; no secret key is needed.
 - **Rate Limits:** Fair use of 500k requests/month, 1,000 requests per 5
   minutes per IP. The CDN sends `cache-control: immutable` (1 day), so
   browser caching absorbs most repeat views.

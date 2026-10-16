@@ -20,7 +20,7 @@ export interface ReportMetric {
   total: number
 }
 
-export type ReportFilterGroup = "Scope" | "Account" | "Center" | "Prospect"
+export type ReportFilterGroup = "Scope" | "Account" | "Centre" | "Prospect"
 
 export interface ReportFilterRow {
   group: ReportFilterGroup
@@ -132,7 +132,7 @@ export interface BuildSummaryReportInput {
 
 const GROUP_LABEL: Record<"account" | "center" | "prospect", ReportFilterGroup> = {
   account: "Account",
-  center: "Center",
+  center: "Centre",
   prospect: "Prospect",
 }
 
@@ -283,11 +283,11 @@ export function buildReportFilterRows(
   if (isRangeActive(filters.centerIncYearRange, baselineRanges.centerIncYear)) {
     const [min, max] = filters.centerIncYearRange
     rows.push(rangeRow({
-      group: "Center",
+      group: "Centre",
       label: FILTER_METADATA.centerIncYearRange.label,
       value: `${min} to ${max}`,
       includeNull: filters.centerIncYearIncludeNull,
-      noun: "Centers",
+      noun: "Centres",
     }))
   }
 
@@ -318,15 +318,15 @@ export function buildReportMetrics(
   if (enabledSections.centers) {
     metrics.push({
       id: "centers",
-      label: "Centers",
-      description: "Delivery and capability centers",
+      label: "Centres",
+      description: "Delivery and capability centres",
       filtered: counts.filteredCentersCount,
       total: counts.totalCentersCount,
     })
     metrics.push({
       id: "upcomingCenters",
-      label: "Upcoming Centers",
-      description: "Centers with an Upcoming status",
+      label: "Upcoming Centres",
+      description: "Centres with an Upcoming status",
       filtered: counts.filteredUpcomingCentersCount,
       total: counts.totalUpcomingCentersCount,
     })
@@ -346,7 +346,7 @@ export function buildReportMetrics(
     metrics.push({
       id: "headcount",
       label: "Headcount",
-      description: "Employees across matching centers",
+      description: "Employees across matching centres",
       filtered: counts.filteredHeadcount,
       total: counts.totalHeadcount,
     })
@@ -424,14 +424,14 @@ export function buildReportChartGroups(
     const src = sources.centers
     groups.push({
       section: "centers",
-      title: "Centers",
+      title: "Centres",
       matching: counts.filteredCentersCount,
       databaseTotal: counts.totalCentersCount,
       charts: [
-        buildReportChart("Center Type", "Centers", src.centerTypeData),
-        buildReportChart("Center Headcount", "Centers", src.employeesRangeData),
-        buildReportChart("City", "Centers", src.cityData),
-        buildReportChart("Function", "Centers", src.functionData),
+        buildReportChart("Centre Type", "Centres", src.centerTypeData),
+        buildReportChart("Centre Headcount", "Centres", src.employeesRangeData),
+        buildReportChart("City", "Centres", src.cityData),
+        buildReportChart("Function", "Centres", src.functionData),
       ],
     })
   }

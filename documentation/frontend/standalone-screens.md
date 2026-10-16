@@ -21,15 +21,15 @@ The logo inside the lockup is `components/brand/brand-mark.tsx`, an inline copy 
 |--------|------|-------|
 | Sign in, sign up, forgot password, reset password | `components/auth/auth-shell.tsx` wrapping `app/(auth)/*/page.tsx` | Card with title, description and form. Footer link under the card. Lockup links to `/signin`. |
 | Dashboard load error | `components/states/error-state.tsx` | Rendered by `app/page.tsx` when the summary request fails. Shows the raw server message in an alert for support, with Retry and Sign in again. |
-| 404 | `app/not-found.tsx` | Server component. Primary button back to `/`. |
-| Global error boundary | `app/global-error.tsx` | Replaces the root layout, so it imports `globals.css` itself and renders in the light theme (the theme provider is gone). Shows `error.digest` as a support reference. |
-| Maintenance | `components/maintenance-page.tsx` | Rendered by `app/layout.tsx` when `NEXT_PUBLIC_MAINTENANCE_MODE=true`. |
+| 404 | `app/not-found.tsx` | Server component. Small muted "Error 404" line above the title, primary button back to `/`. |
+| Global error boundary | `app/global-error.tsx` | Replaces the root layout, so it imports `globals.css` itself and renders in the light theme (the theme provider is gone). Shows `error.digest` as a support reference and a Try again button that calls `reset()`. There is no route-level `app/error.tsx`, so this boundary catches every uncaught render error. |
+| Maintenance | `components/states/maintenance-page.tsx` | Rendered by `app/layout.tsx` when `NEXT_PUBLIC_MAINTENANCE_MODE=true`. |
 
 Design rules these screens follow, so new ones stay consistent:
 
 - Use theme tokens only. The four brand colors appear in the logo mark and nowhere else.
 - Default `Button` variants. No hardcoded gradients.
-- No eyebrow labels or uppercase pills above titles. The title carries the message.
+- No eyebrow labels or uppercase pills above titles. The title carries the message (the 404's plain muted "Error 404" line is the only exception).
 - Copy says what happened and what to do next, in sentence case. Errors do not apologize.
 - No em dashes anywhere in copy (project rule).
 
@@ -67,10 +67,10 @@ Reference dimensions, taken from the real components:
 | `CompanyLogo size="md"` (grid cards) | `h-12 w-12 rounded-xl` |
 | Prospect avatar (table / card) | `h-8 w-8` / `h-10 w-10`, `rounded-full` |
 | Grid card title (`text-base`) and subtitle (`text-sm`) | `h-5` and `h-4` |
-| Grid card `Button size="sm"` | `h-9 rounded-md` |
+| Grid card `Button size="sm"` | `h-9 rounded-[var(--radius-button)]` (the button radius) |
 | Summary card count | Invisible copy of the real typography with a `Skeleton` overlaid, see `summary-cards.tsx` |
 
-Dialog sections that load related data have their own inline skeletons, and each mirrors the loaded section: the centre dialog's services list is a bordered list of label-plus-pills rows, and the prospect dialog's contacts section is three filter rows above a framed `GridSkeletonCards` grid.
+Dialog sections that load related data have their own inline skeletons, and each mirrors the loaded section: the centre dialog's services list (including the AI Services row) is a bordered list of label-plus-pills rows, the prospect dialog's "More Contacts From" section is three filter rows above a framed `GridSkeletonCards` grid, and the prospect campaign activity timeline (`components/dialogs/prospect-engagement-timeline.tsx`) shows one ghost row (date, icon tile, two text lines) with a Try again button if the load fails.
 
 When adding a new loading surface:
 
@@ -87,6 +87,6 @@ When adding a new loading surface:
 | `components/auth/auth-shell.tsx` | Auth page card inside the brand frame |
 | `components/states/loading-state.tsx` | Full-page dashboard skeleton |
 | `components/states/error-state.tsx` | Full-page dashboard load error |
-| `components/maintenance-page.tsx` | Maintenance mode screen |
+| `components/states/maintenance-page.tsx` | Maintenance mode screen |
 | `components/ui/data-skeletons.tsx` | Table, grid and map skeleton primitives |
 | `components/ui/skeleton.tsx`, `components/ui/chart-wave-skeleton.tsx` | Base skeleton primitives |

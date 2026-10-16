@@ -2,7 +2,7 @@
 
 This guide documents the implementation of the "Saved Filters" feature, which allows users to persist their complex filter configurations. It uses a dedicated table in Supabase with a `JSONB` column to store the flexible filter state.
 
-> **Context:** Used by `components/saved-filters-manager.tsx` and `app/actions.ts`.
+> **Context:** Data access in `hooks/use-saved-filters.ts`; UI in `components/filters/saved-filters-manager.tsx` and `components/filters/saved-filter-card.tsx`.
 
 ---
 
@@ -55,10 +55,12 @@ interface FilterValue {
 interface Filters {
   // Accounts
   accountVisibilityMode: "all" | "gcc" | "nonGcc";
+  accountHqRegionValues: FilterValue[];
   accountHqCountryValues: FilterValue[];
   accountHqIndustryValues: FilterValue[];
   accountDataCoverageValues: FilterValue[];
   accountSourceValues: FilterValue[];
+  accountTypeValues: FilterValue[];
   accountPrimaryCategoryValues: FilterValue[];
   accountPrimaryNatureValues: FilterValue[];
   accountNasscomStatusValues: FilterValue[];
@@ -69,6 +71,8 @@ interface Filters {
   accountYearsInIndiaRange: [number, number];
   yearsInIndiaIncludeNull: boolean;
   accountGlobalLegalNameKeywords: FilterValue[];
+  accountNameValues: FilterValue[]; // exact names, derived from account lists
+  accountListValues: FilterValue[]; // value = account_lists.id
 
   // Centers
   centerTypeValues: FilterValue[];
@@ -87,11 +91,15 @@ interface Filters {
   
   // Prospects
   prospectDepartmentValues: FilterValue[];
+  prospectHeadTypeValues: FilterValue[];
   prospectLevelValues: FilterValue[];
+  prospectEngagedValues: FilterValue[];
   prospectCityValues: FilterValue[];
   prospectTitleKeywords: FilterValue[];
 }
 ```
+
+The source of truth is the `Filters` interface in `lib/types.ts`. Older payloads missing newer keys are filled in by `withFilterDefaults` on load (see 4.2).
 
 ---
 
@@ -105,23 +113,23 @@ alter table public.saved_filters enable row level security;
 -- SELECT: Users see only their own filters
 create policy "Saved filters are private"
   on public.saved_filters for select
-  using (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id);
 
 -- INSERT: Users can create filters only for themselves
 create policy "Users can insert their saved filters"
   on public.saved_filters for insert
-  with check (auth.uid() = user_id);
+  with check ((select auth.uid()) = user_id);
 
 -- UPDATE: Users can update only their own filters
 create policy "Users can update their saved filters"
   on public.saved_filters for update
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
 -- DELETE: Users can delete only their own filters
 create policy "Users can delete their saved filters"
   on public.saved_filters for delete
-  using (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id);
 ```
 
 ---
@@ -150,6 +158,8 @@ for each row execute function public.set_updated_at();
 - **Saving:** The frontend serializes the entire `filters` state object to JSON and sends it to Supabase.
 - **Loading:** The frontend fetches the JSON, parses it, runs it through `withFilterDefaults` to ensure required keys and range defaults are present, and then sanitizes disabled keys before applying it to the dashboard state.
 
+After a saved filter is loaded, the sidebar's Saved Filters dropdown shows its name. The name stays until the applied filters change (any edit, Reset or another load), and it is looked up by id, so a rename shows straight away and a deleted filter falls back to "Saved Filters". See `activeSaved` in `components/filters/saved-filters-manager.tsx`.
+
 ### 4.3 Deployment Access and Premium Filter Sanitization
 
 Saved filters are intentionally forward-compatible with deployment packaging changes.
@@ -167,7 +177,7 @@ Uploaded client account lists are their own object (Supabase `account_lists`) an
 
 ## 6. Filter Sharing
 
-### 5.1 Table: `filter_shares`
+### 6.1 Table: `filter_shares`
 
 Enables users to share saved filter configurations with specific teammates by email.
 
@@ -180,11 +190,11 @@ Enables users to share saved filter configurations with specific teammates by em
 | `shared_with_email` | `TEXT` | **NO** | Email of the recipient (for display purposes). |
 | `created_at` | `TIMESTAMPTZ` | **NO** | Default `now()`. |
 
-**Unique constraint:** `(filter_id, shared_with_user_id)` — a filter can only be shared once per recipient.
+**Unique constraint:** `(filter_id, shared_with_user_id)`: a filter can only be shared once per recipient.
 
-**Lookup helper:** `public.lookup_profile_by_email(input_email text)` is an authenticated-only, narrowly scoped function that performs a case-insensitive exact email lookup for the share flow without granting cross-user access to `profiles`. The migration also adds `profiles_email_lower_idx` on `lower(email)` so lookups stay index-friendly.
+**Lookup helper:** `public.lookup_profile_by_email(input_email text)` is an authenticated-only, narrowly scoped function that performs a case-insensitive exact email lookup for the share flow without granting cross-user access to `profiles`. The migration also adds `profiles_email_lower_idx` on `lower(email)` so lookups stay index-friendly. A second helper, `public.lookup_shared_filter_owner_emails()`, returns the owner emails of filters shared with the caller (for the "Shared with me" labels), scoped to the share relationship. Both are `security definer` with an empty `search_path` and executable by `authenticated` only.
 
-### 5.2 SQL Definition
+### 6.2 SQL Definition
 
 ```sql
 CREATE TABLE IF NOT EXISTS public.filter_shares (
@@ -198,18 +208,18 @@ CREATE TABLE IF NOT EXISTS public.filter_shares (
 );
 ```
 
-### 5.3 RLS Policies
+### 6.3 RLS Policies
 
 ```sql
 -- Owners can manage their shares
 CREATE POLICY "Owners can manage their shares"
   ON public.filter_shares FOR ALL
-  USING (auth.uid() = owner_user_id);
+  USING ((select auth.uid()) = owner_user_id);
 
 -- Recipients can view shares directed at them
 CREATE POLICY "Recipients can view their shares"
   ON public.filter_shares FOR SELECT
-  USING (auth.uid() = shared_with_user_id);
+  USING ((select auth.uid()) = shared_with_user_id);
 
 -- Recipients can read the shared filter data from saved_filters
 CREATE POLICY "Users can view filters shared with them"
@@ -218,18 +228,18 @@ CREATE POLICY "Users can view filters shared with them"
     EXISTS (
       SELECT 1 FROM public.filter_shares
       WHERE filter_shares.filter_id = saved_filters.id
-        AND filter_shares.shared_with_user_id = auth.uid()
+        AND filter_shares.shared_with_user_id = (select auth.uid())
     )
   );
 ```
 
-### 5.4 Sharing Flow
+### 6.4 Sharing Flow
 
-1. **Share:** Owner clicks Share on a saved filter → enters recipient email → app looks up `profiles` table → creates `filter_shares` record.
+1. **Share:** Owner clicks Share on a saved filter, enters the recipient email, the app resolves it with the `lookup_profile_by_email` RPC, then creates the `filter_shares` record.
 2. **View:** Recipient sees shared filters in a "Shared with me" section in the saved filters dropdown.
-3. **Load:** Recipient can load shared filters (read-only — cannot edit or delete the original).
+3. **Load:** Recipient can load shared filters (read-only: cannot edit or delete the original).
 4. **Revoke:** Owner can view who they've shared with and remove access.
 
-### 5.5 Migration
+### 6.5 Migration
 
-See `sql/filter-shares-migration.sql` for the complete migration script.
+See `sql/filter-shares-migration.sql` for the complete migration script. `sql/supabase-security-hardening-migration.sql` then revokes `anon` access and re-grants `select, insert, update, delete` on `saved_filters` and `filter_shares` to `authenticated`.

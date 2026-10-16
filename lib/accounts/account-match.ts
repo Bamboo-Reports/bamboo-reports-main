@@ -14,7 +14,7 @@
 
 import type { SqlQuery } from "@/lib/dashboard/filtering-sql"
 
-export const MAX_MATCH_NAMES = 1000
+export const MAX_MATCH_NAMES = 500
 export const MAX_NAME_LENGTH = 200
 export const MAX_CANDIDATES = 5
 

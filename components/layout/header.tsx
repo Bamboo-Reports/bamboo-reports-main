@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { RiCompass3Line, RiComputerLine, RiFileZipLine, RiLogoutBoxRLine, RiMoonLine, RiRefreshLine, RiSearchLine, RiStarLine, RiSunLine, RiTerminalBoxLine, RiTimeLine, RiUserLine } from "@remixicon/react"
+import { RiCodeSSlashLine, RiCompass3Line, RiComputerLine, RiFileZipLine, RiLogoutBoxRLine, RiMoonLine, RiRefreshLine, RiSearchLine, RiSunLine, RiTimeLine, RiUserLine } from "@remixicon/react"
 import { useTheme } from 'next-themes'
 import { Button } from '@/components/ui/button'
 import {
@@ -13,10 +13,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { NotificationDropdown } from '@/components/notifications/notification-dropdown'
+import { NotificationDropdown } from '@/components/layout/notification-dropdown'
 import { captureEvent, resetAnalytics } from '@/lib/analytics/client'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
-import { getEnvironmentLabel } from '@/lib/config/environment'
+import { getDevEnvironment } from '@/lib/config/environment'
 import { normalizeUserRole } from '@/lib/auth/roles'
 import { NOTIFICATIONS_ENABLED } from '@/lib/config/notifications'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
@@ -30,7 +30,6 @@ interface HeaderProps {
   onOpenSearch?: () => void
   onOpenExports?: () => void
   onOpenHistory?: () => void
-  onOpenFavorites?: () => void
 }
 
 type ThemeMode = 'light' | 'dark' | 'system'
@@ -91,8 +90,8 @@ function ProfileThemeSwitcher() {
   )
 }
 
-export const Header = React.memo(function Header({ onRefresh, refreshing = false, onStartTour, onOpenSearch, onOpenExports, onOpenHistory, onOpenFavorites }: HeaderProps): React.JSX.Element {
-  const environmentLabel = getEnvironmentLabel()
+export const Header = React.memo(function Header({ onRefresh, refreshing = false, onStartTour, onOpenSearch, onOpenExports, onOpenHistory }: HeaderProps): React.JSX.Element {
+  const devEnvironment = getDevEnvironment()
   const router = useRouter()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [sessionEmail, setSessionEmail] = useState<string | null>(null)
@@ -180,14 +179,12 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
   })()
   const roleLabel = normalizedRole === 'admin' ? 'Admin' : 'Viewer'
 
-  const environmentBadgeLabel = environmentLabel === "DEV" ? "DEV" : null
-
   return (
     <div className="sticky top-0 z-20 border-b border-border/80 bg-background/95 backdrop-blur-md">
       <div className="mx-auto w-full px-6 py-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-primary/20 bg-background">
+            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-background">
               <Image
                 src="/logo.svg"
                 alt="Bamboo Reports logo"
@@ -200,13 +197,16 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <p className="truncate text-lg font-bold text-foreground">Bamboo Reports</p>
-                {environmentBadgeLabel ? (
-                  <div className="inline-flex shrink-0 items-center gap-1 rounded-md border border-amber-500/25 bg-amber-500/8 px-2 py-0.5 dark:border-amber-400/20 dark:bg-amber-500/10">
-                    <RiTerminalBoxLine className="h-3 w-3 shrink-0 text-amber-600 dark:text-amber-400" />
-                    <span className="font-mono text-[10px] font-bold uppercase leading-none tracking-widest text-amber-700 dark:text-amber-300">
-                      {environmentBadgeLabel}
+                {devEnvironment ? (
+                  <span
+                    className="inline-flex shrink-0 items-center gap-1 rounded-md bg-amber-400 px-2 py-1 text-amber-950 shadow-sm ring-1 ring-inset ring-amber-500/60"
+                    title={devEnvironment === "dev" ? "Local development server (npm run dev)" : "Vercel preview deployment"}
+                  >
+                    <RiCodeSSlashLine className="h-3 w-3 shrink-0" aria-hidden="true" />
+                    <span className="text-[10px] font-bold uppercase leading-none tracking-wider">
+                      {devEnvironment === "dev" ? "Dev" : "Preview"}
                     </span>
-                  </div>
+                  </span>
                 ) : null}
               </div>
             </div>
@@ -218,7 +218,7 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
                 onClick={onOpenSearch}
                 title="Search (⌘K)"
                 aria-label="Open search"
-                className="hidden sm:inline-flex items-center gap-2 rounded-lg border border-border/60 bg-muted/30 px-3 py-1.5 text-sm text-muted-foreground/70 transition-colors hover:bg-muted/60 hover:text-muted-foreground hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 w-56"
+                className="hidden sm:inline-flex items-center gap-2 rounded-[var(--radius-button)] border border-border/60 bg-muted/30 px-3 py-1.5 text-sm text-muted-foreground/70 transition-colors hover:bg-muted/60 hover:text-muted-foreground hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 w-56"
               >
                 <RiSearchLine className="h-3.5 w-3.5 shrink-0" />
                 <span className="flex-1 text-left text-xs">Search…</span>
@@ -226,11 +226,11 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
             )}
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={onRefresh}
               disabled={refreshing}
               aria-busy={refreshing}
-              className="h-8 px-3 group"
+              className="h-8 w-8 group"
               title={refreshing ? 'Refreshing…' : 'Refresh'}
               aria-label={refreshing ? 'Refreshing data' : 'Refresh data'}
             >
@@ -316,15 +316,6 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
                 </div>
 
                 <div className="flex items-stretch gap-1 px-1.5 pb-1.5">
-                  {onOpenFavorites && (
-                    <DropdownMenuItem
-                      className="flex flex-1 flex-col items-center justify-center gap-1 cursor-pointer rounded-md border border-border/60 bg-muted/20 px-2 py-2.5 text-[11px] font-medium text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 focus:border-border focus:bg-muted/60 focus:text-foreground"
-                      onSelect={() => onOpenFavorites()}
-                    >
-                      <RiStarLine className="h-4 w-4" />
-                      Favourites
-                    </DropdownMenuItem>
-                  )}
                   {onOpenExports && (
                     <DropdownMenuItem
                       className="flex flex-1 flex-col items-center justify-center gap-1 cursor-pointer rounded-md border border-border/60 bg-muted/20 px-2 py-2.5 text-[11px] font-medium text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 focus:border-border focus:bg-muted/60 focus:text-foreground"

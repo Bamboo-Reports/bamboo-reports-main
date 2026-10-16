@@ -19,8 +19,6 @@ export const ANALYTICS_EVENTS = {
   SECTION_VIEW_CHANGED: "section_view_changed",
   MAP_MODE_CHANGED: "map_mode_changed",
   DATA_LAYOUT_CHANGED: "data_layout_changed",
-  TABLE_COLUMN_VISIBILITY_CHANGED: "table_column_visibility_changed",
-  TABLE_COLUMNS_RESET: "table_columns_reset",
   SORT_CHANGED: "sort_changed",
   PAGE_CHANGED: "page_changed",
   RECORD_OPENED: "record_opened",
@@ -75,9 +73,6 @@ export const ANALYTICS_EVENTS = {
   SEARCH_RECENT_ITEM_SELECTED: "search_recent_item_selected",
   SEARCH_ACTION_SELECTED: "search_action_selected",
   SEARCH_CLOSED: "search_closed",
-  FAVORITE_ADDED: "favorite_added",
-  FAVORITE_REMOVED: "favorite_removed",
-  FAVORITES_VIEW_OPENED: "favorites_view_opened",
 } as const
 
 export type AnalyticsEventName = (typeof ANALYTICS_EVENTS)[keyof typeof ANALYTICS_EVENTS]

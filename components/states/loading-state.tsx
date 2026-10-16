@@ -33,17 +33,17 @@ export function LoadingState() {
         <div className="mx-auto w-full px-6 py-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
-              <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-primary/20 bg-background">
+              <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-background">
                 <BrandMark />
               </div>
               <p className="truncate text-lg font-bold text-foreground">Bamboo Reports</p>
             </div>
 
             <div className="flex items-center gap-2" aria-hidden="true">
-              <Skeleton className="hidden h-8 w-56 rounded-lg sm:block" />
-              <Skeleton className="h-8 w-20 rounded-md" />
-              <Skeleton className="h-8 w-8 rounded-md" />
-              <Skeleton className="h-8 w-8 rounded-md" />
+              <Skeleton className="hidden h-8 w-56 rounded-[var(--radius-button)] sm:block" />
+              <Skeleton className="h-8 w-20 rounded-[var(--radius-button)]" />
+              <Skeleton className="h-8 w-8 rounded-[var(--radius-button)]" />
+              <Skeleton className="h-8 w-8 rounded-[var(--radius-button)]" />
             </div>
           </div>
         </div>

@@ -8,7 +8,7 @@
 
 | Cache | Code | Used by | Storage |
 |-------|------|---------|---------|
-| Shared two-tier cache | `lib/cache/memory.ts` (`getOrCompute`), Upstash client in `lib/cache/redis.ts` | Every data endpoint: summary, facets, charts, centers map, entity queries, search, autocomplete, account related | L1 in-process Map + optional L2 Upstash Redis |
+| Shared two-tier cache | `lib/cache/memory.ts` (`getOrCompute`), Upstash client in `lib/cache/redis.ts` | Every cached data endpoint: summary, facets, charts, centers map, entity queries, search, autocomplete, account related, account-list match index | L1 in-process Map + optional L2 Upstash Redis |
 
 A route-local SWR cache used to sit in front of `GET /api/dashboard` (the full-payload route). That route was retired on 2026-09-05 along with its cache.
 
@@ -56,26 +56,29 @@ The residency cap means an L1 entry is re-validated against Redis at most every 
 |----------|-----|-----|
 | `POST /api/dashboard/summary` | `summary:<filters JSON>` | `DASHBOARD_CACHE_TTL_MS` |
 | `POST /api/dashboard/facets` | `facets:<filters JSON>` | `DASHBOARD_CACHE_TTL_MS` |
-| `POST /api/dashboard/charts` | `charts:<filters JSON>` | `DASHBOARD_CACHE_TTL_MS` |
+| `POST /api/dashboard/charts` | `charts:<filters JSON>` (`charts:full:<filters JSON>` when the body sends `full: true`, the uncapped buckets for the summary PDF) | `DASHBOARD_CACHE_TTL_MS` |
 | `POST /api/centers/map` | `centers-map:<filters JSON>` | `DASHBOARD_CACHE_TTL_MS` |
 | Entity queries (`lib/dashboard/entity-query-route.ts`) | `query:<entity>:<filters/page/sort JSON>` | `DASHBOARD_CACHE_TTL_MS` |
 | `GET /api/accounts/[name]/related` | `related:<account name>` | `DASHBOARD_CACHE_TTL_MS` |
 | `GET /api/search` | `search:<term>` | 24 h |
 | `GET /api/accounts/autocomplete` | `autocomplete:<term>` | 24 h |
+| `POST /api/accounts/match` | `account-match:index-rows` (the account and alias name rows; the match index is rebuilt from them per instance) | 24 h |
 
-Search and autocomplete use a fixed 24 h TTL but are disabled entirely when `DASHBOARD_CACHE_TTL_MS=0` (the global off switch). All keys share the `dash:` Redis prefix, so one purge clears everything.
+Not cached: `GET /api/centers/[key]`, `GET /api/prospects/[id]`, `GET /api/prospects/[id]/engagements`, `GET /api/financials` and the export routes.
+
+Search, autocomplete and the account-match index use a fixed 24 h TTL but are disabled entirely when `DASHBOARD_CACHE_TTL_MS=0` (the global off switch). All keys share the `dash:` Redis prefix, so one purge clears everything.
 
 ### Why the TTL is 8 days
 
-Warehouse data updates once a week (Friday ETL). The recommended `DASHBOARD_CACHE_TTL_MS=691200000` (8 days = weekly cadence plus one day of slack) keeps hits warm between imports; the ETL purge, not TTL expiry, is the real invalidation. Rationale and the session that set it: [`../2026-07-29-perf-and-data-hygiene.md`](../2026-07-29-perf-and-data-hygiene.md). The code default without the env var is 10 minutes.
+Warehouse data updates once a week (Friday ETL). The recommended `DASHBOARD_CACHE_TTL_MS=691200000` (8 days = weekly cadence plus one day of slack) keeps hits warm between imports; the ETL purge, not TTL expiry, is the real invalidation. Rationale and the session that set it: [`../reports/2026-07-29-perf-and-data-hygiene.md`](../reports/2026-07-29-perf-and-data-hygiene.md). The code default without the env var is 10 minutes.
 
-Latency numbers for compute vs Redis-served requests: [`redis-cache-benchmark.md`](redis-cache-benchmark.md).
+Measured during #249: facets p95 dropped from about 5.1s (compute) to about 0.7s (Redis-served).
 
 ## Cache invalidation
 
 | Mechanism | Clears | When to use |
 |-----------|--------|-------------|
-| `x-no-cache: 1` request header | Bypasses reads on the two-tier endpoints, rewrites the entry | Debugging, benchmarks, forced repopulation of a single key |
+| `x-no-cache: 1` request header | Bypasses reads on the two-tier endpoints, rewrites the entry | Debugging, forced repopulation of a single key |
 | ETL post-import purge | All `dash:*` keys in Redis | After every production data import |
 | TTL expiry | Everything, eventually | Backstop only |
 
@@ -86,6 +89,7 @@ Copy of `etl/V2/main.py` (same flags) that additionally runs `purge_dashboard_ca
 - `SCAN` cursor loop matching `dash:*` (COUNT 1000), then `DEL` each batch, via the Upstash REST API (`urllib`, 10 s timeout).
 - Skipped with a notice when `UPSTASH_REDIS_REST_URL`/token (or the `KV_REST_API_*` pair) are not in the ETL `.env`.
 - A purge failure never fails the import; the cache then expires by TTL.
+- The import runs `ANALYZE` on the reloaded tables before the purge, so the recompute wave that follows does not hit tables without planner statistics.
 - Warm serverless instances still hold L1 copies after the purge, but the 5-minute L1 residency cap bounds staleness: within 5 minutes every instance re-checks Redis and recomputes.
 
 The variant also strips invisible Unicode characters (zero-width space, BOM, soft hyphen) from sheet values, a fix for the "Freudenberg SE" incident of 2026-07-29.
@@ -98,7 +102,7 @@ Use `main_cache_purge.py` for production imports (data changed, cache must drop)
 |----------|---------|---------|
 | `UPSTASH_REDIS_REST_URL` (or `KV_REST_API_URL`) | unset | Upstash REST endpoint. Unset = no L2, in-process cache only |
 | `UPSTASH_REDIS_REST_TOKEN` (or `KV_REST_API_TOKEN`) | unset | Upstash REST bearer token. Both URL and token must be present |
-| `DASHBOARD_CACHE_TTL_MS` | `600000` (10 min) in `lib/cache/memory.ts`; `3600000` (1 h) in the SWR route | Cache TTL in ms. `0` disables caching. Recommended: `691200000` (8 days) |
+| `DASHBOARD_CACHE_TTL_MS` | `600000` (10 min) | Cache TTL in ms. `0` disables caching. Recommended: `691200000` (8 days) |
 | `DATA_RATE_LIMIT_PER_MIN` | `60` | Per-user request budget per minute on data endpoints |
 | `EXPORT_RATE_LIMIT_PER_HOUR` | `20` | Per-user export generations per rolling hour |
 
@@ -116,13 +120,16 @@ Per-user, per-bucket fixed-window counters, shared across all serverless instanc
 
 ### Storage: Upstash Redis when configured, Supabase otherwise
 
-When the Upstash REST credentials are set (the same pair the response cache uses), the counter lives in Redis: key `rl:<user>:<bucket>:<windowStartMs>`, bumped with `INCR` plus `PEXPIRE` (window + 1 s) in one pipelined round trip (about 20 ms). The `rl:` prefix sits outside the `dash:*` namespace, so the ETL's post-import purge never resets a budget. A Redis failure fails open; it does not fall back to Supabase.
+When the Upstash REST credentials are set (the same pair the response cache uses), the counter lives in Redis: key `rl:<user>:<bucket>:<windowStartMs>`, bumped with `INCR` plus `PEXPIRE` (window + 1 s) in one pipelined round trip (about 20 ms). The `rl:` prefix sits outside the `dash:*` namespace, so the ETL's post-import purge never resets a budget.
 
-Why Redis: the counter gates every data response, including cache hits. The Supabase RPC cost a few hundred milliseconds per request and was the fixed latency floor measured in [`redis-cache-benchmark.md`](redis-cache-benchmark.md).
+Only `NODE_ENV=production` uses the bare `rl:` prefix. Every other environment prefixes with its `NODE_ENV` (`rl:development:...`, `rl:test:...`), because local dev shares the production Redis and Supabase users: without the split, dev traffic (doubled by React Strict Mode) would spend the user's production budget. The Supabase fallback has no such split. A Redis failure fails open; it does not fall back to Supabase.
+
+Why Redis: the counter gates every data response, including cache hits. The Supabase RPC cost a few hundred milliseconds per request and was the fixed latency floor in the #249 cache measurements.
 
 Without Redis credentials the original Supabase path is used. Migration: [`sql/rate-limits-migration.sql`](sql/rate-limits-migration.sql).
 
 - Table `public.rate_limit_counters` with PK `(user_id, bucket_key, window_start)`, RLS enabled, all access revoked from `anon` and `authenticated`. Only the service role touches it.
+- Expired rows are pruned daily at 03:17 UTC by the pg_cron job `prune-rate-limit-counters` (deletes windows older than 1 day; the longest window is 1 hour). Migration: [`sql/rate-limits-prune-cron-migration.sql`](sql/rate-limits-prune-cron-migration.sql).
 - Function `increment_rate_limit(user, bucket, window_start)`: `security definer`, empty `search_path`, executable by `service_role` only. Atomic upsert-increment returning the new count.
 - Stale windows are never read once passed; an optional scheduled `DELETE` prunes rows older than a day.
 
@@ -132,7 +139,8 @@ Without Redis credentials the original Supabase path is used. Migration: [`sql/r
 |--------|-------|--------|
 | `dashboard:summary`, `dashboard:facets`, `dashboard:charts` | dashboard aggregate endpoints | default |
 | `<entity>:query` | entity table queries via `lib/dashboard/entity-query-route.ts` | default |
-| `centers:map`, `centers:detail`, `accounts:related`, `prospects:detail` | detail endpoints | default |
+| `centers:map`, `centers:detail`, `accounts:related`, `prospects:detail`, `prospects:engagements` | map and detail endpoints | default |
+| `accounts:match` | `POST /api/accounts/match` (account list upload) | 20/min |
 | `search`, `autocomplete` | `GET /api/search`, `GET /api/accounts/autocomplete` | default |
 | `exports:list`, `exports:download` | export listing and re-download | default |
 | `financials` | `GET /api/financials` | 20/min |
@@ -148,14 +156,14 @@ Export **generation** (`POST /api/exports/generate`) uses a separate mechanism: 
 | File | Role |
 |------|------|
 | `lib/cache/memory.ts` | Two-tier `getOrCompute` cache (L1 Map + Upstash L2) |
-| `app/api/dashboard/route.ts` | Route-local SWR payload cache, POST purge handler |
+| `lib/cache/redis.ts` | Shared Upstash REST client (`redisConfig`, `redisCommand`, `redisPipeline`) used by the cache and the rate limiter |
 | `lib/dashboard/entity-query-route.ts` | Shared entity-query handler (cache + rate limit) |
 | `lib/rate-limit/server.ts` | `enforceRateLimit`, fixed windows in Upstash Redis (Supabase fallback) |
 | `documentation/backend/sql/rate-limits-migration.sql` | `rate_limit_counters` table + `increment_rate_limit` RPC |
+| `documentation/backend/sql/rate-limits-prune-cron-migration.sql` | Enables pg_cron and schedules the daily prune of expired counters |
 | `app/api/financials/route.ts` | Authed, rate-limited Yahoo Finance proxy |
 | `app/api/exports/generate/route.ts` | Hourly export cap via `user_exports` row counts |
 | `etl/V2/main_cache_purge.py` | ETL import variant with post-import `dash:*` purge |
 | `tests/unit/memory-cache.test.ts`, `tests/unit/redis-cache.test.ts` | Cache behavior tests |
 | `tests/unit/rate-limit.test.ts`, `tests/unit/rate-limits-migration.test.ts` | Rate limit behavior and migration tests |
-| `documentation/backend/redis-cache-benchmark.md` | Compute vs Redis latency benchmark (#249) |
-| `documentation/2026-07-29-perf-and-data-hygiene.md` | Session log: 8-day TTL decision, purge-as-invalidation |
+| `documentation/reports/2026-07-29-perf-and-data-hygiene.md` | Session log: 8-day TTL decision, purge-as-invalidation |

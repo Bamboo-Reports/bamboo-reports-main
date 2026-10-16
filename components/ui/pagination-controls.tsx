@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { RiDownloadLine } from "@remixicon/react"
+import { RiArrowLeftSLine, RiArrowRightSLine, RiDownloadLine } from "@remixicon/react"
 import { getPageInfo, getTotalPages } from "@/lib/utils/helpers"
 
 interface PaginationControlsProps {
@@ -50,26 +50,30 @@ export function PaginationControls({
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
-            size="sm"
+            size="icon"
             onClick={() => onPageChange((prev) => Math.max(prev - 1, 1))}
             disabled={currentPage === 1}
-            className="h-8"
+            className="h-8 w-8"
+            aria-label="Previous page"
+            title="Previous page"
           >
-            Previous
+            <RiArrowLeftSLine className="h-4 w-4" />
           </Button>
-          <span className="text-sm text-muted-foreground min-w-[60px] text-center">
+          <span className="text-sm text-muted-foreground min-w-[60px] text-center tabular-nums">
             {currentPage}/{totalPages}
           </span>
           <Button
             variant="outline"
-            size="sm"
+            size="icon"
             onClick={() =>
               onPageChange((prev) => Math.min(prev + 1, totalPages))
             }
             disabled={currentPage === totalPages}
-            className="h-8"
+            className="h-8 w-8"
+            aria-label="Next page"
+            title="Next page"
           >
-            Next
+            <RiArrowRightSLine className="h-4 w-4" />
           </Button>
         </div>
       )}

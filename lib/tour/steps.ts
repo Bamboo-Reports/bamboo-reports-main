@@ -17,6 +17,9 @@ function getVisibleTourElement(selector: string): Element | null {
         style.display !== "none" &&
         style.visibility !== "hidden" &&
         style.opacity !== "0" &&
+        // The sidebar marks its faded-out panel as soon as it toggles; reading
+        // opacity would catch the 200ms fade half way.
+        !htmlElement.closest("[data-tour-hidden]") &&
         htmlElement.getClientRects().length > 0
       )
     }) ?? null
@@ -90,9 +93,9 @@ export function getDashboardTourSteps(options: { hasMapView: boolean; isSidebarC
 
   addStep("[data-tour='export-button']", {
     popover: {
-      title: "Export to Excel",
+      title: "Export",
       description:
-        "Download filtered data as a multi-sheet Excel workbook. Choose which datasets to include.",
+        "Download this view as an Excel workbook, or as a PDF report with the counts, charts and applied filters.",
       side: "right",
       align: "start",
     },

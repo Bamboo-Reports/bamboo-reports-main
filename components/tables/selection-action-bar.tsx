@@ -1,9 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { RiCloseLine, RiDownloadLine, RiStarFill, RiStarLine } from "@remixicon/react"
+import { RiCloseLine, RiDownloadLine } from "@remixicon/react"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
 
 interface SelectionActionBarProps {
   /** Whether the bar should be visible (e.g. in data view with rows selected). */
@@ -12,14 +11,10 @@ interface SelectionActionBarProps {
   count: number
   onClear: () => void
   onExport: () => void
-  /** When provided, shows a bulk "favourite selected" action. */
-  onFavorite?: () => void
-  /** When true, the favorite button turns blue (the selection is already favorited). */
-  favoriteActive?: boolean
 }
 
 /** Floating bottom-center bar for selective export. Animates in and out. */
-export function SelectionActionBar({ show, count, onClear, onExport, onFavorite, favoriteActive }: SelectionActionBarProps) {
+export function SelectionActionBar({ show, count, onClear, onExport }: SelectionActionBarProps) {
   const [mounted, setMounted] = useState(false)
   const [exiting, setExiting] = useState(false)
   const [displayCount, setDisplayCount] = useState(0)
@@ -46,7 +41,7 @@ export function SelectionActionBar({ show, count, onClear, onExport, onFavorite,
     <div className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4">
       <div
         className={
-          "pointer-events-auto flex items-center gap-3 rounded-full border bg-background/70 px-4 py-2 shadow-lg backdrop-blur-md supports-[backdrop-filter]:bg-background/60 ease-out " +
+          "pointer-events-auto flex items-center gap-3 rounded-xl border bg-background/70 px-4 py-2 shadow-lg backdrop-blur-md supports-[backdrop-filter]:bg-background/60 ease-out " +
           (exiting
             ? "animate-out fade-out slide-out-to-bottom-4 duration-200"
             : "animate-in fade-in slide-in-from-bottom-4 duration-300")
@@ -55,28 +50,14 @@ export function SelectionActionBar({ show, count, onClear, onExport, onFavorite,
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 rounded-full"
+          className="h-8 w-8"
           onClick={onClear}
           aria-label="Clear selection"
         >
           <RiCloseLine className="h-4 w-4" />
         </Button>
         <span className="text-sm font-medium">{displayCount} selected</span>
-        {onFavorite && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className={cn(
-              "h-8 gap-2 rounded-full px-3 text-xs",
-              favoriteActive && "text-blue-500 hover:text-blue-500"
-            )}
-            onClick={onFavorite}
-          >
-            {favoriteActive ? <RiStarFill className="h-3.5 w-3.5 text-blue-500" /> : <RiStarLine className="h-3.5 w-3.5" />}
-            {favoriteActive ? "Favourited" : "Favourite"}
-          </Button>
-        )}
-        <Button size="sm" className="h-8 gap-2 rounded-full px-4 text-xs" onClick={onExport}>
+        <Button size="sm" className="h-8 gap-2 px-4 text-xs" onClick={onExport}>
           <RiDownloadLine className="h-3.5 w-3.5" />
           Export
         </Button>

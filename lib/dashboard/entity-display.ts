@@ -2,7 +2,7 @@ import { RiBriefcaseLine, RiBuilding2Line, RiGroupLine } from "@remixicon/react"
 export type EntityDisplayType = "account" | "center" | "prospect"
 
 /**
- * Relative-time label shared by the history and favorites lists. Accepts an
+ * Relative-time label used by the history list. Accepts an
  * epoch number or an ISO string; returns "" for an unparseable value.
  */
 export function formatTimeAgo(value: number | string): string {
@@ -37,7 +37,7 @@ export const ENTITY_TYPE_META: Record<
     iconClass: "text-[hsl(var(--chart-2))]",
     borderClass: "border-[hsl(var(--chart-2))]/25",
     badgeClass: "bg-[hsl(var(--chart-2)/0.12)] text-[hsl(var(--chart-2))] border-[hsl(var(--chart-2)/0.25)]",
-    label: "Center",
+    label: "Centre",
   },
   prospect: {
     icon: RiGroupLine,

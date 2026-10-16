@@ -11,7 +11,7 @@ import {
   isSectionDisabled,
   isSectionEnabled,
 } from "@/lib/config/dashboard-access"
-import { getBrandfetchClientId, getEnvironmentLabel } from "@/lib/config/environment"
+import { getBrandfetchClientId, getDevEnvironment } from "@/lib/config/environment"
 import { canExportData, normalizeUserRole } from "@/lib/auth/roles"
 import { extractBearerToken } from "@/lib/auth/server"
 import { getClientInfo } from "@/lib/request/client-info"
@@ -36,10 +36,24 @@ describe("config, auth, request, and ticker helpers", () => {
   })
 
   it("normalizes environment values", () => {
-    vi.stubEnv("NEXT_PUBLIC_ENVIRONMENT_LABEL", " staging ")
     vi.stubEnv("NEXT_PUBLIC_BRANDFETCH_CLIENT_ID", " client-id ")
-    expect(getEnvironmentLabel()).toBe("STAGING")
     expect(getBrandfetchClientId()).toBe("client-id")
+  })
+
+  it("detects dev and preview environments", () => {
+    vi.stubEnv("NEXT_PUBLIC_VERCEL_ENV", "")
+
+    vi.stubEnv("NODE_ENV", "development")
+    expect(getDevEnvironment()).toBe("dev")
+
+    vi.stubEnv("NODE_ENV", "production")
+    expect(getDevEnvironment()).toBeNull()
+
+    vi.stubEnv("NEXT_PUBLIC_VERCEL_ENV", "preview")
+    expect(getDevEnvironment()).toBe("preview")
+
+    vi.stubEnv("NEXT_PUBLIC_VERCEL_ENV", "production")
+    expect(getDevEnvironment()).toBeNull()
   })
 
   it("handles roles and bearer tokens", () => {

@@ -8,12 +8,13 @@ This guide details the authentication setup using Supabase, including the necess
 
 ## 1. Environment Variables
 
-Ensure these are set in your `.env.local` (for local development) and your deployment environment (Vercel).
+Ensure these are set in your `.env` (for local development) and your deployment environment (Vercel).
 
 | Variable | Description | Required |
 | :--- | :--- | :--- |
 | `NEXT_PUBLIC_SUPABASE_URL` | The unique API URL for your Supabase project. | **Yes** |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | The public API key (safe for browser use). Used by the client to authenticate. | **Yes** |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | The public API key (safe for browser use). Used by the client to authenticate, and by `lib/auth/server.ts` to verify Bearer tokens. | **Yes** |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-only key read by `getSupabaseServiceRoleClient()` in `lib/supabase/server.ts`. Used by the export routes and the Supabase rate-limit fallback. Never expose it to the browser. | For exports |
 
 ---
 
@@ -50,6 +51,8 @@ create table if not exists public.profiles (
 create unique index if not exists profiles_user_id_key on public.profiles(user_id);
 ```
 
+The product tour adds two nullable columns, `tour_completed_at timestamptz` and `tour_version integer`, via [`sql/tour-columns-migration.sql`](sql/tour-columns-migration.sql). Run it before the column grants below, which reference them.
+
 ### 2.2 Row Level Security (RLS) Policies
 
 RLS is **mandatory**. Without it, the table is publicly inaccessible or (if misconfigured) publicly writable. These policies ensure users can only access their own data.
@@ -63,7 +66,7 @@ create policy "Profiles are viewable by owner"
 on public.profiles
 for select
 to authenticated
-using (auth.uid() = user_id);
+using ((select auth.uid()) = user_id);
 
 -- 3. Insert Policy: Users can create their own profile
 -- (Usually triggered by a signup flow or a trigger on auth.users).
@@ -72,15 +75,15 @@ create policy "Profiles are insertable by owner"
 on public.profiles
 for insert
 to authenticated
-with check (auth.uid() = user_id and role = 'viewer');
+with check ((select auth.uid()) = user_id and role = 'viewer');
 
 -- 4. Update Policy: Users can update their own profile
 create policy "Profiles are updatable by owner"
 on public.profiles
 for update
 to authenticated
-using (auth.uid() = user_id)
-with check (auth.uid() = user_id);
+using ((select auth.uid()) = user_id)
+with check ((select auth.uid()) = user_id);
 
 -- 5. Column Privileges: authenticated users can manage profile details,
 -- but cannot set or update role from the browser.
@@ -88,6 +91,8 @@ revoke insert, update on public.profiles from authenticated;
 grant insert (user_id, first_name, last_name, email, phone) on public.profiles to authenticated;
 grant update (first_name, last_name, email, phone, tour_completed_at, tour_version) on public.profiles to authenticated;
 ```
+
+[`sql/supabase-security-hardening-migration.sql`](sql/supabase-security-hardening-migration.sql) re-applies the owner-only select policy, re-enables RLS, revokes all table grants from `anon` and re-grants only the columns above to `authenticated`. Other users' profiles are never readable directly: email-based sharing goes through the `security definer` RPCs `lookup_profile_by_email(input_email)` and `lookup_shared_filter_owner_emails()` defined there.
 
 ### 2.3 Auto-Update Trigger
 
@@ -145,15 +150,15 @@ create policy "Profiles are insertable by owner"
 on public.profiles
 for insert
 to authenticated
-with check (auth.uid() = user_id and role = 'viewer');
+with check ((select auth.uid()) = user_id and role = 'viewer');
 
 drop policy if exists "Profiles are updatable by owner" on public.profiles;
 create policy "Profiles are updatable by owner"
 on public.profiles
 for update
 to authenticated
-using (auth.uid() = user_id)
-with check (auth.uid() = user_id);
+using ((select auth.uid()) = user_id)
+with check ((select auth.uid()) = user_id);
 
 revoke insert, update on public.profiles from authenticated;
 grant insert (user_id, first_name, last_name, email, phone) on public.profiles to authenticated;

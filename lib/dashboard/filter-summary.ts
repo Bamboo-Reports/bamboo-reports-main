@@ -30,15 +30,29 @@ export function withFilterDefaults(filters: Partial<Filters> | null | undefined)
   }
 }
 
-export function calculateActiveFilters(filters: Filters) {
-  const [minRevenue, maxRevenue] = filters.accountHqRevenueRange || DEFAULT_REVENUE_RANGE
-  const revenueFilterActive = minRevenue !== DEFAULT_REVENUE_RANGE[0] || maxRevenue !== DEFAULT_REVENUE_RANGE[1]
-  const [minYearsInIndia, maxYearsInIndia] = filters.accountYearsInIndiaRange || DEFAULT_YEARS_IN_INDIA_RANGE
-  const yearsInIndiaFilterActive =
-    minYearsInIndia !== DEFAULT_YEARS_IN_INDIA_RANGE[0] || maxYearsInIndia !== DEFAULT_YEARS_IN_INDIA_RANGE[1]
-  const [minCenterIncYear, maxCenterIncYear] = filters.centerIncYearRange || DEFAULT_CENTER_INC_YEAR_RANGE
-  const centerIncYearFilterActive =
-    minCenterIncYear !== DEFAULT_CENTER_INC_YEAR_RANGE[0] || maxCenterIncYear !== DEFAULT_CENTER_INC_YEAR_RANGE[1]
+export type RangeBounds = { min: number; max: number }
+
+/** The data's full extent for each range filter, when the caller knows it. */
+export interface FilterRangeBounds {
+  revenue?: RangeBounds
+  yearsInIndia?: RangeBounds
+  centerIncYear?: RangeBounds
+}
+
+// A range narrows results only when it is not the "no limit" default and,
+// when the data's bounds are known, it cuts into them. Ranges are stored at the
+// data's bounds once data loads, so comparing with the default alone would
+// count every untouched range.
+function isRangeActive(range: [number, number] | undefined, fallback: [number, number], bounds?: RangeBounds) {
+  const [min, max] = range || fallback
+  if (min === fallback[0] && max === fallback[1]) return false
+  return bounds ? min > bounds.min || max < bounds.max : true
+}
+
+export function calculateActiveFilters(filters: Filters, bounds: FilterRangeBounds = {}) {
+  const revenueFilterActive = isRangeActive(filters.accountHqRevenueRange, DEFAULT_REVENUE_RANGE, bounds.revenue)
+  const yearsInIndiaFilterActive = isRangeActive(filters.accountYearsInIndiaRange, DEFAULT_YEARS_IN_INDIA_RANGE, bounds.yearsInIndia)
+  const centerIncYearFilterActive = isRangeActive(filters.centerIncYearRange, DEFAULT_CENTER_INC_YEAR_RANGE, bounds.centerIncYear)
 
   return (
     ((filters.accountVisibilityMode ?? "gcc") !== "gcc" ? 1 : 0) +
@@ -54,9 +68,9 @@ export function calculateActiveFilters(filters: Filters) {
     filters.accountHqEmployeeRangeValues.length +
     filters.accountCenterEmployeesRangeValues.length +
     (revenueFilterActive ? 1 : 0) +
-    (filters.accountHqRevenueIncludeNull ? 1 : 0) +
+    (filters.accountHqRevenueIncludeNull ? 0 : 1) +
     (yearsInIndiaFilterActive ? 1 : 0) +
-    (filters.yearsInIndiaIncludeNull ? 1 : 0) +
+    (filters.yearsInIndiaIncludeNull ? 0 : 1) +
     filters.accountGlobalLegalNameKeywords.length +
     (filters.accountListValues.length > 0 ? filters.accountListValues.length : filters.accountNameValues.length) +
     filters.centerTypeValues.length +
@@ -67,7 +81,7 @@ export function calculateActiveFilters(filters: Filters) {
     filters.centerEmployeesRangeValues.length +
     filters.centerStatusValues.length +
     (centerIncYearFilterActive ? 1 : 0) +
-    (filters.centerIncYearIncludeNull ? 1 : 0) +
+    (filters.centerIncYearIncludeNull ? 0 : 1) +
     filters.functionNameValues.length +
     filters.techSoftwareInUseKeywords.length +
     filters.prospectDepartmentValues.length +

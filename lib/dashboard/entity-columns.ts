@@ -1,7 +1,7 @@
 /**
  * Column projections shared by the paginated query endpoints, search
- * hydration, and lookup endpoints. They mirror the dashboard fetchers in
- * app/actions/data.ts so server-returned rows have the same shape the client
+ * hydration, and lookup endpoints. They match the row shapes in lib/types.ts
+ * so server-returned rows have the same shape the client
  * already renders. Kept in a pure module (no server-only imports) so SQL
  * builders and tests can use them.
  */
@@ -36,7 +36,7 @@ export const PROSPECT_COLUMNS = [
   "last_review_date", "email_verification_date", "contact_status", "prospect_engaged",
 ]
 
-// Same columns as getDashboardServices / getDashboardTech in app/actions/data.ts.
+// Services and tech columns, matching the Service and Tech types in lib/types.ts.
 export const SERVICE_COLUMNS = [
   "cn_unique_key", "center_name", "primary_service", "focus_region", "service_it", "service_ai",
   "service_erd", "service_fna", "service_hr", "service_procurement", "service_sales_marketing",

@@ -40,7 +40,8 @@ type ReviewRow = {
 
 type Step = "input" | "review"
 
-const ACCEPTED_EXTENSIONS = [".csv", ".tsv", ".txt", ".xlsx", ".xls"]
+// ExcelJS only reads .xlsx, so the legacy binary .xls format is rejected up front.
+const ACCEPTED_EXTENSIONS = [".csv", ".tsv", ".txt", ".xlsx"]
 
 async function readSpreadsheet(file: File): Promise<ParsedAccountTable> {
   const ExcelJS = (await import("exceljs")).default
@@ -146,16 +147,21 @@ export function AccountListUploadDialog({ open, onOpenChange, existingList = nul
     if (pasted.trim()) return extractNames(parseDelimitedText(pasted), 0)
     return []
   }, [table, column, pasted])
+  const tooManyNames = names.length > MAX_MATCH_NAMES
 
   const handleFile = useCallback(async (file: File) => {
     setParseError(null)
     const lower = file.name.toLowerCase()
+    if (lower.endsWith(".xls")) {
+      setParseError("Older .xls files are not supported. Save the file as .xlsx or CSV and upload it again.")
+      return
+    }
     if (!ACCEPTED_EXTENSIONS.some((ext) => lower.endsWith(ext))) {
       setParseError("Unsupported file type. Upload a CSV, TSV, TXT or XLSX file.")
       return
     }
     try {
-      const parsed = lower.endsWith(".xlsx") || lower.endsWith(".xls") ? await readSpreadsheet(file) : parseDelimitedText(await file.text())
+      const parsed = lower.endsWith(".xlsx") ? await readSpreadsheet(file) : parseDelimitedText(await file.text())
       if (parsed.rows.length === 0) {
         setParseError("The file has no rows to import.")
         return
@@ -172,10 +178,10 @@ export function AccountListUploadDialog({ open, onOpenChange, existingList = nul
   }, [filterName])
 
   const handleMatch = useCallback(async () => {
-    if (names.length === 0) return
+    if (names.length === 0 || names.length > MAX_MATCH_NAMES) return
     setMatching(true)
     try {
-      const { results } = await fetchAccountMatches(names.slice(0, MAX_MATCH_NAMES))
+      const { results } = await fetchAccountMatches(names)
       const nextRows = rowsFromResults(results)
       setRows(nextRows)
       setStep("review")
@@ -359,12 +365,18 @@ export function AccountListUploadDialog({ open, onOpenChange, existingList = nul
               </p>
             )}
 
-            {names.length > 0 && (
+            {tooManyNames && (
+              <p role="alert" className="flex items-start gap-2 text-sm text-destructive">
+                <RiErrorWarningLine className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>
+                  This list has {names.length.toLocaleString()} names. Upload at most {MAX_MATCH_NAMES} at a time: split it into smaller files and upload each as its own list.
+                </span>
+              </p>
+            )}
+
+            {names.length > 0 && !tooManyNames && (
               <div className="min-w-0 rounded-md border bg-muted/30 px-3 py-2 text-sm">
-                <span className="font-medium">{Math.min(names.length, MAX_MATCH_NAMES)}</span> unique names ready to match
-                {names.length > MAX_MATCH_NAMES && (
-                  <span className="text-muted-foreground"> (only the first {MAX_MATCH_NAMES} will be used)</span>
-                )}
+                <span className="font-medium">{names.length}</span> unique names ready to match
                 <p className="mt-1 truncate text-xs text-muted-foreground" title={names.slice(0, 5).join(", ")}>
                   {names.slice(0, 5).join(", ")}
                   {names.length > 5 ? ", ..." : ""}
@@ -484,7 +496,7 @@ export function AccountListUploadDialog({ open, onOpenChange, existingList = nul
               <Button variant="ghost" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleMatch} disabled={names.length === 0 || matching}>
+              <Button onClick={handleMatch} disabled={names.length === 0 || tooManyNames || matching}>
                 {matching ? (
                   <>
                     <RiLoader4Line className="h-4 w-4 animate-spin" />

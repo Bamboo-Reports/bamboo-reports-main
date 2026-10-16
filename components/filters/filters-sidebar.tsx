@@ -1,8 +1,8 @@
 "use client"
 
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { RiArrowDownSLine, RiArrowLeftSLine, RiArrowRightSLine, RiBriefcaseLine, RiBuildingLine, RiFilterLine, RiGroupLine } from "@remixicon/react"
-import { SavedFiltersManager } from '@/components/saved-filters-manager'
+import { SavedFiltersManager } from '@/components/filters/saved-filters-manager'
 import {
   AccountFiltersSection,
   CenterFiltersSection,
@@ -10,6 +10,7 @@ import {
 } from '@/components/filters/filter-sections'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
+import { ViewSwitcher } from '@/components/ui/view-switcher'
 import { getSectionUnavailableMessage, isSectionEnabled } from '@/lib/config/dashboard-access'
 import { cn } from '@/lib/utils'
 import { isFilterEnabled, isSectionVisible } from '@/lib/config/filters'
@@ -54,7 +55,7 @@ interface FiltersSidebarProps {
   handleCenterIncYearRangeChange: (value: [number, number]) => void
 
   getTotalActiveFilters: () => number
-  handleLoadSavedFilters: (savedFilters: Filters) => void
+  handleLoadSavedFilters: (savedFilters: Filters) => Filters
   formatRevenueInMillions: (value: number) => string
 }
 
@@ -94,12 +95,13 @@ export function FiltersSidebar({
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
   const [openSection, setOpenSection] = useState<string>('accounts')
   const totalActiveFilters = getTotalActiveFilters()
+  const rangeBounds = useMemo(
+    () => ({ revenue: revenueRange, yearsInIndia: yearsInIndiaRange, centerIncYear: centerIncYearRange }),
+    [revenueRange, yearsInIndiaRange, centerIncYearRange]
+  )
   const scrollRef = useRef<HTMLDivElement>(null)
   const [canScrollDown, setCanScrollDown] = useState(false)
   const [optimisticVisibilityMode, setOptimisticVisibilityMode] = useState(pendingFilters.accountVisibilityMode)
-  const visibilityModeIndex = ACCOUNT_VISIBILITY_OPTIONS.findIndex(
-    (option) => option.value === optimisticVisibilityMode
-  )
 
   const checkScroll = useCallback(() => {
     requestAnimationFrame(() => {
@@ -155,6 +157,11 @@ export function FiltersSidebar({
           'absolute inset-y-0 left-0 z-10 w-16 px-2 py-4 transition-all duration-200 ease-out motion-reduce:transition-none',
           isCollapsed ? 'opacity-100 translate-x-0 pointer-events-auto' : 'opacity-0 -translate-x-1 pointer-events-none'
         )}
+        data-tour-hidden={isCollapsed ? undefined : true}
+        // The faded-out panel stays mounted; inert keeps its controls out of
+        // the tab order and screen readers. Focusing one would scroll the
+        // sidebar sideways and leave it showing a blank strip.
+        inert={!isCollapsed}
       >
         <div className="flex h-full flex-col items-center gap-2">
           <Button
@@ -203,11 +210,16 @@ export function FiltersSidebar({
       </div>
 
       <div
+        // scrollbar-gutter keeps the 6px scrollbar track reserved, so opening a
+        // section never shifts the content; pr-2.5 (10px) plus the 6px track
+        // keeps the right side at 16px like the left.
         ref={scrollRef}
         className={cn(
-          'absolute inset-y-0 left-0 w-[320px] overflow-y-auto p-4 space-y-3 transition-all duration-200 ease-out motion-reduce:transition-none',
+          'absolute inset-y-0 left-0 w-[320px] overflow-y-auto [scrollbar-gutter:stable] py-4 pl-4 pr-2.5 space-y-3 transition-all duration-200 ease-out motion-reduce:transition-none',
           isCollapsed ? 'opacity-0 translate-x-1 pointer-events-none' : 'opacity-100 translate-x-0 pointer-events-auto'
         )}
+        data-tour-hidden={isCollapsed ? true : undefined}
+        inert={isCollapsed}
       >
         <div className="flex flex-col gap-2 mb-3 pb-3 border-b border-sidebar-border">
           <div className="flex items-center justify-between gap-2">
@@ -241,45 +253,25 @@ export function FiltersSidebar({
               exportBlockedMessage="You are not allowed to export data. Please contact an admin."
               onGenerateReport={handleGenerateReport}
               isGeneratingReport={isGeneratingReport}
+              rangeBounds={rangeBounds}
             />
           </div>
         </div>
 
         {isFilterEnabled("accountVisibilityMode") && (
-          <div className="rounded-xl bg-secondary/30 p-2">
-            <div className="relative grid grid-cols-3 rounded-lg border border-border/70 bg-muted/30 p-1" aria-label="Account Visibility">
-              <span
-                aria-hidden="true"
-                className="absolute inset-y-1 left-1 w-[calc((100%-0.5rem)/3)] rounded-md bg-primary shadow-sm transition-transform duration-200 ease-out"
-                style={{ transform: `translateX(${Math.max(visibilityModeIndex, 0) * 100}%)` }}
-              />
-              {ACCOUNT_VISIBILITY_OPTIONS.map((option) => {
-                const isSelected = optimisticVisibilityMode === option.value
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    aria-pressed={isSelected}
-                    onClick={() => {
-                      setOptimisticVisibilityMode(option.value)
-                      setActiveFilter("accountVisibilityMode")
-                      React.startTransition(() => {
-                        setPendingFilters((prev) => ({ ...prev, accountVisibilityMode: option.value }))
-                      })
-                    }}
-                    className={cn(
-                      "relative z-10 inline-flex h-8 items-center justify-center rounded-md px-2 text-[11px] font-semibold leading-none transition-transform duration-200 ease-out active:scale-[0.98]",
-                      isSelected
-                        ? "text-primary-foreground"
-                        : "text-muted-foreground"
-                    )}
-                  >
-                    {option.label}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
+          <ViewSwitcher
+            fullWidth
+            aria-label="Account visibility"
+            value={optimisticVisibilityMode}
+            options={ACCOUNT_VISIBILITY_OPTIONS}
+            onValueChange={(mode) => {
+              setOptimisticVisibilityMode(mode)
+              setActiveFilter("accountVisibilityMode")
+              React.startTransition(() => {
+                setPendingFilters((prev) => ({ ...prev, accountVisibilityMode: mode }))
+              })
+            }}
+          />
         )}
 
         <Accordion type="single" collapsible value={openSection} onValueChange={setOpenSection} className="w-full space-y-2">

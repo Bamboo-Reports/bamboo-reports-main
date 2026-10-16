@@ -1,14 +1,17 @@
 {
-    "generatedAt": "2026-02-25",
+    "generatedAt": "2026-10-16",
     "sourceFiles": [
+        "lib/config/filters.ts",
         "components/filters/filter-sections.tsx",
-        "lib/dashboard/filtering.ts",
+        "components/filters/filters-sidebar.tsx",
+        "lib/dashboard/filtering-sql.ts",
+        "lib/accounts/account-lists.ts",
         "lib/types.ts"
     ],
     "filters": [
         {
             "filterKey": "accountVisibilityMode",
-            "uiSection": "Account Attributes",
+            "uiSection": "Sidebar header (above the sections)",
             "uiLabel": "Account Visibility",
             "referencedColumns": [
                 {
@@ -16,96 +19,52 @@
                     "column": "account_visibility"
                 }
             ],
-            "status": "active"
+            "status": "active",
+            "note": "View switcher (shared ViewSwitcher): ALL / GCCs / NON-GCCs (values all, gcc, nonGcc; default gcc)"
         },
         {
-            "filterKey": "accountHqCountryValues",
+            "filterKey": "accountGlobalLegalNameKeywords",
             "uiSection": "Account Attributes",
-            "uiLabel": "Countries",
+            "uiLabel": "Account Name",
             "referencedColumns": [
                 {
                     "dataset": "accounts",
-                    "column": "account_hq_country"
+                    "column": "account_global_legal_name"
                 }
             ],
-            "status": "active"
+            "status": "active",
+            "note": "Autocomplete keyword search, alias-aware"
         },
         {
-            "filterKey": "accountHqIndustryValues",
+            "filterKey": "accountListValues",
             "uiSection": "Account Attributes",
-            "uiLabel": "Industries",
+            "uiLabel": "Account List",
+            "referencedColumns": [
+                {
+                    "dataset": "account_lists",
+                    "column": "id"
+                }
+            ],
+            "status": "active",
+            "note": "Supabase account_lists rows; expanded on the client into accountNameValues, never sent to the warehouse SQL"
+        },
+        {
+            "filterKey": "accountNameValues",
+            "uiSection": "Account Attributes",
+            "uiLabel": "Account List Accounts",
             "referencedColumns": [
                 {
                     "dataset": "accounts",
-                    "column": "account_hq_industry"
+                    "column": "account_global_legal_name"
                 }
             ],
-            "status": "active"
-        },
-        {
-            "filterKey": "accountPrimaryCategoryValues",
-            "uiSection": "Account Attributes",
-            "uiLabel": "Primary Categories",
-            "referencedColumns": [
-                {
-                    "dataset": "accounts",
-                    "column": "account_primary_category"
-                }
-            ],
-            "status": "active"
-        },
-        {
-            "filterKey": "accountPrimaryNatureValues",
-            "uiSection": "Account Attributes",
-            "uiLabel": "Primary Nature",
-            "referencedColumns": [
-                {
-                    "dataset": "accounts",
-                    "column": "account_primary_nature"
-                }
-            ],
-            "status": "active"
-        },
-        {
-            "filterKey": "accountNasscomStatusValues",
-            "uiSection": "Account Attributes",
-            "uiLabel": "NASSCOM GCC Listing Status",
-            "referencedColumns": [
-                {
-                    "dataset": "accounts",
-                    "column": "account_nasscom_status"
-                }
-            ],
-            "status": "active"
-        },
-        {
-            "filterKey": "accountHqEmployeeRangeValues",
-            "uiSection": "Account Attributes",
-            "uiLabel": "Employees Range",
-            "referencedColumns": [
-                {
-                    "dataset": "accounts",
-                    "column": "account_hq_employee_range"
-                }
-            ],
-            "status": "active"
-        },
-        {
-            "filterKey": "accountCenterEmployeesRangeValues",
-            "uiSection": "Account Attributes",
-            "uiLabel": "Center Employees",
-            "referencedColumns": [
-                {
-                    "dataset": "accounts",
-                    "column": "account_center_employees_range"
-                }
-            ],
-            "status": "active"
+            "status": "active",
+            "note": "Exact names derived from the selected account lists; no sidebar control of its own"
         },
         {
             "filterKey": "accountHqRevenueRange",
             "uiSection": "Account Attributes",
-            "uiLabel": "Revenue",
+            "uiLabel": "HQ Company Revenue",
             "referencedColumns": [
                 {
                     "dataset": "accounts",
@@ -117,11 +76,23 @@
         {
             "filterKey": "accountHqRevenueIncludeNull",
             "uiSection": "Account Attributes",
-            "uiLabel": "Revenue (Include all)",
+            "uiLabel": "HQ Company Revenue: Include all",
             "referencedColumns": [
                 {
                     "dataset": "accounts",
                     "column": "account_hq_revenue"
+                }
+            ],
+            "status": "active"
+        },
+        {
+            "filterKey": "accountCenterEmployeesRangeValues",
+            "uiSection": "Account Attributes",
+            "uiLabel": "GCC Aggregate Headcount (India)",
+            "referencedColumns": [
+                {
+                    "dataset": "accounts",
+                    "column": "account_center_employees_range"
                 }
             ],
             "status": "active"
@@ -141,7 +112,7 @@
         {
             "filterKey": "yearsInIndiaIncludeNull",
             "uiSection": "Account Attributes",
-            "uiLabel": "Years In India (Include all)",
+            "uiLabel": "Years In India: Include all",
             "referencedColumns": [
                 {
                     "dataset": "accounts",
@@ -151,93 +122,137 @@
             "status": "active"
         },
         {
-            "filterKey": "accountGlobalLegalNameKeywords",
+            "filterKey": "accountPrimaryCategoryValues",
             "uiSection": "Account Attributes",
-            "uiLabel": "Search Account Name",
+            "uiLabel": "Industry",
             "referencedColumns": [
                 {
                     "dataset": "accounts",
-                    "column": "account_global_legal_name"
+                    "column": "account_primary_category"
                 }
             ],
             "status": "active"
         },
         {
-            "filterKey": "centerTypeValues",
-            "uiSection": "Center Attributes",
-            "uiLabel": "Center Types",
+            "filterKey": "accountHqCountryValues",
+            "uiSection": "Account Attributes",
+            "uiLabel": "HQ Country",
             "referencedColumns": [
                 {
-                    "dataset": "centers",
-                    "column": "center_type"
+                    "dataset": "accounts",
+                    "column": "account_hq_country"
                 }
             ],
             "status": "active"
         },
         {
-            "filterKey": "centerFocusValues",
-            "uiSection": "Center Attributes",
-            "uiLabel": "Center Focus",
+            "filterKey": "accountHqRegionValues",
+            "uiSection": "Account Attributes",
+            "uiLabel": "HQ Region",
             "referencedColumns": [
                 {
-                    "dataset": "centers",
-                    "column": "center_focus"
+                    "dataset": "accounts",
+                    "column": "account_hq_region"
                 }
             ],
-            "status": "active"
+            "status": "active",
+            "note": "Behind Show More"
         },
         {
-            "filterKey": "centerCityValues",
-            "uiSection": "Center Attributes",
-            "uiLabel": "Cities",
+            "filterKey": "accountHqEmployeeRangeValues",
+            "uiSection": "Account Attributes",
+            "uiLabel": "HQ Employee Range",
             "referencedColumns": [
                 {
-                    "dataset": "centers",
-                    "column": "center_city"
+                    "dataset": "accounts",
+                    "column": "account_hq_employee_range"
                 }
             ],
-            "status": "active"
+            "status": "active",
+            "note": "Behind Show More"
         },
         {
-            "filterKey": "centerStateValues",
-            "uiSection": "Center Attributes",
-            "uiLabel": "States",
+            "filterKey": "accountHqIndustryValues",
+            "uiSection": "Account Attributes",
+            "uiLabel": "Sub Industry",
             "referencedColumns": [
                 {
-                    "dataset": "centers",
-                    "column": "center_state"
+                    "dataset": "accounts",
+                    "column": "account_hq_industry"
                 }
             ],
-            "status": "active"
+            "status": "active",
+            "note": "Behind Show More"
         },
         {
-            "filterKey": "centerCountryValues",
-            "uiSection": "Center Attributes",
-            "uiLabel": "Countries",
+            "filterKey": "accountPrimaryNatureValues",
+            "uiSection": "Account Attributes",
+            "uiLabel": "Segment",
             "referencedColumns": [
                 {
-                    "dataset": "centers",
-                    "column": "center_country"
+                    "dataset": "accounts",
+                    "column": "account_primary_nature"
                 }
             ],
-            "status": "active"
+            "status": "active",
+            "note": "Behind Show More"
         },
         {
-            "filterKey": "centerEmployeesRangeValues",
-            "uiSection": "Center Attributes",
-            "uiLabel": "Center Employees",
+            "filterKey": "accountNasscomStatusValues",
+            "uiSection": "Account Attributes",
+            "uiLabel": "NASSCOM GCC Listing Status",
             "referencedColumns": [
                 {
-                    "dataset": "centers",
-                    "column": "center_employees_range"
+                    "dataset": "accounts",
+                    "column": "account_nasscom_status"
                 }
             ],
-            "status": "active"
+            "status": "active",
+            "note": "Behind Show More"
+        },
+        {
+            "filterKey": "accountSourceValues",
+            "uiSection": "Account Attributes",
+            "uiLabel": "Source",
+            "referencedColumns": [
+                {
+                    "dataset": "accounts",
+                    "column": "account_source"
+                }
+            ],
+            "status": "disabled",
+            "note": "enabled: false in lib/config/filters.ts"
+        },
+        {
+            "filterKey": "accountTypeValues",
+            "uiSection": "Account Attributes",
+            "uiLabel": "Type",
+            "referencedColumns": [
+                {
+                    "dataset": "accounts",
+                    "column": "account_type"
+                }
+            ],
+            "status": "disabled",
+            "note": "enabled: false in lib/config/filters.ts"
+        },
+        {
+            "filterKey": "accountDataCoverageValues",
+            "uiSection": "Account Attributes",
+            "uiLabel": "Coverage",
+            "referencedColumns": [
+                {
+                    "dataset": "accounts",
+                    "column": "account_data_coverage"
+                }
+            ],
+            "status": "disabled",
+            "note": "enabled: false in lib/config/filters.ts"
         },
         {
             "filterKey": "centerStatusValues",
             "uiSection": "Center Attributes",
-            "uiLabel": "Center Status",
+            "uiLabel": "Status",
             "referencedColumns": [
                 {
                     "dataset": "centers",
@@ -247,25 +262,13 @@
             "status": "active"
         },
         {
-            "filterKey": "centerIncYearRange",
+            "filterKey": "centerTypeValues",
             "uiSection": "Center Attributes",
-            "uiLabel": "Timeline",
+            "uiLabel": "Centre Type",
             "referencedColumns": [
                 {
                     "dataset": "centers",
-                    "column": "center_inc_year"
-                }
-            ],
-            "status": "active"
-        },
-        {
-            "filterKey": "centerIncYearIncludeNull",
-            "uiSection": "Center Attributes",
-            "uiLabel": "Timeline (Include all)",
-            "referencedColumns": [
-                {
-                    "dataset": "centers",
-                    "column": "center_inc_year"
+                    "column": "center_type"
                 }
             ],
             "status": "active"
@@ -273,7 +276,7 @@
         {
             "filterKey": "functionNameValues",
             "uiSection": "Center Attributes",
-            "uiLabel": "Functions",
+            "uiLabel": "Services Offered",
             "referencedColumns": [
                 {
                     "dataset": "functions",
@@ -289,6 +292,80 @@
                 }
             ],
             "status": "active"
+        },
+        {
+            "filterKey": "centerCityValues",
+            "uiSection": "Center Attributes",
+            "uiLabel": "City",
+            "referencedColumns": [
+                {
+                    "dataset": "centers",
+                    "column": "center_city"
+                }
+            ],
+            "status": "active"
+        },
+        {
+            "filterKey": "centerIncYearRange",
+            "uiSection": "Center Attributes",
+            "uiLabel": "Incorporation Timeline",
+            "referencedColumns": [
+                {
+                    "dataset": "centers",
+                    "column": "center_inc_year"
+                }
+            ],
+            "status": "active"
+        },
+        {
+            "filterKey": "centerIncYearIncludeNull",
+            "uiSection": "Center Attributes",
+            "uiLabel": "Incorporation Timeline: Include all",
+            "referencedColumns": [
+                {
+                    "dataset": "centers",
+                    "column": "center_inc_year"
+                }
+            ],
+            "status": "active"
+        },
+        {
+            "filterKey": "centerEmployeesRangeValues",
+            "uiSection": "Center Attributes",
+            "uiLabel": "Centre Headcount",
+            "referencedColumns": [
+                {
+                    "dataset": "centers",
+                    "column": "center_employees_range"
+                }
+            ],
+            "status": "active"
+        },
+        {
+            "filterKey": "centerStateValues",
+            "uiSection": "Center Attributes",
+            "uiLabel": "State",
+            "referencedColumns": [
+                {
+                    "dataset": "centers",
+                    "column": "center_state"
+                }
+            ],
+            "status": "active",
+            "note": "Behind Show More"
+        },
+        {
+            "filterKey": "centerFocusValues",
+            "uiSection": "Center Attributes",
+            "uiLabel": "Centre Focus",
+            "referencedColumns": [
+                {
+                    "dataset": "centers",
+                    "column": "center_focus"
+                }
+            ],
+            "status": "active",
+            "note": "Behind Show More"
         },
         {
             "filterKey": "techSoftwareInUseKeywords",
@@ -308,48 +385,26 @@
                     "column": "cn_unique_key"
                 }
             ],
-            "status": "active"
+            "status": "active",
+            "note": "Behind Show More"
         },
         {
-            "filterKey": "prospectDepartmentValues",
-            "uiSection": "Prospect Attributes",
-            "uiLabel": "Departments",
+            "filterKey": "centerCountryValues",
+            "uiSection": "Center Attributes",
+            "uiLabel": "Country",
             "referencedColumns": [
                 {
-                    "dataset": "prospects",
-                    "column": "prospect_department"
+                    "dataset": "centers",
+                    "column": "center_country"
                 }
             ],
-            "status": "active"
-        },
-        {
-            "filterKey": "prospectLevelValues",
-            "uiSection": "Prospect Attributes",
-            "uiLabel": "Levels",
-            "referencedColumns": [
-                {
-                    "dataset": "prospects",
-                    "column": "prospect_level"
-                }
-            ],
-            "status": "active"
-        },
-        {
-            "filterKey": "prospectCityValues",
-            "uiSection": "Prospect Attributes",
-            "uiLabel": "Cities",
-            "referencedColumns": [
-                {
-                    "dataset": "prospects",
-                    "column": "prospect_city"
-                }
-            ],
-            "status": "active"
+            "status": "disabled",
+            "note": "enabled: false in lib/config/filters.ts"
         },
         {
             "filterKey": "prospectTitleKeywords",
             "uiSection": "Prospect Attributes",
-            "uiLabel": "Title Keywords",
+            "uiLabel": "Job Title",
             "referencedColumns": [
                 {
                     "dataset": "prospects",
@@ -359,28 +414,65 @@
             "status": "active"
         },
         {
-            "filterKey": "accountDataCoverageValues",
-            "uiSection": "Account Attributes",
-            "uiLabel": "Data Coverage",
+            "filterKey": "prospectHeadTypeValues",
+            "uiSection": "Prospect Attributes",
+            "uiLabel": "Role",
             "referencedColumns": [
                 {
-                    "dataset": "accounts",
-                    "column": "account_data_coverage"
+                    "dataset": "prospects",
+                    "column": "head_type"
                 }
             ],
             "status": "active"
         },
         {
-            "filterKey": "accountSourceValues",
-            "uiSection": "Account Attributes",
-            "uiLabel": "Account Source",
+            "filterKey": "prospectLevelValues",
+            "uiSection": "Prospect Attributes",
+            "uiLabel": "Seniority Level",
             "referencedColumns": [
                 {
-                    "dataset": "accounts",
-                    "column": "account_source"
+                    "dataset": "prospects",
+                    "column": "prospect_level"
                 }
             ],
             "status": "active"
+        },
+        {
+            "filterKey": "prospectDepartmentValues",
+            "uiSection": "Prospect Attributes",
+            "uiLabel": "Department",
+            "referencedColumns": [
+                {
+                    "dataset": "prospects",
+                    "column": "prospect_department"
+                }
+            ],
+            "status": "active"
+        },
+        {
+            "filterKey": "prospectCityValues",
+            "uiSection": "Prospect Attributes",
+            "uiLabel": "City",
+            "referencedColumns": [
+                {
+                    "dataset": "prospects",
+                    "column": "prospect_city"
+                }
+            ],
+            "status": "active"
+        },
+        {
+            "filterKey": "prospectEngagedValues",
+            "uiSection": "Prospect Attributes",
+            "uiLabel": "Engaged",
+            "referencedColumns": [
+                {
+                    "dataset": "prospects",
+                    "column": "prospect_engaged"
+                }
+            ],
+            "status": "active",
+            "note": "Yes/No from the prospects sheet; Yes when the email has a subscribers row"
         }
     ]
 }

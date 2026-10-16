@@ -507,6 +507,28 @@ export function buildProspectsCountQuery(f: Filters, access: FilterAccess = {}):
   return { text: `${withClause} select count(*)::int as total from prospects where ${where}`, values: p.values }
 }
 
+// Centres count + upcoming + headcount in one pass. Headcount leaves out
+// manufacturing, sales & marketing, BPO and distribution centres, which are not
+// GCC work. The NON-GCC view counts every centre instead: those are the only
+// kinds a non-GCC account has, so excluding them always gave 0.
+export function centerMetricsSelect(countAllCenterTypes: boolean): string {
+  const employees = countAllCenterTypes
+    ? "center_employees"
+    : "case when (center_type is null or lower(center_type) not in " +
+      "('manufacturing', 'sales & marketing', 'bpo', 'distribution')) then center_employees else 0 end"
+  return (
+    "count(*)::int as centers, " +
+    "sum(case when center_status = 'Upcoming' then 1 else 0 end)::int as upcoming, " +
+    `coalesce(sum(${employees}), 0)::int as headcount`
+  )
+}
+
+/** True when the filters show the NON-GCC view (a name search ignores the view, as in accountPredicate). */
+export function isNonGccView(f: Filters): boolean {
+  const hasNameSearch = f.accountGlobalLegalNameKeywords.length > 0 || f.accountNameValues.length > 0
+  return (f.accountVisibilityMode ?? "gcc") === "nonGcc" && !hasNameSearch
+}
+
 export type AggregateEntity = "accounts" | "centers" | "prospects" | "functions"
 
 export type AggregateBranch = { select: string; where?: string; groupBy?: string }

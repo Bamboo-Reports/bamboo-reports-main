@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo } from "react"
 import { RiCloseLine } from "@remixicon/react"
-import { EnhancedMultiSelect } from "@/components/enhanced-multi-select"
+import { EnhancedMultiSelect } from "@/components/filters/enhanced-multi-select"
 import { useAccountLists } from "@/contexts/account-lists-context"
 import type { AccountList } from "@/lib/accounts/account-lists"
 import type { FilterValue } from "@/lib/types"
