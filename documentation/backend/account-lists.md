@@ -12,8 +12,8 @@ Supabase table `account_lists` (migration: `sql/account-lists-migration.sql`), o
 | `name` | Shown in the sidebar picker and the manage dialog. |
 | `accounts` | JSON array of exact `account_global_legal_name` values. |
 | `account_count` | Denormalized length of `accounts`. |
-| `unmatched` | Uploaded names that were not mapped, kept for reference. |
-| `source_file` | Original file name, if uploaded from a file. |
+| `unmatched` | Uploaded names that were not mapped, kept for reference (not shown in the UI). |
+| `source_file` | Original file name, if uploaded from a file (not shown in the UI). |
 
 The warehouse is not touched. Lists live next to saved filters in the Supabase user-data store.
 
@@ -36,7 +36,9 @@ Expansion happens whenever the sidebar selection changes (`withAccountLists`) an
 ## UI
 
 - Sidebar, account section: "Account List" picker (`components/filters/account-list-picker.tsx`), rendered with the shared `EnhancedMultiSelect` (chips, include/exclude, search) and showing the account count.
-- Saved filters panel: the upload icon button (next to Save) opens "Account Lists" (`components/filters/account-lists-dialog.tsx`) to upload, include (the "+" button adds the list to the Account List filter in include mode), rename, update from a file, share, or delete. Lists shared with the caller appear in a separate "Shared with me" section.
+- Saved filters panel: the round upload icon button next to Save (tooltip "Upload Accounts") opens "Account Lists" (`components/filters/account-lists-dialog.tsx`) to upload, include, rename, update from a file, share, or delete. Lists shared with the caller appear in a separate "Shared with me" section.
+- Account Lists manager rows: the list name, then "20 Accounts • 12 Oct 2026" (account count and last update in the app's day-month-year format; shared lists add the owner's email as a third item). Row actions: "+" (tooltip "Include") adds the list to the Account List filter in include mode and closes the dialog; owners also get share, rename, update from a file and delete. The header button reads "Upload". There is no expand panel: the `unmatched` names and `source_file` are stored on the row but not shown in the manager.
+- Upload dialog limits: CSV, TSV, TXT or XLSX only (legacy `.xls` is rejected with a "save as .xlsx or CSV" message) and at most 500 names per upload. Larger lists show an error asking the user to split the file, and Match stays disabled.
 - Saved filter cards and the summary PDF show the list as a count ("2 lists, 340 accounts") rather than every name.
 
 ## Provider

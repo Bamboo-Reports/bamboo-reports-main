@@ -113,23 +113,23 @@ alter table public.saved_filters enable row level security;
 -- SELECT: Users see only their own filters
 create policy "Saved filters are private"
   on public.saved_filters for select
-  using (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id);
 
 -- INSERT: Users can create filters only for themselves
 create policy "Users can insert their saved filters"
   on public.saved_filters for insert
-  with check (auth.uid() = user_id);
+  with check ((select auth.uid()) = user_id);
 
 -- UPDATE: Users can update only their own filters
 create policy "Users can update their saved filters"
   on public.saved_filters for update
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
 -- DELETE: Users can delete only their own filters
 create policy "Users can delete their saved filters"
   on public.saved_filters for delete
-  using (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id);
 ```
 
 ---
@@ -212,12 +212,12 @@ CREATE TABLE IF NOT EXISTS public.filter_shares (
 -- Owners can manage their shares
 CREATE POLICY "Owners can manage their shares"
   ON public.filter_shares FOR ALL
-  USING (auth.uid() = owner_user_id);
+  USING ((select auth.uid()) = owner_user_id);
 
 -- Recipients can view shares directed at them
 CREATE POLICY "Recipients can view their shares"
   ON public.filter_shares FOR SELECT
-  USING (auth.uid() = shared_with_user_id);
+  USING ((select auth.uid()) = shared_with_user_id);
 
 -- Recipients can read the shared filter data from saved_filters
 CREATE POLICY "Users can view filters shared with them"
@@ -226,7 +226,7 @@ CREATE POLICY "Users can view filters shared with them"
     EXISTS (
       SELECT 1 FROM public.filter_shares
       WHERE filter_shares.filter_id = saved_filters.id
-        AND filter_shares.shared_with_user_id = auth.uid()
+        AND filter_shares.shared_with_user_id = (select auth.uid())
     )
   );
 ```

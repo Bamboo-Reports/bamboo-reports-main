@@ -109,7 +109,7 @@ Key components:
 | Context | Responsibility |
 |---------|---------------|
 | `account-lists-context.tsx` | Owner-scoped and shared account lists (Supabase `account_lists`, `account_list_shares`), one provider so the sidebar picker, upload dialog and manage dialog stay in sync |
-| `notification-context.tsx` | Notification state shared between the header bell and the recently-updated dots |
+| `notification-context.tsx` | Notification state shared between the header bell and the recently-updated dots. Polls every 60s; each request gets a fresh access token from `getSession()` so a background tab that missed Supabase's auto-refresh never sends an expired one |
 
 ### 2.5 `lib/` (Utilities & Configuration)
 
@@ -193,7 +193,10 @@ const rows = await queryWarehouse(buildEntityAggregateQuery("accounts", filters,
 ### 4.2 Supabase PostgreSQL (User Data)
 
 -   **Tables:** `public.profiles`, `public.saved_filters`, `public.filter_shares`, `public.account_lists`, `public.account_list_shares`, `public.user_exports` (export audit log).
--   **Security:** Row-Level Security (RLS) policies ensure users can only access their own data.
+-   **Server-only tables:** `public.rate_limit_counters` (rate-limit fallback when Redis is not configured) and `public.user_exports` have RLS on with no policies; only the service role touches them.
+-   **Security:** Row-Level Security (RLS) policies ensure users can only access their own data. Policies use `(select auth.uid())` so the user check runs once per query.
+-   **Scheduled jobs:** Supabase Cron (`pg_cron`) runs `prune-rate-limit-counters` daily at 03:17 UTC to delete expired rate-limit windows (see [Caching and Rate Limiting](backend/caching-and-rate-limiting.md)).
+-   **Migrations:** SQL lives in `documentation/backend/sql/`; the latest are `drop-user-favorites-migration.sql`, `supabase-cleanup-2026-10-migration.sql` and `rate-limits-prune-cron-migration.sql`.
 -   **Client:** Singleton Supabase browser client in `lib/supabase/client.ts`; service-role client in `lib/supabase/server.ts` for trusted Storage/export operations.
 -   **Boundary:** Supabase data is not accessed through Prisma in this codebase. Keeping Supabase on its own APIs preserves Auth, RLS, and Storage semantics.
 
@@ -253,7 +256,7 @@ app/layout.tsx (Root Layout)
         ├── LoadingState (ghost of the shell, before the first payload)
         ├── ErrorState (when the summary request fails)
         └── DashboardContent
-            ├── Header
+            ├── Header (DEV badge under `npm run dev`, PREVIEW on Vercel previews, via `getDevEnvironment()`)
             │   └── NotificationDropdown, profile menu (theme switcher, exports, history, tour)
             ├── GlobalSearch
             ├── FiltersSidebar

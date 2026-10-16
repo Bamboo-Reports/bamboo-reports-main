@@ -297,7 +297,8 @@ bamboo-reports-nextjs/
 │   │   ├── security-249-progress.md        # Living log of the #249 data-exposure work
 │   │   ├── data-exposure-audit.md          # Original data-exposure audit (#249 findings)
 │   │   ├── security-verification-report.md # Supabase hardening verification (2026-06-29)
-│   │   └── 2026-07-29-perf-and-data-hygiene.md  # Session log: cache tuning, Brandfetch, data hygiene
+│   │   ├── 2026-07-29-perf-and-data-hygiene.md  # Session log: cache tuning, Brandfetch, data hygiene
+│   │   └── 2026-10-16-repo-cleanup-and-db-review.md  # Session log: repo cleanup, docs refresh, UI tweaks, Supabase review
 │   │
 │   ├── backend/                    # Data layer, auth, and server-side feature docs
 │   │   ├── sql/                    # Supabase migration scripts

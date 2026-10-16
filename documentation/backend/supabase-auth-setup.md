@@ -66,7 +66,7 @@ create policy "Profiles are viewable by owner"
 on public.profiles
 for select
 to authenticated
-using (auth.uid() = user_id);
+using ((select auth.uid()) = user_id);
 
 -- 3. Insert Policy: Users can create their own profile
 -- (Usually triggered by a signup flow or a trigger on auth.users).
@@ -75,15 +75,15 @@ create policy "Profiles are insertable by owner"
 on public.profiles
 for insert
 to authenticated
-with check (auth.uid() = user_id and role = 'viewer');
+with check ((select auth.uid()) = user_id and role = 'viewer');
 
 -- 4. Update Policy: Users can update their own profile
 create policy "Profiles are updatable by owner"
 on public.profiles
 for update
 to authenticated
-using (auth.uid() = user_id)
-with check (auth.uid() = user_id);
+using ((select auth.uid()) = user_id)
+with check ((select auth.uid()) = user_id);
 
 -- 5. Column Privileges: authenticated users can manage profile details,
 -- but cannot set or update role from the browser.
@@ -150,15 +150,15 @@ create policy "Profiles are insertable by owner"
 on public.profiles
 for insert
 to authenticated
-with check (auth.uid() = user_id and role = 'viewer');
+with check ((select auth.uid()) = user_id and role = 'viewer');
 
 drop policy if exists "Profiles are updatable by owner" on public.profiles;
 create policy "Profiles are updatable by owner"
 on public.profiles
 for update
 to authenticated
-using (auth.uid() = user_id)
-with check (auth.uid() = user_id);
+using ((select auth.uid()) = user_id)
+with check ((select auth.uid()) = user_id);
 
 revoke insert, update on public.profiles from authenticated;
 grant insert (user_id, first_name, last_name, email, phone) on public.profiles to authenticated;
