@@ -35,14 +35,14 @@ vi.mock("@/lib/analytics/client", () => ({ captureEvent: vi.fn() }))
 import { SavedFiltersManager } from "@/components/filters/saved-filters-manager"
 
 // Mirrors useDashboardFilters: loading replaces the filters with a new object.
-function Harness() {
+function Harness({ active = 1 }: { active?: number }) {
   const [filters, setFilters] = useState<Filters>(createDefaultFilters())
   return (
     <>
       <SavedFiltersManager
         currentFilters={filters}
         onLoadFilters={(next) => setFilters({ ...next })}
-        totalActiveFilters={1}
+        totalActiveFilters={active}
       />
       <button type="button" onClick={() => setFilters((f) => ({ ...f, accountHqCountryValues: [] }))}>
         edit filters
@@ -53,7 +53,7 @@ function Harness() {
 
 const trigger = () => screen.getByRole("button", { name: /saved filters|q4 bfsi gccs/i })
 
-describe("saved filters trigger label", () => {
+describe("saved filters menu", () => {
   beforeAll(() => {
     globalThis.ResizeObserver ??= class {
       observe() {}
@@ -74,5 +74,26 @@ describe("saved filters trigger label", () => {
 
     await act(async () => fireEvent.click(screen.getByText("edit filters")))
     expect(trigger().textContent).toContain("Saved Filters")
+  })
+
+  it("loads a saved filter with the keyboard and exposes Share as its own item", async () => {
+    render(<Harness />)
+    fireEvent.keyDown(trigger(), { key: "Enter" })
+    const item = await screen.findByTitle("Q4 BFSI GCCs")
+    expect(item.getAttribute("role")).toBe("menuitem")
+    expect(screen.getByRole("menuitem", { name: "Share saved filter Q4 BFSI GCCs" })).toBeTruthy()
+
+    await act(async () => fireEvent.keyDown(item, { key: "Enter" }))
+    expect(trigger().textContent).toContain("Q4 BFSI GCCs")
+  })
+
+  it("keeps Save focusable and explains why it is unavailable with no filters", () => {
+    render(<Harness active={0} />)
+    const save = screen.getByRole("button", { name: "Save current filters (apply a filter first)" })
+    expect(save.getAttribute("aria-disabled")).toBe("true")
+    expect(save.hasAttribute("disabled")).toBe(false)
+    expect(save.getAttribute("title")).toBe("Apply a filter to save")
+    fireEvent.click(save)
+    expect(screen.queryByRole("dialog")).toBeNull()
   })
 })

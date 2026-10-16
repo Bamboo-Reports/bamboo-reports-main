@@ -324,29 +324,25 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
               </div>
             ) : (
               myFilters.slice(0, 5).map((filter) => (
-                <DropdownMenuItem key={filter.id} className="flex items-center p-0 group">
-                  <button
-                    type="button"
-                    className="flex-1 px-2 py-2 hover:bg-accent/40 rounded-sm text-left transition-colors duration-150 truncate"
-                    onClick={() => handleLoadFilter(filter)}
+                // Load and Share are sibling menu items (not buttons nested in
+                // one item) so Enter loads the filter and arrow keys reach Share.
+                <div key={filter.id} className="flex items-center gap-1">
+                  <DropdownMenuItem
+                    className="min-w-0 flex-1 py-2"
+                    onSelect={() => handleLoadFilter(filter)}
                     title={filter.name}
                   >
-                    <span className="font-medium text-sm">{filter.name}</span>
-                  </button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 mr-2 shrink-0 text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors duration-150"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleOpenShareDialog(filter)
-                    }}
+                    <span className="truncate font-medium text-sm">{filter.name}</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="h-8 w-8 shrink-0 justify-center p-0 text-muted-foreground focus:text-foreground"
+                    onSelect={() => handleOpenShareDialog(filter)}
                     aria-label={`Share saved filter ${filter.name}`}
+                    title="Share"
                   >
-                    <RiShareLine className="h-3.5 w-3.5" />
-                  </Button>
-                </DropdownMenuItem>
+                    <RiShareLine className="!size-3.5" />
+                  </DropdownMenuItem>
+                </div>
               ))
             )}
 
@@ -360,15 +356,13 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
                 </div>
                 <DropdownMenuSeparator />
                 {sharedWithMeFilters.slice(0, 5).map((filter) => (
-                  <DropdownMenuItem key={filter.id} className="flex items-center p-0 group">
-                    <button
-                      type="button"
-                      className="flex-1 px-2 py-2 hover:bg-accent/40 rounded-sm text-left transition-colors duration-150 truncate"
-                      onClick={() => handleLoadFilter(filter)}
-                      title={filter.name}
-                    >
-                      <span className="font-medium text-sm">{filter.name}</span>
-                    </button>
+                  <DropdownMenuItem
+                    key={filter.id}
+                    className="py-2"
+                    onSelect={() => handleLoadFilter(filter)}
+                    title={filter.name}
+                  >
+                    <span className="truncate font-medium text-sm">{filter.name}</span>
                   </DropdownMenuItem>
                 ))}
               </>
@@ -377,18 +371,14 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
             {(myFilters.length > 0 || sharedWithMeFilters.length > 0) && (
               <>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="p-0">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-start text-xs h-8 font-normal text-muted-foreground hover:text-foreground"
-                    onClick={() => setManageDialogOpen(true)}
-                  >
-                    <RiSettings4Line className="h-3.5 w-3.5 mr-2" />
-                    {myFilters.length > 5 || sharedWithMeFilters.length > 5
-                      ? `Manage all filters (${myFilters.length + sharedWithMeFilters.length})...`
-                      : "Manage all filters..."}
-                  </Button>
+                <DropdownMenuItem
+                  className="text-xs text-muted-foreground focus:text-foreground"
+                  onSelect={() => setManageDialogOpen(true)}
+                >
+                  <RiSettings4Line className="!size-3.5" />
+                  {myFilters.length > 5 || sharedWithMeFilters.length > 5
+                    ? `Manage all filters (${myFilters.length + sharedWithMeFilters.length})…`
+                    : "Manage all filters…"}
                 </DropdownMenuItem>
               </>
             )}
@@ -397,14 +387,19 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
 
         <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
           <DialogTrigger asChild>
+            {/* aria-disabled rather than disabled, so the button stays focusable
+                and its tooltip still explains why it can't be used yet. */}
             <Button
               type="button"
               variant="outline"
               size="icon"
-              disabled={totalActiveFilters === 0}
-              className="h-9 w-9 rounded-full shrink-0"
-              title="Save current filters"
-              aria-label="Save current filters"
+              aria-disabled={totalActiveFilters === 0}
+              onClick={(e) => {
+                if (totalActiveFilters === 0) e.preventDefault()
+              }}
+              className="h-9 w-9 rounded-full shrink-0 aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
+              title={totalActiveFilters === 0 ? "Apply a filter to save" : "Save current filters"}
+              aria-label={totalActiveFilters === 0 ? "Save current filters (apply a filter first)" : "Save current filters"}
             >
               <RiSaveLine className="h-4 w-4" />
             </Button>
