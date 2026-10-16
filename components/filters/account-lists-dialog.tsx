@@ -127,6 +127,7 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
 
   const renderList = (list: AccountList, own: boolean) => {
                 const renaming = renamingId === list.id
+                const updated = list.updated_at ? formatDate(list.updated_at) : ""
                 return (
                   <li key={list.id} className="px-3 py-2.5">
                     <div className="flex items-start gap-3">
@@ -160,10 +161,10 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
                           <span className="shrink-0">
                             {list.accounts.length} Account{list.accounts.length === 1 ? "" : "s"}
                           </span>
-                          {list.updated_at && formatDate(list.updated_at) && (
+                          {updated && (
                             <>
                               <span aria-hidden="true" className="mx-1.5 shrink-0">•</span>
-                              <span className="shrink-0">{formatDate(list.updated_at)}</span>
+                              <span className="shrink-0">{updated}</span>
                             </>
                           )}
                           {!own && list.owner_email && (
