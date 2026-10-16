@@ -131,7 +131,9 @@ export function useProductTour({ userId, dataLoaded, hasMapView, isSidebarCollap
   }, [isRunning, driveTour])
 
   useEffect(() => {
-    if (!isRunning || !driverRef.current) {
+    // A tour that is animating out stays closed: its exit timer would
+    // otherwise finish against the re-driven tour and leave it on screen.
+    if (!isRunning || !driverRef.current || isExitingRef.current) {
       return
     }
 
