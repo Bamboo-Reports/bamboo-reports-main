@@ -3,20 +3,14 @@ import { newDb } from "pg-mem"
 import type { Account, Center, Function as FnRow, Prospect, Tech, Filters } from "@/lib/types"
 import { createDefaultFilters } from "@/lib/dashboard/defaults"
 import { getFilteredData } from "@/lib/dashboard/filtering"
-import { buildEntityAggregateQuery } from "@/lib/dashboard/filtering-sql"
+import { buildEntityAggregateQuery, centerMetricsSelect, isNonGccView } from "@/lib/dashboard/filtering-sql"
 
-// JS reference for the headcount exclusion in CENTER_METRICS below.
-// Centers with no center_type still count; only these types are dropped.
+// JS reference for the headcount exclusion in centerMetricsSelect. Centers with
+// no center_type still count; only these types are dropped, except in the
+// NON-GCC view, which counts every centre.
 const HEADCOUNT_EXCLUDED = new Set(["manufacturing", "sales & marketing", "bpo", "distribution"])
 const countsTowardHeadcount = (centerType: string | null | undefined) =>
   centerType == null || !HEADCOUNT_EXCLUDED.has(centerType.trim().toLowerCase())
-
-// Same SQL the summary route uses for center count/upcoming/headcount.
-const CENTER_METRICS =
-  "count(*)::int as centers, " +
-  "sum(case when center_status = 'Upcoming' then 1 else 0 end)::int as upcoming, " +
-  "coalesce(sum(case when (center_type is null or lower(center_type) not in " +
-  "('manufacturing', 'sales & marketing', 'bpo', 'distribution')) then center_employees else 0 end), 0)::int as headcount"
 
 const accounts = [
   a("Acme", { country: "United States", visibility: "include" }),
@@ -33,6 +27,7 @@ const centers = [
   c("c4", "Delta", { type: "Sales & Marketing", status: "Active", emp: 300 }),
   c("c5", "Delta", { type: "GBS", status: "Upcoming", emp: 250 }),
   c("c6", "Gamma", { type: "IT", status: "Active", emp: 700 }),
+  c("c7", "Gamma", { type: "Manufacturing", status: "Active", emp: 400 }),
 ] as unknown as Center[]
 
 const functions: FnRow[] = []
@@ -85,12 +80,15 @@ async function assertMetrics(name: string, overrides: Partial<Filters>) {
     accounts: e.filteredAccounts.length,
     centers: e.filteredCenters.length,
     upcoming: e.filteredCenters.filter((x) => x.center_status === "Upcoming").length,
-    headcount: e.filteredCenters.reduce((s, x) => s + (countsTowardHeadcount(x.center_type) ? (x.center_employees ?? 0) : 0), 0),
+    headcount: e.filteredCenters.reduce(
+      (s, x) => s + (isNonGccView(filters) || countsTowardHeadcount(x.center_type) ? (x.center_employees ?? 0) : 0),
+      0
+    ),
     prospects: e.filteredProspects.length,
   }
   const o = { materialized: false } as const
   const accF = await q(buildEntityAggregateQuery("accounts", filters, {}, "count(*)::int as total", o))
-  const cenF = await q(buildEntityAggregateQuery("centers", filters, {}, CENTER_METRICS, o))
+  const cenF = await q(buildEntityAggregateQuery("centers", filters, {}, centerMetricsSelect(isNonGccView(filters)), o))
   const proF = await q(buildEntityAggregateQuery("prospects", filters, {}, "count(*)::int as total", o))
   const sqlMetrics = {
     accounts: Number(accF[0]?.total ?? 0),
@@ -100,6 +98,7 @@ async function assertMetrics(name: string, overrides: Partial<Filters>) {
     prospects: Number(proF[0]?.total ?? 0),
   }
   expect(sqlMetrics, name).toEqual(engine)
+  return sqlMetrics
 }
 
 describe("summary aggregate parity (buildEntityAggregateQuery vs engine)", () => {
@@ -115,4 +114,17 @@ describe("summary aggregate parity (buildEntityAggregateQuery vs engine)", () =>
       await assertMetrics(name, overrides)
     })
   }
+
+  it("counts every centre type in the NON-GCC view", async () => {
+    // Gamma is the only non-GCC account: its IT (700) and Manufacturing (400) centres.
+    expect((await assertMetrics("nonGcc headcount", { accountVisibilityMode: "nonGcc" })).headcount).toBe(1100)
+    // The GCC view still drops Manufacturing and Sales & Marketing: Acme 500 + Beta 100 + Delta 250.
+    expect((await assertMetrics("gcc headcount", {})).headcount).toBe(850)
+  })
+
+  it("keeps the GCC rule when a name search overrides the view", async () => {
+    const filters = createDefaultFilters({ accountVisibilityMode: "nonGcc", accountNameValues: inc("Gamma") })
+    expect(isNonGccView(filters)).toBe(false)
+    expect((await assertMetrics("nonGcc + name search", { accountVisibilityMode: "nonGcc", accountNameValues: inc("Gamma") })).headcount).toBe(700)
+  })
 })

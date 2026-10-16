@@ -1,6 +1,6 @@
 import "server-only"
 
-import { buildCentersQuery, buildEntityAggregateQuery, buildFacetCountsQuery, type AggregateEntity, type FilterAccess, type SqlQuery } from "@/lib/dashboard/filtering-sql"
+import { buildCentersQuery, buildEntityAggregateQuery, buildFacetCountsQuery, centerMetricsSelect, isNonGccView, type AggregateEntity, type FilterAccess, type SqlQuery } from "@/lib/dashboard/filtering-sql"
 import { queryWarehouse } from "@/lib/db/warehouse"
 import { dashboardCacheTtlMs, getOrCompute } from "@/lib/cache/memory"
 import type { ChartsResponse, FacetsResponse, SummaryResponse } from "@/lib/dashboard/api-client"
@@ -112,14 +112,6 @@ export function computeFacets(filters: Filters, access: FilterAccess, opts: { by
   )
 }
 
-// Centers count + upcoming + headcount in one pass. Headcount excludes
-// manufacturing, sales & marketing, BPO and distribution centers.
-const CENTER_METRICS =
-  "count(*)::int as centers, " +
-  "sum(case when center_status = 'Upcoming' then 1 else 0 end)::int as upcoming, " +
-  "coalesce(sum(case when (center_type is null or lower(center_type) not in " +
-  "('manufacturing', 'sales & marketing', 'bpo', 'distribution')) then center_employees else 0 end), 0)::int as headcount"
-
 const num = (rows: Record<string, unknown>[], key: string) => Number(rows[0]?.[key] ?? 0)
 
 export function computeSummary(filters: Filters, access: FilterAccess, opts: { bypassRead?: boolean } = {}): Promise<SummaryResponse> {
@@ -127,6 +119,9 @@ export function computeSummary(filters: Filters, access: FilterAccess, opts: { b
     `summary:${JSON.stringify(filters)}`,
     dashboardCacheTtlMs(),
     async () => {
+      // The total uses the same headcount rule as the filtered figure, so the
+      // NON-GCC view's "of total" covers every centre type too.
+      const centerMetrics = centerMetricsSelect(isNonGccView(filters))
       // Filtered services = services rows of the surviving centers (services
       // have no filter engine of their own). Used by the export-by-filter dialog.
       const centersSub = buildCentersQuery(filters, access, { columns: "cn_unique_key", orderBy: null })
@@ -138,13 +133,13 @@ export function computeSummary(filters: Filters, access: FilterAccess, opts: { b
       const fullQuery: SqlQuery = {
         text:
           "select (select count(*)::int from accounts) as accounts, (select count(*)::int from prospects) as prospects, " +
-          `(select count(*)::int from services) as services, c.* from (select ${CENTER_METRICS} from centers) c`,
+          `(select count(*)::int from services) as services, c.* from (select ${centerMetrics} from centers) c`,
         values: [],
       }
 
       const [accF, cenF, proF, svcF, all] = await Promise.all([
         queryWarehouse(buildEntityAggregateQuery("accounts", filters, access, "count(*)::int as total")),
-        queryWarehouse(buildEntityAggregateQuery("centers", filters, access, CENTER_METRICS)),
+        queryWarehouse(buildEntityAggregateQuery("centers", filters, access, centerMetrics)),
         queryWarehouse(buildEntityAggregateQuery("prospects", filters, access, "count(*)::int as total")),
         queryWarehouse(servicesFilteredQuery),
         queryWarehouse(fullQuery),
