@@ -3,8 +3,13 @@ import { newDb } from "pg-mem"
 import type { Account, Center, Function as FnRow, Prospect, Tech, Filters } from "@/lib/types"
 import { createDefaultFilters } from "@/lib/dashboard/defaults"
 import { getFilteredData } from "@/lib/dashboard/filtering"
-import { countsTowardHeadcount } from "@/lib/dashboard/headcount"
 import { buildEntityAggregateQuery } from "@/lib/dashboard/filtering-sql"
+
+// JS reference for the headcount exclusion in CENTER_METRICS below.
+// Centers with no center_type still count; only these types are dropped.
+const HEADCOUNT_EXCLUDED = new Set(["manufacturing", "sales & marketing", "bpo", "distribution"])
+const countsTowardHeadcount = (centerType: string | null | undefined) =>
+  centerType == null || !HEADCOUNT_EXCLUDED.has(centerType.trim().toLowerCase())
 
 // Same SQL the summary route uses for center count/upcoming/headcount.
 const CENTER_METRICS =

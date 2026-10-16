@@ -74,23 +74,19 @@ Organized by feature domain:
 | `cards/` | Card component variants |
 | `charts/` | Highcharts donut charts and the Technology treemap (the Recharts revenue area chart lives in `dialogs/`) |
 | `dashboard/` | Summary cards with filtered vs. total counts |
-| `dialogs/` | Tabbed detail views for Accounts, Centers, Prospects |
-| `export/` | Excel export workflow and dialog |
-| `exports/` | "My exports" dialog for re-downloading archived exports |
-| `filters/` | Sidebar filter UI, multi-select controls, keyword inputs |
-| `history/` | Recently viewed history dialog |
-| `layout/` | Header and Footer components |
+| `dialogs/` | Tabbed detail views for Accounts, Centers, Prospects, plus the History (recently viewed) and Favorites dialogs |
+| `exports/` | Excel export dialog and the "My exports" dialog for re-downloading archived exports |
+| `filters/` | Sidebar filter UI, multi-select controls, keyword inputs, saved filters manager |
+| `layout/` | Header, global search with alias-aware account matching, notification bell dropdown |
 | `maps/` | MapLibre cluster map and state choropleth map |
-| `notifications/` | Notification bell dropdown |
-| `search/` | Global search with alias-aware account matching |
-| `states/` | Full-page loading skeleton (`LoadingState`), dashboard load error (`ErrorState`), in-place empty states |
+| `states/` | Full-page loading skeleton (`LoadingState`), dashboard load error (`ErrorState`), in-place empty states, maintenance screen |
 | `tables/` | Data grid row components (AccountRow, CenterRow, etc.) |
 | `tabs/` | Tab views (Accounts, Centers, Prospects, Services) |
 | `ui/` | Shared design system primitives (shadcn/ui) plus skeleton primitives (`skeleton.tsx`, `chart-wave-skeleton.tsx`, `data-skeletons.tsx`) |
 
 Key components:
 -   **`filters/filters-sidebar.tsx`**: Composes filter sections and saved-filter controls; state lives in hooks at the page level.
--   **`saved-filters-manager.tsx`**: Encapsulates all Supabase interaction for saving/loading user filter preferences.
+-   **`filters/saved-filters-manager.tsx`**: Encapsulates all Supabase interaction for saving/loading user filter preferences.
 -   **`maps/centers-choropleth-map.tsx`**: State-level choropleth with disputed boundary alias handling.
 -   **`brand/brand-page.tsx`**: One frame for the auth, load error, 404, global error and maintenance screens, so they share the dashboard's gradient and brand lockup. See [Standalone Screens](frontend/standalone-screens.md).
 -   **`states/loading-state.tsx`**: A ghost of the dashboard shell (header, rail, five summary cards, chart card) shown before the first payload, so data fills into the same structure instead of swapping screens.
@@ -211,7 +207,7 @@ Two columns on `accounts` control whether an account is included by default in d
 
 The `public.alias` table stores alternate names for each account (short legal name, brand name, abbreviation, flagship products, "currently known as"), linked to `accounts` by a foreign key on `account_global_legal_name` with `ON UPDATE`/`ON DELETE CASCADE`.
 
-Alias rows power alias-aware account search: the global search (`components/search/global-search.tsx`) and the account filter autocomplete (`components/filters/account-autocomplete.tsx`) match a query against both account names and alias values, so searching for an alternate name (for example "HMH" or "HackerRank") resolves to the underlying account. Matches found through an alias surface a "Known as: <alias>" hint so the result is not confusing. Matching logic lives in `lib/search/alias-utils.ts` and `lib/search/index.ts`; alias matches are served by `GET /api/accounts/autocomplete` and `GET /api/search` (`lib/search/search-sql.ts`). The migration is `documentation/backend/sql/alias-table-migration.sql`.
+Alias rows power alias-aware account search: the global search (`components/layout/global-search.tsx`) and the account filter autocomplete (`components/filters/account-autocomplete.tsx`) match a query against both account names and alias values, so searching for an alternate name (for example "HMH" or "HackerRank") resolves to the underlying account. Matches found through an alias surface a "Known as: <alias>" hint so the result is not confusing. Matching logic lives in `lib/search/alias-utils.ts` and `lib/search/index.ts`; alias matches are served by `GET /api/accounts/autocomplete` and `GET /api/search` (`lib/search/search-sql.ts`). The migration is `documentation/backend/sql/alias-table-migration.sql`.
 
 ---
 

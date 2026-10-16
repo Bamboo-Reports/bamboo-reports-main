@@ -2,7 +2,7 @@
 
 This guide documents the implementation of the "Saved Filters" feature, which allows users to persist their complex filter configurations. It uses a dedicated table in Supabase with a `JSONB` column to store the flexible filter state.
 
-> **Context:** Used by `components/saved-filters-manager.tsx` and `app/actions.ts`.
+> **Context:** Used by `components/filters/saved-filters-manager.tsx` and `app/actions.ts`.
 
 ---
 

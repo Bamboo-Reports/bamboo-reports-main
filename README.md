@@ -216,20 +216,16 @@ bamboo-reports-nextjs/
 │   ├── cards/                      # Card component variants
 │   ├── charts/                     # Recharts + Highcharts visualizations
 │   ├── dashboard/                  # Summary cards and hero stats
-│   ├── dialogs/                    # Detail views (Account, Center, Prospect)
-│   ├── export/                     # Excel export workflow
-│   ├── exports/                    # My exports dialog (audit log re-download)
-│   ├── filters/                    # Sidebar filter UI and controls
-│   ├── history/                    # Recently viewed history dialog
-│   ├── layout/                     # Header and Footer
+│   ├── dialogs/                    # Detail views (Account, Center, Prospect), History and Favorites dialogs
+│   ├── exports/                    # Excel export dialog and My exports dialog (audit log re-download)
+│   ├── filters/                    # Sidebar filter UI, multi-select, saved filters manager
+│   ├── layout/                     # Header, global search, notification bell
 │   ├── maps/                       # MapLibre cluster + choropleth maps
-│   ├── notifications/              # Notification bell dropdown
-│   ├── search/                     # Global search with alias-aware matching
-│   ├── states/                     # Full-page loading skeleton, load error, empty states
+│   ├── states/                     # Full-page loading skeleton, load error, empty states, maintenance screen
 │   ├── tables/                     # Data grid row components
 │   ├── tabs/                       # Tab views (Accounts, Centers, etc.)
 │   ├── ui/                         # Shared design system (shadcn/ui) + skeleton primitives (data-skeletons.tsx)
-│   └── maintenance-page.tsx        # Maintenance mode screen (NEXT_PUBLIC_MAINTENANCE_MODE)
+│   └── theme-provider.tsx          # next-themes provider
 │
 ├── hooks/                          # Custom React Hooks
 │   ├── use-auth-guard.ts           # Authentication guard
@@ -285,8 +281,12 @@ bamboo-reports-nextjs/
 │   ├── developer-workflow.md       # Developer guide and coding standards (whole app)
 │   ├── testing-guide.md            # Vitest setup, mocking patterns, how to add tests (whole app)
 │   ├── scripts-and-tooling.md      # Standalone dev scripts (benchmark, work summary)
-│   ├── security-249-progress.md    # Living log of the #249 data-exposure work
-│   ├── 2026-07-29-perf-and-data-hygiene.md  # Session log: cache tuning, Brandfetch, data hygiene
+│   │
+│   ├── reports/                    # Audits, progress logs and dated session write-ups
+│   │   ├── security-249-progress.md        # Living log of the #249 data-exposure work
+│   │   ├── data-exposure-audit.md          # Original data-exposure audit (#249 findings)
+│   │   ├── security-verification-report.md # Supabase hardening verification (2026-06-29)
+│   │   └── 2026-07-29-perf-and-data-hygiene.md  # Session log: cache tuning, Brandfetch, data hygiene
 │   │
 │   ├── backend/                    # Data layer, auth, and server-side feature docs
 │   │   ├── sql/                    # Supabase migration scripts

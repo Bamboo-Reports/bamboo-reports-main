@@ -554,7 +554,7 @@ Renders a state-level heatmap overlay showing center density per administrative 
 
 ## 8. Export (Excel)
 
-**Source file:** `components/export/export-dialog.tsx`, `lib/utils/export-helpers.ts`
+**Source file:** `components/exports/export-dialog.tsx`, `lib/utils/export-helpers.ts`
 
 The Excel export generates a `.xlsx` file with multiple sheets. Each sheet corresponds to a filtered entity type.
 

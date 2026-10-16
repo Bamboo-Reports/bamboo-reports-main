@@ -23,7 +23,7 @@ The logo inside the lockup is `components/brand/brand-mark.tsx`, an inline copy 
 | Dashboard load error | `components/states/error-state.tsx` | Rendered by `app/page.tsx` when the summary request fails. Shows the raw server message in an alert for support, with Retry and Sign in again. |
 | 404 | `app/not-found.tsx` | Server component. Primary button back to `/`. |
 | Global error boundary | `app/global-error.tsx` | Replaces the root layout, so it imports `globals.css` itself and renders in the light theme (the theme provider is gone). Shows `error.digest` as a support reference. |
-| Maintenance | `components/maintenance-page.tsx` | Rendered by `app/layout.tsx` when `NEXT_PUBLIC_MAINTENANCE_MODE=true`. |
+| Maintenance | `components/states/maintenance-page.tsx` | Rendered by `app/layout.tsx` when `NEXT_PUBLIC_MAINTENANCE_MODE=true`. |
 
 Design rules these screens follow, so new ones stay consistent:
 
@@ -87,6 +87,6 @@ When adding a new loading surface:
 | `components/auth/auth-shell.tsx` | Auth page card inside the brand frame |
 | `components/states/loading-state.tsx` | Full-page dashboard skeleton |
 | `components/states/error-state.tsx` | Full-page dashboard load error |
-| `components/maintenance-page.tsx` | Maintenance mode screen |
+| `components/states/maintenance-page.tsx` | Maintenance mode screen |
 | `components/ui/data-skeletons.tsx` | Table, grid and map skeleton primitives |
 | `components/ui/skeleton.tsx`, `components/ui/chart-wave-skeleton.tsx` | Base skeleton primitives |

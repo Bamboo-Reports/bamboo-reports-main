@@ -16,7 +16,7 @@ Built on `driver.js` (see [Tech Stack](../tech-stack.md)), which handles the act
 |------|-----------------|
 | `lib/tour/steps.ts` | `getDashboardTourSteps({ hasMapView, isSidebarCollapsed })` — returns the ordered `driver.js` step definitions (target selector, title, description) for the current layout |
 | `lib/tour/constants.ts` | `TOUR_STORAGE_KEY`, `TOUR_VERSION`, `TOUR_AUTO_START_DELAY_MS` |
-| `lib/tour/migration.sql` | Adds `tour_completed_at` / `tour_version` columns to `public.profiles` |
+| `documentation/backend/sql/tour-columns-migration.sql` | Adds `tour_completed_at` / `tour_version` columns to `public.profiles` |
 | `hooks/use-tour-persistence.ts` | Reads/writes completion state (localStorage + Supabase) |
 | `hooks/use-product-tour.ts` | Owns the `driver.js` instance lifecycle, auto-start, and analytics |
 
@@ -59,7 +59,7 @@ Fired via `captureEvent` (PostHog) at each lifecycle point: `TOUR_STARTED` (with
 |------|---------|
 | `lib/tour/steps.ts` | Tour step definitions |
 | `lib/tour/constants.ts` | Storage key, version, auto-start delay |
-| `lib/tour/migration.sql` | `profiles.tour_completed_at` / `tour_version` columns |
+| `documentation/backend/sql/tour-columns-migration.sql` | `profiles.tour_completed_at` / `tour_version` columns |
 | `hooks/use-tour-persistence.ts` | Completion read/write (localStorage + Supabase) |
 | `hooks/use-product-tour.ts` | `driver.js` instance lifecycle, auto-start, layout reactivity |
 | `documentation/backend/supabase-auth-setup.md` | `profiles` table base schema |

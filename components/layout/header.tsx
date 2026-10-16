@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { NotificationDropdown } from '@/components/notifications/notification-dropdown'
+import { NotificationDropdown } from '@/components/layout/notification-dropdown'
 import { captureEvent, resetAnalytics } from '@/lib/analytics/client'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { getEnvironmentLabel } from '@/lib/config/environment'

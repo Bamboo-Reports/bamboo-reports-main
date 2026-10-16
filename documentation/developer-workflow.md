@@ -92,7 +92,7 @@ To add a new filter (e.g., "Founded Year") to the sidebar:
     - Add a new filter section using `EnhancedMultiSelect`, `Slider`, or a custom control.
 
 5. **Update Saved Filters (if applicable):**
-    If users should be able to save this filter, ensure the key is included in the filter serialization logic in `components/saved-filters-manager.tsx`.
+    If users should be able to save this filter, ensure the key is included in the filter serialization logic in `components/filters/saved-filters-manager.tsx`.
 
 6. **Update the server-side SQL translation:**
     Server mode translates filters to SQL in `lib/dashboard/filtering-sql.ts`. Every new filter must be implemented there too, and covered by the parity suite (`tests/unit/filtering-sql-parity.test.ts`) so the client and server engines stay equivalent. See [Server-Mode Dashboard](backend/server-dashboard-mode.md).

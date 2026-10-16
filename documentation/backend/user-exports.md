@@ -33,7 +33,7 @@ ExportsDialog ("My exports")
 | `app/api/exports/route.ts` | GET: lists a user's past exports |
 | `app/api/exports/[id]/download/route.ts` | GET: signed-URL redirect for re-download |
 | `lib/exports/request-client.ts` | Client helper — calls `/api/exports/generate` |
-| `components/export/export-dialog.tsx` | "Export" dialog that kicks off the request |
+| `components/exports/export-dialog.tsx` | "Export" dialog that kicks off the request |
 | `components/exports/exports-dialog.tsx` | "My exports" listing dialog |
 | `lib/supabase/server.ts` | Service-role Supabase client (for Storage ops) |
 | `lib/request/client-info.ts` | Extracts IP + UA from Next.js `Request` |

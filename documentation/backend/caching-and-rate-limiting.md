@@ -67,7 +67,7 @@ Search and autocomplete use a fixed 24 h TTL but are disabled entirely when `DAS
 
 ### Why the TTL is 8 days
 
-Warehouse data updates once a week (Friday ETL). The recommended `DASHBOARD_CACHE_TTL_MS=691200000` (8 days = weekly cadence plus one day of slack) keeps hits warm between imports; the ETL purge, not TTL expiry, is the real invalidation. Rationale and the session that set it: [`../2026-07-29-perf-and-data-hygiene.md`](../2026-07-29-perf-and-data-hygiene.md). The code default without the env var is 10 minutes.
+Warehouse data updates once a week (Friday ETL). The recommended `DASHBOARD_CACHE_TTL_MS=691200000` (8 days = weekly cadence plus one day of slack) keeps hits warm between imports; the ETL purge, not TTL expiry, is the real invalidation. Rationale and the session that set it: [`../reports/2026-07-29-perf-and-data-hygiene.md`](../reports/2026-07-29-perf-and-data-hygiene.md). The code default without the env var is 10 minutes.
 
 Latency numbers for compute vs Redis-served requests: [`redis-cache-benchmark.md`](redis-cache-benchmark.md).
 
@@ -158,4 +158,4 @@ Export **generation** (`POST /api/exports/generate`) uses a separate mechanism: 
 | `tests/unit/memory-cache.test.ts`, `tests/unit/redis-cache.test.ts` | Cache behavior tests |
 | `tests/unit/rate-limit.test.ts`, `tests/unit/rate-limits-migration.test.ts` | Rate limit behavior and migration tests |
 | `documentation/backend/redis-cache-benchmark.md` | Compute vs Redis latency benchmark (#249) |
-| `documentation/2026-07-29-perf-and-data-hygiene.md` | Session log: 8-day TTL decision, purge-as-invalidation |
+| `documentation/reports/2026-07-29-perf-and-data-hygiene.md` | Session log: 8-day TTL decision, purge-as-invalidation |

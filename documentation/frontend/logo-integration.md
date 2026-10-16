@@ -6,7 +6,7 @@ configuration, component usage, and troubleshooting.
 
 > **Context:** Used to enhance the visual identity of Accounts and Centers
 > in tables and dialogs. Replaced the earlier Logo.dev integration on
-> 2026-07-29 (see `documentation/2026-07-29-perf-and-data-hygiene.md`).
+> 2026-07-29 (see `documentation/reports/2026-07-29-perf-and-data-hygiene.md`).
 
 ---
 

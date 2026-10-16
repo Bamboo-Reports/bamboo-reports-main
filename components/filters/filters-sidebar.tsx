@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { RiArrowDownSLine, RiArrowLeftSLine, RiArrowRightSLine, RiBriefcaseLine, RiBuildingLine, RiFilterLine, RiGroupLine } from "@remixicon/react"
-import { SavedFiltersManager } from '@/components/saved-filters-manager'
+import { SavedFiltersManager } from '@/components/filters/saved-filters-manager'
 import {
   AccountFiltersSection,
   CenterFiltersSection,

@@ -1,6 +1,6 @@
 # Server-Mode Dashboard
 
-> **Scope:** The server-backed dashboard data path (#249), the only data path since the legacy full-payload route was retired on 2026-09-05: the SQL filter translation, the paginated/aggregated read endpoints, the client fetch layer, and export-by-filter. Background: [security-249-progress.md](../security-249-progress.md) (phased plan and rollout state) and [filtering-sql-parity-report.md](filtering-sql-parity-report.md) (parity verification).
+> **Scope:** The server-backed dashboard data path (#249), the only data path since the legacy full-payload route was retired on 2026-09-05: the SQL filter translation, the paginated/aggregated read endpoints, the client fetch layer, and export-by-filter. Background: [security-249-progress.md](../reports/security-249-progress.md) (phased plan and rollout state) and [filtering-sql-parity-report.md](filtering-sql-parity-report.md) (parity verification).
 
 ## Why it exists
 
@@ -136,7 +136,7 @@ Keyword filters on new columns should stay as raw-column `ILIKE` and get a pg_tr
 
 ## Rollout state
 
-Per [security-249-progress.md](../security-249-progress.md):
+Per [security-249-progress.md](../reports/security-249-progress.md):
 
 - Server mode is fully built and user-verified behind the flag; counts match the parity report. The legacy `/api/dashboard` full-payload path still exists and is what runs whenever the flag is unset.
 - The legacy path was retired on 2026-09-05 (see [No flag any more](#no-flag-any-more)).
@@ -155,7 +155,6 @@ Per [security-249-progress.md](../security-249-progress.md):
 | `lib/dashboard/entity-columns.ts` | Column projections shared by query/search/lookup endpoints |
 | `lib/dashboard/centers-map.ts` | City/state map aggregate SQL |
 | `lib/dashboard/account-related.ts` | Account detail payload assembly |
-| `lib/dashboard/headcount.ts` | Headcount-excluded center types (client twin of the summary SQL) |
 | `lib/db/warehouse.ts` | `queryWarehouse`: Neon HTTP driver, array-param-safe |
 | `lib/dashboard/api-client.ts` | Typed bearer-authed client fetchers |
 | `hooks/use-server-dashboard-data.ts` | Client orchestration: debounce, lazy fetch, prefetch, LRU cache, pending flags |
@@ -170,4 +169,4 @@ Per [security-249-progress.md](../security-249-progress.md):
 | `tests/unit/filtering-sql-parity.test.ts` | pg-mem golden-parity suite (engine vs SQL) |
 | `tests/api/dashboard-summary-route.test.ts` | Example route test (auth, 429, metrics, failure) |
 | `documentation/backend/filtering-sql-parity-report.md` | Real-data parity verification |
-| `documentation/security-249-progress.md` | Phased #249 plan, rollout and retirement state |
+| `documentation/reports/security-249-progress.md` | Phased #249 plan, rollout and retirement state |

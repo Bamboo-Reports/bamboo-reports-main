@@ -64,7 +64,7 @@ Zod schemas used by the auth forms (`app/(auth)/*/page.tsx`, framed by `componen
 
 | Location | Check |
 |----------|-------|
-| `components/export/*` | Export button disabled unless `canExportData(userRole)`. |
+| `components/exports/*` | Export button disabled unless `canExportData(userRole)`. |
 | `app/api/exports/*` route handlers | Re-check role server-side; never trust a client-disabled button as the only guard. |
 | `hooks/use-auth-guard.ts` | Redirects unauthenticated sessions before any protected UI mounts. |
 
