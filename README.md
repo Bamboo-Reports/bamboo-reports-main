@@ -138,53 +138,9 @@ graph TD
 
 ## Tech Stack
 
-For a comprehensive breakdown of every technology used in this project, see the **[Tech Stack Reference](documentation/tech-stack.md)**.
+Next.js 16 (App Router) with React 19 and TypeScript, Tailwind CSS with shadcn/ui on Radix primitives, Highcharts and Recharts, MapLibre GL, Neon PostgreSQL via Prisma for the warehouse, Supabase for auth and user data, Upstash Redis for caching and rate limits, ExcelJS and jsPDF for exports, PostHog and Vercel Analytics, and Vitest for tests.
 
-### Core Framework
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| **Next.js** | 16.2.x | App Router, Server Actions, Route Handlers, SSR |
-| **React** | 19.2.x | Component Library, Hooks |
-| **TypeScript** | 5.x | Strict Type Safety |
-
-### UI and Styling
-| Technology | Purpose |
-|------------|---------|
-| **Tailwind CSS 3.4** | Utility-first styling with custom animations |
-| **shadcn/ui** | Accessible component primitives (Radix UI) |
-| **Remix Icon** (`@remixicon/react`) | Consistent iconography |
-| **next-themes** | Dark/Light mode support |
-| **DM Sans** | Primary typeface (Google Fonts, variable) |
-
-### Data Visualization
-| Technology | Purpose |
-|------------|---------|
-| **Highcharts** | Donut charts for categorical breakdowns and the Technology treemap |
-| **Recharts** | Revenue trend area chart in the Account details dialog |
-| **MapLibre GL + Carto** | Cluster maps and state choropleth |
-
-### Backend and Data
-| Technology | Purpose |
-|------------|---------|
-| **Neon PostgreSQL** | Primary BI data warehouse (serverless, read-only) |
-| **Supabase** | Authentication, user profiles, saved filters |
-| **Yahoo Finance 2** | Stock and financial data integration |
-| **ExcelJS** | Native `.xlsx` report generation |
-| **jsPDF** | Summary PDF report (with `jspdf-autotable`) |
-| **Upstash Redis** | L2 response cache and rate-limit counters (REST API) |
-| **Zod** | Schema validation for forms and inputs |
-
-### Testing
-| Technology | Purpose |
-|------------|---------|
-| **Vitest** | Fast unit and integration testing framework |
-| **React Testing Library** | UI component testing |
-
-### Analytics and Monitoring
-| Technology | Purpose |
-|------------|---------|
-| **PostHog** | Product analytics and event tracking |
-| **Vercel Analytics** | Page performance monitoring |
+Versions, rationale and architecture decisions live in the **[Tech Stack Reference](documentation/tech-stack.md)**, which is the single source for this information.
 
 ---
 
@@ -192,138 +148,20 @@ For a comprehensive breakdown of every technology used in this project, see the 
 
 ```
 bamboo-reports-main/
-├── app/                            # Next.js App Router
-│   ├── (auth)/                     # Auth route group (signin, signup, forgot-password, reset-password)
-│   ├── actions/                    # Modular Server Actions
-│   │   ├── notifications.ts        # Notification logic
-│   │   └── system.ts               # System diagnostics
-│   ├── api/                        # Route Handlers
-│   │   ├── dashboard/              # summary, facets and charts endpoints
-│   │   ├── accounts/               # Paginated account query, autocomplete, list match, detail, related
-│   │   ├── centers/                # Paginated center query, detail, map data
-│   │   ├── prospects/              # Paginated prospect query, detail, campaign engagements
-│   │   ├── search/                 # Server-side global search
-│   │   ├── financials/             # Authed, rate-limited Yahoo Finance proxy
-│   │   └── exports/                # Export generation, listing, and re-download
-│   ├── actions.ts                  # Central server action re-exports
-│   ├── global-error.tsx            # Last-resort error boundary (brand frame, light theme)
-│   ├── layout.tsx                  # Root layout with providers (renders the maintenance page when flagged)
-│   ├── not-found.tsx               # 404 page
-│   ├── page.tsx                    # Main dashboard entry point
-│   └── providers.tsx               # Analytics providers (PostHog)
-│
-├── components/                     # React Components
-│   ├── auth/                       # AuthShell: card frame shared by the (auth) pages
-│   ├── brand/                      # BrandMark (animated logo) and BrandPage (standalone screen frame)
-│   ├── cards/                      # Card component variants
-│   ├── charts/                     # Recharts + Highcharts visualizations
-│   ├── dashboard/                  # Summary cards and hero stats
-│   ├── dialogs/                    # Detail views (Account, Center, Prospect)
-│   ├── export/                     # Excel export workflow
-│   ├── exports/                    # My exports dialog (audit log re-download)
-│   ├── favorites/                  # Favorites dialog
-│   ├── filters/                    # Sidebar filter UI and controls
-│   ├── history/                    # Recently viewed history dialog
-│   ├── layout/                     # Header
-│   ├── maps/                       # MapLibre cluster + choropleth maps
-│   ├── notifications/              # Notification bell dropdown
-│   ├── search/                     # Global search with alias-aware matching
-│   ├── states/                     # Full-page loading skeleton, load error, empty states
-│   ├── tables/                     # Data grid row components
-│   ├── tabs/                       # Tab views (Accounts, Centers, etc.)
-│   ├── ui/                         # Shared design system (shadcn/ui) + skeleton primitives (data-skeletons.tsx)
-│   └── maintenance-page.tsx        # Maintenance mode screen (NEXT_PUBLIC_MAINTENANCE_MODE)
-│
-├── hooks/                          # Custom React Hooks
-│   ├── use-auth-guard.ts           # Authentication guard
-│   ├── use-copy-to-clipboard.ts    # Copy-to-clipboard with reset timeout
-│   ├── use-dashboard-filters.ts    # Complex filter state management
-│   ├── use-favorites.ts            # Favorites CRUD (accounts/centers/prospects)
-│   ├── use-global-search.ts        # Alias-aware global search
-│   ├── use-notifications.ts        # Notification tracking
-│   ├── use-product-tour.ts         # Guided product tour orchestration (driver.js)
-│   ├── use-recent-items.ts         # Recently viewed history tracking
-│   ├── use-row-selection.ts        # Generic row selection state
-│   ├── use-saved-filters.ts        # Saved filter persistence
-│   ├── use-server-dashboard-data.ts  # Server-mode data orchestration (paginated endpoints)
-│   ├── use-table-column-preferences.ts  # Table column visibility prefs
-│   ├── use-table-row-selection.ts  # Table-specific row selection wiring
-│   └── use-tour-persistence.ts     # Tour completion tracking (localStorage + Supabase)
-│
-├── lib/                            # Utilities & Configuration
-│   ├── accounts/                   # Account list parsing, matching and filter helpers
-│   ├── analytics/                  # PostHog client, events, tracking
-│   ├── auth/                       # Role-based access control + server-side token verification
-│   ├── cache/                      # Two-tier response cache (in-memory L1 + Upstash Redis L2)
-│   ├── config/                     # Environment, dashboard access, filters, server mode, notifications
-│   ├── dashboard/                  # Dashboard utility functions
-│   ├── db/                         # Neon PostgreSQL client + retry logic
-│   ├── exports/                    # Export request client + server-side workbook builder
-│   ├── finance/                    # Yahoo Finance lookups (financial-info.ts) and ticker helpers
-│   ├── maps/                       # Carto basemap style and boundary helpers
-│   ├── notifications/              # Notification formatting helpers
-│   ├── rate-limit/                 # Per-user rate limiting (Upstash Redis, Supabase RPC fallback)
-│   ├── reports/                    # Summary PDF report model and jsPDF renderer
-│   ├── request/                    # Request metadata helpers (IP, user-agent)
-│   ├── search/                     # Account search index + alias matching
-│   ├── supabase/                   # Supabase client factory
-│   ├── tour/                       # Guided product tour steps and config
-│   ├── utils/                      # Helpers (chart, export, filter, general)
-│   ├── validators/                 # Zod validation schemas
-│   ├── logger.ts                   # Structured server-side logger
-│   └── types.ts                    # Shared TypeScript interfaces
-│
-├── contexts/                       # React context providers (notification-context.tsx)
-│
-├── etl/                            # Python ETL, one uv project (run with uv run --directory etl ...)
-│   ├── common/                     # Shared: etl/.env loading, Google Sheets auth, terminal UI
-│   ├── importer/                   # Sheets to Postgres import (python -m importer --target dev|prod)
-│   │   ├── tables.py               # TABLE_DEFS, import order, constraints, indexes
-│   │   └── master-schema.json      # Source-of-truth database schema export
-│   ├── sheets/                     # Work on the source Google Sheet before an import
-│   │   ├── rules.py                # Column rules shared by validate and cleanup
-│   │   ├── validate/               # Read-only checks (python -m sheets.validate)
-│   │   └── cleanup/                # Automatic fixes (python -m sheets.cleanup)
-│   ├── import.sh                   # Run the importer (--help for flags; confirms before prod writes)
-│   ├── validate.sh                 # Run sheet validation (--help for flags)
-│   ├── cleanup.sh                  # Run sheet cleanup, dry run unless --apply (--help for flags)
-│   ├── pyproject.toml              # Python project and dependencies (uv)
-│   └── uv.lock                     # Locked Python dependencies
-│                                    # See documentation/backend/etl-pipeline.md for the full process
-│
-├── documentation/                  # Technical documentation
-│   ├── tech-stack.md               # Detailed tech stack reference (whole app)
-│   ├── project-architecture.md     # Architecture and data flow (whole app)
-│   ├── developer-workflow.md       # Developer guide and coding standards (whole app)
-│   ├── testing-guide.md            # Vitest setup, mocking patterns, how to add tests (whole app)
-│   ├── scripts-and-tooling.md      # Standalone dev scripts (benchmark, work summary)
-│   ├── archive/                    # Retired reports, session logs and applied migrations (historical only)
-│   │
-│   ├── backend/                    # Data layer, auth, and server-side feature docs
-│   │   ├── sql/                    # Supabase migration scripts
-│   │   ├── schema-migration-guide.md    # Database schema reference (column-level)
-│   │   ├── table-relationships.md       # Table hierarchy, keys, FK constraints, import order
-│   │   ├── etl-pipeline.md              # ETL process: source, diffing, audit trail, extending it
-│   │   ├── supabase-auth-setup.md       # Auth setup guide
-│   │   ├── rbac-and-auth-guards.md      # Role enforcement and request authentication
-│   │   ├── supabase-saved-filters.md    # Saved filters spec
-│   │   ├── favorites-and-filter-sharing.md  # Favorites and filter-sharing tables/RLS
-│   │   ├── user-exports.md              # Export audit log and Storage archive
-│   │   ├── server-dashboard-mode.md     # Server-mode dashboard (#249): endpoints and SQL filters
-│   │   ├── caching-and-rate-limiting.md # Two-tier response cache and per-user rate limits
-│   │   └── account-lists.md             # Uploaded account lists: matching, filter, sharing
-│   │
-│   └── frontend/                   # UI-facing feature docs
-│       ├── product-tour.md              # Guided onboarding tour
-│       ├── ui-column-mapping.md         # UI label to database column mapping
-│       ├── logo-integration.md          # Brandfetch logo integration guide
-│       ├── map-disputed-boundaries.md   # Choropleth boundary handling
-│       └── standalone-screens.md        # Auth/error/404/maintenance frame, loading skeleton conventions
-│
-├── scripts/                        # Standalone scripts (benchmark/data-fetch.run.ts, work summary report)
-├── tests/                          # Vitest test suite (unit, integration, and API route tests)
-└── public/                         # Static assets (logos, images, data)
+├── app/              # Next.js App Router: pages, Route Handlers (api/), Server Actions (actions/)
+├── components/       # React components, grouped by feature
+├── contexts/         # React context providers (notifications, account lists)
+├── hooks/            # Custom React hooks
+├── lib/              # Server and client modules: dashboard SQL, cache, auth, exports, config
+├── etl/              # Python ETL, one uv project (see documentation/backend/etl-pipeline.md)
+├── prisma/           # Prisma schema for the Neon warehouse
+├── scripts/          # Standalone dev scripts (see documentation/scripts-and-tooling.md)
+├── tests/            # Vitest suites (see documentation/testing-guide.md)
+├── public/           # Static assets (logos, images, boundary GeoJSON)
+└── documentation/    # Technical docs (see Documentation Reference below)
 ```
+
+The per-directory breakdown (every `components/`, `hooks/` and `lib/` module and what it owns) lives in **[Project Architecture, section 2](documentation/project-architecture.md#2-directory-structure--responsibilities)**.
 
 ---
 
@@ -507,28 +345,14 @@ This project is optimized for Vercel.
 Subsequent pushes to the `main` branch trigger automatic deployments.
 
 ### Build Configuration
-- Next.js image optimization is on; `cdn.brandfetch.io` is the only allowed remote pattern and optimized images are cached for 90 days (`images.minimumCacheTTL`)
-- HTTP response compression is enabled (`compress: true`)
+
+See [Tech Stack Reference, Build Configuration](documentation/tech-stack.md#build-configuration).
 
 ---
 
 ## Troubleshooting
 
-| Issue | Possible Cause | Solution |
-| :--- | :--- | :--- |
-| **Map not loading** | Basemap or local boundary request failed | Check access to `basemaps.cartocdn.com` and confirm `public/data/admin-1.geojson` is available. |
-| **"Database connection failed"** | Neon scaling / network | The Neon instance might be sleeping. Retry after a few seconds. Verify `DATABASE_URL`. For Prisma CLI issues, also verify `DIRECT_URL`. |
-| **Auth errors (401/403)** | Supabase config | Verify `NEXT_PUBLIC_SUPABASE_URL` and `ANON_KEY`. Check RLS policies in Supabase dashboard. |
-| **Missing logos** | Brandfetch client ID | Ensure `NEXT_PUBLIC_BRANDFETCH_CLIENT_ID` is set. If omitted, monogram fallbacks are used. |
-| **Notifications not showing** | Feature flag | Set `NEXT_PUBLIC_NOTIFICATIONS_ENABLED=enabled` in your environment. |
-| **Charts not rendering** | Data issue | Check browser console for errors. Check the `/api/dashboard/charts` response in the network tab. |
-| **Unexpected map boundaries** | Basemap boundary layers are still visible | Verify `hideBasemapBoundaries` runs after map load and the local Survey of India overlay loads. See [Map Boundaries](documentation/frontend/map-disputed-boundaries.md). |
-| **Export button disabled** | User role | Only `admin` users can export. Update the role in the `profiles` table. |
-| **Export fails with "Failed to archive export"** | `user-exports` Storage bucket missing | Create a **private** bucket named exactly `user-exports` in the Supabase dashboard. |
-| **Export fails with "Failed to record export: relation 'public.user_exports' does not exist"** | Schema SQL not run | Execute `documentation/backend/sql/user-exports-schema.sql` against your Supabase project. |
-| **"My exports" dialog is empty after a successful export** | Dev-server module cache | Hard-refresh the page; restart `next dev`. |
-| **"The dashboard could not load" screen** | Summary request failed (Neon asleep, network, bad `DATABASE_URL`) | The alert on that screen shows the raw server message. Retry, then check the Neon instance and `DATABASE_URL`. |
-| **Skeleton and loaded layout do not line up** | Shell changed without updating the skeleton | Update `components/states/loading-state.tsx` or the relevant `data-skeletons.tsx` primitive to the new geometry. See [Standalone Screens](documentation/frontend/standalone-screens.md). |
+Common problems and fixes are collected in **[Developer Workflow, Troubleshooting](documentation/developer-workflow.md#5-troubleshooting)**.
 
 ---
 

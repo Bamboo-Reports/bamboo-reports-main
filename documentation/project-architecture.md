@@ -41,6 +41,22 @@ Supabase-backed user data (auth, profiles, saved filters, favorites, export audi
 
 ## 2. Directory Structure & Responsibilities
 
+This section is the single source for the repo layout; the README only shows the top level.
+
+| Top-level directory | Responsibility |
+|-----------|---------------|
+| `app/` | Next.js App Router (2.1) |
+| `components/` | React components (2.2) |
+| `hooks/` | Custom hooks (2.3) |
+| `lib/` | Shared modules (2.4) |
+| `contexts/` | `notification-context.tsx` and `account-lists-context.tsx`, mounted in `AppProviders` |
+| `etl/` | Python ETL, one uv project: `importer/` (Sheets to Postgres, `master-schema.json`), `sheets/` (validate and cleanup), `common/`, plus `import.sh`, `validate.sh`, `cleanup.sh`. See [ETL Pipeline](backend/etl-pipeline.md) |
+| `prisma/` | Prisma schema for the Neon warehouse |
+| `scripts/` | Standalone dev scripts. See [Scripts & Tooling](scripts-and-tooling.md) |
+| `tests/` | Vitest suites. See [Testing Guide](testing-guide.md) |
+| `public/` | Static assets, including `data/admin-1.geojson` |
+| `documentation/` | Technical docs; `archive/` holds historical reports |
+
 ### 2.1 `app/` (Routes & Actions)
 
 -   **`api/**`**: Warehouse reads (Route Handlers): `dashboard/{summary,facets,charts}`, `<entity>/query`, `centers/map`, `accounts/[name]/related`, `search`, `accounts/autocomplete`, built on `lib/dashboard/filtering-sql.ts` and `lib/db/warehouse.ts`. See [Server-Mode Dashboard](backend/server-dashboard-mode.md).
@@ -48,8 +64,9 @@ Supabase-backed user data (auth, profiles, saved filters, favorites, export audi
 -   **`actions/system.ts`**: System diagnostics and health checks.
 -   **`page.tsx`**: Main dashboard entry point and UI orchestrator. Wires auth, data loading, filtering hooks, and layout composition.
 -   **`providers.tsx`**: Application-level providers (PostHog analytics).
--   **`(auth)/`**: Auth route group containing `signin/` and `signup/` pages.
--   **`api/dashboard/{summary,facets,charts}/`**, **`api/{accounts,centers,prospects}/query/`**, **`api/search/`**, **`api/accounts/autocomplete/`**, **`api/centers/map/`**: Server-mode read endpoints (#249) that serve aggregated and paginated slices with filters translated to SQL (see `documentation/backend/server-dashboard-mode.md`).
+-   **`(auth)/`**: Auth route group: `signin/`, `signup/`, `forgot-password/`, `reset-password/`.
+-   **`actions.ts`**: Re-exports the notification Server Actions.
+-   **`layout.tsx`**, **`not-found.tsx`**, **`global-error.tsx`**: Root layout (renders `components/maintenance-page.tsx` when `NEXT_PUBLIC_MAINTENANCE_MODE` is set), 404 page and last-resort error boundary.
 -   **`api/financials/`**: Authed, rate-limited proxy for Yahoo Finance data (built on `lib/finance/financial-info.ts`).
 -   **`api/exports/`**: Route Handlers for generating, listing, and re-downloading user exports.
 -   **Rule:** Neon database access runs only on the server: `app/actions/*`, `app/api/*`, and the server-side query modules they call (`lib/dashboard/*`, `lib/exports/server-builder.ts`), all through `lib/db/prisma.ts` and `lib/db/warehouse.ts`. Supabase Auth, RLS-backed user tables, and Storage continue to use Supabase client/service-role APIs.
