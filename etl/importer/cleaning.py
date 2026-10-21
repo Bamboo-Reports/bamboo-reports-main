@@ -10,17 +10,16 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
+# Invisible characters (zero-width, BOM, soft hyphen, bidi controls) are
+# stripped from every value. The list lives in sheets.rules so the import
+# strips exactly what validate flags and cleanup removes (it once kept a
+# shorter copy that missed the bidi marks).
+from sheets.rules import INVISIBLE_CHARS_RE
+
 from .logs import logger
 from .tables import TABLE_PRIMARY_ID_COLUMNS, TABLE_SECONDARY_ID_COLUMNS
 
 # ── Data Processing ──────────────────────────────────────────────────────────
-
-
-# Invisible characters that arrive via copy-paste into the source sheet:
-# zero-width space/non-joiner/joiner, BOM, soft hyphen. They render as nothing
-# in Google Sheets but corrupt keys, sorting, and search in the warehouse
-# (the "Freudenberg SE" incident, 2026-07-29). Stripped from every value.
-INVISIBLE_CHARS_RE = re.compile("[​‌‍﻿­]")
 
 
 def clean_dataframe(df: pd.DataFrame, table_schema: Dict) -> pd.DataFrame:
