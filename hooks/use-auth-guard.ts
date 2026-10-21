@@ -14,8 +14,12 @@ export function useAuthGuard() {
   useEffect(() => {
     const supabase = getSupabaseBrowserClient()
     let isMounted = true
+    // getSession and the INITIAL_SESSION / SIGNED_IN / hourly TOKEN_REFRESHED
+    // events all report the same user, so share one role fetch per user. Callers
+    // still await it, so authReady never flips before the role has landed.
+    let roleLoad: { userId: string; promise: Promise<void> } | null = null
 
-    const loadUserRole = async (currentUserId: string) => {
+    const fetchUserRole = async (currentUserId: string) => {
       try {
         const { data, error } = await supabase
           .from("profiles")
@@ -25,15 +29,24 @@ export function useAuthGuard() {
 
         if (!isMounted) return
         if (error) {
+          roleLoad = null
           setUserRole(DEFAULT_USER_ROLE)
           return
         }
 
         setUserRole(normalizeUserRole(data?.role))
       } catch (_error) {
+        roleLoad = null
         if (!isMounted) return
         setUserRole(DEFAULT_USER_ROLE)
       }
+    }
+
+    const loadUserRole = (currentUserId: string) => {
+      if (roleLoad?.userId !== currentUserId) {
+        roleLoad = { userId: currentUserId, promise: fetchUserRole(currentUserId) }
+      }
+      return roleLoad.promise
     }
 
     supabase.auth.getSession().then(async ({ data }) => {
@@ -60,6 +73,7 @@ export function useAuthGuard() {
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!isMounted) return
       if (!session) {
+        roleLoad = null
         setUserId(null)
         setUserEmail(null)
         setUserRole(DEFAULT_USER_ROLE)

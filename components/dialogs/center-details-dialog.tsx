@@ -321,7 +321,7 @@ export function CenterDetailsDialog({
               <KPITile
                 icon={RiGroupLine}
                 label="Employees"
-                value={center.center_employees}
+                value={center.center_employees?.toLocaleString("en-US")}
                 caption={center.center_employees_range}
               />
               <KPITile
