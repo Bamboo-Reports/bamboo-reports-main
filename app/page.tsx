@@ -60,6 +60,7 @@ import type { RecentItem } from "@/hooks/use-recent-items"
 import type { Account, Alias, Center, Function as FunctionRow, Prospect, Service, Tech } from "@/lib/types"
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "br-dashboard-sidebar-collapsed"
+const LOAD_ERROR_TOAST_ID = "dashboard-load-error"
 
 // The dashboard is server-backed (#249): every dataset is paged and aggregated
 // by the API and the client never holds the warehouse arrays. Components that
@@ -685,6 +686,7 @@ function DashboardContent(): React.JSX.Element | null {
     captureEvent(ANALYTICS_EVENTS.DATA_REFRESH_CLICKED)
     refreshRequestedRef.current = true
     refreshStartFailureSeqRef.current = serverData.failure?.seq ?? 0
+    toast.dismiss(LOAD_ERROR_TOAST_ID)
     serverData.reload()
   }, [serverData])
 
@@ -701,7 +703,9 @@ function DashboardContent(): React.JSX.Element | null {
   }, [serverData])
 
   // Once data is on screen, the full-page error state no longer applies, so a
-  // failed fetch is reported here; the previous data stays visible.
+  // failed fetch is reported here; the previous data stays visible. The toast
+  // stays until closed, retried, or the user moves on (filters or refresh),
+  // so stale numbers are never shown without it.
   const shownFailureSeqRef = useRef(0)
   const failure = serverData.failure
   useEffect(() => {
@@ -710,11 +714,17 @@ function DashboardContent(): React.JSX.Element | null {
     if (!serverData.summary) return
     captureEvent(ANALYTICS_EVENTS.ERROR_STATE_SHOWN, { error_message: failure.message })
     toast.error("Some data could not be loaded.", {
-      id: "dashboard-load-error",
+      id: LOAD_ERROR_TOAST_ID,
       description: failure.message,
+      duration: Infinity,
+      closeButton: true,
       action: { label: "Retry", onClick: handleErrorRetry },
     })
   }, [failure, serverData.summary, handleErrorRetry])
+
+  useEffect(() => {
+    toast.dismiss(LOAD_ERROR_TOAST_ID)
+  }, [filtersPaginationResetKey])
 
   // Cancel any pending deferred scope clear so a freshly opened export can't be
   // reset by a timer scheduled when the previous dialog closed.
