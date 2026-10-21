@@ -14,6 +14,16 @@ from .tables import IMPORT_ORDER, WORKSHEET_MAP
 # ── Header Checking ──────────────────────────────────────────────────────────
 
 
+def _column_letter(idx: int) -> str:
+    """0-based column index to its sheet letter: 0 -> A, 26 -> AA."""
+    letters = ""
+    idx += 1
+    while idx:
+        idx, rem = divmod(idx - 1, 26)
+        letters = chr(65 + rem) + letters
+    return letters
+
+
 def check_sheet_headers(schema_def: Dict[str, Any], target_tables: List[str] = None) -> bool:
     """Compare each worksheet's header row with the schema. Missing or
     duplicated columns fail; extra sheet columns are only a warning (the
@@ -42,9 +52,14 @@ def check_sheet_headers(schema_def: Dict[str, Any], target_tables: List[str] = N
             return ws_name, 0, 0, [], [], {}, "not in schema"
         try:
             ws = spreadsheet.worksheet(ws_name)
-            sheet_headers = [h.strip() for h in ws.row_values(1) if h.strip()]
+            raw_headers = ws.row_values(1)
+            sheet_headers = [h.strip() for h in raw_headers if h.strip()]
         except Exception as e:
             return ws_name, 0, 0, [], [], {}, f"could not read worksheet: {e}"
+        # row_values() trims trailing blanks, so a blank here sits between
+        # named columns: an unnamed column the import drops.
+        unnamed = [i for i, h in enumerate(raw_headers) if not h.strip()]
+        unnamed_columns[table_name] = unnamed
 
         schema_cols = {c["Column"] for c in schema_def[table_name].get("columns", [])}
         sheet_cols = set(sheet_headers)
@@ -56,6 +71,7 @@ def check_sheet_headers(schema_def: Dict[str, Any], target_tables: List[str] = N
         extra = sorted(sheet_cols - schema_cols)
         return ws_name, len(sheet_headers), len(schema_cols), missing, extra, duplicates, None
 
+    unnamed_columns: Dict[str, List[int]] = {}
     with console.status("Reading header rows ...", spinner_style="info"):
         with concurrent.futures.ThreadPoolExecutor(max_workers=min(32, max(1, len(tables_to_check)))) as executor:
             results = dict(zip(tables_to_check, executor.map(check_table, tables_to_check)))
@@ -76,9 +92,9 @@ def check_sheet_headers(schema_def: Dict[str, Any], target_tables: List[str] = N
             ws_name,
             f"{n_sheet} / {n_schema}",
             str(len(missing)) if missing else "[muted]0[/muted]",
-            str(len(extra)) if extra else "[muted]0[/muted]",
+            str(len(extra) + len(unnamed_columns.get(table, []))) if extra or unnamed_columns.get(table) else "[muted]0[/muted]",
             str(len(duplicates)) if duplicates else "[muted]0[/muted]",
-            tui.ICONS["fail" if not ok else "warn" if extra else "pass"],
+            tui.ICONS["fail" if not ok else "warn" if extra or unnamed_columns.get(table) else "pass"],
         )
         if missing:
             problems.append(("fail", f"{table}: missing in the sheet: {', '.join(missing)}"))
@@ -87,6 +103,9 @@ def check_sheet_headers(schema_def: Dict[str, Any], target_tables: List[str] = N
             problems.append(("fail", f"{table}: duplicated headers: {dup}"))
         if extra:
             problems.append(("warn", f"{table}: extra in the sheet (not imported): {', '.join(extra)}"))
+        if unnamed_columns.get(table):
+            letters = ", ".join(_column_letter(i) for i in unnamed_columns[table])
+            problems.append(("warn", f"{table}: column {letters} has no header (not imported); run etl/validate.sh for details"))
     tui.print_table(overview)
     tui.note("Columns: sheet / schema", indent=2)
     for status, message in problems:

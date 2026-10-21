@@ -208,7 +208,7 @@ Config comes from `etl/.env` (`SPREADSHEET_ID`, `GOOGLE_SA_FILE`), the same file
 
 | Phase | Check |
 |---|---|
-| 0 | Per-column format/enum/nullable rules (`ALL_RULES`) for all nine tables, including `subscribers` and the prospects `prospect_phone` (10 digits) and `prospect_engaged` (Yes/No) columns |
+| 0 | Per-column format/enum/nullable rules (`ALL_RULES`) for all nine tables, including `subscribers` and the prospects `prospect_phone` (10 digits) and `prospect_engaged` (Yes/No) columns. Also the header row: data under a blank header, columns no rule covers, duplicated headers and rule columns missing from the sheet (the import drops unnamed and unknown columns silently, and the importer's `--check-headers` only warns about them) |
 | 0B | Invisible characters: flags cells containing zero-width chars, BOM, or soft hyphen, with exact sheet/row/column |
 | 0C | Every cell is plain text: no smart chips (a people chip holding an email looks like text but VLOOKUP and MATCH skip it) and no dropdowns. Read from cell metadata, one extra API call per sheet |
 | 1 | Uniqueness of key columns: `accounts.account_global_legal_name`, `centers.cn_unique_key`, `services.cn_unique_key`, `prospects.ps_unique_key`, and in `subscribers` the combination of email, campaign and date (the same engagement entered twice) |

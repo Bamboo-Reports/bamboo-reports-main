@@ -13,7 +13,7 @@ from .highlights import record_issue
 from .options import is_excluded
 from .phases import PhaseResult, problem_kind
 from .sheet_cache import SheetCache
-from .table_format import check_table_format
+from .table_format import check_columns, check_table_format
 
 
 def check_all_tables_format(cache: SheetCache) -> PhaseResult:
@@ -29,6 +29,7 @@ def check_all_tables_format(cache: SheetCache) -> PhaseResult:
             result.errors += 1
             overview.add_row(table_name, "-", "-", f"{tui.ICONS['fail']} not found or empty")
             continue
+        errors = check_columns(cache, table_name) + errors
         rows = len(cache.get_data(table_name)[1])
         checked_rows += rows
         issues.extend((table_name, r, c, m) for r, c, m in errors)

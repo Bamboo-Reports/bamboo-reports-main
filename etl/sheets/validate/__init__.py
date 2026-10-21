@@ -7,6 +7,9 @@ Validates Google Sheets data in several phases:
       Per-column format/enum/nullable checks driven by ALL_RULES for:
         accounts, centers, services, prospects, ticker, alias, functions, tech,
         subscribers
+      plus the header row of each: data under a blank header, columns no rule
+      covers, duplicated headers and rule columns missing from the sheet (the
+      import drops unnamed and unknown columns without a word).
 
   Phase 0B - Invisible Characters
       Flags cells containing zero-width spaces, BOMs, or soft hyphens

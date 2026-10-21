@@ -210,3 +210,47 @@ def check_table_format(cache: SheetCache, table_name: str) -> list[tuple[int, st
     for r_idx, c_name, _msg in errors:
         record_issue(table_name, r_idx, c_name, headers)
     return errors
+
+
+def column_letter(idx: int) -> str:
+    """0-based column index to its sheet letter: 0 -> A, 26 -> AA."""
+    letters = ""
+    idx += 1
+    while idx:
+        idx, rem = divmod(idx - 1, 26)
+        letters = chr(65 + rem) + letters
+    return letters
+
+
+def check_columns(cache: SheetCache, table_name: str) -> list[tuple[int, str, str]]:
+    """(row, column, message) for header-row problems in one sheet: data under
+    a blank header, named columns no rule covers, duplicated headers, and rule
+    columns missing from the sheet. The import drops unnamed and unknown
+    columns silently, so they are only caught here."""
+    rules_map = ALL_RULES.get(table_name, {})
+    try:
+        headers, rows = cache.get_data(table_name)
+    except Exception:
+        return []
+    if not headers or not rules_map:
+        return []
+
+    expected = {name.strip().lower() for name in rules_map}
+    issues: list[tuple[int, str, str]] = []
+    seen: set[str] = set()
+    for idx, header in enumerate(headers):
+        letter = column_letter(idx)
+        if not header:
+            filled = sum(1 for row in rows if idx < len(row) and str(row[idx]).strip())
+            if filled:
+                issues.append(
+                    (1, f"{letter} (no header)", f"No header, {filled:,} cells filled; not imported, delete the column")
+                )
+        elif header in seen:
+            issues.append((1, f"{letter} ({header})", "Duplicate header: the name is used by an earlier column"))
+        elif header not in expected:
+            issues.append((1, f"{letter} ({header})", "Unknown column: not imported; delete it or add it to the schema"))
+        seen.add(header)
+    for name in sorted(expected - seen):
+        issues.append((1, name, "Missing column: not in the sheet"))
+    return issues
