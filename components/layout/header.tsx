@@ -102,19 +102,31 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
     const supabase = getSupabaseBrowserClient()
     let isMounted = true
 
-    const loadProfile = async (userId: string) => {
+    // getSession and the INITIAL_SESSION / SIGNED_IN / hourly TOKEN_REFRESHED
+    // events all report the same user, so share one profile fetch per user.
+    let profileLoad: { userId: string; promise: Promise<void> } | null = null
+
+    const fetchProfile = async (userId: string) => {
       const { data, error } = await supabase
         .from('profiles')
         .select('id, user_id, first_name, last_name, email, phone, role')
         .eq('user_id', userId)
         .single()
 
+      if (error) profileLoad = null
       if (!isMounted) return
       if (error) {
         setProfile(null)
         return
       }
       setProfile(data)
+    }
+
+    const loadProfile = (userId: string) => {
+      if (profileLoad?.userId !== userId) {
+        profileLoad = { userId, promise: fetchProfile(userId) }
+      }
+      return profileLoad.promise
     }
 
     supabase.auth.getSession().then(({ data }) => {
@@ -135,6 +147,7 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!isMounted) return
       if (!session?.user) {
+        profileLoad = null
         setSessionEmail(null)
         setLastSignInAt(null)
         setProfile(null)
@@ -142,7 +155,7 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
       }
       setSessionEmail(session.user.email ?? null)
       setLastSignInAt(session.user.last_sign_in_at ?? null)
-      loadProfile(session.user.id)
+      void loadProfile(session.user.id)
     })
 
     return () => {
