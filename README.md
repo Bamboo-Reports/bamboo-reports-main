@@ -282,6 +282,7 @@ bamboo-reports-nextjs/
 │   │   └── cleanup/                # Automatic fixes (python -m sheets.cleanup)
 │   ├── import.sh                   # Run the importer (--help for flags; confirms before prod writes)
 │   ├── validate.sh                 # Run sheet validation (--help for flags)
+│   ├── cleanup.sh                  # Run sheet cleanup, dry run unless --apply (--help for flags)
 │   ├── pyproject.toml              # Python project and dependencies (uv)
 │   └── uv.lock                     # Locked Python dependencies
 │                                    # See documentation/backend/etl-pipeline.md for the full process

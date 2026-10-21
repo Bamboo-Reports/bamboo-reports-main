@@ -232,6 +232,7 @@ Config comes from `etl/.env` (`SPREADSHEET_ID`, `GOOGLE_SA_FILE`), the same file
 Formula cells are never written (many columns are formulas, such as `tech.account_global_legal_name` and the range columns); a fix a step wanted on one is listed at the end instead. Order matters: entities, invisible characters and whitespace go first so every later step sees clean text, and references run last because names only compare equal once both sheets are clean. Column rules (`ALL_RULES`, `VALIDATION_RULES`, `INVISIBLE_CHARS`) live in `etl/sheets/rules.py`, imported by both tools, so a rule change applies to both. Each step lives in its own module: `text.py` (chips, artifacts, invisible, whitespace), `lists.py`, `links.py`, `formats.py`, `references.py`; `workbook.py` is the in-memory copy and the single write.
 
 ```bash
+etl/cleanup.sh --report changes.csv                                  # the wrapper: same flags, --help, works from any directory
 uv run --directory etl python -m sheets.cleanup                        # preview every step
 uv run --directory etl python -m sheets.cleanup --apply                # show the report, confirm y/N, then write
 uv run --directory etl python -m sheets.cleanup --apply --yes          # write without asking (required when not run from a terminal)
@@ -240,7 +241,7 @@ uv run --directory etl python -m sheets.cleanup --sheets centers       # only ch
 uv run --directory etl python -m sheets.cleanup --report changes.csv   # full change list
 ```
 
-Typical order: `sheets.cleanup`, then `sheets.cleanup --apply`, then `sheets.validate`, then the importer.
+Typical order: `etl/cleanup.sh`, then `etl/cleanup.sh --apply`, then `etl/validate.sh`, then `etl/import.sh`.
 
 ---
 
