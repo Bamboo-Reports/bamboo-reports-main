@@ -228,6 +228,7 @@ class Workbook:
             )
         # Dropdowns usually cover a run of rows in one column, so clear each
         # run with one request. setDataValidation without a rule removes it.
+        # The source sheets keep a filter on, so filtered rows must be included.
         by_column: dict[tuple[str, int], list[int]] = {}
         for sheet, r, c in self.dropdown_cells:
             by_column.setdefault((sheet, c), []).append(r)
@@ -247,7 +248,10 @@ class Workbook:
                                 "endRowIndex": prev + FIRST_DATA_ROW,
                                 "startColumnIndex": c,
                                 "endColumnIndex": c + 1,
-                            }
+                            },
+                            # Without this, rows hidden by an active filter
+                            # are skipped and keep their dropdown.
+                            "filteredRowsIncluded": True,
                         }
                     }
                 )
