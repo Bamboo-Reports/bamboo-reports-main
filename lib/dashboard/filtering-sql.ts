@@ -127,7 +127,7 @@ function escapeLike(s: string): string {
  *
  * Uses `col ILIKE '%kw%'` on the RAW column (not lower(coalesce(...))) so the
  * GIN pg_trgm indexes on account_global_legal_name / prospect_title /
- * software_in_use (created by the ETL, etl/V2/main.py) can be used; a
+ * software_in_use (created by the ETL, etl/importer/tables.py) can be used; a
  * functional wrapper would force a seq scan. NULL is handled explicitly to
  * preserve the engine's "NULL treated as ''" semantics.
  */

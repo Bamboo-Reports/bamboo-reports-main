@@ -1,14 +1,10 @@
 """
 tui.py
 ------
-The shared terminal look for the ETL (V2/main_cache_purge.py, V2/main.py)
-and the sheet scripts (data_validator/validate.py, data_validator/cleanup.py):
-one colour theme, status icons, a header panel, section rules, compact
-tables, progress bars and the closing summary and verdict.
-
-It lives in etl/ so both folders can reach it; each script puts this
-directory on sys.path before `import tui`. It only needs `rich`, which every
-one of them already depends on.
+The shared terminal look for the ETL (the importer and the sheet tools,
+validate and cleanup): one colour theme, status icons, a header panel,
+section rules, compact tables, progress bars and the closing summary and
+verdict. It only needs `rich`.
 """
 
 import time

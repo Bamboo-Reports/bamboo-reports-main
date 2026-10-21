@@ -1,6 +1,6 @@
 # Scripts and Tooling
 
-> **Scope:** Standalone scripts in `scripts/` that support development but are not part of the app runtime or the ETL pipeline (see [ETL Pipeline](backend/etl-pipeline.md) for `etl/V2/`).
+> **Scope:** Standalone scripts in `scripts/` that support development but are not part of the app runtime or the ETL pipeline (see [ETL Pipeline](backend/etl-pipeline.md) for `etl/`).
 
 ---
 
@@ -50,4 +50,4 @@ Needs `DATABASE_URL` in `.env`. Read-only.
 | `scripts/generate_work_summary.py` | Git-history-driven `.xlsx` work summary generator |
 | `scripts/benchmark/data-fetch.run.ts` | Neon warehouse fetch-time benchmark (`npm run bench`) |
 | `vitest.bench.config.ts` | Vitest config used only by the benchmark |
-| `documentation/backend/etl-pipeline.md` | The other standalone script category: `etl/V2/` |
+| `documentation/backend/etl-pipeline.md` | The other standalone script category: `etl/` |

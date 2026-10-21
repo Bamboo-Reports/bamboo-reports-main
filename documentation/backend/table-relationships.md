@@ -29,7 +29,7 @@ accounts  (PK: account_global_legal_name)
 
 ## Core Tables
 
-Only `accounts`, `ticker`, and `centers` currently have database primary-key constraints in `etl/V2/main.py`.
+Only `accounts`, `ticker`, and `centers` currently have database primary-key constraints in `etl/importer/tables.py`.
 The remaining child tables are linked through the hub keys below, but their ETL/logical identifiers are
 not database-enforced primary keys and should not be modelled as Prisma `@id` fields.
 
@@ -49,7 +49,7 @@ not database-enforced primary keys and should not be modelled as Prisma `@id` fi
 
 ## ETL Foreign Key Constraints
 
-Defined in `etl/V2/main.py` → `CONSTRAINTS_SQL`. All child tables cascade on parent delete.
+Defined in `etl/importer/tables.py` → `CONSTRAINTS_SQL`. All child tables cascade on parent delete.
 
 | Child Table | Parent Table | Linking Column | Behaviour |
 |-------------|--------------|----------------|-----------|
@@ -123,7 +123,7 @@ Only `AccountWarehouse` (`accounts`) and `CenterWarehouse` (`centers`) are model
 
 | File | Purpose |
 |------|---------|
-| `etl/V2/main.py` | Single source of truth for `CONSTRAINTS_SQL`, `TABLE_DEFS`, and `IMPORT_ORDER` |
+| `etl/importer/tables.py` | Single source of truth for `CONSTRAINTS_SQL`, `TABLE_DEFS`, and `IMPORT_ORDER` |
 | `prisma/schema.prisma` | Prisma models for `accounts` and `centers` |
 | `lib/dashboard/filtering-sql.ts` | Server-side filter cascade with DB-level joins (accounts, centers, functions, tech, prospects) |
 | `lib/dashboard/filtering.ts` | Client-side in-memory linking and filter propagation |
