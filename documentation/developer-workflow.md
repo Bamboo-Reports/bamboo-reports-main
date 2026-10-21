@@ -204,7 +204,7 @@ This is the single troubleshooting table for the app; the README links here.
 | **Export fails with "Failed to archive export"** | Storage bucket | Create a **private** bucket named exactly `user-exports` in the Supabase dashboard. |
 | **Export fails with "relation 'public.user_exports' does not exist"** | Schema SQL not run | Run `documentation/backend/sql/user-exports-schema.sql` against the Supabase project. |
 | **"My exports" dialog empty after a successful export** | Dev-server module cache | Hard-refresh the page and restart `next dev`. |
-| **PostHog events missing** | Environment variables | Verify `NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_POSTHOG_HOST` are set and that `providers.tsx` wraps the app. |
+| **PostHog events missing** | Environment variables | Verify `NEXT_PUBLIC_POSTHOG_KEY` is set, `providers.tsx` wraps the app, and `/ingest` requests return 200 (reverse proxy in `next.config.mjs`). |
 | **Company logos not loading** | Brandfetch client ID | Set `NEXT_PUBLIC_BRANDFETCH_CLIENT_ID`. If Brandfetch has no logo for the domain, the monogram fallback is expected. |
 | **Financial data missing** | Yahoo Finance | The Yahoo Finance API can be rate-limited. Check the `/api/financials` route logs. |
 | **Skeleton and loaded layout do not line up** | Shell changed without the skeleton | Update `components/states/loading-state.tsx` or the relevant `data-skeletons.tsx` primitive. See [Standalone Screens](frontend/standalone-screens.md). |

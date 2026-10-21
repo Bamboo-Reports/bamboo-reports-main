@@ -2,6 +2,7 @@
 
 import React from "react"
 import { devError } from "@/lib/utils/dev-log"
+import { captureError } from "@/lib/analytics/client"
 
 interface Props {
   children: React.ReactNode
@@ -25,6 +26,7 @@ export class MapErrorBoundary extends React.Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     devError("[MapErrorBoundary] Error details:", error, errorInfo)
+    captureError(error, { boundary: "map", component_stack: errorInfo.componentStack })
   }
 
   render() {
