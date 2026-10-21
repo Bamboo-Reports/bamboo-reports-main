@@ -73,8 +73,8 @@ gated("centers map aggregation parity against the real Neon warehouse", () => {
        from accounts`
     )) as unknown as Account[]
 
-    // center_name asc matches the order the app receives centers in
-    // (app/actions/data.ts), which the client "first center wins" rules use.
+    // center_name asc matches the default order of buildCentersQuery, which the
+    // client "first center wins" rules use.
     centers = (await sql.query(
       `select cn_unique_key, account_global_legal_name, center_name, center_type, center_focus, center_city,
         center_state, center_country, center_country_iso2, center_employees_range, center_status,

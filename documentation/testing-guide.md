@@ -311,7 +311,7 @@ const gated = DATABASE_URL ? describe : describe.skip
 gated("filtering-sql parity against the real Neon warehouse", () => { ... })
 ```
 
-With no `DATABASE_URL` in `.env` (or the environment) the whole file reports as skipped; with one set, `npm run test` includes them automatically. There is no separate script or `--` flag. Current files: `filtering-sql-realdata.test.ts`, `export-workbook-realdata.test.ts` (full xlsx build via `buildServerExport` with per-sheet row-count parity), `export-workbook-realdata-more.test.ts`, `export-filters-realdata.test.ts`, `centers-map-realdata.test.ts`. They read the warehouse only (selects), derive scenario values (most common country, industry, etc.) from live data, and compare SQL results against the client engine over the same rows. Expect them to be slower; run one file at a time while iterating.
+With no `DATABASE_URL` in `.env` (or the environment) the whole file reports as skipped; with one set, `npm run test` includes them automatically. There is no separate script or `--` flag. Current files: `filtering-sql-realdata.test.ts`, `filtering-sql-thorough.test.ts`, `export-workbook-realdata.test.ts` (full xlsx build via `buildServerExport` with per-sheet row-count parity), `export-workbook-realdata-more.test.ts`, `export-filters-realdata.test.ts`, `centers-map-realdata.test.ts`. They read the warehouse only (selects), derive scenario values (most common country, industry, etc.) from live data, and compare SQL results against the client engine over the same rows. Expect them to be slower; run one file at a time while iterating.
 
 ## 7. Naming and Organization Conventions
 
