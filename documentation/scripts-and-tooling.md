@@ -4,23 +4,7 @@
 
 ---
 
-## 1. `scripts/generate_work_summary.py`
-
-Generates an `.xlsx` report summarizing recent git activity for stakeholder reporting. Parses `git log --numstat` over a configured date range, classifies each commit by conventional-commit prefix (`feat:`, `fix:`, `docs:`, etc.) into `Feature` / `Fix` / `Other`, and infers a functional area (Analytics, Exports, Notifications, Database, Testing, Documentation, Search/Filters, ...) from the changed file paths and commit subject keywords.
-
-Output is a formatted Excel workbook (via `openpyxl`) written to `reports/may-june-work-summary.xlsx` under the repo root. The script creates the `reports/` directory if it is missing (the directory is not checked in). The workbook has a `Summary` sheet (per month: days with work, entries, Feature/Fix/Other counts, top areas) and one sheet per month (`May 2026`, `June 2026`) with one row per commit: date, category, area, summary, before/after/improvement notes, files/insertions/deletions, author, and commit hash.
-
-**Editing the date range or area rules:** `DATE_START` / `DATE_END` and `OUTPUT_PATH` are constants at the top of the file, the area keywords live in `infer_area()`, and the months are hardcoded in `main()` and `add_summary_sheet()`. There's no CLI flag; edit these directly for a different reporting period or to add a new area bucket.
-
-**Run it:**
-
-```bash
-uv run --with openpyxl scripts/generate_work_summary.py
-```
-
-`openpyxl` is not a project dependency (the script is outside the `etl/` uv project), so `--with` supplies it for the run.
-
-## 2. `scripts/benchmark/data-fetch.run.ts`
+## 1. `scripts/benchmark/data-fetch.run.ts`
 
 Replaces the retired `scripts/benchmark-loading.mjs`, which measured the full-payload `GET /api/dashboard` route removed on 2026-09-05.
 
@@ -45,7 +29,6 @@ Needs `DATABASE_URL` in `.env.local` or `.env`. Read-only.
 
 | File | Purpose |
 |------|---------|
-| `scripts/generate_work_summary.py` | Git-history-driven `.xlsx` work summary generator |
 | `scripts/benchmark/data-fetch.run.ts` | Neon warehouse fetch-time benchmark (`npm run bench`) |
 | `vitest.bench.config.ts` | Vitest config used only by the benchmark |
 | `documentation/backend/etl-pipeline.md` | The other standalone script category: `etl/` |

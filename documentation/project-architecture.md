@@ -283,10 +283,8 @@ app/layout.tsx (Root Layout)
             │   ├── CentersTab
             │   │   ├── CentersMap / CentersChoroplethMap (map view)
             │   │   └── DataTable with CenterRow (data view)
-            │   ├── ProspectsTab
-            │   │   └── DataTable with ProspectRow (data view)
-            │   └── ServicesTab
-            │       └── DataTable with ServiceRow (data view)
+            │   └── ProspectsTab
+            │       └── DataTable with ProspectRow (data view)
             ├── ExportDialog
             └── Detail Dialogs
                 ├── AccountDetailsTabbedDialog

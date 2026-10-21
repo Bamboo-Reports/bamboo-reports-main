@@ -181,9 +181,9 @@ The row context menu also uses `center_website` and `center_linkedin`. `cn_uniqu
 
 The row context menu also uses `prospect_email` and `prospect_linkedin_url`. Row selection for export uses `ps_unique_key`.
 
-### 2.4 Services and Functions (not rendered)
+### 2.4 Services and Functions
 
-`components/tabs/services-tab.tsx` (`ServicesTab`), `components/tables/service-row.tsx` (`ServiceRow`) and `components/tables/function-row.tsx` (`FunctionRow`) are re-exported from their `index.ts` files but are not rendered anywhere in the app. Service data is shown only in the Centre Details dialog (section 3.2) and in the Services export sheet (section 8). Function data is used by the Services Offered filter and the Function chart.
+There is no Services or Functions table. Service data is shown only in the Centre Details dialog (section 3.2) and in the Services export sheet (section 8). Function data is used by the Services Offered filter and the Function chart.
 
 ---
 

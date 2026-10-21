@@ -380,7 +380,7 @@ Detailed documentation for specific subsystems lives in the `documentation/` fol
 | [**User Exports & Audit Log**](documentation/backend/user-exports.md) | Server-side export generation, Storage archive, and audit table |
 | [**Product Tour**](documentation/frontend/product-tour.md) | Guided onboarding walkthrough, completion tracking, and versioning |
 | [**Logo Integration**](documentation/frontend/logo-integration.md) | Setup and usage guide for the Brandfetch logo integration |
-| [**Scripts & Tooling**](documentation/scripts-and-tooling.md) | Standalone dev scripts: data fetch benchmark and git-history work summary |
+| [**Scripts & Tooling**](documentation/scripts-and-tooling.md) | Standalone dev scripts: the warehouse data fetch benchmark |
 | [**Map Boundaries**](documentation/frontend/map-disputed-boundaries.md) | Carto basemap and local Survey of India boundary behavior |
 | [**Standalone Screens**](documentation/frontend/standalone-screens.md) | Brand frame for auth, error, 404 and maintenance screens; full-page loading skeleton; skeleton conventions |
 
