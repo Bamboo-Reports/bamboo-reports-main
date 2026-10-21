@@ -1,6 +1,6 @@
-# Bamboo Reports By ResearchNXT
+# Bamboo Reports by ResearchNXT
 
-A modern Business Intelligence dashboard built with Next.js App Router, React, and TypeScript. The app delivers account, center, service, and prospect intelligence through rich filtering, data visualization, geospatial analytics, and export workflows.
+Bamboo Reports is a business intelligence dashboard for accounts, centers, services and prospects, built with the Next.js App Router, React and TypeScript. Users filter the data, view it as tables, charts and maps, and export it to Excel or PDF.
 
 <p align="center">
   <img src="https://skillicons.dev/icons?i=nextjs,react,ts,tailwind,nodejs,supabase,postgres,vercel&perline=8" alt="Next.js, React, TypeScript, Tailwind CSS, Node.js, Supabase, PostgreSQL, Vercel" />
@@ -25,95 +25,93 @@ A modern Business Intelligence dashboard built with Next.js App Router, React, a
 
 ---
 
-## Table of Contents
+## Table of contents
 
 - [Overview](#overview)
-- [Key Features](#key-features)
-- [Architecture & Data Flow](#architecture--data-flow)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Getting Started](#getting-started)
-- [Environment Variables](#environment-variables)
-- [Authentication & Authorization](#authentication--authorization)
-- [Database & Schema](#database--schema)
-- [Analytics & Monitoring](#analytics--monitoring)
+- [Features](#features)
+- [Architecture and data flow](#architecture-and-data-flow)
+- [Tech stack](#tech-stack)
+- [Project structure](#project-structure)
+- [Getting started](#getting-started)
+- [Environment variables](#environment-variables)
+- [Deployment config](#deployment-config)
+- [Authentication and authorization](#authentication-and-authorization)
+- [Database and schema](#database-and-schema)
+- [Analytics and monitoring](#analytics-and-monitoring)
 - [Deployment](#deployment)
 - [Troubleshooting](#troubleshooting)
-- [Documentation Reference](#documentation-reference)
+- [Documentation reference](#documentation-reference)
+- [License](#license)
 
 ---
 
 ## Overview
 
-Bamboo Reports provides a unified view of business entities (**Accounts**, **Centers**, **Services**, **Functions**, **Tech**, and **Prospects**). The dashboard combines high-performance data grids with geospatial analytics and charting to empower decision-makers.
-
-### Core Value Proposition
-- **High Signal-to-Noise:** Designed for rapid filtering and drilling down into large datasets.
-- **Geospatial Intelligence:** Visualize delivery center density with clustered markers and state-level choropleth maps.
-- **Persistence:** Save complex filter configurations to the cloud (Supabase) for recurring reporting tasks.
-- **Exportability:** Generate boardroom-ready Excel reports with multi-sheet support and company logos.
-- **Real-Time Notifications:** Track recently updated accounts and table records with an in-app notification system.
+The dashboard covers six entities: accounts, centers, services, functions, tech and prospects. The server filters and aggregates the data in SQL, and the browser receives one page of rows plus precomputed counts, so no request returns the whole dataset.
 
 ---
 
-## Key Features
+## Features
 
-### Dashboard and Insights
-- **Smart Summary Cards:** Real-time filtered vs. total counts per entity.
-- **Interactive Charts:** Highcharts donut charts and a technology treemap for categorical breakdowns (Country, Industry, Revenue, Headcount, Technology), plus a Recharts revenue trend chart in the Account details dialog.
-- **Tabbed Navigation:** Switch between Accounts, Centers, Prospects, and Services tabs.
-- **Deployment-Level Access Control:** Accounts, Centers, and Prospects can be enabled or disabled per deployment via `lib/config/dashboard-access.ts`.
-- **Geospatial Analytics:**
-  - MapLibre cluster map optimized for 5000+ center points over a keyless Carto basemap.
-  - State-level choropleth map using local Survey of India administrative boundaries.
+### Dashboard
 
-### Advanced Filtering Engine
-- **Multi-Select Filters:** Country, Region, Industry, Category, Nature, Technology, Functions, and more.
-- **Server-Side Filtering (#249):** Filters are translated to parameterized SQL on the server and the client reads paginated slices and pre-computed aggregates; no endpoint returns the whole dataset. See [Server-Mode Dashboard](documentation/backend/server-dashboard-mode.md).
-- **Account Visibility Filter:** `ALL` / `GCCs` / `NON-GCCs` toggle (default `GCCs`) constrains tables, charts, and exports to the chosen account set, while summary cards still report the full universe.
-- **Alias-Aware Account Search:** Global search and the account filter autocomplete match accounts by alternate names (short legal name, brand, abbreviation, flagship products, "currently known as") and show a "Known as" hint on alias matches.
-- **Precision Slicing:** "Include" vs. "Exclude" toggle per filter group.
-- **Range Sliders:** Revenue, Employee count, and Years in India sliders with logarithmic scaling.
-- **Premium Filter Reveal:** Accounts and Centers support config-driven `Show More` premium filters via `lib/config/filters.ts`.
-- **Saved Filters:** Persist complex filter sets to Supabase with Row-Level Security isolation.
-- **Account Lists:** Upload a client's own account list (`lib/accounts`), map it to warehouse accounts via `POST /api/accounts/match` (alias-aware), and apply it as an Account List filter; lists can be reused in saved filters and shared. See [Account Lists](documentation/backend/account-lists.md).
-- **Engaged Prospects:** An `Engaged` prospect filter (`prospect_engaged`), plus a campaign touchpoint timeline in the prospect dialog served by `GET /api/prospects/[id]/engagements` from the `subscribers` table (`lib/dashboard/engagements.ts`).
-- **Filter Sharing:** Share a saved filter with a specific teammate by email; the recipient gets read access to that one filter only.
-- **Debounced Search:** 300ms debounce on keyword inputs to optimize performance.
-- **Active Filter Count:** Visual badge indicator showing the number of applied filters.
+- Summary cards show the filtered count and the total count for each entity.
+- Highcharts donut charts break down accounts and centers by country, industry, revenue and headcount, and a treemap shows technologies. The account dialog adds a Recharts revenue trend chart.
+- The Accounts and Centers tabs switch between chart, map and table views. The Prospects tab has chart and table views.
+- `lib/config/dashboard-access.ts` turns the Accounts, Centers and Prospects sections on or off per deployment.
+- The MapLibre cluster map plots 5,000+ center locations on a Carto basemap that needs no API key.
+- A choropleth map shades Indian states by center count, using local Survey of India boundaries.
 
-### Data Management
-- **Paginated Tables:** 50 items per page, optimized for performance with `React.memo`.
-- **Row-Level Details:** Comprehensive tabbed dialog views for Accounts, Centers, and Prospects.
-- **Type Safety:** Shared TypeScript definitions ensuring consistency from database to UI.
+### Filtering
 
-### Export and Integrations
-- **Server-Side `.xlsx` Exports:** ExcelJS builds multi-sheet workbooks on the server against a full-schema `SELECT *`, so exports include every database column regardless of what the dashboard renders.
-- **Filter-Aware:** The client sends account / center identifier lists (or, in server mode, the filter set itself) so filtered exports only include matching rows; unfiltered exports pull the full tables.
-- **Audit Log + Re-Download:** Every export is archived to a private Supabase Storage bucket and logged in `public.user_exports` with IP, user-agent, filters snapshot, and row counts. Users re-download past exports from the **My exports** dialog via short-lived signed URLs.
-- **Summary PDF:** Download the filtered summary counts and the active filter list as an A4 PDF (`lib/reports`, rendered with jsPDF, loaded lazily).
-- **Logo Integration:** Automated company logo fetching via the Brandfetch Logo API with monogram fallbacks.
-- **Financial Data:** Stock information and financial metrics via Yahoo Finance integration.
+- Multi-select filters cover country, region, industry, category, nature, technology, functions and more. Each value can be included or excluded.
+- The server turns filters into parameterized SQL and returns paginated rows and aggregates. See [Server-Mode Dashboard](documentation/backend/server-dashboard-mode.md).
+- The `ALL` / `GCCs` / `NON-GCCs` toggle limits tables, charts and exports to that set of accounts. It defaults to `GCCs`. The total on each summary card still counts every account.
+- Global search and the account filter match alternate account names, such as short legal names, brands, abbreviations, flagship products and former names. A "Known as" hint shows which alias matched.
+- Range sliders filter by HQ revenue, years in India and center incorporation year.
+- The account and center filter groups can hide premium filters behind `Show More`, configured in `lib/config/filters.ts`.
+- Saved filters are stored in Supabase, and Row-Level Security limits each user to their own.
+- A saved filter can be shared with a teammate by email. The recipient can read that one filter and nothing else.
+- Users can upload a client's account list, which `POST /api/accounts/match` maps to warehouse accounts using aliases. The list then works as an Account List filter, and it can be saved with a filter and shared. The code is in `lib/accounts`. See [Account Lists](documentation/backend/account-lists.md).
+- The `Engaged` prospect filter reads `prospect_engaged`. The prospect dialog shows a campaign timeline from the `subscribers` table, served by `GET /api/prospects/[id]/engagements` and built in `lib/dashboard/engagements.ts`.
+- Account name search waits 300 ms after the last keystroke before it queries the server.
+- A badge shows how many filters are active.
 
-> **Details:** See [User Exports & Audit Log](documentation/backend/user-exports.md) for the architecture, setup steps, and troubleshooting.
+### Tables and records
+
+- Tables show 51 rows per page, and each row component is memoized with `React.memo`.
+- Clicking a row opens a tabbed dialog for that account, center or prospect.
+- One set of TypeScript types describes each entity from the database query to the UI.
+
+### Exports and integrations
+
+- ExcelJS builds `.xlsx` workbooks on the server from a `SELECT *` on each table, so an export includes every database column, even ones the dashboard does not show.
+- A filtered export contains only matching rows. The client sends the filter set, or lists of account and center identifiers, and an unfiltered export returns full tables.
+- Every export is archived to a private Supabase Storage bucket and logged in `public.user_exports` with the IP address, user agent, filter snapshot and row counts. Users download past exports again from the **My exports** dialog through short-lived signed URLs.
+- The Summary PDF button downloads the filtered counts and the active filters as an A4 PDF. `lib/reports` renders it with jsPDF, which loads only when needed.
+- Company logos come from the Brandfetch Logo API. Accounts without a logo get a monogram.
+- Stock and financial figures come from Yahoo Finance.
+
+See [User Exports & Audit Log](documentation/backend/user-exports.md) for the architecture, setup steps and troubleshooting.
 
 ### Notifications
-- **Recently Updated Accounts:** Tracks account-level changes with grouped notifications.
-- **Recently Updated Records:** Table-level update summaries across all entities.
-- **Unread Count Badge:** Bell icon with visual count indicator.
-- **Feature Flag:** Toggle via `NEXT_PUBLIC_NOTIFICATIONS_ENABLED` environment variable.
+
+- The bell lists recently updated accounts, grouped by account, and a summary of updated records in each table.
+- The bell shows a count of unread notifications.
+- `NEXT_PUBLIC_NOTIFICATIONS_ENABLED` turns notifications on or off.
 
 ### Personalization
-- **Recently Viewed History:** Automatic tracking of recently opened detail dialogs.
-- **Guided Product Tour:** Auto-starting, replayable `driver.js` walkthrough for first-time users, with per-browser and per-account completion tracking.
 
-> **Details:** See [Filter Sharing](documentation/backend/filter-sharing.md) and [Product Tour](documentation/frontend/product-tour.md).
+- The app records which record dialogs a user opened recently.
+- A `driver.js` product tour starts on a user's first visit and can be replayed. Completion is stored per browser and per account.
+
+See [Filter Sharing](documentation/backend/filter-sharing.md) and [Product Tour](documentation/frontend/product-tour.md).
 
 ---
 
-## Architecture & Data Flow
+## Architecture and data flow
 
-The application follows a **Server-First** data architecture with **Client-Side** interactivity.
+The server reads and filters all warehouse data. The browser holds UI state and renders the results.
 
 ```mermaid
 graph TD
@@ -136,23 +134,24 @@ graph TD
     end
 ```
 
-### Data Fetching Strategy
-1. **Initial Load:** The client requests the summary counts, filter facets, charts and the first page of each table from dedicated Route Handlers. No endpoint returns the whole dataset (the full-payload `GET /api/dashboard` route and client-side filtering were retired on 2026-09-05).
-2. **Filtering:** User actions update React state (`hooks/use-dashboard-filters.ts`); `hooks/use-server-dashboard-data.ts` sends the filter set to the server, which filters and aggregates in SQL.
-3. **Route Handlers and Server Actions:** Warehouse reads go through `app/api/**` Route Handlers built on `lib/dashboard/filtering-sql.ts`; user-data operations use action files (`app/actions/notifications.ts`, `app/actions/system.ts`) and the Supabase client directly.
-4. **Runtime Behavior (#249):** Filters are translated to SQL on the server and the client reads paginated/aggregated slices from dedicated endpoints (`/api/dashboard/summary`, `/api/dashboard/facets`, `/api/dashboard/charts`, `/api/{accounts,centers,prospects}/query`, `/api/search`, `/api/centers/map`). Responses are cached in a two-tier cache (in-memory L1 + Upstash Redis L2) keyed on the filter state and purged by the ETL after each import. See [Server-Mode Dashboard](documentation/backend/server-dashboard-mode.md) and [Caching and Rate Limiting](documentation/backend/caching-and-rate-limiting.md).
+### How data is fetched
+
+1. On first load, the client requests summary counts, filter options, charts and the first page of each table from separate Route Handlers. The old `GET /api/dashboard` route, which returned the full dataset for filtering in the browser, was removed on 2026-09-05.
+2. When a user changes a filter, `hooks/use-dashboard-filters.ts` updates React state, and `hooks/use-server-dashboard-data.ts` sends the new filter set to the server, which filters and aggregates in SQL.
+3. Warehouse reads go through the `app/api/**` Route Handlers, which build their SQL with `lib/dashboard/filtering-sql.ts`. User data goes through the Supabase client and the action files `app/actions/notifications.ts` and `app/actions/system.ts`.
+4. The endpoints are `/api/dashboard/summary`, `/api/dashboard/facets`, `/api/dashboard/charts`, `/api/{accounts,centers,prospects}/query`, `/api/search` and `/api/centers/map`. Responses are cached in memory and in Upstash Redis, keyed on the filter state, and the ETL clears the cache after each import. See [Server-Mode Dashboard](documentation/backend/server-dashboard-mode.md) and [Caching and Rate Limiting](documentation/backend/caching-and-rate-limiting.md).
 
 ---
 
-## Tech Stack
+## Tech stack
 
-Next.js 16 (App Router) with React 19 and TypeScript, Tailwind CSS with shadcn/ui on Radix primitives, Highcharts and Recharts, MapLibre GL, Neon PostgreSQL via Prisma for the warehouse, Supabase for auth and user data, Upstash Redis for caching and rate limits, ExcelJS and jsPDF for exports, PostHog and Vercel Analytics, and Vitest for tests.
+The app uses Next.js 16 with the App Router, React 19 and TypeScript. The UI uses Tailwind CSS and shadcn/ui components built on Radix. Charts use Highcharts and Recharts, and maps use MapLibre GL. Prisma reads the Neon PostgreSQL warehouse, Supabase handles auth and user data, and Upstash Redis holds the cache and rate-limit counters. ExcelJS and jsPDF generate exports, PostHog and Vercel Analytics collect usage data, and Vitest runs the tests.
 
-Versions, rationale and architecture decisions live in the **[Tech Stack Reference](documentation/tech-stack.md)**, which is the single source for this information.
+The [Tech Stack Reference](documentation/tech-stack.md) lists versions and explains each choice. Update that file, not this one, when the stack changes.
 
 ---
 
-## Project Structure
+## Project structure
 
 ```
 bamboo-reports-main/
@@ -168,192 +167,191 @@ bamboo-reports-main/
 └── documentation/    # Technical docs (see Documentation Reference below)
 ```
 
-The per-directory breakdown (every `components/`, `hooks/` and `lib/` module and what it owns) lives in **[Project Architecture, section 2](documentation/project-architecture.md#2-directory-structure--responsibilities)**.
+[Project Architecture, section 2](documentation/project-architecture.md#2-directory-structure--responsibilities) describes every module in `components/`, `hooks/` and `lib/`.
 
 ---
 
-## Getting Started
+## Getting started
 
 ### Prerequisites
-- **Node.js 20.9+**
-- **npm** (v9+)
-- **Neon PostgreSQL:** Connection string for the data warehouse.
-- **Supabase Project:** For authentication and user state.
+
+- Node.js 20.9 or later
+- npm 9 or later
+- A Neon PostgreSQL connection string for the data warehouse
+- A Supabase project for authentication and user data
 
 ### Installation
 
-1. **Clone the Repository:**
+1. Clone the repository:
     ```bash
     git clone https://github.com/Bamboo-Reports/bamboo-reports-main.git
     cd bamboo-reports-main
     ```
 
-2. **Install Dependencies:**
+2. Install dependencies:
     ```bash
     npm install
     ```
 
-3. **Environment Setup:**
-    Duplicate the example file and fill in your secrets.
+3. Copy the example environment file and fill in your values:
     ```bash
     cp .env.example .env.local
     ```
 
-4. **Run Development Server:**
+4. Start the development server:
     ```bash
     npm run dev
     ```
-    Open [http://localhost:3000](http://localhost:3000) to view the app.
+    Then open [http://localhost:3000](http://localhost:3000).
 
-### Available Scripts
+### Available scripts
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start development server with hot reload |
-| `npm run build` | Create production build |
-| `npm run start` | Start production server |
-| `npm run lint` | Run ESLint checks |
-| `npm run typecheck` | Run TypeScript compiler checks |
-| `npm run test` | Run Vitest test suite |
+| `npm run dev` | Start the development server with hot reload |
+| `npm run build` | Create a production build |
+| `npm run start` | Start the production server |
+| `npm run lint` | Run ESLint |
+| `npm run typecheck` | Run the TypeScript compiler without emitting files |
+| `npm run test` | Run the Vitest suite |
 | `npm run test:watch` | Run Vitest in watch mode |
-| `npm run prisma:generate` | Regenerate the Prisma Client after schema changes |
+| `npm run prisma:generate` | Regenerate the Prisma Client after a schema change |
 
 ---
 
-## Environment Variables
+## Environment variables
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `DATABASE_URL` | **Yes** | Neon PostgreSQL pooled runtime connection string used by Prisma Client. |
+| `DATABASE_URL` | **Yes** | Pooled Neon PostgreSQL connection string that Prisma Client uses at runtime. |
 | `DIRECT_URL` | No | Direct Neon connection string for Prisma CLI commands. Falls back to `DATABASE_URL`. |
 | `NEXT_PUBLIC_SUPABASE_URL` | **Yes** | Your Supabase project URL. |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | **Yes** | Supabase public anon key (safe for client). |
-| `SUPABASE_SERVICE_ROLE_KEY` | **Yes** | Supabase service-role secret. Server-only. Used to write/read `user_exports` and upload archived exports to Storage. |
-| `DASHBOARD_CACHE_TTL_MS` | No | Response cache TTL. Code default: `600000` (10 min); recommended `691200000` (8 days) since the ETL purges the cache after each weekly import. |
-| `EXPORT_RATE_LIMIT_PER_HOUR` | No | Max data exports per user per rolling hour. Default: `20`. |
-| `NEXT_PUBLIC_BRANDFETCH_CLIENT_ID` | No | Brandfetch Logo API client ID. Without it the UI shows monogram fallbacks. |
-| `DATA_RATE_LIMIT_PER_MIN` | No | Max requests per user per minute on data endpoints. Default: `60`. |
-| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | No | Upstash Redis credentials for the L2 response cache (`KV_REST_API_URL` / `KV_REST_API_TOKEN` also accepted). Also backs the rate-limit counters. Without them the cache runs L1-only and rate limiting uses the Supabase `increment_rate_limit` RPC. |
-| `NEXT_PUBLIC_POSTHOG_KEY` | No | PostHog project API key for analytics. |
-| `NEXT_PUBLIC_POSTHOG_HOST` | No | PostHog host URL. Leave unset to use the `/ingest` reverse proxy in `next.config.mjs`. |
-| `NEXT_PUBLIC_ENABLE_ANALYTICS` | No | Set to `true` to enable PostHog during local development. |
-| `NEXT_PUBLIC_POSTHOG_DEBUG` | No | Set to `true` to enable PostHog debug logging. |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | **Yes** | Supabase anon key. It is public and safe to send to the browser. |
+| `SUPABASE_SERVICE_ROLE_KEY` | **Yes** | Supabase service-role secret, for the server only. Reads and writes `user_exports` and uploads archived exports to Storage. |
+| `DASHBOARD_CACHE_TTL_MS` | No | Response cache lifetime in milliseconds. The code default is `600000`, 10 minutes. Use `691200000`, 8 days, in production, because the ETL clears the cache after each weekly import. |
+| `EXPORT_RATE_LIMIT_PER_HOUR` | No | Maximum data exports per user in any rolling hour. Default: `20`. |
+| `NEXT_PUBLIC_BRANDFETCH_CLIENT_ID` | No | Brandfetch Logo API client ID. Without it, the UI shows monograms instead of logos. |
+| `DATA_RATE_LIMIT_PER_MIN` | No | Maximum requests per user per minute on data endpoints. Default: `60`. |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | No | Upstash Redis credentials for the shared response cache and the rate-limit counters. `KV_REST_API_URL` / `KV_REST_API_TOKEN` also work. Without them, the cache is in memory only and rate limiting uses the Supabase `increment_rate_limit` RPC. |
+| `NEXT_PUBLIC_POSTHOG_KEY` | No | PostHog project API key. |
+| `NEXT_PUBLIC_POSTHOG_HOST` | No | PostHog host URL. Leave it unset to send events through the `/ingest` reverse proxy in `next.config.mjs`. |
+| `NEXT_PUBLIC_ENABLE_ANALYTICS` | No | Set to `true` to send PostHog events during local development. |
+| `NEXT_PUBLIC_POSTHOG_DEBUG` | No | Set to `true` to turn on PostHog debug logging. |
 | `POSTHOG_HOST` | No | PostHog host for server-side events from API routes. Defaults to `https://us.i.posthog.com`. |
-| `NEXT_PUBLIC_NOTIFICATIONS_ENABLED` | No | Feature flag: `enabled` or `disabled`. |
+| `NEXT_PUBLIC_NOTIFICATIONS_ENABLED` | No | Set to `enabled` or `disabled`. |
 | `NEXT_PUBLIC_MAINTENANCE_MODE` | No | Set to `true` to show a maintenance page instead of the dashboard. |
-| `NEXT_PUBLIC_ENVIRONMENT_LABEL` | No | Environment tag displayed in the UI: `DEV`, `PROD`, or empty. |
+| `NEXT_PUBLIC_ENVIRONMENT_LABEL` | No | Environment tag shown in the UI: `DEV`, `PROD` or empty. |
 
 ---
 
-## Deployment Config
+## Deployment config
 
-Two local config files control client-specific packaging without changing the core dashboard:
+Two config files change what a client deployment includes, without changes to the dashboard code:
 
-- `lib/config/dashboard-access.ts`
-  - Controls whether top-level sections like `accounts`, `centers`, and `prospects` are accessible.
-  - The same config is respected by dashboard navigation, search, exports, and server-side export enforcement.
-- `lib/config/filters.ts`
-  - Controls which individual filters are enabled.
-  - Also controls premium `Show More` behavior for Account and Center filters via `showMoreEnabled` and `premiumFilterKeys`.
+- `lib/config/dashboard-access.ts` turns the `accounts`, `centers` and `prospects` sections on or off. Navigation, search and exports all follow it, and the server enforces it on exports.
+- `lib/config/filters.ts` turns individual filters on or off. Its `showMoreEnabled` and `premiumFilterKeys` settings control which account and center filters sit behind `Show More`.
 
-Typical use cases:
+For example:
 
-- Client only needs Accounts + Prospects:
-  - Set `centers` to `"disabled"` in `lib/config/dashboard-access.ts`
-- Client has standard filters only:
-  - Set `showMoreEnabled: false` for the relevant filter section in `lib/config/filters.ts`
+- For a client that needs only accounts and prospects, set `centers` to `"disabled"` in `lib/config/dashboard-access.ts`.
+- For a client on standard filters only, set `showMoreEnabled: false` for that filter section in `lib/config/filters.ts`.
 
 ---
 
-## Authentication & Authorization
+## Authentication and authorization
 
-The app delegates identity management to **Supabase Auth**.
+Supabase Auth manages user accounts.
 
-- **Sign Up/Login:** Standard Email/Password flow.
-- **Session Persistence:** Browser-side via `@supabase/supabase-js`. "Remember me" keeps the session in `localStorage`; unchecked, it lives in `sessionStorage` and ends with the tab. API routes receive the access token as a Bearer header and verify it server-side (see RBAC & Auth Guards).
-- **Auth Screens:** Sign in, sign up, forgot password and reset password share one card frame (`components/auth/auth-shell.tsx`) built on the brand frame described in [Standalone Screens](documentation/frontend/standalone-screens.md).
-- **Role-Based Access Control:**
-  - `viewer`: Read-only access to the dashboard.
-  - `admin`: Read access plus data export capabilities.
-- **User Data:**
-  - **`public.profiles`**: Stores user metadata (First Name, Last Name, Email, Role).
-  - **`public.saved_filters`**: Stores JSON blobs of user's filter configurations.
-  - **`public.user_exports`**: Audit log of exports with metadata (IP, user-agent, row counts, filters snapshot). Pairs with the private `user-exports` Storage bucket for the archived `.xlsx` files.
-- **Security:** Row-Level Security (RLS) ensures full data isolation between users.
+- Users sign up and sign in with an email and password.
+- `@supabase/supabase-js` keeps the session in the browser. With "Remember me" checked, the session is stored in `localStorage`. Otherwise it is stored in `sessionStorage` and ends when the tab closes. API routes receive the access token in a Bearer header and verify it on the server. See [RBAC & Auth Guards](documentation/backend/rbac-and-auth-guards.md).
+- The sign in, sign up, forgot password and reset password screens share one card layout, `components/auth/auth-shell.tsx`, built on the brand frame in [Standalone Screens](documentation/frontend/standalone-screens.md).
+- There are two roles. A `viewer` can read the dashboard. An `admin` can also export data.
+- Supabase stores user data in these tables:
+  - `public.profiles` holds each user's first name, last name, email and role.
+  - `public.saved_filters` holds each user's saved filters as JSON.
+  - `public.user_exports` logs each export with its IP address, user agent, row counts and filter snapshot. The archived `.xlsx` files are in the private `user-exports` Storage bucket.
+- Row-Level Security policies stop users from reading each other's data.
 
-> **Setup Guides:**
-> - Auth & profiles: [Supabase Auth Setup](documentation/backend/supabase-auth-setup.md)
-> - Exports audit log + bucket: [User Exports & Audit Log](documentation/backend/user-exports.md)
+Setup guides:
 
----
-
-## Database & Schema
-
-The core BI data resides in **Neon PostgreSQL**. All tables follow strict `snake_case` naming.
-
-### Core Tables
-| Table | Description | Database primary key | ETL/logical identity or link |
-|-------|-------------|----------------------|------------------------------|
-| `accounts` | Top-level company entities with HQ details, financials, workforce | `account_global_legal_name` | `account_global_legal_name` |
-| `ticker` | Stock ticker per account (one row per account) | `account_global_legal_name` | `account_global_legal_name` |
-| `centers` | Delivery centers / office locations with geospatial data | `cn_unique_key` | `cn_unique_key` |
-| `services` | Service-line rows linked to centers | *(none)* | `cn_unique_key` |
-| `functions` | Function rows linked to centers | *(none)* | `cn_unique_key`, `function_name` |
-| `tech` | Technology stack rows (software, vendors, categories) | *(none)* | `cn_unique_key` plus software fields |
-| `prospects` | Contact/lead rows linked to accounts | *(none)* | `ps_unique_key` |
-| `alias` | Alternate account names (brand, abbreviation, flagship products) | *(none)* | `account_global_legal_name` |
-| `subscribers` | Campaign engagement rows (one per prospect per campaign) | *(none)* | `lower(prospect_email)` |
-
-### Audit Tables (in `audit` schema)
-- `audit.import_runs`: Data import tracking
-- `audit.field_change_events`: Field-level audit log linked to `import_runs`
-- `audit.notification_reads`: Notification read status per user, linked to `field_change_events`
-- `audit.user_notification_state`: Per-user bookmark of the last read timestamp
-
-### Key Relationships
-- `alias` links to `accounts` via `account_global_legal_name` (cascades on delete)
-- `centers` links to `accounts` via `account_global_legal_name` (cascades on delete)
-- `services`, `functions`, and `tech` link to `centers` via `cn_unique_key` (cascades on delete)
-- `prospects` links to `accounts` via `account_global_legal_name` (cascades on delete)
-- `subscribers` links to `prospects` by case-insensitive email match (logical link, no FK)
-
-> **Reference:** See the [Schema Migration Guide](documentation/backend/schema-migration-guide.md) for complete column definitions and table relationships.
+- Auth and profiles: [Supabase Auth Setup](documentation/backend/supabase-auth-setup.md)
+- Export audit log and bucket: [User Exports & Audit Log](documentation/backend/user-exports.md)
 
 ---
 
-## Analytics & Monitoring
+## Database and schema
+
+The business data lives in Neon PostgreSQL. Table and column names use `snake_case`.
+
+### Core tables
+
+| Table | Description | Database primary key | ETL or logical identity |
+|-------|-------------|----------------------|-------------------------|
+| `accounts` | Companies, with HQ details, financials and workforce | `account_global_legal_name` | `account_global_legal_name` |
+| `ticker` | One stock ticker row per account | `account_global_legal_name` | `account_global_legal_name` |
+| `centers` | Delivery centers and office locations, with coordinates | `cn_unique_key` | `cn_unique_key` |
+| `services` | Service lines, linked to centers | *none* | `cn_unique_key` |
+| `functions` | Functions, linked to centers | *none* | `cn_unique_key`, `function_name` |
+| `tech` | Software, vendors and categories used at each center | *none* | `cn_unique_key` plus the software fields |
+| `prospects` | Contacts, linked to accounts | *none* | `ps_unique_key` |
+| `alias` | Alternate account names: brands, abbreviations, flagship products | *none* | `account_global_legal_name` |
+| `subscribers` | Campaign engagement, one row per prospect per campaign | *none* | `lower(prospect_email)` |
+
+### Audit tables
+
+These live in the `audit` schema:
+
+- `audit.import_runs` records each data import.
+- `audit.field_change_events` records each field change, linked to `import_runs`.
+- `audit.notification_reads` records which notifications each user has read, linked to `field_change_events`.
+- `audit.user_notification_state` stores the time each user last read their notifications.
+
+### Relationships
+
+- `alias`, `centers` and `prospects` link to `accounts` through `account_global_legal_name`. Deleting an account deletes these rows.
+- `services`, `functions` and `tech` link to `centers` through `cn_unique_key`. Deleting a center deletes these rows.
+- `subscribers` matches `prospects` by email, ignoring case. There is no foreign key.
+
+The [Schema Migration Guide](documentation/backend/schema-migration-guide.md) lists every column and relationship.
+
+---
+
+## Analytics and monitoring
 
 ### PostHog
-Product analytics integrated via `posthog-js`. Tracks:
-- Dashboard page views and session duration
-- Filter interactions and saved filter usage
-- Export actions and tab navigation
-- User identification tied to Supabase user ID, with role and name as person properties
-- `app_env` and `app_version` super properties on every client event, so data splits by deployment
-- Server-side events from API routes via `posthog-node` (`lib/analytics/server.ts`): export generated, denied, rate limited, failed and downloaded, account list matching, financials and engagements served
-- Session replay, dead clicks, and unhandled exceptions (plus errors caught by `app/global-error.tsx` and the map error boundary)
 
-Events go through the `/ingest` reverse proxy in `next.config.mjs` so ad blockers do not drop them. Configuration: set `NEXT_PUBLIC_POSTHOG_KEY` (US Cloud project).
+`posthog-js` tracks:
+
+- Dashboard page views and session length
+- Filter changes and saved filter use
+- Exports and tab switches
+- The Supabase user ID, with role and name as person properties
+- `app_env` and `app_version` on every client event, so data can be split by deployment
+- Server-side events from API routes, sent by `posthog-node` in `lib/analytics/server.ts`: exports generated, denied, rate limited, failed and downloaded, account list matching, and financials and engagements served
+- Session replays, dead clicks and unhandled exceptions, including errors caught by `app/global-error.tsx` and the map error boundary
+
+Events go through the `/ingest` reverse proxy in `next.config.mjs`, so ad blockers do not drop them. To turn PostHog on, set `NEXT_PUBLIC_POSTHOG_KEY` to the US Cloud project key.
 
 ### Vercel Analytics
-Page performance monitoring via `@vercel/analytics`. Automatically tracks Core Web Vitals when deployed on Vercel.
+
+`@vercel/analytics` records page performance and Core Web Vitals on Vercel deployments.
 
 ---
 
 ## Deployment
 
-### Vercel (Recommended)
+### Vercel
 
-This project is optimized for Vercel.
+The project deploys to Vercel.
 
-1. **Push to GitHub.**
-2. **Import in Vercel:** Select the repository.
-3. **Configure Environment Variables:** Add all required keys from the table above.
-4. **Deploy:** Vercel auto-detects Next.js and builds.
+1. Push the code to GitHub.
+2. Import the repository in Vercel.
+3. Add the required environment variables from the table above.
+4. Deploy. Vercel detects Next.js and runs the build.
 
-Subsequent pushes to the `main` branch trigger automatic deployments.
+Each push to `main` deploys again.
 
-### Build Configuration
+### Build configuration
 
 See [Tech Stack Reference, Build Configuration](documentation/tech-stack.md#build-configuration).
 
@@ -361,36 +359,36 @@ See [Tech Stack Reference, Build Configuration](documentation/tech-stack.md#buil
 
 ## Troubleshooting
 
-Common problems and fixes are collected in **[Developer Workflow, Troubleshooting](documentation/developer-workflow.md#5-troubleshooting)**.
+[Developer Workflow, Troubleshooting](documentation/developer-workflow.md#5-troubleshooting) lists common problems and fixes.
 
 ---
 
-## Documentation Reference
+## Documentation reference
 
-Detailed documentation for specific subsystems lives in the `documentation/` folder:
+The `documentation/` folder covers each subsystem in detail:
 
 | Document | Description |
 |----------|-------------|
-| [**Tech Stack**](documentation/tech-stack.md) | Comprehensive technology reference with versions, purposes, and categories |
-| [**UI-to-Column Mapping**](documentation/frontend/ui-column-mapping.md) | Complete mapping of every UI label to its database column (filters, tables, dialogs, charts) |
-| [**Project Architecture**](documentation/project-architecture.md) | High-level design, server actions, state management, and integrations |
-| [**Schema Guide**](documentation/backend/schema-migration-guide.md) | Deep dive into the data model, column definitions, and migration history |
-| [**Table Relationships**](documentation/backend/table-relationships.md) | Table hierarchy, primary keys, FK constraints, and ETL import order |
-| [**ETL Pipeline**](documentation/backend/etl-pipeline.md) | The import process itself: source data, diffing, audit trail, how to extend it |
-| [**Developer Workflow**](documentation/developer-workflow.md) | Guide for common tasks, coding standards, and troubleshooting |
-| [**Testing Guide**](documentation/testing-guide.md) | Vitest setup, mocking patterns, and how to add a new test |
-| [**Server-Mode Dashboard**](documentation/backend/server-dashboard-mode.md) | The #249 server-backed data path: endpoints, SQL filter translation, rollout state |
-| [**Caching and Rate Limiting**](documentation/backend/caching-and-rate-limiting.md) | Two-tier response cache (L1 + Upstash Redis L2), cache purges, per-user rate limits |
-| [**Account Lists**](documentation/backend/account-lists.md) | Uploading client account lists, name matching, the Account List filter, and sharing |
-| [**Supabase Auth**](documentation/backend/supabase-auth-setup.md) | Setting up the `profiles` table, RLS policies, and auth triggers |
-| [**RBAC & Auth Guards**](documentation/backend/rbac-and-auth-guards.md) | Role enforcement, client-side session guard, server-side token verification |
-| [**Saved Filters**](documentation/backend/supabase-saved-filters.md) | Technical spec for the saved filters JSON structure |
-| [**Filter Sharing**](documentation/backend/filter-sharing.md) | Filter-sharing table, RLS model, lookup functions, and Supabase migration order |
-| [**User Exports & Audit Log**](documentation/backend/user-exports.md) | Server-side export generation, Storage archive, and audit table |
-| [**Product Tour**](documentation/frontend/product-tour.md) | Guided onboarding walkthrough, completion tracking, and versioning |
-| [**Logo Integration**](documentation/frontend/logo-integration.md) | Setup and usage guide for the Brandfetch logo integration |
-| [**Map Boundaries**](documentation/frontend/map-disputed-boundaries.md) | Carto basemap and local Survey of India boundary behavior |
-| [**Standalone Screens**](documentation/frontend/standalone-screens.md) | Brand frame for auth, error, 404 and maintenance screens; full-page loading skeleton; skeleton conventions |
+| [Tech Stack](documentation/tech-stack.md) | Every library and service, with versions and purpose |
+| [UI-to-Column Mapping](documentation/frontend/ui-column-mapping.md) | Every UI label and the database column behind it, for filters, tables, dialogs and charts |
+| [Project Architecture](documentation/project-architecture.md) | Overall design, server actions, state management and integrations |
+| [Schema Guide](documentation/backend/schema-migration-guide.md) | The data model, column definitions and migration history |
+| [Table Relationships](documentation/backend/table-relationships.md) | Table hierarchy, primary keys, foreign keys and ETL import order |
+| [ETL Pipeline](documentation/backend/etl-pipeline.md) | The import process: source data, diffing, audit trail and how to extend it |
+| [Developer Workflow](documentation/developer-workflow.md) | Common tasks, coding standards and troubleshooting |
+| [Testing Guide](documentation/testing-guide.md) | Vitest setup, mocking patterns and how to add a test |
+| [Server-Mode Dashboard](documentation/backend/server-dashboard-mode.md) | The server-backed data path from #249: endpoints, SQL filter translation and rollout state |
+| [Caching and Rate Limiting](documentation/backend/caching-and-rate-limiting.md) | The in-memory and Upstash Redis response cache, cache clearing and per-user rate limits |
+| [Account Lists](documentation/backend/account-lists.md) | Uploading client account lists, name matching, the Account List filter and sharing |
+| [Supabase Auth](documentation/backend/supabase-auth-setup.md) | Setting up the `profiles` table, RLS policies and auth triggers |
+| [RBAC & Auth Guards](documentation/backend/rbac-and-auth-guards.md) | Role checks, the client-side session guard and server-side token verification |
+| [Saved Filters](documentation/backend/supabase-saved-filters.md) | The JSON format of saved filters |
+| [Filter Sharing](documentation/backend/filter-sharing.md) | The filter-sharing table, RLS model, lookup functions and Supabase migration order |
+| [User Exports & Audit Log](documentation/backend/user-exports.md) | Server-side export generation, the Storage archive and the audit table |
+| [Product Tour](documentation/frontend/product-tour.md) | The onboarding tour, completion tracking and versioning |
+| [Logo Integration](documentation/frontend/logo-integration.md) | Setting up and using the Brandfetch logo integration |
+| [Map Boundaries](documentation/frontend/map-disputed-boundaries.md) | The Carto basemap and how the local Survey of India boundaries are drawn |
+| [Standalone Screens](documentation/frontend/standalone-screens.md) | The brand frame for auth, error, 404 and maintenance screens, the full-page loading skeleton and skeleton conventions |
 
 ---
 
