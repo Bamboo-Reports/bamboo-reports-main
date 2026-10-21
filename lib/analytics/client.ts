@@ -1,6 +1,14 @@
 "use client"
 
-import posthog from "posthog-js"
+import {
+  LogLevel,
+  StatsigClient,
+  type PrecomputedEvaluationsInterface,
+  type StatsigPlugin,
+  type StatsigUser,
+} from "@statsig/js-client"
+import { StatsigSessionReplayPlugin } from "@statsig/session-replay"
+import { StatsigAutoCapturePlugin } from "@statsig/web-analytics"
 import type { AnalyticsEventName } from "@/lib/analytics/events"
 
 const SESSION_STORAGE_KEY = "br.analytics.session_id"
@@ -28,18 +36,18 @@ type AnalyticsContext = Partial<{
 }>
 
 let analyticsContext: AnalyticsContext = {}
-let isInitialized = false
+let client: StatsigClient | null = null
 
 const shouldEnableAnalytics = () =>
   process.env.NODE_ENV === "production" || process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === "true"
 
-const shouldEnablePostHogExtensions = () =>
-  process.env.NEXT_PUBLIC_POSTHOG_ENABLE_RECORDING === "true"
+const shouldEnableSessionReplay = () =>
+  process.env.NEXT_PUBLIC_STATSIG_ENABLE_RECORDING === "true"
 
 const isAnalyticsEnabled = () =>
   typeof window !== "undefined" &&
   shouldEnableAnalytics() &&
-  Boolean(process.env.NEXT_PUBLIC_POSTHOG_KEY)
+  Boolean(process.env.NEXT_PUBLIC_STATSIG_CLIENT_KEY)
 
 const isSensitiveKey = (key: string) => {
   const normalized = key.toLowerCase()
@@ -54,6 +62,14 @@ const sanitizeProperties = (properties: Record<string, unknown>) =>
     Object.entries(properties).filter(([key, value]) => !isSensitiveKey(key) && value !== undefined)
   )
 
+// Statsig event metadata only accepts string values
+const toStatsigMetadata = (properties: Record<string, unknown>) =>
+  Object.fromEntries(
+    Object.entries(properties)
+      .filter(([, value]) => value !== null)
+      .map(([key, value]) => [key, typeof value === "string" ? value : JSON.stringify(value)])
+  )
+
 const createSessionId = () => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID()
@@ -62,50 +78,25 @@ const createSessionId = () => {
 }
 
 export const initAnalytics = () => {
-  if (!isAnalyticsEnabled() || isInitialized) {
+  if (!isAnalyticsEnabled() || client) {
     return
   }
 
-  posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY as string, {
-    api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
-    person_profiles: "identified_only",
-    autocapture: true,
-    capture_pageview: false,
-    capture_pageleave: true,
-    capture_dead_clicks: shouldEnablePostHogExtensions(),
-    disable_session_recording: !shouldEnablePostHogExtensions(),
-    before_send: (event) => {
-      if (!event || typeof event !== "object") {
-        return event
-      }
+  const plugins: StatsigPlugin<PrecomputedEvaluationsInterface>[] = [new StatsigAutoCapturePlugin()]
+  if (shouldEnableSessionReplay()) {
+    plugins.push(new StatsigSessionReplayPlugin())
+  }
 
-      const currentProperties =
-        event && "properties" in event && typeof event.properties === "object" && event.properties !== null
-          ? (event.properties as Record<string, unknown>)
-          : {}
-
-      const mergedProperties: Record<string, unknown> = {
-        ...sanitizeProperties(analyticsContext as Record<string, unknown>),
-        ...currentProperties,
-      }
-
-      if (!mergedProperties.session_id) {
-        mergedProperties.session_id = ensureAnalyticsSession()
-      }
-
-      return {
-        ...event,
-        properties: mergedProperties,
-      }
-    },
-    loaded: (client) => {
-      if (process.env.NEXT_PUBLIC_POSTHOG_DEBUG === "true") {
-        client.debug()
-      }
-    },
-  })
-
-  isInitialized = true
+  client = new StatsigClient(
+    process.env.NEXT_PUBLIC_STATSIG_CLIENT_KEY as string,
+    {},
+    {
+      environment: { tier: process.env.NODE_ENV === "production" ? "production" : "development" },
+      logLevel: process.env.NEXT_PUBLIC_STATSIG_DEBUG === "true" ? LogLevel.Debug : LogLevel.Warn,
+      plugins,
+    }
+  )
+  client.initializeSync()
 }
 
 export const ensureAnalyticsSession = () => {
@@ -158,12 +149,15 @@ export const identifyUser = ({
 
   const emailDomain = email?.split("@")[1] ?? null
 
-  posthog.identify(id, {
+  const user: StatsigUser = {
+    userID: id,
     ...(email ? { email } : {}),
-    ...(emailDomain ? { email_domain: emailDomain } : {}),
-    ...(authProvider ? { auth_provider: authProvider } : {}),
-    last_seen_at: new Date().toISOString(),
-  })
+    custom: {
+      ...(emailDomain ? { email_domain: emailDomain } : {}),
+      ...(authProvider ? { auth_provider: authProvider } : {}),
+    },
+  }
+  client?.updateUserSync(user)
 }
 
 export const resetAnalytics = () => {
@@ -171,7 +165,7 @@ export const resetAnalytics = () => {
     return
   }
 
-  posthog.reset()
+  client?.updateUserSync({})
   clearAnalyticsSession()
   clearAnalyticsContext()
 }
@@ -183,23 +177,14 @@ export const captureEvent = (event: AnalyticsEventName, properties: Record<strin
 
   initAnalytics()
 
-  posthog.capture(event, {
-    ...sanitizeProperties(analyticsContext as Record<string, unknown>),
-    ...sanitizeProperties(properties),
-    session_id: ensureAnalyticsSession(),
-    timestamp: new Date().toISOString(),
-  })
-}
-
-export const capturePageView = (url: string) => {
-  if (!isAnalyticsEnabled()) {
-    return
-  }
-
-  initAnalytics()
-
-  posthog.capture("$pageview", {
-    $current_url: url,
-    session_id: ensureAnalyticsSession(),
-  })
+  client?.logEvent(
+    event,
+    undefined,
+    toStatsigMetadata({
+      ...sanitizeProperties(analyticsContext as Record<string, unknown>),
+      ...sanitizeProperties(properties),
+      session_id: ensureAnalyticsSession(),
+      timestamp: new Date().toISOString(),
+    })
+  )
 }

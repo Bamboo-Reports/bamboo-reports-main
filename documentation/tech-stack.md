@@ -37,7 +37,7 @@ A comprehensive breakdown of every technology used in the Bamboo Reports project
 | **Maps** | MapLibre GL, Carto Positron, local GeoJSON |
 | **Database** | Neon PostgreSQL (data warehouse), Supabase PostgreSQL (auth/user data) |
 | **Authentication** | Supabase Auth |
-| **Analytics** | PostHog, Vercel Analytics, Vercel Speed Insights |
+| **Analytics** | Statsig, Vercel Analytics, Vercel Speed Insights |
 | **Export** | ExcelJS (Excel workbooks), jsPDF + jspdf-autotable (summary report PDF) |
 | **Caching** | In-memory L1 + Upstash Redis L2 response cache |
 | **Deployment** | Vercel |
@@ -288,16 +288,16 @@ Technologies for generating downloadable reports.
 
 Technologies for tracking usage and performance.
 
-### PostHog
+### Statsig
 
 | | |
 |---|---|
-| **What it is** | An open-source product analytics platform |
-| **Version** | 1.375.x |
+| **What it is** | A product analytics and experimentation platform |
+| **Version** | 3.33.x |
 | **Why we use it** | Tracks user behavior, feature usage, and engagement patterns. Helps the team understand which features are most valuable and where users encounter friction |
 | **Events tracked** | Page views, filter interactions, export actions, tab navigation, session duration |
 | **User identification** | Tied to Supabase user ID |
-| **Package** | `posthog-js` |
+| **Package** | `@statsig/js-client`, `@statsig/web-analytics`, `@statsig/session-replay` |
 
 ### Vercel Analytics
 
@@ -404,7 +404,7 @@ Third-party services the application communicates with at runtime.
 | **Carto Positron** | Basemap tiles for geospatial views | Yes | None |
 | **Brandfetch** | Company logo images | No | `NEXT_PUBLIC_BRANDFETCH_CLIENT_ID` |
 | **Upstash Redis** | L2 response cache and rate-limit counters (optional; L1-only cache and Supabase RPC rate limits without it) | No | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` (or `KV_REST_API_*`) |
-| **PostHog** | Product analytics | No | `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST` |
+| **Statsig** | Product analytics | No | `NEXT_PUBLIC_STATSIG_CLIENT_KEY` |
 | **Yahoo Finance** | Stock prices and financial data | No | None (public API) |
 
 ---

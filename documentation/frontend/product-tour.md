@@ -43,7 +43,7 @@ Bump `TOUR_VERSION` in `lib/tour/constants.ts` when the tour content changes eno
 
 ## 6. Analytics
 
-Fired via `captureEvent` (PostHog) at each lifecycle point: `TOUR_STARTED` (with `is_replay` when re-triggered manually), `TOUR_STEP_VIEWED` (per step, with index and title), `TOUR_COMPLETED` (reached the last step), `TOUR_SKIPPED` (closed early, with the step index it was skipped at). See `lib/analytics/events.ts` for the full event catalog.
+Fired via `captureEvent` (Statsig) at each lifecycle point: `TOUR_STARTED` (with `is_replay` when re-triggered manually), `TOUR_STEP_VIEWED` (per step, with index and title), `TOUR_COMPLETED` (reached the last step), `TOUR_SKIPPED` (closed early, with the step index it was skipped at). See `lib/analytics/events.ts` for the full event catalog.
 
 ## 7. Adding or Changing a Step
 

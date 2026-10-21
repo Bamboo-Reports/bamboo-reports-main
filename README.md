@@ -10,7 +10,7 @@ A modern Business Intelligence dashboard built with Next.js App Router, React, a
 [![Node.js](https://img.shields.io/badge/Node.js-20.9+-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Supabase](https://img.shields.io/badge/Auth-Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=0B0B0B)](https://supabase.com)
 [![Neon](https://img.shields.io/badge/DB-Neon_PostgreSQL-00E699?style=for-the-badge&logo=postgresql&logoColor=white)](https://neon.tech/)
-[![PostHog](https://img.shields.io/badge/Analytics-PostHog-1D4AFF?style=for-the-badge&logo=posthog&logoColor=white)](https://posthog.com/)
+[![Statsig](https://img.shields.io/badge/Analytics-Statsig-194B7D?style=for-the-badge)](https://statsig.com/)
 [![MapLibre](https://img.shields.io/badge/Maps-MapLibre_GL-396CB2?style=for-the-badge&logo=maplibre&logoColor=white)](https://maplibre.org/)
 ![License: Proprietary](https://img.shields.io/badge/License-Proprietary-C62828?style=for-the-badge)
 
@@ -122,7 +122,7 @@ graph TD
     end
 
     subgraph Analytics
-        Client -->|Event Tracking| PostHog[PostHog Analytics]
+        Client -->|Event Tracking| Statsig[Statsig Analytics]
         Client -->|Page Analytics| Vercel[Vercel Analytics]
     end
 ```
@@ -137,7 +137,7 @@ graph TD
 
 ## Tech Stack
 
-Next.js 16 (App Router) with React 19 and TypeScript, Tailwind CSS with shadcn/ui on Radix primitives, Highcharts and Recharts, MapLibre GL, Neon PostgreSQL via Prisma for the warehouse, Supabase for auth and user data, Upstash Redis for caching and rate limits, ExcelJS and jsPDF for exports, PostHog and Vercel Analytics, and Vitest for tests.
+Next.js 16 (App Router) with React 19 and TypeScript, Tailwind CSS with shadcn/ui on Radix primitives, Highcharts and Recharts, MapLibre GL, Neon PostgreSQL via Prisma for the warehouse, Supabase for auth and user data, Upstash Redis for caching and rate limits, ExcelJS and jsPDF for exports, Statsig and Vercel Analytics, and Vitest for tests.
 
 Versions, rationale and architecture decisions live in the **[Tech Stack Reference](documentation/tech-stack.md)**, which is the single source for this information.
 
@@ -225,11 +225,10 @@ The per-directory breakdown (every `components/`, `hooks/` and `lib/` module and
 | `NEXT_PUBLIC_BRANDFETCH_CLIENT_ID` | No | Brandfetch Logo API client ID. Without it the UI shows monogram fallbacks. |
 | `DATA_RATE_LIMIT_PER_MIN` | No | Max requests per user per minute on data endpoints. Default: `60`. |
 | `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | No | Upstash Redis credentials for the L2 response cache (`KV_REST_API_URL` / `KV_REST_API_TOKEN` also accepted). Also backs the rate-limit counters. Without them the cache runs L1-only and rate limiting uses the Supabase `increment_rate_limit` RPC. |
-| `NEXT_PUBLIC_POSTHOG_KEY` | No | PostHog project API key for analytics. |
-| `NEXT_PUBLIC_POSTHOG_HOST` | No | PostHog host URL (defaults to PostHog cloud). |
-| `NEXT_PUBLIC_ENABLE_ANALYTICS` | No | Set to `true` to enable PostHog during local development. |
-| `NEXT_PUBLIC_POSTHOG_ENABLE_RECORDING` | No | Set to `true` to enable session recording and dead-click capture. |
-| `NEXT_PUBLIC_POSTHOG_DEBUG` | No | Set to `true` to enable PostHog debug logging. |
+| `NEXT_PUBLIC_STATSIG_CLIENT_KEY` | No | Statsig client SDK key for analytics. |
+| `NEXT_PUBLIC_ENABLE_ANALYTICS` | No | Set to `true` to enable Statsig during local development. |
+| `NEXT_PUBLIC_STATSIG_ENABLE_RECORDING` | No | Set to `true` to enable Statsig session replay. |
+| `NEXT_PUBLIC_STATSIG_DEBUG` | No | Set to `true` to enable Statsig SDK debug logging. |
 | `NEXT_PUBLIC_NOTIFICATIONS_ENABLED` | No | Feature flag: `enabled` or `disabled`. |
 | `NEXT_PUBLIC_MAINTENANCE_MODE` | No | Set to `true` to show a maintenance page instead of the dashboard. |
 | `NEXT_PUBLIC_ENVIRONMENT_LABEL` | No | Environment tag displayed in the UI: `DEV`, `PROD`, or empty. |
@@ -314,14 +313,14 @@ The core BI data resides in **Neon PostgreSQL**. All tables follow strict `snake
 
 ## Analytics & Monitoring
 
-### PostHog
-Product analytics integrated via `posthog-js`. Tracks:
-- Dashboard page views and session duration
+### Statsig
+Product analytics integrated via `@statsig/js-client` with the `@statsig/web-analytics` autocapture plugin (and `@statsig/session-replay` when enabled). Tracks:
+- Page views (autocaptured, including client-side navigations) and session duration
 - Filter interactions and saved filter usage
 - Export actions and tab navigation
 - User identification tied to Supabase user ID
 
-Configuration: Set `NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_POSTHOG_HOST` environment variables.
+Configuration: Set the `NEXT_PUBLIC_STATSIG_CLIENT_KEY` environment variable.
 
 ### Vercel Analytics
 Page performance monitoring via `@vercel/analytics`. Automatically tracks Core Web Vitals when deployed on Vercel.

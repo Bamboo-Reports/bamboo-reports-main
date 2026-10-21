@@ -62,7 +62,7 @@ This section is the single source for the repo layout; the README only shows the
 -   **`actions/notifications.ts`**: Notification tracking (recently updated accounts and records, read status).
 -   **`actions/system.ts`**: System diagnostics and health checks.
 -   **`page.tsx`**: Main dashboard entry point and UI orchestrator. Wires auth, data loading, filtering hooks, and layout composition.
--   **`providers.tsx`**: Application-level providers (PostHog analytics).
+-   **`providers.tsx`**: Application-level providers (Statsig analytics).
 -   **`(auth)/`**: Auth route group: `signin/`, `signup/`, `forgot-password/`, `reset-password/`.
 -   **`actions.ts`**: Re-exports the notification Server Actions.
 -   **`layout.tsx`**, **`not-found.tsx`**, **`global-error.tsx`**: Root layout (renders `components/maintenance-page.tsx` when `NEXT_PUBLIC_MAINTENANCE_MODE` is set), 404 page and last-resort error boundary.
@@ -124,7 +124,7 @@ Key components:
 
 | Directory | Responsibility |
 |-----------|---------------|
-| `analytics/` | PostHog client initialization, event definitions, tracking helpers |
+| `analytics/` | Statsig client initialization, event definitions, tracking helpers |
 | `auth/` | Role-based access control and server-side token verification (see [RBAC & Auth Guards](backend/rbac-and-auth-guards.md)) |
 | `cache/` | Two-tier response cache: in-process L1 with residency cap + optional Upstash Redis L2 (see [Caching and Rate Limiting](backend/caching-and-rate-limiting.md)) |
 | `accounts/` | Account list parsing, storage and name matching for account lists |
@@ -239,10 +239,10 @@ Alias rows power alias-aware account search: the global search (`components/sear
 -   **Purpose:** Fetches stock prices and financial metrics for account entities with stock tickers.
 -   **Integration:** Server-side only, through the authed, rate-limited `GET /api/financials` Route Handler; the browser calls it via `lib/finance/request-client.ts`.
 
-### 5.4 PostHog Analytics
+### 5.4 Statsig Analytics
 -   Initialized in `app/providers.tsx` and `lib/analytics/client.ts`.
 -   **Event tracking:** Defined in `lib/analytics/events.ts`, executed via helpers in `lib/analytics/tracking.ts`.
--   **Events tracked:** Page views, filter interactions, export actions, tab navigation, session duration.
+-   **Events tracked:** Page views (autocaptured by `@statsig/web-analytics`), filter interactions, export actions, tab navigation, session duration.
 -   **User identification:** Tied to Supabase user ID for cross-session tracking.
 
 ### 5.5 Vercel Analytics
@@ -255,7 +255,7 @@ Alias rows power alias-aware account search: the global search (`components/sear
 
 ```
 app/layout.tsx (Root Layout)
-└── AppProviders (PostHog, NotificationProvider, AccountListsProvider)
+└── AppProviders (Statsig, NotificationProvider, AccountListsProvider)
     └── ThemeProvider
     ├── MaintenancePage (only when NEXT_PUBLIC_MAINTENANCE_MODE=true; replaces everything below)
     └── app/page.tsx (Dashboard)
