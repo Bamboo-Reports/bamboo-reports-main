@@ -1,12 +1,19 @@
 """Phase 0 for one sheet: every column against its format and value rules."""
 
+import functools
+import json
 import re
 from datetime import datetime
 
-from sheets.rules import ALL_RULES, EMAIL_PATTERN, URL_LINE_PATTERN
+from common.env import ETL_DIR
+from sheets.rules import ALL_RULES, ALL_SHEETS, EMAIL_PATTERN, URL_LINE_PATTERN
 
 from .highlights import record_issue
 from .sheet_cache import SheetCache
+
+# The importer's schema: what each table loads. Validate checks the sheet's
+# headers against it too, so the rules and the import cannot drift apart.
+SCHEMA_FILE = ETL_DIR / "importer" / "master-schema.json"
 
 
 # -- Phase 0: Table Format Validation -----------------------------------------
@@ -222,10 +229,20 @@ def column_letter(idx: int) -> str:
     return letters
 
 
+@functools.cache
+def schema_columns() -> dict[str, set[str]]:
+    """Columns per table in the importer's master-schema.json, lowercased.
+    Read once; the same file decides what the import loads."""
+    with open(SCHEMA_FILE, encoding="utf-8") as f:
+        schema = json.load(f)
+    return {table: {c["Column"].strip().lower() for c in spec.get("columns", [])} for table, spec in schema.items()}
+
+
 def check_columns(cache: SheetCache, table_name: str) -> list[tuple[int, str, str]]:
     """(row, column, message) for header-row problems in one sheet: data under
-    a blank header, named columns no rule covers, duplicated headers, and rule
-    columns missing from the sheet. The import drops unnamed and unknown
+    a blank header, duplicated headers, and named columns that the rules
+    (sheets/rules.py) and the import's schema (master-schema.json) do not
+    both know, in either direction. The import drops unnamed and unknown
     columns silently, so they are only caught here."""
     rules_map = ALL_RULES.get(table_name, {})
     try:
@@ -235,7 +252,8 @@ def check_columns(cache: SheetCache, table_name: str) -> list[tuple[int, str, st
     if not headers or not rules_map:
         return []
 
-    expected = {name.strip().lower() for name in rules_map}
+    in_rules = {name.strip().lower() for name in rules_map}
+    in_schema = schema_columns().get(table_name, set())
     issues: list[tuple[int, str, str]] = []
     seen: set[str] = set()
     for idx, header in enumerate(headers):
@@ -248,9 +266,24 @@ def check_columns(cache: SheetCache, table_name: str) -> list[tuple[int, str, st
                 )
         elif header in seen:
             issues.append((1, f"{letter} ({header})", "Duplicate header: the name is used by an earlier column"))
-        elif header not in expected:
+        elif header not in in_rules and header not in in_schema:
             issues.append((1, f"{letter} ({header})", "Unknown column: not imported; delete it or add it to the schema"))
+        elif header not in in_schema:
+            issues.append((1, f"{letter} ({header})", "Not in master-schema.json: validated but not imported"))
+        elif header not in in_rules:
+            issues.append((1, f"{letter} ({header})", "No rules in sheets/rules.py: imported but not validated"))
         seen.add(header)
-    for name in sorted(expected - seen):
-        issues.append((1, name, "Missing column: not in the sheet"))
+    for name in sorted((in_rules | in_schema) - seen):
+        where = "rules and schema" if name in in_rules and name in in_schema else "schema" if name in in_schema else "rules"
+        issues.append((1, name, f"Missing column: expected by the {where}, not in the sheet"))
     return issues
+
+
+def check_schema_tables() -> list[tuple[str, int, str, str]]:
+    """(sheet, row, column, message) for tables master-schema.json imports
+    that validate has no rules for, so they would load unchecked."""
+    return [
+        (table, 1, "-", "In master-schema.json but sheets/rules.py has no rules for this sheet")
+        for table in sorted(schema_columns())
+        if table not in ALL_RULES or table not in ALL_SHEETS
+    ]

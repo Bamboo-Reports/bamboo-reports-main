@@ -13,7 +13,7 @@ from .highlights import record_issue
 from .options import is_excluded
 from .phases import PhaseResult, problem_kind
 from .sheet_cache import SheetCache
-from .table_format import check_columns, check_table_format
+from .table_format import check_columns, check_schema_tables, check_table_format
 
 
 def check_all_tables_format(cache: SheetCache) -> PhaseResult:
@@ -40,6 +40,7 @@ def check_all_tables_format(cache: SheetCache) -> PhaseResult:
             tui.ICONS["fail" if errors else "pass"],
         )
     tui.print_table(overview)
+    issues.extend(check_schema_tables())
 
     result.errors += len(issues)
     if not issues:

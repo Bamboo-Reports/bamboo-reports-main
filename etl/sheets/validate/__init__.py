@@ -7,9 +7,11 @@ Validates Google Sheets data in several phases:
       Per-column format/enum/nullable checks driven by ALL_RULES for:
         accounts, centers, services, prospects, ticker, alias, functions, tech,
         subscribers
-      plus the header row of each: data under a blank header, columns no rule
-      covers, duplicated headers and rule columns missing from the sheet (the
-      import drops unnamed and unknown columns without a word).
+      plus the header row of each: data under a blank header, duplicated
+      headers, and columns that the rules and the importer's
+      master-schema.json do not both know, either way (the import drops
+      unnamed and unknown columns without a word). Tables in
+      master-schema.json with no rules here are flagged too.
 
   Phase 0B - Invisible Characters
       Flags cells containing zero-width spaces, BOMs, or soft hyphens
