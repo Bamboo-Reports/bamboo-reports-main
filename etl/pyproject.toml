@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Bamboo Reports ETL: Google Sheets checks and cleanup, and the import into PostgreSQL"
 requires-python = ">=3.11"
 dependencies = [
+    "certifi>=2026.10.19",
     "google-auth",
     "gspread",
     "gspread-dataframe",
