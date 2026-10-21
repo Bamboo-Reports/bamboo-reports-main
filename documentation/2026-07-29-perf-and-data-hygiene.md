@@ -97,9 +97,8 @@ validator regex fix eventually.
 ## Operational notes
 
 - The weekly flow is now (paths updated after the 2026-10-21 ETL
-  restructure): `uv run --directory etl python -m sheets.validate` (fails on
-  format or invisible characters), then
-  `uv run --directory etl python -m importer --target prod` (import +
+  restructure): `etl/validate.sh` (fails on format or invisible
+  characters), then `etl/import.sh --target prod` (import +
   automatic cache purge; without `--target prod` it imports into dev). No
   manual cache clearing needed.
 - Post-import, the first dashboard load pays one cold recompute (~5s for

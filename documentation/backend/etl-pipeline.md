@@ -94,7 +94,15 @@ Only tables with `track_changes: True` in `TABLE_DEFS` produce field-change even
 
 ## 3. Running it locally
 
-Run from the repo root with `uv run --directory etl` (or from `etl/` with plain `uv run`):
+`etl/import.sh` is the everyday entry point. It takes the importer's flags (`etl/import.sh --help` lists them), works from any directory, and asks for confirmation before anything writes to prod (`--yes` skips the question and is required without a terminal):
+
+```bash
+etl/import.sh --dry-run                  # preview a dev import
+etl/import.sh                            # full import into dev
+etl/import.sh --target prod              # weekly prod import (asks to confirm)
+```
+
+Under the hood it runs the importer with uv; the same flags work directly, from the repo root with `uv run --directory etl` (or from `etl/` with plain `uv run`):
 
 ```bash
 uv run --directory etl python -m importer                  # default: import -> snapshot -> validate -> index, into dev
@@ -180,9 +188,10 @@ A missing `SPREADSHEET_ID` or URL for the chosen `--target` aborts as soon as th
 
 Standalone pre-import validation of the source spreadsheet, copied from the `br-data-scripts` repo in commit `6666b40` so all pipeline scripts live together. Run it before an import to catch data problems the ETL itself does not check (formats, duplicates, broken references). It reads the sheet only; it never touches the DB.
 
-**Running.** Both tools are packages in the same uv project as the importer:
+**Running.** Both tools are packages in the same uv project as the importer. `etl/validate.sh` wraps validate with a `--help` and rejects unknown flags (validate itself ignores them):
 
 ```bash
+etl/validate.sh --force --limit 50                             # same as the commands below
 uv run --directory etl python -m sheets.validate               # all phases
 uv run --directory etl python -m sheets.validate --force       # continue past a failing phase
 uv run --directory etl python -m sheets.validate --limit 50    # more rows per detail table (default 20)

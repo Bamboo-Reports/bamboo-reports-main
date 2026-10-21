@@ -280,6 +280,8 @@ bamboo-reports-nextjs/
 │   │   ├── rules.py                # Column rules shared by validate and cleanup
 │   │   ├── validate/               # Read-only checks (python -m sheets.validate)
 │   │   └── cleanup/                # Automatic fixes (python -m sheets.cleanup)
+│   ├── import.sh                   # Run the importer (--help for flags; confirms before prod writes)
+│   ├── validate.sh                 # Run sheet validation (--help for flags)
 │   ├── pyproject.toml              # Python project and dependencies (uv)
 │   └── uv.lock                     # Locked Python dependencies
 │                                    # See documentation/backend/etl-pipeline.md for the full process
