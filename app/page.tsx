@@ -677,23 +677,44 @@ function DashboardContent(): React.JSX.Element | null {
   // toast are the only signals that the click did anything.
   const refreshing = serverData.isRefreshing
   const refreshRequestedRef = useRef(false)
+  // Failure seq when the refresh was clicked: if it moved by the time the
+  // refresh settles, the error toast reports it instead of "Data refreshed".
+  const refreshStartFailureSeqRef = useRef(0)
 
   const handleRefresh = useCallback(() => {
     captureEvent(ANALYTICS_EVENTS.DATA_REFRESH_CLICKED)
     refreshRequestedRef.current = true
+    refreshStartFailureSeqRef.current = serverData.failure?.seq ?? 0
     serverData.reload()
   }, [serverData])
 
   useEffect(() => {
     if (refreshing || !refreshRequestedRef.current) return
     refreshRequestedRef.current = false
+    if ((serverData.failure?.seq ?? 0) !== refreshStartFailureSeqRef.current) return
     toast.success('Data refreshed')
-  }, [refreshing])
+  }, [refreshing, serverData.failure])
 
   const handleErrorRetry = useCallback(() => {
     captureEvent(ANALYTICS_EVENTS.ERROR_RETRY_CLICKED)
     serverData.reload()
   }, [serverData])
+
+  // Once data is on screen, the full-page error state no longer applies, so a
+  // failed fetch is reported here; the previous data stays visible.
+  const shownFailureSeqRef = useRef(0)
+  const failure = serverData.failure
+  useEffect(() => {
+    if (!failure || failure.seq === shownFailureSeqRef.current) return
+    shownFailureSeqRef.current = failure.seq
+    if (!serverData.summary) return
+    captureEvent(ANALYTICS_EVENTS.ERROR_STATE_SHOWN, { error_message: failure.message })
+    toast.error("Some data could not be loaded.", {
+      id: "dashboard-load-error",
+      description: failure.message,
+      action: { label: "Retry", onClick: handleErrorRetry },
+    })
+  }, [failure, serverData.summary, handleErrorRetry])
 
   // Cancel any pending deferred scope clear so a freshly opened export can't be
   // reset by a timer scheduled when the previous dialog closed.
