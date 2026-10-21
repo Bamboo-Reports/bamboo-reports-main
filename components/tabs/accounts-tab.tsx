@@ -12,7 +12,6 @@ import { RiExpandUpDownLine, RiLayoutGridLine, RiMapLine, RiMapPinLine, RiPieCha
 import { AccountRow } from "@/components/tables"
 import { SelectionActionBar } from "@/components/tables/selection-action-bar"
 import { useTableRowSelection } from "@/hooks/use-table-row-selection"
-import type { FavoriteInput } from "@/hooks/use-favorites"
 import { AccountGridCard } from "@/components/cards/account-grid-card"
 import {
   PieChartCard,
@@ -67,27 +66,14 @@ interface AccountsTabProps {
   itemsPerPage: number
   onRecordOpened?: (item: { type: "account"; id: string; title: string; subtitle: string }) => void
   onDownloadSelection?: (scope: { dataset: "accounts"; accountNames: string[] }) => void
-  favoriteKeys?: Set<string>
-  onToggleFavorite?: (item: FavoriteInput) => void
-  onFavoriteMany?: (items: FavoriteInput[]) => void
-  onUnfavoriteMany?: (items: FavoriteInput[]) => void
   server?: TabServerProps | null
   mapData?: { cities: CityAggregate[]; states: StateAggregate[] } | null
   chartsLoading?: boolean
   mapLoading?: boolean
 }
 
-// Module-level so the references are stable across renders (passed to memo'd rows).
+// Module-level so the reference is stable across renders (passed to memo'd rows).
 const getAccountKey = (account: Account) => account.account_global_legal_name ?? ""
-
-function buildAccountFavorite(account: Account): FavoriteInput {
-  return {
-    entity_type: "account",
-    entity_id: account.account_global_legal_name ?? "",
-    title: account.account_global_legal_name || "Unknown Account",
-    subtitle: [account.account_hq_city, account.account_hq_country].filter(Boolean).join(", ") || null,
-  }
-}
 
 export function AccountsTab({
   accounts,
@@ -105,10 +91,6 @@ export function AccountsTab({
   itemsPerPage,
   onRecordOpened,
   onDownloadSelection,
-  favoriteKeys,
-  onToggleFavorite,
-  onFavoriteMany,
-  onUnfavoriteMany,
   server,
   mapData,
   chartsLoading = false,
@@ -287,18 +269,11 @@ export function AccountsTab({
     pageKeys: pageNames,
     allPageSelected,
     somePageSelected,
-    allSelectedFavorited,
-    selectedFavoriteInputs,
     handleRowSelectChange,
-    handleRowToggleFavorite,
   } = useTableRowSelection({
     items: server ? pageAccounts : accounts,
     pageItems: pageAccounts,
     getKey: getAccountKey,
-    favoritePrefix: "account",
-    favoriteKeys,
-    buildFavorite: buildAccountFavorite,
-    onToggleFavorite,
   })
 
   // Tab-specific open handler kept stable so memo'd rows don't re-render.
@@ -522,8 +497,6 @@ export function AccountsTab({
                           selectable
                           isSelected={selectedNames.has(account.account_global_legal_name ?? "")}
                           onSelectChange={getAccountKey(account) ? handleRowSelectChange : undefined}
-                          isFavorite={favoriteKeys?.has(`account:${account.account_global_legal_name ?? ""}`)}
-                          onToggleFavorite={onToggleFavorite && getAccountKey(account) ? handleRowToggleFavorite : undefined}
                         />
                       )
                     )}
@@ -584,16 +557,6 @@ export function AccountsTab({
         count={selectedNames.size}
         onClear={clearSelection}
         onExport={() => onDownloadSelection?.({ dataset: "accounts", accountNames: Array.from(selectedNames) })}
-        onFavorite={
-          onFavoriteMany || onUnfavoriteMany
-            ? () => {
-                const items = selectedFavoriteInputs()
-                if (allSelectedFavorited) onUnfavoriteMany?.(items)
-                else onFavoriteMany?.(items)
-              }
-            : undefined
-        }
-        favoriteActive={allSelectedFavorited}
       />
 
       {/* Account Details Dialog */}

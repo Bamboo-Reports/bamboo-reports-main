@@ -7,7 +7,6 @@ import { ExportDialog } from "@/components/export/export-dialog"
 import type { ExportDatasetKey } from "@/lib/utils/export-helpers"
 import { ExportsDialog } from "@/components/exports/exports-dialog"
 import { HistoryDialog } from "@/components/history/history-dialog"
-import { FavoritesDialog } from "@/components/favorites/favorites-dialog"
 import { FiltersSidebar } from "@/components/filters/filters-sidebar"
 import { Header } from "@/components/layout/header"
 import { GlobalSearch } from "@/components/search/global-search"
@@ -36,7 +35,6 @@ import {
 } from "@/lib/dashboard/api-client"
 import { useGlobalSearch } from "@/hooks/use-global-search"
 import { useRecentItems } from "@/hooks/use-recent-items"
-import { useFavorites, type FavoriteItem, type FavoriteInput } from "@/hooks/use-favorites"
 import { buildSummaryReport } from "@/lib/reports/summary-report"
 import {
   captureEvent,
@@ -271,7 +269,6 @@ function DashboardContent(): React.JSX.Element | null {
   >(null)
   const [exportsDialogOpen, setExportsDialogOpen] = useState(false)
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false)
-  const [favoritesDialogOpen, setFavoritesDialogOpen] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const canExport = canExportData(userRole)
   const accountVisibilityByName = useMemo<Record<string, AccountVisibilityInfo>>(
@@ -314,16 +311,6 @@ function DashboardContent(): React.JSX.Element | null {
     addRecentSearch,
     clearRecentItems,
   } = useRecentItems()
-
-  const {
-    favorites,
-    favoriteKeys,
-    toggleFavorite,
-    addFavorites,
-    removeFavorite,
-    removeFavorites,
-    clearFavorites,
-  } = useFavorites()
 
   // Search-triggered detail dialogs (separate from tab-level dialogs)
   const [searchSelectedAccount, setSearchSelectedAccount] = useState<Account | null>(null)
@@ -1073,94 +1060,6 @@ function DashboardContent(): React.JSX.Element | null {
     [setSearchQuery]
   )
 
-  const handleOpenFavorites = useCallback(() => {
-    captureEvent(ANALYTICS_EVENTS.FAVORITES_VIEW_OPENED, { count: favorites.length })
-    setFavoritesDialogOpen(true)
-  }, [favorites.length])
-
-  const handleToggleFavorite = useCallback(
-    async (item: FavoriteInput) => {
-      const result = await toggleFavorite(item)
-      // null means a toggle for this item is already in flight; ignore it.
-      if (!result) return
-      if (!result.ok) {
-        toast.error("Could not update favourites. Please try again.")
-        return
-      }
-      toast.success(result.added ? "Added to favourites" : "Removed from favourites")
-    },
-    [toggleFavorite]
-  )
-
-  const handleFavoriteMany = useCallback(
-    async (items: FavoriteInput[]) => {
-      if (items.length === 0) return
-      const ok = await addFavorites(items)
-      if (!ok) {
-        toast.error("Could not add to favourites. Please try again.")
-        return
-      }
-      toast.success(`Added ${items.length} ${items.length === 1 ? "item" : "items"} to favourites`)
-    },
-    [addFavorites]
-  )
-
-  const handleRemoveFavorite = useCallback(
-    async (item: FavoriteItem) => {
-      const ok = await removeFavorite(item.entity_type, item.entity_id)
-      toast[ok ? "success" : "error"](ok ? "Removed from favourites" : "Could not remove favourite. Please try again.")
-    },
-    [removeFavorite]
-  )
-
-  const handleUnfavoriteMany = useCallback(
-    async (items: FavoriteInput[]) => {
-      if (items.length === 0) return
-      const ok = await removeFavorites(items)
-      if (!ok) {
-        toast.error("Could not remove from favourites. Please try again.")
-        return
-      }
-      toast.success(`Removed ${items.length} ${items.length === 1 ? "item" : "items"} from favourites`)
-    },
-    [removeFavorites]
-  )
-
-  const handleClearFavorites = useCallback(async () => {
-    const ok = await clearFavorites()
-    toast[ok ? "success" : "error"](ok ? "Cleared all favourites" : "Could not clear favourites. Please try again.")
-  }, [clearFavorites])
-
-  const handleOpenFavorite = useCallback(
-    (item: FavoriteItem) => {
-      setFavoritesDialogOpen(false)
-      if (item.entity_type === "account") {
-        fetchAccountRelated(item.entity_id)
-          .then((res) => {
-            if (!res.account) return toast.info("This account is not available in the current dataset.")
-            setSearchSelectedAccount(res.account)
-            setSearchAccountDialogOpen(true)
-          })
-          .catch(() => toast.info("This account is not available in the current dataset."))
-      } else if (item.entity_type === "center") {
-        fetchCenterDetail(item.entity_id)
-          .then((res) => {
-            setSearchSelectedCenter(res.center)
-            setSearchCenterDialogOpen(true)
-          })
-          .catch(() => toast.info("This centre is not available in the current dataset."))
-      } else {
-        fetchProspectById(item.entity_id)
-          .then((res) => {
-            setSearchSelectedProspect(res.prospect)
-            setSearchProspectDialogOpen(true)
-          })
-          .catch(() => toast.info("This prospect is not available in the current dataset."))
-      }
-    },
-    []
-  )
-
   const handleSearchActionSelect = useCallback(
     (action: string) => {
       handleSearchClose()
@@ -1241,16 +1140,8 @@ function DashboardContent(): React.JSX.Element | null {
       >
         Skip to main content
       </a>
-      <Header onRefresh={handleRefresh} refreshing={refreshing} onStartTour={startTour} onOpenSearch={handleSearchOpen} onOpenExports={() => setExportsDialogOpen(true)} onOpenHistory={() => setHistoryDialogOpen(true)} onOpenFavorites={handleOpenFavorites} />
+      <Header onRefresh={handleRefresh} refreshing={refreshing} onStartTour={startTour} onOpenSearch={handleSearchOpen} onOpenExports={() => setExportsDialogOpen(true)} onOpenHistory={() => setHistoryDialogOpen(true)} />
       <ExportsDialog open={exportsDialogOpen} onOpenChange={setExportsDialogOpen} />
-      <FavoritesDialog
-        open={favoritesDialogOpen}
-        onOpenChange={setFavoritesDialogOpen}
-        favorites={favorites}
-        onOpenFavorite={handleOpenFavorite}
-        onRemove={handleRemoveFavorite}
-        onClearAll={handleClearFavorites}
-      />
       <HistoryDialog
         open={historyDialogOpen}
         onOpenChange={setHistoryDialogOpen}
@@ -1415,10 +1306,6 @@ function DashboardContent(): React.JSX.Element | null {
                       itemsPerPage={itemsPerPage}
                       onRecordOpened={addRecentItem}
                       onDownloadSelection={canExport ? handleDownloadSelection : undefined}
-                      favoriteKeys={favoriteKeys}
-                      onToggleFavorite={handleToggleFavorite}
-                      onFavoriteMany={handleFavoriteMany}
-                      onUnfavoriteMany={handleUnfavoriteMany}
                     />
                   )}
 
@@ -1445,10 +1332,6 @@ function DashboardContent(): React.JSX.Element | null {
                       itemsPerPage={itemsPerPage}
                       onRecordOpened={addRecentItem}
                       onDownloadSelection={canExport ? handleDownloadSelection : undefined}
-                      favoriteKeys={favoriteKeys}
-                      onToggleFavorite={handleToggleFavorite}
-                      onFavoriteMany={handleFavoriteMany}
-                      onUnfavoriteMany={handleUnfavoriteMany}
                     />
                   )}
 
@@ -1472,10 +1355,6 @@ function DashboardContent(): React.JSX.Element | null {
                       itemsPerPage={itemsPerPage}
                       onRecordOpened={addRecentItem}
                       onDownloadSelection={canExport ? handleDownloadSelection : undefined}
-                      favoriteKeys={favoriteKeys}
-                      onToggleFavorite={handleToggleFavorite}
-                      onFavoriteMany={handleFavoriteMany}
-                      onUnfavoriteMany={handleUnfavoriteMany}
                     />
                   )}
                 </Tabs>

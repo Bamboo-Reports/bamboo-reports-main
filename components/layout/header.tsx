@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { RiCompass3Line, RiComputerLine, RiFileZipLine, RiLogoutBoxRLine, RiMoonLine, RiRefreshLine, RiSearchLine, RiStarLine, RiSunLine, RiTerminalBoxLine, RiTimeLine, RiUserLine } from "@remixicon/react"
+import { RiCompass3Line, RiComputerLine, RiFileZipLine, RiLogoutBoxRLine, RiMoonLine, RiRefreshLine, RiSearchLine, RiSunLine, RiTerminalBoxLine, RiTimeLine, RiUserLine } from "@remixicon/react"
 import { useTheme } from 'next-themes'
 import { Button } from '@/components/ui/button'
 import {
@@ -30,7 +30,6 @@ interface HeaderProps {
   onOpenSearch?: () => void
   onOpenExports?: () => void
   onOpenHistory?: () => void
-  onOpenFavorites?: () => void
 }
 
 type ThemeMode = 'light' | 'dark' | 'system'
@@ -91,7 +90,7 @@ function ProfileThemeSwitcher() {
   )
 }
 
-export const Header = React.memo(function Header({ onRefresh, refreshing = false, onStartTour, onOpenSearch, onOpenExports, onOpenHistory, onOpenFavorites }: HeaderProps): React.JSX.Element {
+export const Header = React.memo(function Header({ onRefresh, refreshing = false, onStartTour, onOpenSearch, onOpenExports, onOpenHistory }: HeaderProps): React.JSX.Element {
   const environmentLabel = getEnvironmentLabel()
   const router = useRouter()
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -316,15 +315,6 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
                 </div>
 
                 <div className="flex items-stretch gap-1 px-1.5 pb-1.5">
-                  {onOpenFavorites && (
-                    <DropdownMenuItem
-                      className="flex flex-1 flex-col items-center justify-center gap-1 cursor-pointer rounded-md border border-border/60 bg-muted/20 px-2 py-2.5 text-[11px] font-medium text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 focus:border-border focus:bg-muted/60 focus:text-foreground"
-                      onSelect={() => onOpenFavorites()}
-                    >
-                      <RiStarLine className="h-4 w-4" />
-                      Favourites
-                    </DropdownMenuItem>
-                  )}
                   {onOpenExports && (
                     <DropdownMenuItem
                       className="flex flex-1 flex-col items-center justify-center gap-1 cursor-pointer rounded-md border border-border/60 bg-muted/20 px-2 py-2.5 text-[11px] font-medium text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 focus:border-border focus:bg-muted/60 focus:text-foreground"

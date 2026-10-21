@@ -1,5 +1,5 @@
 import { memo } from "react"
-import { RiExternalLinkLine, RiEyeLine, RiFileCopyLine, RiStarLine, RiStarOffLine } from "@remixicon/react"
+import { RiExternalLinkLine, RiEyeLine, RiFileCopyLine } from "@remixicon/react"
 import { TableRow, TableCell } from "@/components/ui/table"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -24,11 +24,9 @@ interface ProspectRowProps {
   selectable?: boolean
   isSelected?: boolean
   onSelectChange?: (prospect: Prospect, checked: boolean) => void
-  isFavorite?: boolean
-  onToggleFavorite?: (prospect: Prospect) => void
 }
 
-export const ProspectRow = memo(({ prospect, onOpen, visibleColumns, selectable, isSelected, onSelectChange, isFavorite, onToggleFavorite }: ProspectRowProps) => {
+export const ProspectRow = memo(({ prospect, onOpen, visibleColumns, selectable, isSelected, onSelectChange }: ProspectRowProps) => {
   const handleOpen = () => onOpen(prospect)
   const copy = useCopyToClipboard()
   const fullName =
@@ -124,12 +122,6 @@ export const ProspectRow = memo(({ prospect, onOpen, visibleColumns, selectable,
           <RiEyeLine className="h-4 w-4" />
           View Details
         </ContextMenuItem>
-        {onToggleFavorite && (
-          <ContextMenuItem onClick={() => onToggleFavorite(prospect)}>
-            {isFavorite ? <RiStarOffLine className="h-4 w-4" /> : <RiStarLine className="h-4 w-4" />}
-            {isFavorite ? "Remove from Favourites" : "Add to Favourites"}
-          </ContextMenuItem>
-        )}
         {prospect.prospect_email && (
           <>
             <ContextMenuSeparator />
