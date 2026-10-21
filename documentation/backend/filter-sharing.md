@@ -1,45 +1,10 @@
-# Favorites and Filter Sharing
+# Filter Sharing
 
-> **Scope:** The `user_favorites` and `filter_shares` Supabase tables, their RLS policies, and the client hooks built on top of them. For the base saved-filter JSON structure, see [Saved Filters](supabase-saved-filters.md).
-
----
-
-## 1. User Favorites
-
-Lets a signed-in user star an account, center, or prospect and revisit it later. Private per user; no sharing.
-
-### Schema (`public.user_favorites`)
-
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | `uuid` | PK, `gen_random_uuid()` |
-| `user_id` | `uuid` | FK to `auth.users`, cascades on delete |
-| `entity_type` | `text` | `'account' \| 'center' \| 'prospect'` (CHECK constraint) |
-| `entity_id` | `text` | The entity's identity value (e.g. `account_global_legal_name`, `cn_unique_key`, `ps_unique_key`) |
-| `title` | `text` | Denormalized display label, so the favorites list renders without re-joining the warehouse |
-| `subtitle` | `text \| null` | Denormalized secondary line |
-| `created_at` | `timestamptz` | |
-
-`UNIQUE (user_id, entity_type, entity_id)` prevents duplicate favorites; the hook relies on this constraint via `upsert(..., ignoreDuplicates: true)` instead of checking existence first.
-
-RLS: every policy scopes to `auth.uid() = user_id`. Full CRUD, no cross-user visibility. Migration: `sql/user-favorites-migration.sql`.
-
-### Client Hook: `useFavorites`
-
-`hooks/use-favorites.ts` owns the full favorites lifecycle:
-
-- Tracks the current Supabase session internally (does not take `userId` as a prop) via `getSession()` + `onAuthStateChange`.
-- `loadFavorites()` fetches all rows for the current user, newest first. **Fails open**: a query error (for example, the migration hasn't been applied yet) logs via `devError` and leaves `favorites` as an empty array rather than throwing, so the rest of the app keeps working.
-- `isFavorite(type, id)`: O(1) lookup against a `Set` built from `favoriteKeys` (`useMemo`).
-- `toggleFavorite(item)`: the primary entry point for star/unstar UI. Guards against a double-click race with `togglingRef` (a `Set` of in-flight keys): a second toggle on the same entity while one is still in flight is ignored rather than double-adding or double-removing.
-- `addFavorites(items)` / `removeFavorite(type, id)` / `removeFavorites(items)`: bulk and single operations, each firing a PostHog event (`FAVORITE_ADDED` / `FAVORITE_REMOVED`) with `bulk: items.length > 1` on multi-item calls.
-- `clearFavorites()`: deletes every favorite for the current user and empties local state. It fires no PostHog event.
-
-All mutation methods return `boolean` (or `{ ok, added } | null` for `toggleFavorite`) instead of throwing, so callers can show a toast on failure without a try/catch.
+> **Scope:** The `filter_shares` Supabase table, its RLS policies, and the lookup functions behind sharing by email. For the base saved-filter JSON structure, see [Saved Filters](supabase-saved-filters.md).
 
 ---
 
-## 2. Filter Sharing
+## 1. Filter Sharing
 
 Lets the owner of a saved filter share it with a specific teammate by email. The recipient gets read access to that one filter; nothing else.
 
@@ -78,11 +43,14 @@ Both are `REVOKE ALL ... FROM PUBLIC, anon` then `GRANT EXECUTE ... TO authentic
 1. `supabase-auth-setup` (create `profiles` and `set_updated_at()`), with `lib/tour/migration.sql` run before its column grants, since they name `tour_completed_at` / `tour_version`. On an existing project without `role`, `profiles-role-migration.sql` goes here too, also after the tour migration.
 2. `supabase-saved-filters` (`saved_filters`).
 3. `filter-shares-migration.sql` (needs `saved_filters` and `profiles`; defines `lookup_profile_by_email`).
-4. `user-favorites-migration.sql` (only needs `auth.users`; independent of 2 and 3).
-5. `account-lists-migration.sql` (only needs `auth.users`; defines its own trigger function).
-6. `account-list-shares-migration.sql` (needs `account_lists` from 5 and `lookup_profile_by_email` from 3).
-7. `user-exports-schema.sql` and `rate-limits-migration.sql` (each only needs `auth.users`; independent).
-8. `supabase-security-hardening-migration.sql` last: it alters `set_updated_at()`, re-grants the tour columns, and enables RLS / revokes grants on `profiles`, `saved_filters`, `filter_shares`, `user_favorites` and `user_exports`, so all of those must already exist.
+4. `account-lists-migration.sql` (only needs `auth.users`; defines its own trigger function).
+5. `account-list-shares-migration.sql` (needs `account_lists` from 4 and `lookup_profile_by_email` from 3).
+6. `user-exports-schema.sql` and `rate-limits-migration.sql` (each only needs `auth.users`; independent).
+7. `rate-limits-prune-cron-migration.sql` (needs `rate_limit_counters` from 6; enables pg_cron and schedules the daily prune).
+8. `supabase-security-hardening-migration.sql`: it alters `set_updated_at()`, re-grants the tour columns, and enables RLS / revokes grants on `profiles`, `saved_filters`, `filter_shares` and `user_exports`, so all of those must already exist.
+9. `supabase-2026-10-cleanup-migration.sql` last: it rewrites the policies from steps 1 to 5 to evaluate `auth.uid()` once per query, adds the share owner indexes, and drops leftovers (`user_favorites`, `check_dashboard_access()`, `profiles.credits_remaining`).
+
+The favorites feature (`user_favorites`) was removed in October 2026; its original migration is in `documentation/archive/sql/`.
 
 ---
 
@@ -90,9 +58,7 @@ Both are `REVOKE ALL ... FROM PUBLIC, anon` then `GRANT EXECUTE ... TO authentic
 
 | File | Purpose |
 |------|---------|
-| `hooks/use-favorites.ts` | Favorites state, CRUD, toggle-race guard |
-| `sql/user-favorites-migration.sql` | `user_favorites` table, index, RLS policies |
 | `sql/filter-shares-migration.sql` | `filter_shares` table, RLS policies, lookup functions |
 | `documentation/backend/supabase-saved-filters.md` | Base `saved_filters` JSON structure |
 | `documentation/backend/supabase-auth-setup.md` | `profiles` table and auth setup |
-| `lib/analytics/events.ts` | `FAVORITE_ADDED` / `FAVORITE_REMOVED` event definitions |
+| `sql/supabase-2026-10-cleanup-migration.sql` | Current form of the share policies and owner indexes |

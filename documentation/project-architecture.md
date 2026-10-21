@@ -35,7 +35,7 @@ Component Mount / User Action
 
 See [Server-Mode Dashboard](backend/server-dashboard-mode.md).
 
-Supabase-backed user data (auth, profiles, saved filters, favorites, export audit rows, and Storage) stays on the Supabase client/service-role APIs so RLS/Auth/Storage behavior remains unchanged.
+Supabase-backed user data (auth, profiles, saved filters, account lists, export audit rows, and Storage) stays on the Supabase client/service-role APIs so RLS/Auth/Storage behavior remains unchanged.
 
 ---
 
@@ -86,7 +86,6 @@ Organized by feature domain:
 | `exports/` | "My exports" dialog for re-downloading archived exports |
 | `filters/` | Sidebar filter UI, multi-select controls, keyword inputs |
 | `history/` | Recently viewed history dialog |
-| `favorites/` | Favorites dialog for saved accounts, centers and prospects |
 | `layout/` | Header component |
 | `maps/` | MapLibre cluster map and state choropleth map |
 | `notifications/` | Notification bell dropdown |
@@ -110,7 +109,6 @@ Key components:
 | `use-auth-guard.ts` | Redirects unauthenticated users to sign-in |
 | `use-copy-to-clipboard.ts` | Copy-to-clipboard with auto-reset "copied" state |
 | `use-dashboard-filters.ts` | Complex filter state management (the largest hook, manages all filter logic, include/exclude modes, range sliders, keyword search) |
-| `use-favorites.ts` | Favorites CRUD and toggle state for accounts/centers/prospects (see [Favorites & Filter Sharing](backend/favorites-and-filter-sharing.md)) |
 | `use-global-search.ts` | Alias-aware global account search state |
 | `use-notifications.ts` | Notification state, unread counts, and read tracking |
 | `use-product-tour.ts` | Guided product tour orchestration (driver.js, see [Product Tour](frontend/product-tour.md)) |
@@ -202,7 +200,7 @@ const rows = await queryWarehouse(buildEntityAggregateQuery("accounts", filters,
 
 ### 4.2 Supabase PostgreSQL (User Data)
 
--   **Tables:** `public.profiles`, `public.saved_filters`, `public.filter_shares`, `public.user_favorites`, `public.account_lists`, `public.account_list_shares`, `public.user_exports` (export audit log).
+-   **Tables:** `public.profiles`, `public.saved_filters`, `public.filter_shares`, `public.account_lists`, `public.account_list_shares`, `public.user_exports` (export audit log).
 -   **Security:** Row-Level Security (RLS) policies ensure users can only access their own data.
 -   **Client:** Singleton Supabase browser client in `lib/supabase/client.ts`; service-role client in `lib/supabase/server.ts` for trusted Storage/export operations.
 -   **Boundary:** Supabase data is not accessed through Prisma in this codebase. Keeping Supabase on its own APIs preserves Auth, RLS, and Storage semantics.

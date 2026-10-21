@@ -53,7 +53,7 @@ revoke all on function public.increment_rate_limit(uuid, text, timestamptz) from
 grant execute on function public.increment_rate_limit(uuid, text, timestamptz) to service_role;
 
 -- =====================================================================
--- Optional pruning (run on a schedule, e.g. pg_cron). Safe to skip; stale
--- windows are simply never read once their window has passed.
+-- Pruning runs daily via pg_cron, see rate-limits-prune-cron-migration.sql.
+-- Stale windows are never read once their window has passed.
 -- =====================================================================
 -- delete from public.rate_limit_counters where window_start < now() - interval '1 day';

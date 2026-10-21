@@ -59,7 +59,6 @@ describe("Supabase security migrations", () => {
       "public.profiles",
       "public.saved_filters",
       "public.filter_shares",
-      "public.user_favorites",
       "public.user_exports",
     ]) {
       expect(hardeningSql).toContain(

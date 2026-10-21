@@ -11,6 +11,7 @@ Historical documents kept for context. They describe the code as it was when the
 | `filtering-sql-parity-report.md` | #249 Phase 2 parity verification on a dated warehouse snapshot |
 | `redis-cache-benchmark.md` | One-off Upstash Redis cache benchmark (2026-07-08) |
 | `filter-column-ui-label-map.json` | Old machine-readable label map. `lib/config/filters.ts` is now the source of truth |
+| `sql/user-favorites-migration.sql` | The retired favorites table. Dropped from Supabase on 2026-10-16 (see `supabase-2026-10-cleanup-migration.sql`) |
 | `sql/alias-table-migration.sql` | Superseded: the ETL now creates the `alias` table itself |
 | `sql/account-notifications-migration.sql` | Superseded by `ensure_notification_tables` in `etl/importer/changes.py` |
 | `sql/notification-simplification-migration.sql` | Superseded by `ensure_notification_tables` in `etl/importer/changes.py` |
