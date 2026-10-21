@@ -1,0 +1,33 @@
+[project]
+name = "bamboo-reports-etl"
+version = "0.1.0"
+description = "Bamboo Reports ETL: Google Sheets checks and cleanup, and the import into PostgreSQL"
+requires-python = ">=3.11"
+dependencies = [
+    "google-auth",
+    "gspread",
+    "gspread-dataframe",
+    "pandas",
+    "psycopg2-binary",
+    "python-dotenv",
+    "rich",
+    "sqlalchemy",
+]
+
+[dependency-groups]
+dev = ["ruff"]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+# Long lines (rule tables, SQL, messages) predate the linter.
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["common", "importer", "sheets"]

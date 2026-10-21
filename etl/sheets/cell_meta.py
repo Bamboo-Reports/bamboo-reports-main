@@ -1,8 +1,8 @@
 """
 cell_meta.py
 ------------
-Finds smart chips and dropdowns in a worksheet, for validate.py (Phase 0C)
-and cleanup.py (the chips step).
+Finds smart chips and dropdowns in a worksheet, for validate (Phase 0C)
+and cleanup (the chips step).
 
 Neither shows up in get_all_values(): a chip comes back as its display text
 and a dropdown is not part of the value at all. Both still matter. A chip

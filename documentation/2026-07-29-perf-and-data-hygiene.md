@@ -96,9 +96,11 @@ validator regex fix eventually.
 
 ## Operational notes
 
-- The weekly flow is now: `etl/data_validator/validate.py` (fails on format
-  or invisible characters), then `etl/V2/run.sh` (import + automatic cache
-  purge). No manual cache clearing needed.
+- The weekly flow is now (paths updated after the 2026-10-21 ETL
+  restructure): `etl/cleanup.sh --apply`, then `etl/validate.sh` (fails on format or invisible
+  characters), then `etl/import.sh --target prod` (import +
+  automatic cache purge; without `--target prod` it imports into dev). No
+  manual cache clearing needed.
 - Post-import, the first dashboard load pays one cold recompute (~5s for
   facets), then the cache is warm for the week. Cache warming was
   considered and deferred.

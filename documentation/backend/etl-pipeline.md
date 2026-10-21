@@ -1,46 +1,65 @@
 # ETL Pipeline
 
-> **Scope:** The Google Sheets → Postgres import process in `etl/V2/main_cache_purge.py` (with `etl/V2/main.py` as its no-purge backup): how it runs, how it diffs old vs new data, how the audit trail is populated, and how to extend it. For column-level schema, see `documentation/backend/schema-migration-guide.md`. For FK constraints and table hierarchy, see `documentation/backend/table-relationships.md`.
+> **Scope:** The ETL in `etl/`: the Google Sheets → Postgres importer (`etl/importer/`) and the sheet tools that run before it (`etl/sheets/`, §7): how they run, how the import diffs old vs new data, how the audit trail is populated, and how to extend it. For column-level schema, see `documentation/backend/schema-migration-guide.md`. For FK constraints and table hierarchy, see `documentation/backend/table-relationships.md`.
 
 ---
 
 ## 1. What it does, end to end
 
-Single Python script run via `etl/V2/run.sh`. Since the 2026-07-29 cache work, `run.sh` execs `etl/V2/main_cache_purge.py`, a copy of `main.py` with two additions (invisible-character stripping and a post-import cache purge, see §1b); `main.py` is kept as the untouched no-purge backup. One invocation can do any combination of: header validation, import, indexing, schema snapshot, schema validation.
+The ETL is one uv project in `etl/` (one `pyproject.toml`, one `uv.lock`, one `.env`) with three packages:
 
 ```
-run.sh
-  └─ main_cache_purge.py (main.py = same minus the analyze and purge steps and the invisible-char strip)
-       ├─ check_sheet_headers()      Diff each worksheet's header row vs master-schema.json
-       ├─ run_import()               Pull sheets → clean → diff vs DB → replace tables → log changes
-       ├─ apply_constraints()        Re-apply PKs/FKs (CONSTRAINTS_SQL)
-       ├─ apply_indexes()            Re-apply per-table indexes (TABLE_DEFS[*]["indexes"])
-       ├─ analyze_tables()           ANALYZE each reloaded table so the planner has statistics before the purge (cache-purge variant only)
-       ├─ run_snapshot()             Dump DB column/row/size stats to a JSON file on disk
-       ├─ run_validate()             Compare DB column types vs master-schema.json
-       └─ purge_dashboard_cache()    Delete the app's dash:* Redis keys (cache-purge variant only)
+etl/
+  common/      env.py (loads etl/.env), google.py (service account, gspread client, rate-limit retry), tui.py (terminal look)
+  importer/    the Sheets → Postgres import, run as `python -m importer`
+    cli.py         flags, stage plan, header, summary
+    config.py      DATABASE_URLS (dev/prod), paths, audit table names
+    tables.py      TABLE_DEFS, IMPORT_ORDER, CONSTRAINTS_SQL, TYPE_MAPPING, master-schema.json loader
+    headers.py     check_sheet_headers()
+    cleaning.py    clean_dataframe(), value normalisation for diffing
+    changes.py     audit tables, import runs, field and lifecycle change events
+    load.py        run_import()
+    database.py    engine, constraints, indexes, ANALYZE, snapshot, schema check
+    cache.py       purge_dashboard_cache()
+    logs.py        log file, console log handler, closing-summary stages
+    master-schema.json
+  sheets/      validate and cleanup for the source sheet (§7), sharing rules.py
+```
+
+One invocation of the importer can do any combination of: header validation, import, indexing, schema snapshot, schema validation.
+
+```
+python -m importer (cli.main)
+  ├─ check_sheet_headers()      Diff each worksheet's header row vs master-schema.json
+  ├─ run_import()               Pull sheets → clean → diff vs DB → replace tables → log changes
+  ├─ apply_constraints()        Re-apply PKs/FKs (CONSTRAINTS_SQL)
+  ├─ apply_indexes()            Re-apply per-table indexes (TABLE_DEFS[*]["indexes"])
+  ├─ analyze_tables()           ANALYZE each reloaded table so the planner has statistics before the purge
+  ├─ run_snapshot()             Dump DB column/row/size stats to a JSON file on disk
+  ├─ run_validate()             Compare DB column types vs master-schema.json
+  └─ purge_dashboard_cache()    Delete the app's dash:* Redis keys (prod imports only, see §1b)
 ```
 
 **Input source.** A single Google Sheet (`SPREADSHEET_ID`), one worksheet per table. The worksheet-name-to-table-name mapping is `WORKSHEET_MAP`, derived from `TABLE_DEFS[*]["worksheet"]` (currently 1:1: `accounts`, `alias`, `ticker`, `centers`, `services`, `functions`, `tech`, `prospects`, `subscribers`). Sheets are read with `gspread` + `gspread_dataframe.get_as_dataframe(evaluate_formulas=True, header=0)`, then fully-blank rows and `Unnamed:*` columns are dropped.
 
-**Cleaning.** `clean_dataframe` coerces each column to its `master-schema.json` type. In the cache-purge variant, every value is additionally stripped of invisible characters (`INVISIBLE_CHARS_RE`: zero-width space U+200B, zero-width non-joiner U+200C, zero-width joiner U+200D, BOM U+FEFF, soft hyphen U+00AD) before numeric parsing in `clean_dataframe` and in `normalize_change_value` / `normalize_text_value`. These are paste artifacts that render as nothing in Google Sheets but corrupt keys, sorting, and search in the warehouse (the "Freudenberg SE" incident, see `documentation/2026-07-29-perf-and-data-hygiene.md`); commit `e526d53`.
+**Cleaning.** `clean_dataframe` coerces each column to its `master-schema.json` type. Every value is also stripped of invisible characters (`INVISIBLE_CHARS_RE`: zero-width space U+200B, zero-width non-joiner U+200C, zero-width joiner U+200D, BOM U+FEFF, soft hyphen U+00AD) before numeric parsing in `clean_dataframe` and in `normalize_change_value` / `normalize_text_value`. These are paste artifacts that render as nothing in Google Sheets but corrupt keys, sorting, and search in the warehouse (the "Freudenberg SE" incident, see `documentation/2026-07-29-perf-and-data-hygiene.md`); commit `e526d53`.
 
-**DB connection.** `sqlalchemy.create_engine(CONN_STRING, pool_pre_ping=True)` where `CONN_STRING = NEON_DSN or DATABASE_URL`. All DDL/DML connections set `isolation_level="AUTOCOMMIT"`, so each statement (or each `to_sql` batch) commits independently, there is no wrapping transaction across a table's import.
+**DB connection.** `sqlalchemy.create_engine(CONN_STRING, pool_pre_ping=True)` where the URL is `DATABASE_URL_DEV` or `DATABASE_URL_PROD`, chosen by `--target dev|prod` (default `dev`, so prod is only written when named) at the start of `cli.main()`. All DDL/DML connections set `isolation_level="AUTOCOMMIT"`, so each statement (or each `to_sql` batch) commits independently, there is no wrapping transaction across a table's import.
 
 **Table creation.** Each table is fully replaced on every import: `DROP TABLE IF EXISTS {table} CASCADE` followed by `df_clean.to_sql(table, engine, if_exists="replace", index=False, method="multi", chunksize=1000, dtype=dtypes)`. Column types come from `master-schema.json` via `TYPE_MAPPING`. `CASCADE` on the drop is what lets an `accounts` reload nuke and let dependent FKs be silently dropped too; they're always reapplied afterward via `apply_constraints()`.
 
-**Diffing old vs new.** Before dropping/replacing a table, `main.py` fetches a pre-import snapshot of that table from Postgres (`fetch_existing_table_snapshot`) restricted to identity columns, label columns, and tracked fields. After cleaning the new sheet data, it builds a normalized "identity index" per row (`prepare_table_identity_index`) and diffs old vs new on that index to produce field-change and lifecycle events (see §2).
+**Diffing old vs new.** Before dropping/replacing a table, the importer fetches a pre-import snapshot of that table from Postgres (`fetch_existing_table_snapshot`) restricted to identity columns, label columns, and tracked fields. After cleaning the new sheet data, it builds a normalized "identity index" per row (`prepare_table_identity_index`) and diffs old vs new on that index to produce field-change and lifecycle events (see §2).
 
-References to `main.py` internals below (function names, `TABLE_DEFS`, `CONSTRAINTS_SQL`, etc.) apply identically to `main_cache_purge.py`; the two files are kept in sync apart from the differences in §1b.
 
-## 1b. The cache-purge variant (`main_cache_purge.py`)
+## 1b. Dashboard cache purge
 
-`main_cache_purge.py` is what `run.sh` actually runs. It differs from `main.py` in exactly two ways:
+The web app caches dashboard responses in a shared Upstash Redis under `dash:*` keys with a long TTL (`DASHBOARD_CACHE_TTL_MS`, 8 days, aligned to the weekly Friday import). After a successful non-dry-run `--target prod` import, `purge_dashboard_cache()` (`importer/cache.py`) SCANs and DELs all `dash:*` keys via the Upstash REST API (stdlib `urllib`, no new dependency) so the app serves fresh data minutes after an import instead of waiting out the TTL. `analyze_tables()` runs first so the recomputes that follow have planner statistics.
 
-1. **Invisible-character stripping** during cleaning and normalization (see §1 above).
-2. **`purge_dashboard_cache()`** after a successful non-dry-run import: the web app caches dashboard responses in a shared Upstash Redis under `dash:*` keys with a long TTL (`DASHBOARD_CACHE_TTL_MS`, 8 days, aligned to the weekly Friday import). The purge SCANs and DELs all `dash:*` keys via the Upstash REST API (stdlib `urllib`, no new dependency) so the app serves fresh data minutes after an import instead of waiting out the TTL. It is skipped with a dim notice when `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` (or `KV_REST_API_URL`/`KV_REST_API_TOKEN`) are unset, and a purge failure logs a warning without failing the import. On the app side, `lib/cache/memory.ts` caps L1 (in-process) cache residency at 5 minutes when Redis is configured, so the purge reaches warm serverless instances quickly.
+- Dev imports skip the purge, since the shared cache serves prod; `--no-purge` skips it on a prod import too.
+- It is skipped with a notice when `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` (or `KV_REST_API_URL`/`KV_REST_API_TOKEN`) are unset, and a purge failure logs a warning without failing the import.
+- On the app side, `lib/cache/memory.ts` caps L1 (in-process) cache residency at 5 minutes when Redis is configured, so the purge reaches warm serverless instances quickly.
 
-`main.py` is the deliberate no-purge backup (two-script policy): run it directly with `uv run --project etl/V2 --locked python etl/V2/main.py` if you need an import without touching the app cache. Flags and env vars are identical. Context: `documentation/2026-07-29-perf-and-data-hygiene.md`, `documentation/security-249-progress.md`.
+Until 2026-10-21 this lived in a second copy of the script (`etl/V2/main_cache_purge.py`, with `main.py` as the no-purge backup); the two were merged into the importer package, and `--no-purge` replaces the backup. Context: `documentation/2026-07-29-perf-and-data-hygiene.md`, `documentation/security-249-progress.md`.
 
 ---
 
@@ -75,36 +94,48 @@ Only tables with `track_changes: True` in `TABLE_DEFS` produce field-change even
 
 ## 3. Running it locally
 
+`etl/import.sh` is the everyday entry point. It takes the importer's flags (`etl/import.sh --help` lists them), works from any directory, and asks for confirmation before anything writes to prod (`--yes` skips the question and is required without a terminal):
+
 ```bash
-etl/V2/run.sh                  # default: import -> snapshot -> validate -> index
-etl/V2/run.sh --import         # import -> snapshot
-etl/V2/run.sh --dry-run        # full import pipeline, diffing included, no DB writes
-etl/V2/run.sh --validate       # schema validation only
-etl/V2/run.sh --schema         # snapshot only
-etl/V2/run.sh --index          # (re)apply indexes only
-etl/V2/run.sh --check-headers  # diff sheet headers vs master-schema.json, no DB connection changes
-etl/V2/run.sh --table centers  # restrict any of the above to one table
-etl/V2/run.sh --verbose        # debug-level logging
+etl/import.sh --dry-run                  # preview a dev import
+etl/import.sh                            # full import into dev
+etl/import.sh --target prod              # weekly prod import (asks to confirm)
 ```
 
-Every run opens with a header (database host, tables, whether it writes, the stages it will run, the log file), shows one compact table per stage (headers, per-table import results, snapshot, schema check) with progress bars while it works, and ends with a summary of every stage and a verdict panel. Routine progress messages go only to the log file; `--verbose` shows them on screen too. The look is shared with the sheet scripts through `etl/tui.py`.
+Under the hood it runs the importer with uv; the same flags work directly, from the repo root with `uv run --directory etl` (or from `etl/` with plain `uv run`):
 
-`run.sh` requires `uv` on `PATH` and executes `uv run --project etl/V2 --locked python etl/V2/main_cache_purge.py "$@"`. `--locked` means it will fail if `pyproject.toml` and the lockfile are out of sync; don't hand-edit dependencies without re-locking. To run the no-purge backup, invoke `main.py` with the same `uv run` command directly (see §1b).
+```bash
+uv run --directory etl python -m importer                  # default: import -> snapshot -> validate -> index, into dev
+uv run --directory etl python -m importer --target prod    # the same into prod, then purge the dashboard cache
+uv run --directory etl python -m importer --import         # import -> snapshot
+uv run --directory etl python -m importer --dry-run        # full import pipeline, diffing included, no DB writes
+uv run --directory etl python -m importer --validate       # schema validation only
+uv run --directory etl python -m importer --schema         # snapshot only
+uv run --directory etl python -m importer --index          # (re)apply indexes only
+uv run --directory etl python -m importer --check-headers  # diff sheet headers vs master-schema.json, no DB connection changes
+uv run --directory etl python -m importer --table centers  # restrict any of the above to one table
+uv run --directory etl python -m importer --no-purge       # prod import without the cache purge
+uv run --directory etl python -m importer --verbose        # debug-level logging
+```
 
-### Env vars (loaded from `etl/V2/.env` or repo-root `.env`, whichever is found first)
+Every run opens with a header (target, database host, tables, whether it writes, the stages it will run, the log file), shows one compact table per stage (headers, per-table import results, snapshot, schema check) with progress bars while it works, and ends with a summary of every stage and a verdict panel. Routine progress messages go only to the log file; `--verbose` shows them on screen too. The look is shared with the sheet tools through `etl/common/tui.py`.
+
+`uv` installs the dependencies from `etl/uv.lock` on first run. Add or remove dependencies with `uv add` / `uv remove` in `etl/` so the lockfile stays in sync.
+
+### Env vars (one file for every ETL tool: `etl/.env`, see `etl/.env.example`)
 
 | Var | Required | Used for |
 |---|---|---|
-| `NEON_DSN` or `DATABASE_URL` | Yes (one of them) | Postgres connection string |
+| `DATABASE_URL_DEV` / `DATABASE_URL_PROD` | The one for the chosen `--target` | Postgres connection string for the dev or prod database |
 | `SPREADSHEET_ID` | Yes | Google Sheet to read from |
-| `GOOGLE_SA_FILE` | Yes | Path (absolute, or relative to `etl/V2/` or repo root) to a Google service-account JSON key with `spreadsheets.readonly` scope |
-| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` (or `KV_REST_API_URL` / `KV_REST_API_TOKEN`) | No | Post-import cache purge (`main_cache_purge.py` only); purge is skipped when unset |
+| `GOOGLE_SA_FILE` | Yes | Path (absolute, or relative to `etl/`) to a Google service-account JSON key. The importer and validate use the `spreadsheets.readonly` scope; cleanup and `validate --highlight` need write access |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` (or `KV_REST_API_URL` / `KV_REST_API_TOKEN`) | No | Post-import cache purge on prod imports; skipped when unset |
 
-Missing `NEON_DSN`/`DATABASE_URL` or `SPREADSHEET_ID` aborts immediately at import time (module-level check). Missing/invalid `GOOGLE_SA_FILE` raises when a Sheets client is actually needed (import or `--check-headers`), not at startup.
+A missing `SPREADSHEET_ID` or URL for the chosen `--target` aborts as soon as the arguments are parsed. A missing or invalid `GOOGLE_SA_FILE` raises when a Sheets client is actually needed (import or `--check-headers`), not at startup.
 
 ### Dependencies
 
-`etl/V2/pyproject.toml`: `google-auth`, `gspread`, `gspread-dataframe`, `pandas`, `psycopg2-binary`, `python-dotenv`, `rich`, `sqlalchemy`. Python `>=3.11`. `[tool.uv] package = false`: it's a script project, not an installable package.
+`etl/pyproject.toml`: `google-auth`, `gspread`, `gspread-dataframe`, `pandas`, `psycopg2-binary`, `python-dotenv`, `rich`, `sqlalchemy`, plus `ruff` in the `dev` group (`uv run ruff check .` from `etl/`). Python `>=3.11`. `[tool.uv] package = false`: the packages run in place with `python -m`, nothing is installed.
 
 ---
 
@@ -132,15 +163,15 @@ Missing `NEON_DSN`/`DATABASE_URL` or `SPREADSHEET_ID` aborts immediately at impo
 ### Add a new column to an existing table
 
 1. Add the column to the corresponding sheet in the source spreadsheet with a matching header.
-2. Add the column definition (`Column`, `Type`) to that table's entry in `etl/V2/master-schema.json`. Type must be one of the keys in `TYPE_MAPPING` (`INTEGER`, `BIGINT`, `TEXT`, `VARCHAR`, `TIMESTAMP`, `BOOLEAN`, `DOUBLE PRECISION`, `FLOAT`).
+2. Add the column definition (`Column`, `Type`) to that table's entry in `etl/importer/master-schema.json`. Type must be one of the keys in `TYPE_MAPPING` (`INTEGER`, `BIGINT`, `TEXT`, `VARCHAR`, `TIMESTAMP`, `BOOLEAN`, `DOUBLE PRECISION`, `FLOAT`).
 3. If the column should show up in `documentation/backend/schema-migration-guide.md`, add it there too (not read by the ETL, documentation only).
 4. Nothing else to change in the scripts: `clean_dataframe` reads `schema_cols` from the schema file dynamically, and `get_tracked_table_fields` will automatically include the new column in change tracking (unless it's `uuid` or a primary-id column, or the table has `track_changes: False`).
-5. Run `etl/V2/run.sh --check-headers --table <table>` to confirm the sheet header matches before doing a real import.
+5. Run `uv run --directory etl python -m importer --check-headers --table <table>` to confirm the sheet header matches before doing a real import.
 
 ### Add a new sheet/table entirely
 
 1. Add a worksheet to the spreadsheet, and its full column list + types to `master-schema.json` (new top-level key).
-2. Add an entry to `TABLE_DEFS` in **both** `main_cache_purge.py` and `main.py` (they must stay in sync, see §1b) with:
+2. Add an entry to `TABLE_DEFS` in `etl/importer/tables.py` with:
    - `worksheet`: the exact worksheet name.
    - `primary_id` / `secondary_id`: columns used to build the diff identity (`prepare_table_identity_index`). Leave both `[]` if the table has no stable identity for diffing (like `functions`, `tech`).
    - `label_cols`: columns used for `record_label` in change events (human-readable identifier shown in notifications).
@@ -153,27 +184,31 @@ Missing `NEON_DSN`/`DATABASE_URL` or `SPREADSHEET_ID` aborts immediately at impo
 
 ---
 
-## 7. Sheet validator (`etl/data_validator/`)
+## 7. Sheet tools (`etl/sheets/`)
 
 Standalone pre-import validation of the source spreadsheet, copied from the `br-data-scripts` repo in commit `6666b40` so all pipeline scripts live together. Run it before an import to catch data problems the ETL itself does not check (formats, duplicates, broken references). It reads the sheet only; it never touches the DB.
 
-**Running.** `validate.py` is a PEP 723 script (deps declared inline, installed automatically by `uv`):
+**Running.** Both tools are packages in the same uv project as the importer. `etl/validate.sh` wraps validate with a `--help` and rejects unknown flags (validate itself ignores them):
 
 ```bash
-cd etl/data_validator && uv run validate.py            # all phases
-cd etl/data_validator && uv run validate.py --force    # continue past a failing phase
-cd etl/data_validator && uv run validate.py --limit 50 # more rows per detail table (default 20)
+etl/validate.sh --force --limit 50                             # same as the commands below
+uv run --directory etl python -m sheets.validate               # all phases
+uv run --directory etl python -m sheets.validate --force       # continue past a failing phase
+uv run --directory etl python -m sheets.validate --limit 50    # more rows per detail table (default 20)
+uv run --directory etl python -m sheets.validate --highlight   # colour failing rows and cells in the sheet
 ```
 
-The output is one compact table per phase (every sheet or rule with its counts and a ✓, ! or ✗), detail tables only for what failed, then a summary of every phase and a verdict panel that says what to run next. The ETL and both sheet scripts share this look through `etl/tui.py`.
+`sheets/validate/` is split by phase: `sheet_cache.py` (every sheet read once), `table_format.py` (Phase 0 per sheet), `cell_checks.py` (0, 0B, 0C), `relation_checks.py` (1 to 3), `highlights.py` and `cli.py`; `options.py` holds the run's flags.
 
-Config comes from `etl/data_validator/.env` (`SPREADSHEET_ID`, `GOOGLE_SA_FILE`; the latter is resolved relative to that directory and points at `etl/V2`'s existing service-account key rather than a duplicate, see `.env.example`).
+The output is one compact table per phase (every sheet or rule with its counts and a ✓, ! or ✗), detail tables only for what failed, then a summary of every phase and a verdict panel that says what to run next. The importer and both sheet tools share this look through `etl/common/tui.py`.
+
+Config comes from `etl/.env` (`SPREADSHEET_ID`, `GOOGLE_SA_FILE`), the same file and service-account key the importer uses.
 
 **Phases** (each failing phase stops the run unless `--force`):
 
 | Phase | Check |
 |---|---|
-| 0 | Per-column format/enum/nullable rules (`ALL_RULES`) for all nine tables, including `subscribers` and the prospects `prospect_phone` (10 digits) and `prospect_engaged` (Yes/No) columns |
+| 0 | Per-column format/enum/nullable rules (`ALL_RULES`) for all nine tables, including `subscribers` and the prospects `prospect_phone` (10 digits) and `prospect_engaged` (Yes/No) columns. Also the header row, against both `sheets/rules.py` and `etl/importer/master-schema.json`: data under a blank header, duplicated headers, columns unknown to both, columns in only one of the two files (validated but not imported, or imported but not validated), columns either file expects but the sheet lacks, and schema tables with no rules (the import drops unnamed and unknown columns silently, and the importer's `--check-headers` only warns about them; cleanup's `columns` step deletes unnamed ones) |
 | 0B | Invisible characters: flags cells containing zero-width chars, BOM, or soft hyphen, with exact sheet/row/column |
 | 0C | Every cell is plain text: no smart chips (a people chip holding an email looks like text but VLOOKUP and MATCH skip it) and no dropdowns. Read from cell metadata, one extra API call per sheet |
 | 1 | Uniqueness of key columns: `accounts.account_global_legal_name`, `centers.cn_unique_key`, `services.cn_unique_key`, `prospects.ps_unique_key`, and in `subscribers` the combination of email, campaign and date (the same engagement entered twice) |
@@ -181,10 +216,11 @@ Config comes from `etl/data_validator/.env` (`SPREADSHEET_ID`, `GOOGLE_SA_FILE`;
 | 2C | Warning only: `prospects.prospect_engaged` is `Yes` exactly when the email has a `subscribers` row |
 | 3 | Every services row has at least one service column filled |
 
-**Cleanup (`cleanup.py`).** A separate script that fixes what can be fixed mechanically, so `validate.py` only reports what needs a person. It reads every sheet once, runs its steps in a fixed order on the in-memory copy, and writes each sheet's net changes once. Dry run by default; `--apply` writes.
+**Cleanup (`sheets/cleanup/`).** A separate tool that fixes what can be fixed mechanically, so validate only reports what needs a person. It reads every sheet once, runs its steps in a fixed order on the in-memory copy, and writes each sheet's net changes once. Dry run by default; `--apply` writes.
 
 | Step | What it fixes |
 |---|---|
+| `columns` | Columns with data but no header deleted (the import drops them anyway). A column a formula still reads from is kept and listed under Needs a person. Deleted after every other write, so other fixes keep their positions |
 | `chips` | Smart chips turned into plain text (a link chip keeps its URL) and dropdowns removed, through the Sheets batchUpdate API |
 | `artifacts` | Spreadsheet error values typed as text (`#N/A`, `#REF!`) cleared; HTML entities (`&amp;`, `&nbsp;`) decoded |
 | `invisible` | Zero-width characters, BOM, soft hyphen, bidi controls in every cell (Phase 0B) |
@@ -194,20 +230,19 @@ Config comes from `etl/data_validator/.env` (`SPREADSHEET_ID`, `GOOGLE_SA_FILE`;
 | `formats` | Values Phase 0 would reject that have one obvious fix: dates to `6-May-2025`, full month names, `2015.0` years, allowed-value casing/spacing, ISO `IN`, email `mailto:`, domain case and Cyrillic/Greek lookalike letters, phones to 10 digits, ALL CAPS or all-lowercase prospect names capitalised |
 | `references` | Child-sheet keys that match the parent except for case, curly quotes or dash style take the parent's spelling; stale `cn_unique_key` prefixes are rebuilt and renamed in every key sheet (Phase 2 case warnings) |
 
-Formula cells are never written (many columns are formulas, such as `tech.account_global_legal_name` and the range columns); a fix a step wanted on one is listed at the end instead. Order matters: entities, invisible characters and whitespace go first so every later step sees clean text, and references run last because names only compare equal once both sheets are clean. Column rules (`ALL_RULES`, `VALIDATION_RULES`, `INVISIBLE_CHARS`) are read from `validate.py`'s source rather than copied, so a rule change there applies to both.
+Formula cells are never written (many columns are formulas, such as `tech.account_global_legal_name` and the range columns); a fix a step wanted on one is listed at the end instead. Order matters: entities, invisible characters and whitespace go first so every later step sees clean text, and references run last because names only compare equal once both sheets are clean. Column rules (`ALL_RULES`, `VALIDATION_RULES`, `INVISIBLE_CHARS`) live in `etl/sheets/rules.py`, imported by both tools, so a rule change applies to both. Each step lives in its own module: `columns.py`, `text.py` (chips, artifacts, invisible, whitespace), `lists.py`, `links.py`, `formats.py`, `references.py`; `workbook.py` is the in-memory copy and the single write.
 
 ```bash
-cd etl/data_validator && uv run cleanup.py                        # preview every step
-cd etl/data_validator && uv run cleanup.py --apply                # show the report, confirm y/N, then write
-cd etl/data_validator && uv run cleanup.py --apply --yes          # write without asking (required when not run from a terminal)
-cd etl/data_validator && uv run cleanup.py --steps formats        # one step (or --skip references)
-cd etl/data_validator && uv run cleanup.py --sheets centers       # only change these sheets
-cd etl/data_validator && uv run cleanup.py --report changes.csv   # full change list
+etl/cleanup.sh --report changes.csv                                  # the wrapper: same flags, --help, works from any directory
+uv run --directory etl python -m sheets.cleanup                        # preview every step
+uv run --directory etl python -m sheets.cleanup --apply                # show the report, confirm y/N, then write
+uv run --directory etl python -m sheets.cleanup --apply --yes          # write without asking (required when not run from a terminal)
+uv run --directory etl python -m sheets.cleanup --steps formats        # one step (or --skip references)
+uv run --directory etl python -m sheets.cleanup --sheets centers       # only change these sheets
+uv run --directory etl python -m sheets.cleanup --report changes.csv   # full change list
 ```
 
-Typical order: `cleanup.py`, then `cleanup.py --apply`, then `validate.py`.
-
-`requirements.txt` mirrors the dependencies for non-uv use.
+Typical order: `etl/cleanup.sh`, then `etl/cleanup.sh --apply`, then `etl/validate.sh`, then `etl/import.sh`.
 
 ---
 
@@ -215,17 +250,18 @@ Typical order: `cleanup.py`, then `cleanup.py --apply`, then `validate.py`.
 
 | File | Purpose |
 |---|---|
-| `etl/V2/main_cache_purge.py` | Primary entry (via `run.sh`): full ETL logic plus invisible-char stripping and post-import cache purge |
-| `etl/V2/main.py` | No-purge backup of the same ETL logic, kept in sync (§1b) |
-| `etl/V2/master-schema.json` | Per-table column/type definitions, read by `clean_dataframe`, `apply_indexes`'s validation, and `run_validate` |
-| `etl/V2/pyproject.toml` | Python dependencies and `uv` project config |
-| `etl/V2/run.sh` | Entry point, wraps `uv run` around `main_cache_purge.py` |
-| `etl/data_validator/validate.py` | Pre-import sheet validation (§7) |
-| `etl/data_validator/cleanup.py` | Ordered pre-import sheet cleanup (§7) |
-| `etl/data_validator/cell_meta.py` | Finds smart chips and dropdowns from cell metadata, for `validate.py` Phase 0C and the `cleanup.py` chips step |
-| `etl/tui.py` | Shared terminal output (theme, tables, progress bars, summary and verdict) for the ETL (`main_cache_purge.py`, `main.py`) and the sheet scripts (`validate.py`, `cleanup.py`); each puts `etl/` on `sys.path` to import it |
-| `etl/V2/import_logs/logs/` | Per-run text log files (`setup_logger`) |
-| `etl/V2/import_logs/snapshot/` | Per-run JSON DB snapshots (`run_snapshot`) |
+| `etl/importer/` | The Sheets → Postgres importer (§1); `python -m importer` |
+| `etl/importer/tables.py` | `TABLE_DEFS`, `IMPORT_ORDER`, `CONSTRAINTS_SQL`, `TYPE_MAPPING` |
+| `etl/importer/master-schema.json` | Per-table column/type definitions, read by `clean_dataframe`, `check_sheet_headers` and `run_validate` |
+| `etl/importer/cache.py` | Post-import dashboard cache purge (§1b) |
+| `etl/sheets/validate/` | Pre-import sheet validation (§7) |
+| `etl/sheets/cleanup/` | Ordered pre-import sheet cleanup (§7) |
+| `etl/sheets/rules.py` | Column, uniqueness, reference and completeness rules shared by validate and cleanup |
+| `etl/sheets/cell_meta.py` | Finds smart chips and dropdowns from cell metadata, for validate Phase 0C and the cleanup chips step |
+| `etl/common/` | Shared by every tool: `env.py` (loads `etl/.env`), `google.py` (service account, client, retries), `tui.py` (terminal output) |
+| `etl/pyproject.toml`, `etl/uv.lock` | Python dependencies and `uv` project config |
+| `etl/importer/import_logs/logs/` | Per-run text log files (`setup_logger`) |
+| `etl/importer/import_logs/snapshot/` | Per-run JSON DB snapshots (`run_snapshot`) |
 | `documentation/backend/table-relationships.md` | FK constraints, import order, table hierarchy |
 | `documentation/backend/schema-migration-guide.md` | Column-level schema reference |
 | `documentation/2026-07-29-perf-and-data-hygiene.md` | Cache-cadence and invisible-character incident write-up |

@@ -53,7 +53,7 @@ const CONFIG: Record<QueryEntity, EntityConfig> = {
     // Prospects have no primary key: ps_unique_key is nullable and non-unique
     // (hence the keyless-prospect handling in lib/exports/server-builder.ts), so
     // the tiebreak falls back to the ETL's row identity (the prospects
-    // secondary_id in etl/V2/main.py).
+    // secondary_id in etl/importer/tables.py).
     tiebreak: [
       "ps_unique_key",
       "prospect_email",
@@ -69,7 +69,7 @@ const CONFIG: Record<QueryEntity, EntityConfig> = {
 
 export type SortSpec = { column?: unknown; direction?: unknown }
 
-// Columns stored as numbers in the warehouse (etl/V2/master-schema.json). They
+// Columns stored as numbers in the warehouse (etl/importer/master-schema.json). They
 // keep native numeric ordering; every other sortable column is text.
 const NUMERIC_SORT_COLUMNS = new Set([
   "account_hq_revenue",

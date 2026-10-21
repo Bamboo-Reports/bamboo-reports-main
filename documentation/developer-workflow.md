@@ -142,9 +142,9 @@ Prefer config changes over dashboard forks for client-specific packaging.
 
 ### 2.5 Database Schema Changes
 
-If you modify the database schema (e.g., rename a column), see [ETL Pipeline](backend/etl-pipeline.md) for how `etl/V2/main.py` applies schema changes and [Table Relationships](backend/table-relationships.md) if the change affects keys or FK constraints. Steps:
+If you modify the database schema (e.g., rename a column), see [ETL Pipeline](backend/etl-pipeline.md) for how the importer (`etl/importer/`) applies schema changes and [Table Relationships](backend/table-relationships.md) if the change affects keys or FK constraints. Steps:
 
-1. **Update `etl/V2/master-schema.json`** with the new structure.
+1. **Update `etl/importer/master-schema.json`** with the new structure.
 2. **Update `documentation/backend/schema-migration-guide.md`** to log the change.
 3. **Update `documentation/backend/table-relationships.md`** if the change affects primary keys, FK constraints, or import order.
 4. **Update `lib/types.ts`** to match the new column names.
@@ -192,7 +192,7 @@ If UI alignment needs tuning:
 ### Type Safety
 - **Strict Mode:** TypeScript strict mode is enabled. Avoid using `any`.
 - **Zod:** Use Zod for validating external inputs (form submissions, saved filter JSON, API parameters).
-- **Shared Types:** All entity types live in `lib/types.ts`. Keep them in sync with `etl/V2/master-schema.json`.
+- **Shared Types:** All entity types live in `lib/types.ts`. Keep them in sync with `etl/importer/master-schema.json`.
 
 ### Performance Best Practices
 - **Neon warehouse reads:** Use the Prisma singleton from `lib/db/prisma.ts` and wrap database calls with `queryWithRetry`.

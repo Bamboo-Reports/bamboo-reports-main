@@ -271,13 +271,21 @@ bamboo-reports-nextjs/
 │
 ├── contexts/                       # React context providers (notification-context.tsx)
 │
-├── etl/V2/                         # Active Python ETL pipeline (data import)
-│   ├── main.py                     # Import script with change notifications
-│   ├── master-schema.json          # Source-of-truth database schema export
+├── etl/                            # Python ETL, one uv project (run with uv run --directory etl ...)
+│   ├── common/                     # Shared: etl/.env loading, Google Sheets auth, terminal UI
+│   ├── importer/                   # Sheets to Postgres import (python -m importer --target dev|prod)
+│   │   ├── tables.py               # TABLE_DEFS, import order, constraints, indexes
+│   │   └── master-schema.json      # Source-of-truth database schema export
+│   ├── sheets/                     # Work on the source Google Sheet before an import
+│   │   ├── rules.py                # Column rules shared by validate and cleanup
+│   │   ├── validate/               # Read-only checks (python -m sheets.validate)
+│   │   └── cleanup/                # Automatic fixes (python -m sheets.cleanup)
+│   ├── import.sh                   # Run the importer (--help for flags; confirms before prod writes)
+│   ├── validate.sh                 # Run sheet validation (--help for flags)
+│   ├── cleanup.sh                  # Run sheet cleanup, dry run unless --apply (--help for flags)
 │   ├── pyproject.toml              # Python project and dependencies (uv)
-│   ├── uv.lock                     # Locked Python dependencies
-│   └── run.sh                      # ETL runner script
-│                                    # See documentation/etl-pipeline.md for the full process
+│   └── uv.lock                     # Locked Python dependencies
+│                                    # See documentation/backend/etl-pipeline.md for the full process
 │
 ├── documentation/                  # Technical documentation
 │   ├── tech-stack.md               # Detailed tech stack reference (whole app)

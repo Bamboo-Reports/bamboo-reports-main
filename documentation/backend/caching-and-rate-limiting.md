@@ -79,18 +79,18 @@ Latency numbers for compute vs Redis-served requests: [`redis-cache-benchmark.md
 | ETL post-import purge | All `dash:*` keys in Redis | After every production data import |
 | TTL expiry | Everything, eventually | Backstop only |
 
-### ETL purge variant (`etl/V2/main_cache_purge.py`)
+### ETL post-import purge (`etl/importer/cache.py`)
 
-Copy of `etl/V2/main.py` (same flags) that additionally runs `purge_dashboard_cache()` after a successful, non-dry-run import:
+The importer runs `purge_dashboard_cache()` after a successful, non-dry-run `--target prod` import (dev imports and `--no-purge` skip it):
 
 - `SCAN` cursor loop matching `dash:*` (COUNT 1000), then `DEL` each batch, via the Upstash REST API (`urllib`, 10 s timeout).
-- Skipped with a notice when `UPSTASH_REDIS_REST_URL`/token (or the `KV_REST_API_*` pair) are not in the ETL `.env`.
+- Skipped with a notice when `UPSTASH_REDIS_REST_URL`/token (or the `KV_REST_API_*` pair) are not in `etl/.env`.
 - A purge failure never fails the import; the cache then expires by TTL.
 - Warm serverless instances still hold L1 copies after the purge, but the 5-minute L1 residency cap bounds staleness: within 5 minutes every instance re-checks Redis and recomputes.
 
-The variant also strips invisible Unicode characters (zero-width space, BOM, soft hyphen) from sheet values, a fix for the "Freudenberg SE" incident of 2026-07-29.
+The importer also strips invisible Unicode characters (zero-width space, BOM, soft hyphen) from sheet values, a fix for the "Freudenberg SE" incident of 2026-07-29.
 
-Use `main_cache_purge.py` for production imports (data changed, cache must drop). Use plain `main.py` for validation runs or when purging is undesirable.
+`uv run --directory etl python -m importer --target prod` purges after the import. Add `--no-purge` when purging is undesirable.
 
 ## Environment variables
 
@@ -154,7 +154,7 @@ Export **generation** (`POST /api/exports/generate`) uses a separate mechanism: 
 | `documentation/backend/sql/rate-limits-migration.sql` | `rate_limit_counters` table + `increment_rate_limit` RPC |
 | `app/api/financials/route.ts` | Authed, rate-limited Yahoo Finance proxy |
 | `app/api/exports/generate/route.ts` | Hourly export cap via `user_exports` row counts |
-| `etl/V2/main_cache_purge.py` | ETL import variant with post-import `dash:*` purge |
+| `etl/importer/cache.py` | ETL post-import `dash:*` purge |
 | `tests/unit/memory-cache.test.ts`, `tests/unit/redis-cache.test.ts` | Cache behavior tests |
 | `tests/unit/rate-limit.test.ts`, `tests/unit/rate-limits-migration.test.ts` | Rate limit behavior and migration tests |
 | `documentation/backend/redis-cache-benchmark.md` | Compute vs Redis latency benchmark (#249) |

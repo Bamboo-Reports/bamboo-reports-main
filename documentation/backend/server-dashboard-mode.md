@@ -132,7 +132,7 @@ Both engines must change in lockstep or parity breaks:
 4. If it should appear in the sidebar facet lists, add a `FacetSpec` to `FACETS` in `lib/dashboard/dashboard-core.ts`.
 5. Extend `tests/unit/filtering-sql-parity.test.ts` with scenarios exercising the new filter (include, exclude, null values) and run the gated real-data parity tests against a live `DATABASE_URL` before shipping.
 
-Keyword filters on new columns should stay as raw-column `ILIKE` and get a pg_trgm index in the ETL (`etl/V2/main.py apply_indexes`) if the column is large.
+Keyword filters on new columns should stay as raw-column `ILIKE` and get a pg_trgm index in the ETL (the `indexes` list in `etl/importer/tables.py`) if the column is large.
 
 ## Rollout state
 
