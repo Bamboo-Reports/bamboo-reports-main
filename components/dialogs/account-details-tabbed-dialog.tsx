@@ -16,7 +16,6 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs"
 import { RiBox3Line, RiBriefcaseLine, RiBuilding2Line, RiBuildingLine, RiCalendarLine, RiGlobalLine, RiGroupLine, RiLineChartLine, RiLinkedinBoxLine, RiMapPinLine, RiMoneyDollarCircleLine } from "@remixicon/react"
-import { formatRevenueInMillions, parseRevenue } from "@/lib/utils/helpers"
 import type { Account, AccountFinancialInfo, Center, Prospect, Service, Tech } from "@/lib/types"
 import { CompanyLogo } from "@/components/ui/company-logo"
 import { CenterDetailsDialog } from "./center-details-dialog"
@@ -509,7 +508,7 @@ export function AccountDetailsDialog({
                 <RiGroupLine className="h-4 w-4" />
                 Prospects
                 <Badge variant="secondary" className="ml-1">
-                  {accountProspects.length}
+                  {accountProspects.length.toLocaleString("en-US")}
                 </Badge>
               </TabsTrigger>
               )}
@@ -572,7 +571,8 @@ export function AccountDetailsDialog({
                   <KPITile
                     icon={RiMoneyDollarCircleLine}
                     label="Revenue"
-                    value={formatRevenueInMillions(parseRevenue(account.account_hq_revenue ?? undefined))}
+                    // Stored in millions; shown in the same compact form as Market Cap and Net Profit.
+                    value={account.account_hq_revenue != null ? formatCompactNumber(account.account_hq_revenue * 1_000_000) : null}
                     caption={account.account_hq_revenue_range}
                   />
                   {financialData && (
@@ -594,7 +594,7 @@ export function AccountDetailsDialog({
                   <KPITile
                     icon={RiGroupLine}
                     label="Employees"
-                    value={account.account_hq_employee_count}
+                    value={account.account_hq_employee_count?.toLocaleString("en-US")}
                     caption={account.account_hq_employee_range}
                   />
                 </div>
@@ -654,7 +654,7 @@ export function AccountDetailsDialog({
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <KPITile icon={RiCalendarLine} label="First Centre" value={account.account_first_center_year} />
                     <KPITile icon={RiCalendarLine} label="Years in India" value={account.years_in_india} />
-                    <KPITile icon={RiGroupLine} label="Centre Employees" value={account.account_center_employees} />
+                    <KPITile icon={RiGroupLine} label="Centre Employees" value={account.account_center_employees?.toLocaleString("en-US")} />
                     <KPITile icon={RiGroupLine} label="GCC Aggregate Headcount (India)" value={account.account_center_employees_range} />
                     <KPITile icon={RiMapPinLine} label="Primary City" value={account.account_primary_city} />
                     <KPITile icon={RiBuilding2Line} label="Hub Structure" value={account.account_hub_structure} />
