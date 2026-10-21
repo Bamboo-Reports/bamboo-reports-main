@@ -66,5 +66,9 @@ venv/
 .eslintcache
 .codex
 
+# Local agent and plugin state
+.impeccable/
+.claude/settings.local.json
+
 # generated Vercel import file (contains secrets)
 for-vercel.env
