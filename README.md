@@ -2,17 +2,26 @@
 
 A modern Business Intelligence dashboard built with Next.js App Router, React, and TypeScript. The app delivers account, center, service, and prospect intelligence through rich filtering, data visualization, geospatial analytics, and export workflows.
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com)
-[![Next.js](https://img.shields.io/badge/Next.js-16.2-000000?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
-[![React](https://img.shields.io/badge/React-19.2-61DAFB?style=for-the-badge&logo=react&logoColor=0B0B0B)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
-[![Node.js](https://img.shields.io/badge/Node.js-20.9+-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
-[![Supabase](https://img.shields.io/badge/Auth-Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=0B0B0B)](https://supabase.com)
-[![Neon](https://img.shields.io/badge/DB-Neon_PostgreSQL-00E699?style=for-the-badge&logo=postgresql&logoColor=white)](https://neon.tech/)
-[![PostHog](https://img.shields.io/badge/Analytics-PostHog-1D4AFF?style=for-the-badge&logo=posthog&logoColor=white)](https://posthog.com/)
-[![MapLibre](https://img.shields.io/badge/Maps-MapLibre_GL-396CB2?style=for-the-badge&logo=maplibre&logoColor=white)](https://maplibre.org/)
-![License: Proprietary](https://img.shields.io/badge/License-Proprietary-C62828?style=for-the-badge)
+<p align="center">
+  <img src="https://skillicons.dev/icons?i=nextjs,react,ts,tailwind,nodejs,supabase,postgres,vercel&perline=8" alt="Next.js, React, TypeScript, Tailwind CSS, Node.js, Supabase, PostgreSQL, Vercel" />
+</p>
+
+<p align="center">
+  <a href="https://nextjs.org/"><img src="https://img.shields.io/badge/Next.js-16.2-4A525C?style=flat-square&logo=next.js&logoColor=white&labelColor=1B1F24" alt="Next.js 16.2" /></a>
+  <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19.2-087EA4?style=flat-square&logo=react&logoColor=61DAFB&labelColor=1B1F24" alt="React 19.2" /></a>
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white&labelColor=1B1F24" alt="TypeScript 5" /></a>
+  <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/Tailwind_CSS-3.4-0E7490?style=flat-square&logo=tailwindcss&logoColor=38BDF8&labelColor=1B1F24" alt="Tailwind CSS 3.4" /></a>
+  <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node.js-20.9+-339933?style=flat-square&logo=node.js&logoColor=white&labelColor=1B1F24" alt="Node.js 20.9+" /></a>
+</p>
+
+<p align="center">
+  <a href="https://vercel.com"><img src="https://img.shields.io/badge/Hosting-Vercel-4A525C?style=flat-square&logo=vercel&logoColor=white&labelColor=1B1F24" alt="Hosting: Vercel" /></a>
+  <a href="https://supabase.com"><img src="https://img.shields.io/badge/Auth-Supabase-249361?style=flat-square&logo=supabase&logoColor=3ECF8E&labelColor=1B1F24" alt="Auth: Supabase" /></a>
+  <a href="https://neon.tech/"><img src="https://img.shields.io/badge/DB-Neon_Postgres-00805A?style=flat-square&logo=postgresql&logoColor=00E699&labelColor=1B1F24" alt="DB: Neon Postgres" /></a>
+  <a href="https://posthog.com/"><img src="https://img.shields.io/badge/Analytics-PostHog-1D4AFF?style=flat-square&logo=posthog&logoColor=F9BD2B&labelColor=1B1F24" alt="Analytics: PostHog" /></a>
+  <a href="https://maplibre.org/"><img src="https://img.shields.io/badge/Maps-MapLibre_GL-396CB2?style=flat-square&logo=maplibre&logoColor=white&labelColor=1B1F24" alt="Maps: MapLibre GL" /></a>
+  <img src="https://img.shields.io/badge/License-Proprietary-B71C1C?style=flat-square&labelColor=1B1F24" alt="License: Proprietary" />
+</p>
 
 ---
 
