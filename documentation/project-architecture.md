@@ -52,7 +52,6 @@ This section is the single source for the repo layout; the README only shows the
 | `contexts/` | `notification-context.tsx` and `account-lists-context.tsx`, mounted in `AppProviders` |
 | `etl/` | Python ETL, one uv project: `importer/` (Sheets to Postgres, `master-schema.json`), `sheets/` (validate and cleanup), `common/`, plus `import.sh`, `validate.sh`, `cleanup.sh`. See [ETL Pipeline](backend/etl-pipeline.md) |
 | `prisma/` | Prisma schema for the Neon warehouse |
-| `scripts/` | Standalone dev scripts. See [Scripts & Tooling](scripts-and-tooling.md) |
 | `tests/` | Vitest suites. See [Testing Guide](testing-guide.md) |
 | `public/` | Static assets, including `data/admin-1.geojson` |
 | `documentation/` | Technical docs; `archive/` holds historical reports |

@@ -155,7 +155,6 @@ bamboo-reports-main/
 ├── lib/              # Server and client modules: dashboard SQL, cache, auth, exports, config
 ├── etl/              # Python ETL, one uv project (see documentation/backend/etl-pipeline.md)
 ├── prisma/           # Prisma schema for the Neon warehouse
-├── scripts/          # Standalone dev scripts (see documentation/scripts-and-tooling.md)
 ├── tests/            # Vitest suites (see documentation/testing-guide.md)
 ├── public/           # Static assets (logos, images, boundary GeoJSON)
 └── documentation/    # Technical docs (see Documentation Reference below)
@@ -209,7 +208,6 @@ The per-directory breakdown (every `components/`, `hooks/` and `lib/` module and
 | `npm run typecheck` | Run TypeScript compiler checks |
 | `npm run test` | Run Vitest test suite |
 | `npm run test:watch` | Run Vitest in watch mode |
-| `npm run bench` | Run the warehouse data fetch benchmark (`scripts/benchmark/data-fetch.run.ts`, needs `DATABASE_URL`) |
 | `npm run prisma:generate` | Regenerate the Prisma Client after schema changes |
 
 ---
@@ -380,7 +378,6 @@ Detailed documentation for specific subsystems lives in the `documentation/` fol
 | [**User Exports & Audit Log**](documentation/backend/user-exports.md) | Server-side export generation, Storage archive, and audit table |
 | [**Product Tour**](documentation/frontend/product-tour.md) | Guided onboarding walkthrough, completion tracking, and versioning |
 | [**Logo Integration**](documentation/frontend/logo-integration.md) | Setup and usage guide for the Brandfetch logo integration |
-| [**Scripts & Tooling**](documentation/scripts-and-tooling.md) | Standalone dev scripts: the warehouse data fetch benchmark |
 | [**Map Boundaries**](documentation/frontend/map-disputed-boundaries.md) | Carto basemap and local Survey of India boundary behavior |
 | [**Standalone Screens**](documentation/frontend/standalone-screens.md) | Brand frame for auth, error, 404 and maintenance screens; full-page loading skeleton; skeleton conventions |
 
