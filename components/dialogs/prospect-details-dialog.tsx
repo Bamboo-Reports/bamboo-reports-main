@@ -16,7 +16,8 @@ import { Badge } from "@/components/ui/badge"
 import { DialogBreadcrumb, type DialogBreadcrumbItem } from "@/components/ui/dialog-breadcrumb"
 import { ProspectGridCard } from "@/components/cards/prospect-grid-card"
 import { PaginationControls } from "@/components/ui/pagination-controls"
-import { fetchAccountRelated } from "@/lib/dashboard/api-client"
+import { useAccountRelated } from "@/hooks/use-account-related"
+import { RelatedLoadError } from "./related-load-error"
 import { Skeleton } from "@/components/ui/skeleton"
 import { GridSkeletonCards } from "@/components/ui/data-skeletons"
 import { EngagedBadge } from "@/components/ui/engaged-badge"
@@ -137,27 +138,11 @@ export function ProspectDetailsDialog({
 
   const p = current
 
-  const [relatedProspects, setRelatedProspects] = useState<Prospect[] | null>(null)
   const relatedAccount = fetchRelated && open ? (p?.account_global_legal_name ?? "") : ""
-  useEffect(() => {
-    if (!relatedAccount) {
-      setRelatedProspects(null)
-      return
-    }
-    let cancelled = false
-    fetchAccountRelated(relatedAccount)
-      .then((res) => {
-        if (!cancelled) setRelatedProspects(res.prospects)
-      })
-      .catch(() => {
-        if (!cancelled) setRelatedProspects(null)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [relatedAccount])
+  const { data: related, loading: relatedFetching, error: relatedError, retry: retryRelated } = useAccountRelated(relatedAccount)
+  const relatedProspects = related?.prospects ?? null
 
-  const relatedLoading = fetchRelated && open && !!p && relatedProspects === null
+  const relatedLoading = fetchRelated && open && !!p && relatedFetching
   const allProspects = useMemo(() => (fetchRelated ? (relatedProspects ?? []) : allProspectsProp), [fetchRelated, relatedProspects, allProspectsProp])
 
   const companyContacts = useMemo(
@@ -412,6 +397,12 @@ export function ProspectDetailsDialog({
             <ProspectEngagementTimeline psUniqueKey={p.ps_unique_key} />
           ) : null}
 
+          {relatedError && (
+            <section className="space-y-4">
+              <SectionHeader title={`More Contacts From ${p.account_global_legal_name}`} />
+              <RelatedLoadError message="Other contacts at this company could not load." onRetry={retryRelated} />
+            </section>
+          )}
           {relatedLoading && (
             <section className="space-y-4">
               <SectionHeader title={`More Contacts From ${p.account_global_legal_name}`} />

@@ -26,7 +26,8 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TechTreemap } from "@/components/charts/tech-treemap"
 import { requestAccountFinancialInfo } from "@/lib/finance/request-client"
-import { fetchAccountRelated, type AccountRelatedResponse } from "@/lib/dashboard/api-client"
+import { useAccountRelated } from "@/hooks/use-account-related"
+import { RelatedLoadError } from "./related-load-error"
 import { isSectionEnabled } from "@/lib/config/dashboard-access"
 import { PaginationControls } from "@/components/ui/pagination-controls"
 import { captureEvent } from "@/lib/analytics/client"
@@ -206,27 +207,10 @@ export function AccountDetailsDialog({
   const canViewCenters = isSectionEnabled("centers")
   const canViewProspects = isSectionEnabled("prospects")
 
-  const [related, setRelated] = useState<AccountRelatedResponse | null>(null)
   const relatedName = fetchRelated && open ? (account?.account_global_legal_name ?? "") : ""
-  useEffect(() => {
-    if (!relatedName) {
-      setRelated(null)
-      return
-    }
-    let cancelled = false
-    fetchAccountRelated(relatedName)
-      .then((res) => {
-        if (!cancelled) setRelated(res)
-      })
-      .catch(() => {
-        if (!cancelled) setRelated(null)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [relatedName])
+  const { data: related, loading: relatedFetching, error: relatedError, retry: retryRelated } = useAccountRelated(relatedName)
 
-  const relatedLoading = fetchRelated && open && !!account && related === null
+  const relatedLoading = fetchRelated && open && !!account && relatedFetching
   // Memoized so a null `related` does not hand a fresh [] to the memos below on every render.
   const centers = React.useMemo(() => (fetchRelated ? (related?.centers ?? []) : centersProp), [fetchRelated, related, centersProp])
   const prospects = React.useMemo(() => (fetchRelated ? (related?.prospects ?? []) : prospectsProp), [fetchRelated, related, prospectsProp])
@@ -552,6 +536,15 @@ export function AccountDetailsDialog({
               </TabsTrigger>
               )}
             </TabsList>
+
+            {relatedError && (
+              <div className="mt-4">
+                <RelatedLoadError
+                  message="Centres, prospects and tech stack for this account could not load."
+                  onRetry={retryRelated}
+                />
+              </div>
+            )}
 
             {/* Account Info Tab */}
             <TabsContent value="info" className="space-y-8 mt-4">
