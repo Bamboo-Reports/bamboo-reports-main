@@ -4,7 +4,7 @@ import React, { useMemo, useState, useEffect, useCallback, useLayoutEffect } fro
 import { Map as MapGL, Source, Layer, NavigationControl, FullscreenControl } from "@vis.gl/react-maplibre"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
-import { BASEMAP_STYLE_URL, hideBasemapBoundaries } from "@/lib/maps/basemap"
+import { BASEMAP_STYLE_URL, MAPLIBRE_WORKER_URL, hideBasemapBoundaries } from "@/lib/maps/basemap"
 import { DebugLocationSearch } from "@/components/maps/debug-location-search"
 import { createLogger } from "@/lib/logger"
 import type { Center } from "@/lib/types"
@@ -462,6 +462,7 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
         style={{ width: "100%", height: "100%" }}
         initialViewState={initialViewState}
         mapStyle={mapStyle}
+        workerUrl={MAPLIBRE_WORKER_URL}
         projection="mercator"
         onLoad={() => {
           const map = mapRef.current?.getMap?.() ?? mapRef.current

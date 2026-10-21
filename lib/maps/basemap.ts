@@ -6,6 +6,11 @@ type MapInstance = MapLibreEvent["target"]
 // the Survey of India GeoJSON overlay, not the basemap (see hideBasemapBoundaries).
 export const BASEMAP_STYLE_URL = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
 
+// maplibre-gl 6 builds its worker path from import.meta.url at runtime, which the
+// bundler can't see, so production 404s on it ("Worker failed to load"). This
+// literal new URL() lets Turbopack emit the worker file and rewrite the path.
+export const MAPLIBRE_WORKER_URL = new URL("maplibre-gl/dist/maplibre-gl-worker.mjs", import.meta.url).toString()
+
 // Carto basemaps draw OSM de-facto international borders (dotted Kashmir, Aksai
 // Chin as China, etc.) from the "boundary" source-layer. Hide those so only our
 // Survey of India GeoJSON overlay draws boundaries. Safe no-op on other styles.

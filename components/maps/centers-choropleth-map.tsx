@@ -4,7 +4,7 @@ import React, { useMemo, useState, useEffect, useLayoutEffect } from "react"
 import { Map as MapGL, Source, Layer, NavigationControl, FullscreenControl } from "@vis.gl/react-maplibre"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
-import { BASEMAP_STYLE_URL, hideBasemapBoundaries } from "@/lib/maps/basemap"
+import { BASEMAP_STYLE_URL, MAPLIBRE_WORKER_URL, hideBasemapBoundaries } from "@/lib/maps/basemap"
 import { DebugLocationSearch } from "@/components/maps/debug-location-search"
 import { devError } from "@/lib/utils/dev-log"
 import type { Center } from "@/lib/types"
@@ -432,6 +432,7 @@ export function CentersChoroplethMap({
           zoom: 1.6,
         }}
         mapStyle={mapStyle}
+        workerUrl={MAPLIBRE_WORKER_URL}
         projection="mercator"
         onLoad={(e) => {
           // Hide the basemap's de-facto international borders; India boundaries
