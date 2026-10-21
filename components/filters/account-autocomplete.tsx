@@ -26,7 +26,6 @@ interface AccountAutocompleteProps {
   placeholder?: string
   trackingKey?: string
   aliases?: Alias[]
-  accountVisibilityByName?: Record<string, AccountVisibilityInfo>
   /** Server mode (#249): fetch suggestions from /api/accounts/autocomplete instead of filtering accountNames. */
   serverSuggest?: boolean
 }
@@ -49,7 +48,6 @@ export function AccountAutocomplete({
   placeholder = "Type to search account names...",
   trackingKey,
   aliases,
-  accountVisibilityByName,
   serverSuggest = false,
 }: AccountAutocompleteProps) {
   const [inputValue, setInputValue] = useState("")
@@ -133,22 +131,20 @@ export function AccountAutocomplete({
     for (const name of uniqueAccountNames) {
       const lowerName = name.toLowerCase()
       if (alreadySelected.has(lowerName)) continue
-      const visibility = accountVisibilityByName?.[name] ?? null
-
       if (lowerName.startsWith(searchTerm)) {
-        startsWithMatches.push({ name, matchedAlias: null, visibility })
+        startsWithMatches.push({ name, matchedAlias: null, visibility: null })
       } else if (lowerName.includes(searchTerm)) {
-        containsMatches.push({ name, matchedAlias: null, visibility })
+        containsMatches.push({ name, matchedAlias: null, visibility: null })
       } else {
         const matched = findAliasMatch(aliasMap.get(lowerName), searchTerm)
         if (matched) {
-          aliasMatches.push({ name, matchedAlias: matched, visibility })
+          aliasMatches.push({ name, matchedAlias: matched, visibility: null })
         }
       }
     }
 
     return [...startsWithMatches, ...containsMatches, ...aliasMatches].slice(0, 50)
-  }, [serverSuggest, debouncedValue, uniqueAccountNames, selectedAccounts, aliasMap, accountVisibilityByName])
+  }, [serverSuggest, debouncedValue, uniqueAccountNames, selectedAccounts, aliasMap])
 
   const suggestions = useMemo<AccountSuggestion[]>(() => {
     if (!serverSuggest) return clientSuggestions

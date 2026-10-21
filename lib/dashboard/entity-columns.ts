@@ -56,3 +56,27 @@ export const ACCOUNT_PROJECTION = [
   "account_hq_revenue::float8 as account_hq_revenue",
   "(select t.account_hq_stock_ticker from ticker t where t.account_global_legal_name = accounts.account_global_legal_name) as account_hq_stock_ticker",
 ].join(", ")
+
+// Tab sort keys -> server sort columns per entity (#249). The server ignores a
+// column outside its whitelist (entity-query.ts resolveOrder) and falls back to
+// the default order, so tests/unit/tab-sort-columns.test.ts checks each entry.
+export const TAB_SORT_COLUMNS: Record<"accounts" | "centers" | "prospects", Record<string, string>> = {
+  accounts: {
+    name: "account_global_legal_name",
+    industry: "account_hq_industry",
+    revenue: "account_hq_revenue_range",
+    employees: "account_center_employees_range",
+  },
+  centers: {
+    name: "center_name",
+    location: "center_city",
+    type: "center_type",
+    employees: "center_employees_range",
+  },
+  prospects: {
+    name: "prospect_full_name",
+    location: "prospect_city",
+    title: "prospect_title",
+    department: "prospect_department",
+  },
+}

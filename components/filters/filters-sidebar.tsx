@@ -13,7 +13,6 @@ import { Button } from '@/components/ui/button'
 import { getSectionUnavailableMessage, isSectionEnabled } from '@/lib/config/dashboard-access'
 import { cn } from '@/lib/utils'
 import { isFilterEnabled, isSectionVisible } from '@/lib/config/filters'
-import type { AccountVisibilityInfo } from '@/components/filters/account-autocomplete'
 import type { AccountVisibilityMode, Alias, AvailableOptions, Filters } from '@/lib/types'
 
 const ACCOUNT_VISIBILITY_OPTIONS: Array<{ value: AccountVisibilityMode; label: string }> = [
@@ -33,7 +32,6 @@ interface FiltersSidebarProps {
   yearsInIndiaRange: { min: number; max: number }
   centerIncYearRange: { min: number; max: number }
   accountNames: string[]
-  accountVisibilityByName?: Record<string, AccountVisibilityInfo>
   aliases?: Alias[]
   serverMode?: boolean
 
@@ -69,7 +67,6 @@ export function FiltersSidebar({
   yearsInIndiaRange,
   centerIncYearRange,
   accountNames,
-  accountVisibilityByName,
   aliases,
   serverMode,
   setPendingFilters,
@@ -303,7 +300,6 @@ export function FiltersSidebar({
                 setPendingFilters={setPendingFilters}
                 setActiveFilter={setActiveFilter}
                 accountNames={accountNames}
-                accountVisibilityByName={accountVisibilityByName}
                 aliases={aliases}
                 serverMode={serverMode}
                 revenueRange={revenueRange}

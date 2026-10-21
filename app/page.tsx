@@ -55,33 +55,11 @@ import {
 import { useProductTour } from "@/hooks/use-product-tour"
 import { formatRevenueInMillions } from "@/lib/utils/helpers"
 import type { SearchResult } from "@/lib/search"
+import { TAB_SORT_COLUMNS } from "@/lib/dashboard/entity-columns"
 import type { RecentItem } from "@/hooks/use-recent-items"
 import type { Account, Alias, Center, Function as FunctionRow, Prospect, Service, Tech } from "@/lib/types"
-import type { AccountVisibilityInfo } from "@/components/filters/account-autocomplete"
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "br-dashboard-sidebar-collapsed"
-
-// Tab sort keys -> whitelisted server sort columns per entity (#249).
-const SERVER_SORT_COLUMNS: Record<"accounts" | "centers" | "prospects", Record<string, string>> = {
-  accounts: {
-    name: "account_global_legal_name",
-    industry: "account_hq_industry",
-    revenue: "account_hq_revenue_range",
-    employees: "account_center_employees_range",
-  },
-  centers: {
-    name: "center_name",
-    location: "center_city",
-    type: "center_type",
-    employees: "center_employees_range",
-  },
-  prospects: {
-    name: "prospect_full_name",
-    location: "prospect_city",
-    title: "prospect_title",
-    department: "prospect_department",
-  },
-}
 
 // The dashboard is server-backed (#249): every dataset is paged and aggregated
 // by the API and the client never holds the warehouse arrays. Components that
@@ -202,7 +180,7 @@ function DashboardContent(): React.JSX.Element | null {
   const makeSortHandler = useCallback(
     (entity: "accounts" | "centers" | "prospects", set: (s: EntitySort | null) => void) =>
       (key: string, direction: "asc" | "desc" | null) => {
-        const column = SERVER_SORT_COLUMNS[entity][key]
+        const column = TAB_SORT_COLUMNS[entity][key]
         set(direction && column ? { column, direction } : null)
       },
     []
@@ -271,19 +249,6 @@ function DashboardContent(): React.JSX.Element | null {
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const canExport = canExportData(userRole)
-  const accountVisibilityByName = useMemo<Record<string, AccountVisibilityInfo>>(
-    () =>
-      Object.fromEntries(
-        accounts.map((account) => [
-          account.account_global_legal_name,
-          {
-            visibility: account.account_visibility,
-            note: account.account_visibility_note,
-          },
-        ])
-      ),
-    [accounts]
-  )
 
   // Global search state
   const { setTheme, resolvedTheme } = useTheme()
@@ -1375,7 +1340,6 @@ function DashboardContent(): React.JSX.Element | null {
             yearsInIndiaRange={yearsInIndiaRange}
             centerIncYearRange={centerIncYearRange}
             accountNames={accountNames}
-            accountVisibilityByName={accountVisibilityByName}
             aliases={aliases}
             setPendingFilters={setPendingFilters}
             resetFilters={resetFilters}
