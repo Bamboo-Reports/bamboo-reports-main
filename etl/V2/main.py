@@ -11,6 +11,9 @@ Usage:
   etl/V2/run.sh --validate       # Just Validate
   etl/V2/run.sh --schema         # Just Snapshot
   etl/V2/run.sh --check-headers  # Diff Google Sheet headers vs schema
+
+Every mode takes --target dev (default) or --target prod, which picks
+DATABASE_URL_DEV or DATABASE_URL_PROD from the .env.
 """
 
 import argparse
@@ -64,10 +67,13 @@ def record_stage(name: str, status: str, detail: str) -> None:
 
 # ── Config ───────────────────────────────────────────────────────────────────
 
-CONN_STRING = os.getenv("NEON_DSN") or os.getenv("DATABASE_URL")
-if not CONN_STRING:
-    console.print("[error]NEON_DSN or DATABASE_URL not set in .env[/]")
-    sys.exit(1)
+# Dev and prod connection strings live side by side in the .env. --target
+# picks one at startup (default dev), so prod is only written when named.
+DATABASE_URLS = {
+    "dev": os.getenv("DATABASE_URL_DEV"),
+    "prod": os.getenv("DATABASE_URL_PROD"),
+}
+CONN_STRING: Optional[str] = None  # set from --target in main()
 
 SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
 if not SPREADSHEET_ID:
@@ -1389,8 +1395,16 @@ def main():
     parser.add_argument("--index", dest="run_index", action="store_true", help="Apply DB Indexes")
     parser.add_argument("--check-headers", dest="check_headers", action="store_true", help="Diff Sheet headers vs schema")
     parser.add_argument("--table", "-t", dest="target_table", help="Target a specific table (e.g., 'centers')")
+    parser.add_argument("--target", choices=("dev", "prod"), default="dev",
+                        help="Database to use: dev (default) or prod")
     parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging")
     args = parser.parse_args()
+
+    global CONN_STRING
+    CONN_STRING = DATABASE_URLS[args.target]
+    if not CONN_STRING:
+        console.print(f"[error]DATABASE_URL_{args.target.upper()} not set in .env[/]")
+        sys.exit(1)
 
     if args.verbose:
         global logger
@@ -1435,6 +1449,7 @@ def main():
     tui.header(
         "ETL · import (no cache purge)",
         [
+            ("Target", "[error]prod[/error]" if args.target == "prod" else "dev"),
             ("Database", database_host()),
             ("Tables", args.target_table or "all"),
             (

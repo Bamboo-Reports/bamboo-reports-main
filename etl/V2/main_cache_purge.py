@@ -14,6 +14,10 @@ otherwise, and a purge failure never fails the import.
 Usage (same flags as main.py):
   uv run --project etl/V2 --locked python etl/V2/main_cache_purge.py
   ... --import / --dry-run / --validate / --schema / --check-headers
+  ... --target dev (default) / --target prod
+
+The purge only runs with --target prod: the cache serves prod, so a dev
+import leaves it alone.
 """
 
 import argparse
@@ -68,10 +72,13 @@ def record_stage(name: str, status: str, detail: str) -> None:
 
 # ── Config ───────────────────────────────────────────────────────────────────
 
-CONN_STRING = os.getenv("NEON_DSN") or os.getenv("DATABASE_URL")
-if not CONN_STRING:
-    console.print("[error]NEON_DSN or DATABASE_URL not set in .env[/]")
-    sys.exit(1)
+# Dev and prod connection strings live side by side in the .env. --target
+# picks one at startup (default dev), so prod is only written when named.
+DATABASE_URLS = {
+    "dev": os.getenv("DATABASE_URL_DEV"),
+    "prod": os.getenv("DATABASE_URL_PROD"),
+}
+CONN_STRING: Optional[str] = None  # set from --target in main()
 
 SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
 if not SPREADSHEET_ID:
@@ -1474,8 +1481,16 @@ def main():
     parser.add_argument("--index", dest="run_index", action="store_true", help="Apply DB Indexes")
     parser.add_argument("--check-headers", dest="check_headers", action="store_true", help="Diff Sheet headers vs schema")
     parser.add_argument("--table", "-t", dest="target_table", help="Target a specific table (e.g., 'centers')")
+    parser.add_argument("--target", choices=("dev", "prod"), default="dev",
+                        help="Database to use: dev (default) or prod")
     parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging")
     args = parser.parse_args()
+
+    global CONN_STRING
+    CONN_STRING = DATABASE_URLS[args.target]
+    if not CONN_STRING:
+        console.print(f"[error]DATABASE_URL_{args.target.upper()} not set in .env[/]")
+        sys.exit(1)
 
     if args.verbose:
         global logger
@@ -1510,7 +1525,7 @@ def main():
     if args.run_import:
         plan.append("import (dry run)" if args.dry_run else "import")
     if args.run_import and not args.dry_run:
-        plan += ["indexes", "cache purge"]
+        plan += ["indexes", "cache purge"] if args.target == "prod" else ["indexes"]
     elif args.run_index:
         plan.append("indexes")
     if args.run_snapshot or (args.run_import and not args.dry_run):
@@ -1520,6 +1535,7 @@ def main():
     tui.header(
         "ETL · import + cache purge",
         [
+            ("Target", "[error]prod[/error]" if args.target == "prod" else "dev"),
             ("Database", database_host()),
             ("Tables", args.target_table or "all"),
             (
@@ -1567,7 +1583,14 @@ def main():
         if args.run_import:
             processed_tables = run_import(engine, full_schema, target_tables, dry_run=args.dry_run)
             if not args.dry_run:
-                purge_dashboard_cache()
+                if args.target == "prod":
+                    purge_dashboard_cache()
+                else:
+                    # The shared dashboard cache serves prod, so a dev import
+                    # must not empty it.
+                    tui.section("Cache · dashboard responses")
+                    tui.line("skip", "Cache purge skipped: the dashboard cache belongs to prod, this run targets dev.")
+                    record_stage("Cache purge", "skip", "dev target")
 
         if args.run_index and not args.run_import:
             tui.section("Database · indexes")

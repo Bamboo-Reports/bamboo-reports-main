@@ -25,7 +25,7 @@ run.sh
 
 **Cleaning.** `clean_dataframe` coerces each column to its `master-schema.json` type. In the cache-purge variant, every value is additionally stripped of invisible characters (`INVISIBLE_CHARS_RE`: zero-width space U+200B, zero-width non-joiner U+200C, zero-width joiner U+200D, BOM U+FEFF, soft hyphen U+00AD) before numeric parsing in `clean_dataframe` and in `normalize_change_value` / `normalize_text_value`. These are paste artifacts that render as nothing in Google Sheets but corrupt keys, sorting, and search in the warehouse (the "Freudenberg SE" incident, see `documentation/2026-07-29-perf-and-data-hygiene.md`); commit `e526d53`.
 
-**DB connection.** `sqlalchemy.create_engine(CONN_STRING, pool_pre_ping=True)` where `CONN_STRING = NEON_DSN or DATABASE_URL`. All DDL/DML connections set `isolation_level="AUTOCOMMIT"`, so each statement (or each `to_sql` batch) commits independently, there is no wrapping transaction across a table's import.
+**DB connection.** `sqlalchemy.create_engine(CONN_STRING, pool_pre_ping=True)` where `CONN_STRING` is `DATABASE_URL_DEV` or `DATABASE_URL_PROD`, chosen by `--target dev|prod` (default `dev`, so prod is only written when named) and resolved at the start of `main()`. All DDL/DML connections set `isolation_level="AUTOCOMMIT"`, so each statement (or each `to_sql` batch) commits independently, there is no wrapping transaction across a table's import.
 
 **Table creation.** Each table is fully replaced on every import: `DROP TABLE IF EXISTS {table} CASCADE` followed by `df_clean.to_sql(table, engine, if_exists="replace", index=False, method="multi", chunksize=1000, dtype=dtypes)`. Column types come from `master-schema.json` via `TYPE_MAPPING`. `CASCADE` on the drop is what lets an `accounts` reload nuke and let dependent FKs be silently dropped too; they're always reapplied afterward via `apply_constraints()`.
 
@@ -38,7 +38,7 @@ References to `main.py` internals below (function names, `TABLE_DEFS`, `CONSTRAI
 `main_cache_purge.py` is what `run.sh` actually runs. It differs from `main.py` in exactly two ways:
 
 1. **Invisible-character stripping** during cleaning and normalization (see §1 above).
-2. **`purge_dashboard_cache()`** after a successful non-dry-run import: the web app caches dashboard responses in a shared Upstash Redis under `dash:*` keys with a long TTL (`DASHBOARD_CACHE_TTL_MS`, 8 days, aligned to the weekly Friday import). The purge SCANs and DELs all `dash:*` keys via the Upstash REST API (stdlib `urllib`, no new dependency) so the app serves fresh data minutes after an import instead of waiting out the TTL. It is skipped with a dim notice when `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` (or `KV_REST_API_URL`/`KV_REST_API_TOKEN`) are unset, and a purge failure logs a warning without failing the import. On the app side, `lib/cache/memory.ts` caps L1 (in-process) cache residency at 5 minutes when Redis is configured, so the purge reaches warm serverless instances quickly.
+2. **`purge_dashboard_cache()`** after a successful non-dry-run `--target prod` import (a dev import skips it, since the shared cache serves prod): the web app caches dashboard responses in a shared Upstash Redis under `dash:*` keys with a long TTL (`DASHBOARD_CACHE_TTL_MS`, 8 days, aligned to the weekly Friday import). The purge SCANs and DELs all `dash:*` keys via the Upstash REST API (stdlib `urllib`, no new dependency) so the app serves fresh data minutes after an import instead of waiting out the TTL. It is skipped with a dim notice when `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` (or `KV_REST_API_URL`/`KV_REST_API_TOKEN`) are unset, and a purge failure logs a warning without failing the import. On the app side, `lib/cache/memory.ts` caps L1 (in-process) cache residency at 5 minutes when Redis is configured, so the purge reaches warm serverless instances quickly.
 
 `main.py` is the deliberate no-purge backup (two-script policy): run it directly with `uv run --project etl/V2 --locked python etl/V2/main.py` if you need an import without touching the app cache. Flags and env vars are identical. Context: `documentation/2026-07-29-perf-and-data-hygiene.md`, `documentation/security-249-progress.md`.
 
@@ -85,6 +85,7 @@ etl/V2/run.sh --index          # (re)apply indexes only
 etl/V2/run.sh --check-headers  # diff sheet headers vs master-schema.json, no DB connection changes
 etl/V2/run.sh --table centers  # restrict any of the above to one table
 etl/V2/run.sh --verbose        # debug-level logging
+etl/V2/run.sh --target prod    # any of the above against prod (default: --target dev)
 ```
 
 Every run opens with a header (database host, tables, whether it writes, the stages it will run, the log file), shows one compact table per stage (headers, per-table import results, snapshot, schema check) with progress bars while it works, and ends with a summary of every stage and a verdict panel. Routine progress messages go only to the log file; `--verbose` shows them on screen too. The look is shared with the sheet scripts through `etl/tui.py`.
@@ -95,12 +96,12 @@ Every run opens with a header (database host, tables, whether it writes, the sta
 
 | Var | Required | Used for |
 |---|---|---|
-| `NEON_DSN` or `DATABASE_URL` | Yes (one of them) | Postgres connection string |
+| `DATABASE_URL_DEV` / `DATABASE_URL_PROD` | The one for the chosen `--target` | Postgres connection string for the dev or prod database |
 | `SPREADSHEET_ID` | Yes | Google Sheet to read from |
 | `GOOGLE_SA_FILE` | Yes | Path (absolute, or relative to `etl/V2/` or repo root) to a Google service-account JSON key with `spreadsheets.readonly` scope |
 | `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` (or `KV_REST_API_URL` / `KV_REST_API_TOKEN`) | No | Post-import cache purge (`main_cache_purge.py` only); purge is skipped when unset |
 
-Missing `NEON_DSN`/`DATABASE_URL` or `SPREADSHEET_ID` aborts immediately at import time (module-level check). Missing/invalid `GOOGLE_SA_FILE` raises when a Sheets client is actually needed (import or `--check-headers`), not at startup.
+Missing `SPREADSHEET_ID` aborts immediately at import time (module-level check); a missing URL for the chosen `--target` aborts as soon as the arguments are parsed. Missing/invalid `GOOGLE_SA_FILE` raises when a Sheets client is actually needed (import or `--check-headers`), not at startup.
 
 ### Dependencies
 
