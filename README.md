@@ -12,7 +12,7 @@ A modern Business Intelligence dashboard built with Next.js App Router, React, a
 [![Neon](https://img.shields.io/badge/DB-Neon_PostgreSQL-00E699?style=for-the-badge&logo=postgresql&logoColor=white)](https://neon.tech/)
 [![PostHog](https://img.shields.io/badge/Analytics-PostHog-1D4AFF?style=for-the-badge&logo=posthog&logoColor=white)](https://posthog.com/)
 [![MapLibre](https://img.shields.io/badge/Maps-MapLibre_GL-396CB2?style=for-the-badge&logo=maplibre&logoColor=white)](https://maplibre.org/)
-[![License: Proprietary](https://img.shields.io/badge/License-Proprietary-C62828?style=for-the-badge)](LICENSE)
+![License: Proprietary](https://img.shields.io/badge/License-Proprietary-C62828?style=for-the-badge)
 
 ---
 
@@ -67,6 +67,8 @@ Bamboo Reports provides a unified view of business entities (**Accounts**, **Cen
 - **Range Sliders:** Revenue, Employee count, and Years in India sliders with logarithmic scaling.
 - **Premium Filter Reveal:** Accounts and Centers support config-driven `Show More` premium filters via `lib/config/filters.ts`.
 - **Saved Filters:** Persist complex filter sets to Supabase with Row-Level Security isolation.
+- **Account Lists:** Upload a client's own account list (`lib/accounts`), map it to warehouse accounts via `POST /api/accounts/match` (alias-aware), and apply it as an Account List filter; lists can be reused in saved filters and shared. See [Account Lists](documentation/backend/account-lists.md).
+- **Engaged Prospects:** An `Engaged` prospect filter (`prospect_engaged`), plus a campaign touchpoint timeline in the prospect dialog served by `GET /api/prospects/[id]/engagements` from the `subscribers` table (`lib/dashboard/engagements.ts`).
 - **Filter Sharing:** Share a saved filter with a specific teammate by email; the recipient gets read access to that one filter only.
 - **Debounced Search:** 300ms debounce on keyword inputs to optimize performance.
 - **Active Filter Count:** Visual badge indicator showing the number of applied filters.
@@ -80,6 +82,7 @@ Bamboo Reports provides a unified view of business entities (**Accounts**, **Cen
 - **Server-Side `.xlsx` Exports:** ExcelJS builds multi-sheet workbooks on the server against a full-schema `SELECT *`, so exports include every database column regardless of what the dashboard renders.
 - **Filter-Aware:** The client sends account / center identifier lists (or, in server mode, the filter set itself) so filtered exports only include matching rows; unfiltered exports pull the full tables.
 - **Audit Log + Re-Download:** Every export is archived to a private Supabase Storage bucket and logged in `public.user_exports` with IP, user-agent, filters snapshot, and row counts. Users re-download past exports from the **My exports** dialog via short-lived signed URLs.
+- **Summary PDF:** Download the filtered summary counts and the active filter list as an A4 PDF (`lib/reports`, rendered with jsPDF, loaded lazily).
 - **Logo Integration:** Automated company logo fetching via the Brandfetch Logo API with monogram fallbacks.
 - **Financial Data:** Stock information and financial metrics via Yahoo Finance integration.
 
@@ -92,7 +95,7 @@ Bamboo Reports provides a unified view of business entities (**Accounts**, **Cen
 - **Feature Flag:** Toggle via `NEXT_PUBLIC_NOTIFICATIONS_ENABLED` environment variable.
 
 ### Personalization
-- **Favorites:** Star any account, center, or prospect and revisit it from a dedicated list, private per user.
+- **Favorites:** Star any account, center, or prospect and revisit it from a dedicated list (`components/favorites`), private per user.
 - **Recently Viewed History:** Automatic tracking of recently opened detail dialogs.
 - **Guided Product Tour:** Auto-starting, replayable `driver.js` walkthrough for first-time users, with per-browser and per-account completion tracking.
 
@@ -106,7 +109,7 @@ The application follows a **Server-First** data architecture with **Client-Side*
 
 ```mermaid
 graph TD
-    Client[Client Browser] <-->|Next.js Server Actions| AppServer[Next.js App Server]
+    Client[Client Browser] <-->|Route Handlers + Server Actions| AppServer[Next.js App Server]
 
     subgraph Data Layer
         AppServer -->|Read-Only SQL| Neon["Neon PostgreSQL<br/>(Data Warehouse)"]
@@ -126,8 +129,8 @@ graph TD
 ```
 
 ### Data Fetching Strategy
-1. **Initial Load:** The client fetches the full dashboard dataset from the `GET /api/dashboard` Route Handler, which wraps the underlying Server Action with an in-memory SWR cache and gzip compression.
-2. **Filtering:** User actions update React state; client-side filtering and chart aggregation run locally for responsiveness.
+1. **Initial Load:** The client requests the summary counts, filter facets, charts and the first page of each table from dedicated Route Handlers. No endpoint returns the whole dataset (the full-payload `GET /api/dashboard` route and client-side filtering were retired on 2026-09-05).
+2. **Filtering:** User actions update React state (`hooks/use-dashboard-filters.ts`); `hooks/use-server-dashboard-data.ts` sends the filter set to the server, which filters and aggregates in SQL.
 3. **Route Handlers and Server Actions:** Warehouse reads go through `app/api/**` Route Handlers built on `lib/dashboard/filtering-sql.ts`; user-data operations use action files (`app/actions/notifications.ts`, `app/actions/system.ts`) and the Supabase client directly.
 4. **Runtime Behavior (#249):** Filters are translated to SQL on the server and the client reads paginated/aggregated slices from dedicated endpoints (`/api/dashboard/summary`, `/api/dashboard/facets`, `/api/dashboard/charts`, `/api/{accounts,centers,prospects}/query`, `/api/search`, `/api/centers/map`). Responses are cached in a two-tier cache (in-memory L1 + Upstash Redis L2) keyed on the filter state and purged by the ETL after each import. See [Server-Mode Dashboard](documentation/backend/server-dashboard-mode.md) and [Caching and Rate Limiting](documentation/backend/caching-and-rate-limiting.md).
 
@@ -149,7 +152,7 @@ For a comprehensive breakdown of every technology used in this project, see the 
 |------------|---------|
 | **Tailwind CSS 3.4** | Utility-first styling with custom animations |
 | **shadcn/ui** | Accessible component primitives (Radix UI) |
-| **Lucide React** | Consistent iconography |
+| **Remix Icon** (`@remixicon/react`) | Consistent iconography |
 | **next-themes** | Dark/Light mode support |
 | **DM Sans** | Primary typeface (Google Fonts, variable) |
 
@@ -167,6 +170,8 @@ For a comprehensive breakdown of every technology used in this project, see the 
 | **Supabase** | Authentication, user profiles, saved filters |
 | **Yahoo Finance 2** | Stock and financial data integration |
 | **ExcelJS** | Native `.xlsx` report generation |
+| **jsPDF** | Summary PDF report (with `jspdf-autotable`) |
+| **Upstash Redis** | L2 response cache and rate-limit counters (REST API) |
 | **Zod** | Schema validation for forms and inputs |
 
 ### Testing
@@ -186,20 +191,17 @@ For a comprehensive breakdown of every technology used in this project, see the 
 ## Project Structure
 
 ```
-bamboo-reports-nextjs/
+bamboo-reports-main/
 ├── app/                            # Next.js App Router
 │   ├── (auth)/                     # Auth route group (signin, signup, forgot-password, reset-password)
 │   ├── actions/                    # Modular Server Actions
-│   │   ├── data.ts                 # Core data fetching (accounts, centers, etc.)
-│   │   ├── saved-filters.ts        # Saved filter CRUD operations
-│   │   ├── financial.ts            # Financial data queries
 │   │   ├── notifications.ts        # Notification logic
 │   │   └── system.ts               # System diagnostics
 │   ├── api/                        # Route Handlers
-│   │   ├── dashboard/              # Cached dashboard payload + summary/facets/charts endpoints
-│   │   ├── accounts/               # Paginated account query, autocomplete, detail, related
+│   │   ├── dashboard/              # summary, facets and charts endpoints
+│   │   ├── accounts/               # Paginated account query, autocomplete, list match, detail, related
 │   │   ├── centers/                # Paginated center query, detail, map data
-│   │   ├── prospects/              # Paginated prospect query and detail
+│   │   ├── prospects/              # Paginated prospect query, detail, campaign engagements
 │   │   ├── search/                 # Server-side global search
 │   │   ├── financials/             # Authed, rate-limited Yahoo Finance proxy
 │   │   └── exports/                # Export generation, listing, and re-download
@@ -219,9 +221,10 @@ bamboo-reports-nextjs/
 │   ├── dialogs/                    # Detail views (Account, Center, Prospect)
 │   ├── export/                     # Excel export workflow
 │   ├── exports/                    # My exports dialog (audit log re-download)
+│   ├── favorites/                  # Favorites dialog
 │   ├── filters/                    # Sidebar filter UI and controls
 │   ├── history/                    # Recently viewed history dialog
-│   ├── layout/                     # Header and Footer
+│   ├── layout/                     # Header
 │   ├── maps/                       # MapLibre cluster + choropleth maps
 │   ├── notifications/              # Notification bell dropdown
 │   ├── search/                     # Global search with alias-aware matching
@@ -234,7 +237,6 @@ bamboo-reports-nextjs/
 ├── hooks/                          # Custom React Hooks
 │   ├── use-auth-guard.ts           # Authentication guard
 │   ├── use-copy-to-clipboard.ts    # Copy-to-clipboard with reset timeout
-│   ├── use-server-dashboard-data.ts # Server-backed data fetching, client cache and loading state
 │   ├── use-dashboard-filters.ts    # Complex filter state management
 │   ├── use-favorites.ts            # Favorites CRUD (accounts/centers/prospects)
 │   ├── use-global-search.ts        # Alias-aware global search
@@ -249,6 +251,7 @@ bamboo-reports-nextjs/
 │   └── use-tour-persistence.ts     # Tour completion tracking (localStorage + Supabase)
 │
 ├── lib/                            # Utilities & Configuration
+│   ├── accounts/                   # Account list parsing, matching and filter helpers
 │   ├── analytics/                  # PostHog client, events, tracking
 │   ├── auth/                       # Role-based access control + server-side token verification
 │   ├── cache/                      # Two-tier response cache (in-memory L1 + Upstash Redis L2)
@@ -256,10 +259,11 @@ bamboo-reports-nextjs/
 │   ├── dashboard/                  # Dashboard utility functions
 │   ├── db/                         # Neon PostgreSQL client + retry logic
 │   ├── exports/                    # Export request client + server-side workbook builder
-│   ├── finance/                    # Financial data utilities
+│   ├── finance/                    # Yahoo Finance lookups (financial-info.ts) and ticker helpers
 │   ├── maps/                       # Carto basemap style and boundary helpers
 │   ├── notifications/              # Notification formatting helpers
-│   ├── rate-limit/                 # Per-user rate limiting for data endpoints
+│   ├── rate-limit/                 # Per-user rate limiting (Upstash Redis, Supabase RPC fallback)
+│   ├── reports/                    # Summary PDF report model and jsPDF renderer
 │   ├── request/                    # Request metadata helpers (IP, user-agent)
 │   ├── search/                     # Account search index + alias matching
 │   ├── supabase/                   # Supabase client factory
@@ -293,8 +297,7 @@ bamboo-reports-nextjs/
 │   ├── developer-workflow.md       # Developer guide and coding standards (whole app)
 │   ├── testing-guide.md            # Vitest setup, mocking patterns, how to add tests (whole app)
 │   ├── scripts-and-tooling.md      # Standalone dev scripts (benchmark, work summary)
-│   ├── security-249-progress.md    # Living log of the #249 data-exposure work
-│   ├── 2026-07-29-perf-and-data-hygiene.md  # Session log: cache tuning, Brandfetch, data hygiene
+│   ├── archive/                    # Retired reports, session logs and applied migrations (historical only)
 │   │
 │   ├── backend/                    # Data layer, auth, and server-side feature docs
 │   │   ├── sql/                    # Supabase migration scripts
@@ -308,22 +311,18 @@ bamboo-reports-nextjs/
 │   │   ├── user-exports.md              # Export audit log and Storage archive
 │   │   ├── server-dashboard-mode.md     # Server-mode dashboard (#249): endpoints and SQL filters
 │   │   ├── caching-and-rate-limiting.md # Two-tier response cache and per-user rate limits
-│   │   ├── filtering-sql-parity-report.md  # Real-data parity verification for server-side filtering
-│   │   └── redis-cache-benchmark.md     # Upstash Redis cache benchmark (#249)
+│   │   └── account-lists.md             # Uploaded account lists: matching, filter, sharing
 │   │
 │   └── frontend/                   # UI-facing feature docs
 │       ├── product-tour.md              # Guided onboarding tour
 │       ├── ui-column-mapping.md         # UI label to database column mapping
-│       ├── filter-column-ui-label-map.json  # Machine-readable UI label to column map
 │       ├── logo-integration.md          # Brandfetch logo integration guide
 │       ├── map-disputed-boundaries.md   # Choropleth boundary handling
 │       └── standalone-screens.md        # Auth/error/404/maintenance frame, loading skeleton conventions
 │
-├── scripts/                        # Standalone scripts (load benchmark, work summary report)
+├── scripts/                        # Standalone scripts (benchmark/data-fetch.run.ts, work summary report)
 ├── tests/                          # Vitest test suite (unit, integration, and API route tests)
-├── types/                          # Additional type definitions
-├── public/                         # Static assets (logos, images, data)
-└── styles/                         # Additional stylesheets
+└── public/                         # Static assets (logos, images, data)
 ```
 
 ---
@@ -340,8 +339,8 @@ bamboo-reports-nextjs/
 
 1. **Clone the Repository:**
     ```bash
-    git clone https://github.com/Bamboo-Reports/bamboo-reports-nextjs.git
-    cd bamboo-reports-nextjs
+    git clone https://github.com/Bamboo-Reports/bamboo-reports-main.git
+    cd bamboo-reports-main
     ```
 
 2. **Install Dependencies:**
@@ -372,6 +371,7 @@ bamboo-reports-nextjs/
 | `npm run typecheck` | Run TypeScript compiler checks |
 | `npm run test` | Run Vitest test suite |
 | `npm run test:watch` | Run Vitest in watch mode |
+| `npm run bench` | Run the warehouse data fetch benchmark (`scripts/benchmark/data-fetch.run.ts`, needs `DATABASE_URL`) |
 | `npm run prisma:generate` | Regenerate the Prisma Client after schema changes |
 
 ---
@@ -384,12 +384,12 @@ bamboo-reports-nextjs/
 | `DIRECT_URL` | No | Direct Neon connection string for Prisma CLI commands. Falls back to `DATABASE_URL`. |
 | `NEXT_PUBLIC_SUPABASE_URL` | **Yes** | Your Supabase project URL. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | **Yes** | Supabase public anon key (safe for client). |
-| `SUPABASE_SERVICE_ROLE_KEY` | **Yes** | Supabase service-role secret. Server-only — used to write/read `user_exports` and upload archived exports to Storage. |
+| `SUPABASE_SERVICE_ROLE_KEY` | **Yes** | Supabase service-role secret. Server-only. Used to write/read `user_exports` and upload archived exports to Storage. |
 | `DASHBOARD_CACHE_TTL_MS` | No | Response cache TTL. Code default: `600000` (10 min); recommended `691200000` (8 days) since the ETL purges the cache after each weekly import. |
 | `EXPORT_RATE_LIMIT_PER_HOUR` | No | Max data exports per user per rolling hour. Default: `20`. |
 | `NEXT_PUBLIC_BRANDFETCH_CLIENT_ID` | No | Brandfetch Logo API client ID. Without it the UI shows monogram fallbacks. |
 | `DATA_RATE_LIMIT_PER_MIN` | No | Max requests per user per minute on data endpoints. Default: `60`. |
-| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | No | Upstash Redis credentials for the L2 response cache (`KV_REST_API_URL` / `KV_REST_API_TOKEN` also accepted). Without them the cache runs L1-only. |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | No | Upstash Redis credentials for the L2 response cache (`KV_REST_API_URL` / `KV_REST_API_TOKEN` also accepted). Also backs the rate-limit counters. Without them the cache runs L1-only and rate limiting uses the Supabase `increment_rate_limit` RPC. |
 | `NEXT_PUBLIC_POSTHOG_KEY` | No | PostHog project API key for analytics. |
 | `NEXT_PUBLIC_POSTHOG_HOST` | No | PostHog host URL (defaults to PostHog cloud). |
 | `NEXT_PUBLIC_ENABLE_ANALYTICS` | No | Set to `true` to enable PostHog during local development. |
@@ -429,8 +429,8 @@ The app delegates identity management to **Supabase Auth**.
 - **Session Persistence:** Browser-side via `@supabase/supabase-js`. "Remember me" keeps the session in `localStorage`; unchecked, it lives in `sessionStorage` and ends with the tab. API routes receive the access token as a Bearer header and verify it server-side (see RBAC & Auth Guards).
 - **Auth Screens:** Sign in, sign up, forgot password and reset password share one card frame (`components/auth/auth-shell.tsx`) built on the brand frame described in [Standalone Screens](documentation/frontend/standalone-screens.md).
 - **Role-Based Access Control:**
-  - `viewer` — Read-only access to the dashboard.
-  - `admin` — Read access plus data export capabilities.
+  - `viewer`: Read-only access to the dashboard.
+  - `admin`: Read access plus data export capabilities.
 - **User Data:**
   - **`public.profiles`**: Stores user metadata (First Name, Last Name, Email, Role).
   - **`public.saved_filters`**: Stores JSON blobs of user's filter configurations.
@@ -458,18 +458,20 @@ The core BI data resides in **Neon PostgreSQL**. All tables follow strict `snake
 | `tech` | Technology stack rows (software, vendors, categories) | *(none)* | `cn_unique_key` plus software fields |
 | `prospects` | Contact/lead rows linked to accounts | *(none)* | `ps_unique_key` |
 | `alias` | Alternate account names (brand, abbreviation, flagship products) | *(none)* | `account_global_legal_name` |
+| `subscribers` | Campaign engagement rows (one per prospect per campaign) | *(none)* | `lower(prospect_email)` |
 
 ### Audit Tables (in `audit` schema)
-- `audit.import_runs` — Data import tracking
-- `audit.field_change_events` — Field-level audit log linked to `import_runs`
-- `audit.notification_reads` — Notification read status per user, linked to `field_change_events`
-- `audit.user_notification_state` — Per-user bookmark of the last read timestamp
+- `audit.import_runs`: Data import tracking
+- `audit.field_change_events`: Field-level audit log linked to `import_runs`
+- `audit.notification_reads`: Notification read status per user, linked to `field_change_events`
+- `audit.user_notification_state`: Per-user bookmark of the last read timestamp
 
 ### Key Relationships
 - `alias` links to `accounts` via `account_global_legal_name` (cascades on delete)
 - `centers` links to `accounts` via `account_global_legal_name` (cascades on delete)
 - `services`, `functions`, and `tech` link to `centers` via `cn_unique_key` (cascades on delete)
 - `prospects` links to `accounts` via `account_global_legal_name` (cascades on delete)
+- `subscribers` links to `prospects` by case-insensitive email match (logical link, no FK)
 
 > **Reference:** See the [Schema Migration Guide](documentation/backend/schema-migration-guide.md) for complete column definitions and table relationships.
 
@@ -505,8 +507,7 @@ This project is optimized for Vercel.
 Subsequent pushes to the `main` branch trigger automatic deployments.
 
 ### Build Configuration
-- TypeScript errors are ignored during builds (`typescript.ignoreBuildErrors: true`)
-- Images are unoptimized (`images.unoptimized: true`); `cdn.brandfetch.io` is the only allowed remote pattern
+- Next.js image optimization is on; `cdn.brandfetch.io` is the only allowed remote pattern and optimized images are cached for 90 days (`images.minimumCacheTTL`)
 - HTTP response compression is enabled (`compress: true`)
 
 ---
@@ -520,7 +521,7 @@ Subsequent pushes to the `main` branch trigger automatic deployments.
 | **Auth errors (401/403)** | Supabase config | Verify `NEXT_PUBLIC_SUPABASE_URL` and `ANON_KEY`. Check RLS policies in Supabase dashboard. |
 | **Missing logos** | Brandfetch client ID | Ensure `NEXT_PUBLIC_BRANDFETCH_CLIENT_ID` is set. If omitted, monogram fallbacks are used. |
 | **Notifications not showing** | Feature flag | Set `NEXT_PUBLIC_NOTIFICATIONS_ENABLED=enabled` in your environment. |
-| **Charts not rendering** | Data issue | Check browser console for errors. Ensure data is being returned from server actions. |
+| **Charts not rendering** | Data issue | Check browser console for errors. Check the `/api/dashboard/charts` response in the network tab. |
 | **Unexpected map boundaries** | Basemap boundary layers are still visible | Verify `hideBasemapBoundaries` runs after map load and the local Survey of India overlay loads. See [Map Boundaries](documentation/frontend/map-disputed-boundaries.md). |
 | **Export button disabled** | User role | Only `admin` users can export. Update the role in the `profiles` table. |
 | **Export fails with "Failed to archive export"** | `user-exports` Storage bucket missing | Create a **private** bucket named exactly `user-exports` in the Supabase dashboard. |
@@ -547,9 +548,7 @@ Detailed documentation for specific subsystems lives in the `documentation/` fol
 | [**Testing Guide**](documentation/testing-guide.md) | Vitest setup, mocking patterns, and how to add a new test |
 | [**Server-Mode Dashboard**](documentation/backend/server-dashboard-mode.md) | The #249 server-backed data path: endpoints, SQL filter translation, rollout state |
 | [**Caching and Rate Limiting**](documentation/backend/caching-and-rate-limiting.md) | Two-tier response cache (L1 + Upstash Redis L2), cache purges, per-user rate limits |
-| [**API Caching (SWR)**](documentation/backend/api-caching-swr.md) | Stale-while-revalidate cache behavior for the `/api/dashboard` route |
-| [**Filtering SQL Parity Report**](documentation/backend/filtering-sql-parity-report.md) | Real-data verification that server-side SQL filtering matches the client engine |
-| [**Redis Cache Benchmark**](documentation/backend/redis-cache-benchmark.md) | Timing comparison for the Upstash Redis cache over the 60-scenario filter matrix |
+| [**Account Lists**](documentation/backend/account-lists.md) | Uploading client account lists, name matching, the Account List filter, and sharing |
 | [**Supabase Auth**](documentation/backend/supabase-auth-setup.md) | Setting up the `profiles` table, RLS policies, and auth triggers |
 | [**RBAC & Auth Guards**](documentation/backend/rbac-and-auth-guards.md) | Role enforcement, client-side session guard, server-side token verification |
 | [**Saved Filters**](documentation/backend/supabase-saved-filters.md) | Technical spec for the saved filters JSON structure |
@@ -557,7 +556,7 @@ Detailed documentation for specific subsystems lives in the `documentation/` fol
 | [**User Exports & Audit Log**](documentation/backend/user-exports.md) | Server-side export generation, Storage archive, and audit table |
 | [**Product Tour**](documentation/frontend/product-tour.md) | Guided onboarding walkthrough, completion tracking, and versioning |
 | [**Logo Integration**](documentation/frontend/logo-integration.md) | Setup and usage guide for the Brandfetch logo integration |
-| [**Scripts & Tooling**](documentation/scripts-and-tooling.md) | Standalone dev scripts: load benchmark and git-history work summary |
+| [**Scripts & Tooling**](documentation/scripts-and-tooling.md) | Standalone dev scripts: data fetch benchmark and git-history work summary |
 | [**Map Boundaries**](documentation/frontend/map-disputed-boundaries.md) | Carto basemap and local Survey of India boundary behavior |
 | [**Standalone Screens**](documentation/frontend/standalone-screens.md) | Brand frame for auth, error, 404 and maintenance screens; full-page loading skeleton; skeleton conventions |
 

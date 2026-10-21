@@ -60,7 +60,7 @@ tests/
 |---|---|---|
 | `tests/unit/` | One function, hook, or component tested in isolation with mocked dependencies. Largest folder by count. Includes the pg-mem-backed SQL suites (section 6). | `tests/unit/filter-helpers.test.ts`, `tests/unit/card.test.tsx`, `tests/unit/filtering-sql-parity.test.ts` |
 | `tests/integration/` | Several real (unmocked) internal modules exercised together, e.g. filtering + search index + a builder pipeline. External I/O (fetch, Supabase) is still mocked, but internal app logic is not. `*-realdata.test.ts` files additionally hit the live Neon warehouse when `DATABASE_URL` is set (section 6). | `tests/integration/dashboard-filtering.test.ts`, `tests/integration/filtering-sql-realdata.test.ts` |
-| `tests/api/` | Next.js route handlers (`GET`/`POST`/etc. exported from `app/api/**/route.ts`), invoked directly with a `Request` object. Mocks auth, rate limiting, the warehouse/data layer, Supabase, and logger. | `tests/api/dashboard-route.test.ts`, `tests/api/dashboard-summary-route.test.ts` |
+| `tests/api/` | Next.js route handlers (`GET`/`POST`/etc. exported from `app/api/**/route.ts`), invoked directly with a `Request` object. Mocks auth, rate limiting, the warehouse/data layer, Supabase, and logger. | `tests/api/dashboard-summary-route.test.ts`, `tests/api/entity-query-route.test.ts` |
 | `tests/fixtures/` | Reusable builder functions for domain objects. No `describe`/`it` blocks. | `tests/fixtures/domain.ts` |
 | `tests/stubs/` | Empty or minimal modules substituted for real packages via `resolve.alias` in `vitest.config.ts`. Not test files. | `tests/stubs/server-only.ts` |
 
@@ -182,18 +182,26 @@ Source: `tests/integration/export-request-client.test.ts`, including the pattern
 
 ### Fake timers
 
-For cache TTL / stale-while-revalidate logic, use `vi.useFakeTimers()` / `vi.advanceTimersByTime()` / `vi.runAllTimersAsync()` / `vi.useRealTimers()`:
+For cache TTL and expiry logic, use `vi.useFakeTimers()` / `vi.setSystemTime()` / `vi.advanceTimersByTime()` / `vi.useRealTimers()`, and call `clearCache()` from `@/lib/cache/memory` in `beforeEach` so entries never leak between tests:
 
 ```ts
-vi.useFakeTimers()
-await GET(request) // populate cache
-vi.advanceTimersByTime(3600001) // past 1h TTL
-const res = await GET(request) // served STALE, revalidation kicked off in background
-await vi.runAllTimersAsync()
-vi.useRealTimers()
+beforeEach(() => {
+  clearCache()
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date("2026-07-03T00:00:00Z"))
+})
+afterEach(() => vi.useRealTimers())
+
+it("recomputes after the TTL expires", async () => {
+  let n = 0
+  const fn = vi.fn(async () => `value-${++n}`)
+  expect(await getOrCompute("k", 1000, fn)).toBe("value-1")
+  vi.advanceTimersByTime(1001) // past the 1s TTL
+  expect(await getOrCompute("k", 1000, fn)).toBe("value-2")
+})
 ```
 
-Source: `tests/api/dashboard-route.test.ts`.
+Source: `tests/unit/memory-cache.test.ts` (L1 cache). `tests/unit/redis-cache.test.ts` applies the same pattern to the Redis L2 layer, stubbing `fetch` with Upstash REST responses and advancing time past the 5-minute L1 residency cap to prove Redis is consulted again.
 
 ## 4. React Component Tests (React Testing Library)
 
@@ -280,7 +288,7 @@ Notes on the pattern actually used in this repo:
 
 ## 6. Real-Data and pg-mem SQL Tests
 
-Two categories exist specifically to prove the SQL filter builders (`lib/dashboard/filtering-sql.ts` and friends) match the reference client-side engine (`lib/dashboard/filtering.ts`).
+Two categories exist specifically to prove the SQL filter builders (`lib/dashboard/filtering-sql.ts` and friends) match the reference client-side engine (`lib/dashboard/filtering.ts`). That engine no longer runs in the app (client-side filtering was retired on 2026-09-05); it is kept only as the parity reference.
 
 ### pg-mem-backed suites (always run)
 
@@ -308,7 +316,7 @@ With no `DATABASE_URL` in `.env` (or the environment) the whole file reports as 
 ## 7. Naming and Organization Conventions
 
 - File name: `kebab-case`, `<subject>.test.ts` or `.test.tsx`, mirroring the source module's name where reasonable (`chart-helpers.test.ts` for `lib/utils/chart-helpers.ts`, `auth-server.test.ts` for `lib/auth/server.ts`).
-- One `describe` block per module/route/component, named after the subject in plain English (`"dashboard API route"`, `"dashboard filtering"`, `"summary-cards"`).
+- One `describe` block per module/route/component, named after the subject in plain English (`"dashboard summary route"`, `"dashboard filtering"`, `"in-memory dashboard cache"`).
 - Nested `describe` per exported function when a module exports several (see `tests/unit/actions-notifications.test.ts`: `describe("getUnreadCount")`, `describe("markAllAsRead")`, etc.).
 - `it` descriptions are full sentences describing behavior, not implementation (`"rejects with 401 if token is invalid or expires"`, not `"calls resolveAuthenticatedUserId"`).
 - Group happy-path and edge-case tests explicitly when a module has many of each, e.g. a trailing `describe("happy paths for query functions")` after several error-path `describe` blocks.

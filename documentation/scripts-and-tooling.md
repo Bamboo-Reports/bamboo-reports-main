@@ -4,27 +4,25 @@
 
 ---
 
-## 1. `scripts/benchmark-loading.mjs` (retired)
+## 1. `scripts/generate_work_summary.py`
 
-Measured the retired `GET /api/dashboard` full-payload route against raw warehouse queries. Removed on 2026-09-05 with that route. Latency figures for the current endpoints: [`backend/redis-cache-benchmark.md`](backend/redis-cache-benchmark.md).
+Generates an `.xlsx` report summarizing recent git activity for stakeholder reporting. Parses `git log --numstat` over a configured date range, classifies each commit by conventional-commit prefix (`feat:`, `fix:`, `docs:`, etc.) into `Feature` / `Fix` / `Other`, and infers a functional area (Analytics, Exports, Notifications, Database, Testing, Documentation, Search/Filters, ...) from the changed file paths and commit subject keywords.
 
-## 2. `scripts/generate_work_summary.py`
+Output is a formatted Excel workbook (via `openpyxl`) written to `reports/may-june-work-summary.xlsx` under the repo root. The script creates the `reports/` directory if it is missing (the directory is not checked in). The workbook has a `Summary` sheet (per month: days with work, entries, Feature/Fix/Other counts, top areas) and one sheet per month (`May 2026`, `June 2026`) with one row per commit: date, category, area, summary, before/after/improvement notes, files/insertions/deletions, author, and commit hash.
 
-Generates an `.xlsx` report (`reports/may-june-work-summary.xlsx`) summarizing recent git activity for stakeholder reporting. Parses `git log --numstat` over a configured date range, classifies each commit by conventional-commit prefix (`feat:`, `fix:`, `docs:`, etc.) into `Feature` / `Fix` / `Other`, and infers a functional area (Analytics, Exports, Notifications, Database, Testing, Documentation, Search/Filters, ...) from the changed file paths and commit subject keywords.
-
-Output is a formatted Excel workbook (via `openpyxl`) with one row per commit: date, author, subject, files/insertions/deletions, area, and category.
-
-**Editing the date range or area rules:** `DATE_START` / `DATE_END` and the `infer_area()` keyword table are hardcoded constants at the top of the file. There's no CLI flag; edit the constants directly for a different reporting period or to add a new area bucket.
+**Editing the date range or area rules:** `DATE_START` / `DATE_END` and `OUTPUT_PATH` are constants at the top of the file, the area keywords live in `infer_area()`, and the months are hardcoded in `main()` and `add_summary_sheet()`. There's no CLI flag; edit these directly for a different reporting period or to add a new area bucket.
 
 **Run it:**
 
 ```bash
-python3 scripts/generate_work_summary.py
+uv run --with openpyxl scripts/generate_work_summary.py
 ```
 
-Requires `openpyxl` (not a project-wide npm/Python dependency; install it in your local environment before running: `pip install openpyxl`).
+`openpyxl` is not a project dependency (the script is outside the `etl/` uv project), so `--with` supplies it for the run.
 
-## 3. `scripts/benchmark/data-fetch.run.ts`
+## 2. `scripts/benchmark/data-fetch.run.ts`
+
+Replaces the retired `scripts/benchmark-loading.mjs`, which measured the full-payload `GET /api/dashboard` route removed on 2026-09-05.
 
 Times the Neon warehouse work behind each dashboard read endpoint (summary, facets, charts, centers map, accounts/centers/prospects page 1). It calls the same lib functions the routes use, directly, so auth, rate limiting and the response cache are not part of the numbers (the bench config sets `DASHBOARD_CACHE_TTL_MS=0`). Queries run one at a time.
 
@@ -39,7 +37,7 @@ npm run bench                                   # 5 runs per query
 BENCH_ITERATIONS=10 BENCH_OUT=bench.json npm run bench
 ```
 
-Needs `DATABASE_URL` in `.env`. Read-only.
+Needs `DATABASE_URL` in `.env.local` or `.env`. Read-only.
 
 ---
 

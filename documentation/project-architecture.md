@@ -4,32 +4,13 @@ This document describes the high-level architecture of the Bamboo Reports applic
 
 ---
 
-## 1. Core Architecture Pattern: Server Actions & Client Components
+## 1. Core Architecture Pattern: Route Handlers & Client Components
 
-The application uses the **Next.js App Router** with a heavy reliance on **Server Actions** for data fetching. This eliminates the need for a separate API layer (REST/GraphQL) for internal data.
+The application uses the **Next.js App Router**. Warehouse reads go through **Route Handlers** in `app/api/**`, which verify the Supabase bearer token, apply per-user rate limits, translate filters to parameterized SQL and serve responses through a shared cache. **Server Actions** remain only for notifications (`app/actions/notifications.ts`) and system diagnostics (`app/actions/system.ts`).
 
 ### Data Flow
 
-```
-User Interaction
-    → React State Update (useDashboardFilters)
-    → Client-Side Filtering + Chart Aggregation (lib/dashboard/*, lib/utils/*)
-    → UI Re-render (Tables, Charts, Maps, Summary Cards)
-```
-
-For operations requiring fresh Neon warehouse data (initial load, dashboard refresh, notifications):
-
-```
-Component Mount / User Action
-    → Server Action (app/actions/*.ts)
-    → Prisma Client Query with Retry Logic (lib/db/prisma.ts)
-    → Neon PostgreSQL
-    → Serialized Response
-    → React State Update
-    → UI Re-render
-```
-
-Since #249 (the legacy full-payload route was retired on 2026-09-05) the first flow has this shape: filters are sent to server read endpoints, translated to parameterized SQL, and only paginated/aggregated slices reach the browser:
+The full-payload `GET /api/dashboard` route and client-side filtering were retired on 2026-09-05 (#249). Filters are sent to server read endpoints, translated to parameterized SQL, and only paginated/aggregated slices reach the browser:
 
 ```
 User Interaction
@@ -37,6 +18,18 @@ User Interaction
     → useServerDashboardData → /api/dashboard/{summary,facets,charts}, /api/{entity}/query
     → SQL filter translation (lib/dashboard/filtering-sql.ts) → Neon PostgreSQL
     → Paginated/aggregated response (cached: L1 + Upstash Redis L2)
+    → UI Re-render
+```
+
+Notifications and diagnostics still use Server Actions:
+
+```
+Component Mount / User Action
+    → Server Action (app/actions/notifications.ts, app/actions/system.ts)
+    → Prisma Client Query with Retry Logic (lib/db/prisma.ts)
+    → Neon PostgreSQL
+    → Serialized Response
+    → React State Update
     → UI Re-render
 ```
 
@@ -50,18 +43,16 @@ Supabase-backed user data (auth, profiles, saved filters, favorites, export audi
 
 ### 2.1 `app/` (Routes & Actions)
 
--   **`actions.ts`**: Central re-export point for all server action modules.
 -   **`api/**`**: Warehouse reads (Route Handlers): `dashboard/{summary,facets,charts}`, `<entity>/query`, `centers/map`, `accounts/[name]/related`, `search`, `accounts/autocomplete`, built on `lib/dashboard/filtering-sql.ts` and `lib/db/warehouse.ts`. See [Server-Mode Dashboard](backend/server-dashboard-mode.md).
--   **`actions/financial.ts`**: Financial data queries (Yahoo Finance integration for stock data).
--   **`actions/notifications.ts`**: Notification tracking — recently updated accounts and records, read status.
+-   **`actions/notifications.ts`**: Notification tracking (recently updated accounts and records, read status).
 -   **`actions/system.ts`**: System diagnostics and health checks.
 -   **`page.tsx`**: Main dashboard entry point and UI orchestrator. Wires auth, data loading, filtering hooks, and layout composition.
 -   **`providers.tsx`**: Application-level providers (PostHog analytics).
 -   **`(auth)/`**: Auth route group containing `signin/` and `signup/` pages.
 -   **`api/dashboard/{summary,facets,charts}/`**, **`api/{accounts,centers,prospects}/query/`**, **`api/search/`**, **`api/accounts/autocomplete/`**, **`api/centers/map/`**: Server-mode read endpoints (#249) that serve aggregated and paginated slices with filters translated to SQL (see `documentation/backend/server-dashboard-mode.md`).
--   **`api/financials/`**: Authed, rate-limited proxy for Yahoo Finance data.
+-   **`api/financials/`**: Authed, rate-limited proxy for Yahoo Finance data (built on `lib/finance/financial-info.ts`).
 -   **`api/exports/`**: Route Handlers for generating, listing, and re-downloading user exports.
--   **Rule:** Neon database access is isolated to `app/actions/*`, `app/api/*`, and `lib/db/prisma.ts`. Supabase Auth, RLS-backed user tables, and Storage continue to use Supabase client/service-role APIs.
+-   **Rule:** Neon database access runs only on the server: `app/actions/*`, `app/api/*`, and the server-side query modules they call (`lib/dashboard/*`, `lib/exports/server-builder.ts`), all through `lib/db/prisma.ts` and `lib/db/warehouse.ts`. Supabase Auth, RLS-backed user tables, and Storage continue to use Supabase client/service-role APIs.
 
 ### 2.2 `components/` (UI Composition)
 
@@ -79,7 +70,8 @@ Organized by feature domain:
 | `exports/` | "My exports" dialog for re-downloading archived exports |
 | `filters/` | Sidebar filter UI, multi-select controls, keyword inputs |
 | `history/` | Recently viewed history dialog |
-| `layout/` | Header and Footer components |
+| `favorites/` | Favorites dialog for saved accounts, centers and prospects |
+| `layout/` | Header component |
 | `maps/` | MapLibre cluster map and state choropleth map |
 | `notifications/` | Notification bell dropdown |
 | `search/` | Global search with alias-aware account matching |
@@ -101,7 +93,6 @@ Key components:
 |------|---------------|
 | `use-auth-guard.ts` | Redirects unauthenticated users to sign-in |
 | `use-copy-to-clipboard.ts` | Copy-to-clipboard with auto-reset "copied" state |
-| `use-server-dashboard-data.ts` | Orchestrates the server-backed data fetching (summary, facets, charts, map, pages), debounce, client cache and loading state |
 | `use-dashboard-filters.ts` | Complex filter state management (the largest hook, manages all filter logic, include/exclude modes, range sliders, keyword search) |
 | `use-favorites.ts` | Favorites CRUD and toggle state for accounts/centers/prospects (see [Favorites & Filter Sharing](backend/favorites-and-filter-sharing.md)) |
 | `use-global-search.ts` | Alias-aware global account search state |
@@ -122,13 +113,15 @@ Key components:
 | `analytics/` | PostHog client initialization, event definitions, tracking helpers |
 | `auth/` | Role-based access control and server-side token verification (see [RBAC & Auth Guards](backend/rbac-and-auth-guards.md)) |
 | `cache/` | Two-tier response cache: in-process L1 with residency cap + optional Upstash Redis L2 (see [Caching and Rate Limiting](backend/caching-and-rate-limiting.md)) |
-| `config/` | Environment label, dashboard access, premium filter reveal, server dashboard mode, notification settings |
+| `accounts/` | Account list parsing, storage and name matching for account lists |
+| `config/` | Environment label, dashboard access, filter availability and premium filter reveal, notification settings |
 | `dashboard/` | Dashboard-specific data transformation utilities |
 | `db/` | Prisma Client singleton for Neon PostgreSQL warehouse access with retry logic |
 | `exports/` | Export request client and server-side ExcelJS workbook builder |
-| `finance/` | Financial data transformation utilities |
+| `finance/` | Yahoo Finance fetch and shaping (`financial-info.ts`), the client for `/api/financials` (`request-client.ts`), ticker normalization |
 | `maps/` | Carto basemap style helpers and boundary handling |
 | `notifications/` | Notification message formatting helpers |
+| `reports/` | Summary report model and PDF renderer (jsPDF, `summary-report-pdf.ts`) |
 | `rate-limit/` | Per-user rate limiting for data endpoints (see [Caching and Rate Limiting](backend/caching-and-rate-limiting.md)) |
 | `request/` | Request metadata helpers (client IP, user-agent) for the export audit log |
 | `search/` | Account search index and alias matching (`alias-utils.ts`, `index.ts`) |
@@ -154,7 +147,7 @@ The filter state is a complex object defined in `lib/types.ts` (`Filters` interf
 -   **Optimization:**
     -   **Debouncing:** Search inputs are debounced (300ms) to prevent excessive re-renders.
     -   **Memoization:** `React.memo` is used on row components (`AccountRow`, `CenterRow`, etc.) to prevent re-rendering the entire table when only filters change.
-    -   **`useMemo`:** Used for expensive data transformations (sorting, filtering, chart aggregation over 1000+ rows).
+    -   **`useMemo`:** Used for derived view state (chart series, row lists). Filtering and aggregation run in SQL on the server; `useServerDashboardData` debounces filter changes and caches each response per canonical filter state.
 
 ### 3.2 Authentication State
 Managed by Supabase Auth.
@@ -170,7 +163,7 @@ Deployment-level packaging is config-driven.
 
 ### 3.4 Notification State
 Managed by `useNotifications` hook.
--   **Data source:** `audit.field_change_events` and `audit.notification_reads` tables.
+-   **Data source:** `audit.field_change_events` and `audit.user_notification_state` (per-user last-read timestamp) tables.
 -   **Feature flag:** Controlled by `NEXT_PUBLIC_NOTIFICATIONS_ENABLED` environment variable.
 -   **Grouping:** Notifications are grouped by account or table record for a clean UI.
 
@@ -180,7 +173,7 @@ Managed by `useNotifications` hook.
 
 ### 4.1 Neon PostgreSQL (Data Warehouse)
 
-We use Prisma ORM over Neon PostgreSQL only. `accounts` and `centers` are modelled in Prisma, matching `documentation/backend/table-relationships.md`. The linked child tables (`alias`, `functions`, `services`, `tech`, `prospects`) stay on Prisma tagged raw SQL; their linkage is handled through `account_global_legal_name` and `cn_unique_key` in query logic and client-side filters. Aggregation-heavy queries and edge-case selection logic also use Prisma raw SQL for control over query structure.
+We use Prisma ORM over Neon PostgreSQL only. `accounts` and `centers` are modelled in Prisma, matching `documentation/backend/table-relationships.md`. The linked child tables (`alias`, `functions`, `services`, `tech`, `prospects`) stay on Prisma tagged raw SQL; their linkage is handled through `account_global_legal_name` and `cn_unique_key` in the SQL query logic. Aggregation-heavy queries and edge-case selection logic also use Prisma raw SQL for control over query structure.
 
 ```typescript
 // lib/dashboard/filtering-sql.ts builds the SQL; lib/db/warehouse.ts runs it
@@ -193,7 +186,7 @@ const rows = await queryWarehouse(buildEntityAggregateQuery("accounts", filters,
 
 ### 4.2 Supabase PostgreSQL (User Data)
 
--   **Tables:** `public.profiles`, `public.saved_filters`, `public.filter_shares`, `public.user_favorites`, `public.user_exports` (export audit log).
+-   **Tables:** `public.profiles`, `public.saved_filters`, `public.filter_shares`, `public.user_favorites`, `public.account_lists`, `public.account_list_shares`, `public.user_exports` (export audit log).
 -   **Security:** Row-Level Security (RLS) policies ensure users can only access their own data.
 -   **Client:** Singleton Supabase browser client in `lib/supabase/client.ts`; service-role client in `lib/supabase/server.ts` for trusted Storage/export operations.
 -   **Boundary:** Supabase data is not accessed through Prisma in this codebase. Keeping Supabase on its own APIs preserves Auth, RLS, and Storage semantics.
@@ -205,13 +198,13 @@ Two columns on `accounts` control whether an account is included by default in d
 -   `account_visibility`: `'include'` (default) or `'exclude'`. Excluded accounts are records we keep but do not want to surface by default (for example, companies with only sales, manufacturing, or distribution presence in India, not full GCC operations).
 -   `account_visibility_note`: short, human-readable reason for the exclusion. Surfaced as a chip alongside the NASSCOM chip on the accounts table row (`components/tables/account-row.tsx`) and grid card (`components/cards/account-grid-card.tsx`).
 
-**Visibility filter behavior:** the Account Attributes sidebar includes `Account Visibility` with `ALL`, `GCCs`, and `NON-GCCs`. `GCCs` is the default and includes accounts where `account_visibility = 'include'`; `NON-GCCs` includes `account_visibility = 'exclude'`; `ALL` includes both. The selected visibility mode constrains `filteredAccounts` / `filteredCenters` / `filteredProspects`, so tables, charts, exports, and summary card numerators stay aligned. The summary card denominators always show the full universe (e.g., 2657 accounts) so the user can see "2349 visible / 2657 total". Explicit account-name search bypasses the visibility mode so a searched account can be found directly. This is implemented in `lib/dashboard/filtering-sql.ts` (`visibilityClause`, mirrored by `lib/dashboard/filtering.ts` for the parity tests) and `POST /api/dashboard/summary`, which returns both the filtered counts (numerators) and the full-universe totals (denominators).
+**Visibility filter behavior:** the Account Attributes sidebar includes `Account Visibility` with `ALL`, `GCCs`, and `NON-GCCs`. `GCCs` is the default and includes accounts where `account_visibility = 'include'`; `NON-GCCs` includes `account_visibility = 'exclude'`; `ALL` includes both. The selected visibility mode is part of the filter state every server read endpoint applies, so tables, charts, exports, and summary card numerators stay aligned. The summary card denominators always show the full universe (e.g., 2657 accounts) so the user can see "2349 visible / 2657 total". Explicit account-name search bypasses the visibility mode so a searched account can be found directly. This is implemented in `lib/dashboard/filtering-sql.ts` (`visibilityClause`, mirrored by `lib/dashboard/filtering.ts` for the parity tests) and `POST /api/dashboard/summary`, which returns both the filtered counts (numerators) and the full-universe totals (denominators).
 
 ### 4.4 Account Aliases (`alias` table)
 
 The `public.alias` table stores alternate names for each account (short legal name, brand name, abbreviation, flagship products, "currently known as"), linked to `accounts` by a foreign key on `account_global_legal_name` with `ON UPDATE`/`ON DELETE CASCADE`.
 
-Alias rows power alias-aware account search: the global search (`components/search/global-search.tsx`) and the account filter autocomplete (`components/filters/account-autocomplete.tsx`) match a query against both account names and alias values, so searching for an alternate name (for example "HMH" or "HackerRank") resolves to the underlying account. Matches found through an alias surface a "Known as: <alias>" hint so the result is not confusing. Matching logic lives in `lib/search/alias-utils.ts` and `lib/search/index.ts`; alias matches are served by `GET /api/accounts/autocomplete` and `GET /api/search` (`lib/search/search-sql.ts`). The migration is `documentation/backend/sql/alias-table-migration.sql`.
+Alias rows power alias-aware account search: the global search (`components/search/global-search.tsx`) and the account filter autocomplete (`components/filters/account-autocomplete.tsx`) match a query against both account names and alias values, so searching for an alternate name (for example "HMH" or "HackerRank") resolves to the underlying account. Matches found through an alias surface a "Known as: <alias>" hint so the result is not confusing. Matching logic lives in `lib/search/alias-utils.ts` and `lib/search/index.ts`; alias matches are served by `GET /api/accounts/autocomplete` and `GET /api/search` (`lib/search/search-sql.ts`). The ETL creates and loads the `alias` table itself (`etl/importer/tables.py`), so no manual migration is needed; the old hand-run migration is archived at `documentation/archive/sql/alias-table-migration.sql`.
 
 ---
 
@@ -228,9 +221,9 @@ Alias rows power alias-aware account search: the global search (`components/sear
 -   **Fallback:** Renders a monogram badge if the image fails to load or no client ID is configured. See [Logo Integration](frontend/logo-integration.md).
 
 ### 5.3 Yahoo Finance
--   Used in `app/actions/financial.ts` and `lib/finance/`.
+-   Used in `app/api/financials/route.ts` and `lib/finance/financial-info.ts`.
 -   **Purpose:** Fetches stock prices and financial metrics for account entities with stock tickers.
--   **Integration:** Server-side only (via server actions).
+-   **Integration:** Server-side only, through the authed, rate-limited `GET /api/financials` Route Handler; the browser calls it via `lib/finance/request-client.ts`.
 
 ### 5.4 PostHog Analytics
 -   Initialized in `app/providers.tsx` and `lib/analytics/client.ts`.
@@ -240,7 +233,7 @@ Alias rows power alias-aware account search: the global search (`components/sear
 
 ### 5.5 Vercel Analytics
 -   Automatic Core Web Vitals tracking via `@vercel/analytics`.
--   Zero configuration required — works automatically when deployed on Vercel.
+-   Zero configuration required: works automatically when deployed on Vercel.
 
 ---
 
@@ -248,14 +241,16 @@ Alias rows power alias-aware account search: the global search (`components/sear
 
 ```
 app/layout.tsx (Root Layout)
-└── AppProviders (PostHog, Theme)
+└── AppProviders (PostHog, NotificationProvider, AccountListsProvider)
+    └── ThemeProvider
     ├── MaintenancePage (only when NEXT_PUBLIC_MAINTENANCE_MODE=true; replaces everything below)
     └── app/page.tsx (Dashboard)
         ├── LoadingState (ghost of the shell, before the first payload)
         ├── ErrorState (when the summary request fails)
         └── DashboardContent
             ├── Header
-            │   └── GlobalSearch, ThemeToggle, NotificationBell, UserMenu
+            │   └── search trigger, NotificationDropdown, user menu (theme options, exports, history, tour)
+            ├── GlobalSearch
             ├── FiltersSidebar
             │   ├── FilterSections
             │   │   ├── EnhancedMultiSelect (per filter group)
@@ -288,11 +283,12 @@ app/layout.tsx (Root Layout)
 
 | Strategy | Implementation |
 |----------|---------------|
-| **Client-side filtering** | After initial data load, filtering runs locally in React state for instant UI feedback |
-| **Concurrent data fetching** | `Promise.all` in `getAllData` parallelizes account, center, and prospect queries |
+| **Server-side filtering** | Filters are translated to parameterized SQL (`lib/dashboard/filtering-sql.ts`); only paginated rows and aggregates reach the browser |
+| **Shared response cache** | In-process L1 plus Upstash Redis L2, purged by the ETL after each import |
+| **Lazy view fetching** | `useServerDashboardData` fetches charts, map and table pages only for the visible view |
 | **Debounced search** | 300ms delay on keyword inputs prevents excessive re-renders |
 | **Row memoization** | `React.memo` on table row components prevents unnecessary re-renders |
 | **Data memoization** | `useMemo` for expensive aggregations (chart data, sorted arrays) |
 | **Lazy image loading** | Company logos use `loading="lazy"` for off-screen rows |
-| **Pagination** | 50 items per page to keep DOM size manageable |
-| **Retry with backoff** | Database queries retry 3 times with exponential backoff (1s, 2s, 4s) |
+| **Pagination** | 51 items per page (server-paginated) to keep DOM size manageable |
+| **Retry with backoff** | `queryWithRetry` in `lib/db/prisma.ts` makes 2 attempts by default, waiting 500ms before the retry (delay doubles per further attempt) |

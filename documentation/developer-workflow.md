@@ -16,8 +16,8 @@ This guide is for developers maintaining or extending the Bamboo Reports applica
 
 1. **Clone & Install:**
     ```bash
-    git clone https://github.com/Bamboo-Reports/bamboo-reports-nextjs.git
-    cd bamboo-reports-nextjs
+    git clone https://github.com/Bamboo-Reports/bamboo-reports-main.git
+    cd bamboo-reports-main
     npm install
     ```
 
@@ -28,22 +28,22 @@ This guide is for developers maintaining or extending the Bamboo Reports applica
     ```
 
     Required variables:
-    - `DATABASE_URL` — Neon PostgreSQL pooled runtime connection string used by Prisma for warehouse data
-    - `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL
-    - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase public key
-    - `SUPABASE_SERVICE_ROLE_KEY` — Server-only secret for the export audit log and Storage archive (see [User Exports](backend/user-exports.md))
+    - `DATABASE_URL`: Neon PostgreSQL pooled runtime connection string used by Prisma for warehouse data
+    - `NEXT_PUBLIC_SUPABASE_URL`: Supabase project URL
+    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Supabase public key
+    - `SUPABASE_SERVICE_ROLE_KEY`: Server-only secret for the export audit log and Storage archive (see [User Exports](backend/user-exports.md))
 
     Optional variables:
-    - `DIRECT_URL` — Direct Neon connection string for Prisma CLI commands
-    - `DASHBOARD_CACHE_TTL_MS` — Response cache TTL override (code default 10 min; 8 days recommended since the ETL purges the cache weekly)
-    - `EXPORT_RATE_LIMIT_PER_HOUR` — Max exports per user per rolling hour, default 20
-    - `DATA_RATE_LIMIT_PER_MIN` — Max requests per user per minute on data endpoints, default 60
-    - `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` — Optional Redis L2 for the response cache (see [Caching and Rate Limiting](backend/caching-and-rate-limiting.md))
-    - `NEXT_PUBLIC_POSTHOG_KEY` / `NEXT_PUBLIC_POSTHOG_HOST` — Analytics
-    - `NEXT_PUBLIC_BRANDFETCH_CLIENT_ID` — Company logos (Brandfetch)
-    - `NEXT_PUBLIC_NOTIFICATIONS_ENABLED` — Set to `enabled` to activate notifications
+    - `DIRECT_URL`: Direct Neon connection string for Prisma CLI commands
+    - `DASHBOARD_CACHE_TTL_MS`: Response cache TTL override (code default 10 min; 8 days recommended since the ETL purges the cache weekly)
+    - `EXPORT_RATE_LIMIT_PER_HOUR`: Max exports per user per rolling hour, default 20
+    - `DATA_RATE_LIMIT_PER_MIN`: Max requests per user per minute on data endpoints, default 60
+    - `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`: Optional Upstash Redis for the L2 response cache and rate-limit counters (`KV_REST_API_URL` / `KV_REST_API_TOKEN` also accepted; see [Caching and Rate Limiting](backend/caching-and-rate-limiting.md))
+    - `NEXT_PUBLIC_POSTHOG_KEY` / `NEXT_PUBLIC_POSTHOG_HOST`: Analytics
+    - `NEXT_PUBLIC_BRANDFETCH_CLIENT_ID`: Company logos (Brandfetch)
+    - `NEXT_PUBLIC_NOTIFICATIONS_ENABLED`: Set to `enabled` to activate notifications
     - `NEXT_PUBLIC_MAINTENANCE_MODE`: set to `true` to show a maintenance page instead of the dashboard
-    - `NEXT_PUBLIC_ENVIRONMENT_LABEL` — Set to `DEV` or `PROD` for environment badge
+    - `NEXT_PUBLIC_ENVIRONMENT_LABEL`: Set to `DEV` or `PROD` for environment badge
 
 3. **Run Development Server:**
     ```bash
@@ -62,6 +62,7 @@ This guide is for developers maintaining or extending the Bamboo Reports applica
 | `npm run typecheck` | Run TypeScript compiler checks |
 | `npm run test` | Run Vitest test suite |
 | `npm run test:watch` | Run Vitest in watch mode |
+| `npm run bench` | Run the warehouse data fetch benchmark (see [Scripts & Tooling](scripts-and-tooling.md)) |
 | `npm run prisma:generate` | Regenerate the Prisma Client after a schema change |
 
 ---
@@ -95,7 +96,7 @@ To add a new filter (e.g., "Founded Year") to the sidebar:
     If users should be able to save this filter, ensure the key is included in the filter serialization logic in `components/saved-filters-manager.tsx`.
 
 6. **Update the server-side SQL translation:**
-    Server mode translates filters to SQL in `lib/dashboard/filtering-sql.ts`. Every new filter must be implemented there too, and covered by the parity suite (`tests/unit/filtering-sql-parity.test.ts`) so the client and server engines stay equivalent. See [Server-Mode Dashboard](backend/server-dashboard-mode.md).
+    Server mode translates filters to SQL in `lib/dashboard/filtering-sql.ts`. Every new filter must be implemented there and covered by the parity suite (`tests/unit/filtering-sql-parity.test.ts`). The old client engine, `lib/dashboard/filtering.ts`, no longer runs in the app; it survives only as the reference implementation that suite compares the SQL against. See [Server-Mode Dashboard](backend/server-dashboard-mode.md).
 
 ### 2.2 Adjusting Deployment Access or Premium Filters
 
@@ -150,7 +151,7 @@ If you modify the database schema (e.g., rename a column), see [ETL Pipeline](ba
 4. **Update `lib/types.ts`** to match the new column names.
 5. **Update the projections** in `lib/dashboard/entity-columns.ts` and the SQL in `lib/dashboard/filtering-sql.ts` to use the new column names.
 6. **Update filter helpers** in `lib/utils/filter-helpers.ts` if filters reference the changed columns.
-7. **Update `documentation/frontend/filter-column-ui-label-map.json`** if UI labels changed.
+7. **Update `lib/config/filters.ts`** if a filter's `column` or UI label changed (it is the source of truth for filter labels and columns).
 
 ### 2.6 Adjusting Dashboard Panel Height
 
@@ -230,7 +231,7 @@ If UI alignment needs tuning:
     - `fix: resolve overflow in sidebar`
     - `docs: update readme`
     - `refactor: extract filter logic into hook`
-3. **PRs:** Ensure `npm run lint` and `npm run build` pass before merging.
+3. **PRs:** CI (`.github/workflows/test.yml`) runs `npm run typecheck` and `npm test` on every pull request; both must pass before merging. Run `npm run lint` locally too.
 4. **Branch Protection:** PRs target the `main` branch. Merges deploy automatically to Vercel.
 
 ---
@@ -248,4 +249,4 @@ If UI alignment needs tuning:
 | **Export button disabled** | User role | Only `admin` role can export. Update the `role` column in `public.profiles`. |
 | **PostHog events missing** | Environment variables | Verify `NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_POSTHOG_HOST` are set. Check that `providers.tsx` is wrapping the app. |
 | **Company logos not loading** | Brandfetch client ID | Set `NEXT_PUBLIC_BRANDFETCH_CLIENT_ID`. If Brandfetch has no logo for the domain, the monogram fallback is expected. |
-| **Financial data missing** | Yahoo Finance | The Yahoo Finance API can be rate-limited. Check server action logs for errors. |
+| **Financial data missing** | Yahoo Finance | The Yahoo Finance API can be rate-limited. Check the `/api/financials` route logs for errors. |

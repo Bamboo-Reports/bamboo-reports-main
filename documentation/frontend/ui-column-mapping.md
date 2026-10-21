@@ -1,9 +1,24 @@
 # UI-to-Database Column Mapping
 
-A complete reference mapping every user-facing label in the application to its source database column. This document covers filters, data tables, detail dialogs, charts, and summary cards.
+A reference mapping every user-facing label in the application to its source database column. This document covers filters, data tables, detail dialogs, charts, summary cards, maps, notifications and export.
 
-> **Last Updated:** May 2026
+> **Last Updated:** October 2026
 > **Audience:** Frontend developers, backend engineers, data engineers, QA testers
+
+**Sources of truth.** When this document and the code disagree, the code wins:
+
+| Area | Source file |
+|------|-------------|
+| Filter keys, labels, columns, tables, enabled flags | `lib/config/filters.ts` (`FILTER_SECTIONS`) |
+| Filter sidebar labels as rendered | `components/filters/filter-sections.tsx`, `components/filters/filters-sidebar.tsx` |
+| Data table columns | `lib/dashboard/table-column-preferences.ts` (`TABLE_COLUMNS`) |
+| Detail dialogs | `components/dialogs/*.tsx` |
+| Charts | `lib/dashboard/charts.ts`, `components/tabs/*-tab.tsx` |
+| Summary cards and headcount rule | `components/dashboard/summary-cards.tsx`, `lib/dashboard/dashboard-core.ts` |
+| Excel export | `lib/exports/server-builder.ts` |
+| Table columns (DB) | `etl/importer/master-schema.json` |
+
+The old `filter-column-ui-label-map.json` has moved to `documentation/archive/` and is not used by anything. Use `lib/config/filters.ts` instead.
 
 ---
 
@@ -11,18 +26,17 @@ A complete reference mapping every user-facing label in the application to its s
 
 - [1. Filters (Sidebar)](#1-filters-sidebar)
   - [1.1 Account Attributes](#11-account-attributes)
-  - [1.2 Center Attributes](#12-center-attributes)
+  - [1.2 Centre Attributes](#12-centre-attributes)
   - [1.3 Prospect Attributes](#13-prospect-attributes)
   - [1.4 Filter Types Reference](#14-filter-types-reference)
 - [2. Data Tables](#2-data-tables)
   - [2.1 Accounts Table](#21-accounts-table)
-  - [2.2 Centers Table](#22-centers-table)
+  - [2.2 Centres Table](#22-centres-table)
   - [2.3 Prospects Table](#23-prospects-table)
-  - [2.4 Services Table](#24-services-table)
-  - [2.5 Functions Table](#25-functions-table)
+  - [2.4 Services and Functions (not rendered)](#24-services-and-functions-not-rendered)
 - [3. Detail Dialogs (Popups)](#3-detail-dialogs-popups)
   - [3.1 Account Details Dialog](#31-account-details-dialog)
-  - [3.2 Center Details Dialog](#32-center-details-dialog)
+  - [3.2 Centre Details Dialog](#32-centre-details-dialog)
   - [3.3 Prospect Details Dialog](#33-prospect-details-dialog)
 - [4. Charts](#4-charts)
   - [4.1 Pie / Donut Charts](#41-pie--donut-charts)
@@ -39,336 +53,292 @@ A complete reference mapping every user-facing label in the application to its s
 
 ## 1. Filters (Sidebar)
 
-The filter sidebar is located on the left side of the dashboard. Filters are grouped into three collapsible sections: Account Attributes, Center Attributes, and Prospect Attributes.
+The filter sidebar is on the left side of the dashboard. Filters are grouped into three collapsible sections: **Account Attributes**, **Centre Attributes** and **Prospect Attributes** (the config section ids are `accounts`, `centers`, `prospects`).
+
+Each section can hide some filters behind a premium "Show More" reveal (`premiumFilterKeys` in `lib/config/filters.ts`). Filters with `enabled: false` are hidden and ignored by filtering (`sanitizeFilters` resets them to defaults).
 
 **Source files:**
+- `lib/config/filters.ts`
 - `components/filters/filter-sections.tsx`
 - `components/filters/filters-sidebar.tsx`
 - `hooks/use-dashboard-filters.ts`
+- SQL: `lib/dashboard/filtering-sql.ts`
 
 ### 1.1 Account Attributes
 
-| UI Label | Filter State Key | Database Column | Table | Filter Type |
-|----------|-----------------|-----------------|-------|-------------|
-| Account Visibility | `accountVisibilityMode` | `account_visibility` | `accounts` | Single-select (`ALL`, `GCCs`, `NON-GCCs`) |
-| Account Name | `accountGlobalLegalNameKeywords` | `account_global_legal_name` | `accounts` | Keyword (include/exclude) |
-| Region | `accountHqRegionValues` | `account_hq_region` | `accounts` | Multi-select (include/exclude) |
-| Country | `accountHqCountryValues` | `account_hq_country` | `accounts` | Multi-select (include/exclude) |
-| Segment | `accountPrimaryNatureValues` | `account_primary_nature` | `accounts` | Multi-select (include/exclude) |
-| Category | `accountPrimaryCategoryValues` | `account_primary_category` | `accounts` | Multi-select (include/exclude) |
-| Industry | `accountHqIndustryValues` | `account_hq_industry` | `accounts` | Multi-select (include/exclude) |
-| Type | `accountTypeValues` | `account_type` | `accounts` | Multi-select (include/exclude) |
-| NASSCOM GCC Listing Status | `accountNasscomStatusValues` | `account_nasscom_status` | `accounts` | Multi-select (include/exclude) |
-| Source | `accountSourceValues` | `account_source` | `accounts` | Multi-select (include/exclude) |
-| Coverage | `accountDataCoverageValues` | `account_data_coverage` | `accounts` | Multi-select (include/exclude) |
-| HQ Employee Range | `accountHqEmployeeRangeValues` | `account_hq_employee_range` | `accounts` | Multi-select (include/exclude) |
-| GCC Aggregate Headcount (India) | `accountCenterEmployeesRangeValues` | `account_center_employees_range` | `accounts` | Multi-select (include/exclude) |
-| HQ Company Revenue | `accountHqRevenueRange` | `account_hq_revenue` | `accounts` | Range slider [min, max] |
-| Revenue — "Include all" toggle | `accountHqRevenueIncludeNull` | `account_hq_revenue` | `accounts` | Boolean toggle (include NULLs) |
-| Years In India | `accountYearsInIndiaRange` | `years_in_india` | `accounts` | Range slider [min, max] |
-| Years In India — "Include all" toggle | `yearsInIndiaIncludeNull` | `years_in_india` | `accounts` | Boolean toggle (include NULLs) |
+Rows are in config order. "Premium" means the filter sits behind "Show More".
 
-### 1.2 Center Attributes
+| UI Label | Filter State Key | Database Column | Table | Filter Type | Notes |
+|----------|-----------------|-----------------|-------|-------------|-------|
+| Account Visibility | `accountVisibilityMode` | `account_visibility` | `accounts` | Single-select (`ALL`, `GCCs`, `NON-GCCs`) | Default is GCCs (`account_visibility = 'include'`). NON-GCCs matches `'exclude'`. Ignored while an account name search is active. |
+| Account Name | `accountGlobalLegalNameKeywords` | `account_global_legal_name` | `accounts` | Keyword (autocomplete) | `AccountAutocomplete`, matches with `ILIKE '%kw%'` |
+| Account List | `accountListValues` | `account_global_legal_name` | `accounts` | Multi-select | Uploaded client account lists (`AccountListPicker`) |
+| Account List Accounts | `accountNameValues` | `account_global_legal_name` | `accounts` | Multi-select | Exact account names derived from the selected lists. No separate control: set together with Account List. |
+| HQ Company Revenue | `accountHqRevenueRange` | `account_hq_revenue` | `accounts` | Range slider [min, max] | |
+| Revenue: Include all | `accountHqRevenueIncludeNull` | `account_hq_revenue` | `accounts` | Boolean toggle | Shown as an "Include all" checkbox next to the revenue label |
+| GCC Aggregate Headcount (India) | `accountCenterEmployeesRangeValues` | `account_center_employees_range` | `accounts` | Multi-select | |
+| Years In India | `accountYearsInIndiaRange` | `years_in_india` | `accounts` | Range slider [min, max] | |
+| Years In India: Include all | `yearsInIndiaIncludeNull` | `years_in_india` | `accounts` | Boolean toggle | |
+| Industry | `accountPrimaryCategoryValues` | `account_primary_category` | `accounts` | Multi-select | |
+| HQ Country | `accountHqCountryValues` | `account_hq_country` | `accounts` | Multi-select | |
+| HQ Region | `accountHqRegionValues` | `account_hq_region` | `accounts` | Multi-select | Premium |
+| HQ Employee Range | `accountHqEmployeeRangeValues` | `account_hq_employee_range` | `accounts` | Multi-select | Premium |
+| Sub Industry | `accountHqIndustryValues` | `account_hq_industry` | `accounts` | Multi-select | Premium |
+| Segment | `accountPrimaryNatureValues` | `account_primary_nature` | `accounts` | Multi-select | Premium |
+| NASSCOM GCC Listing Status | `accountNasscomStatusValues` | `account_nasscom_status` | `accounts` | Multi-select | Premium |
+| Source | `accountSourceValues` | `account_source` | `accounts` | Multi-select | Premium, `enabled: false` |
+| Type | `accountTypeValues` | `account_type` | `accounts` | Multi-select | Premium, `enabled: false` |
+| Coverage | `accountDataCoverageValues` | `account_data_coverage` | `accounts` | Multi-select | Premium, `enabled: false` |
 
-| UI Label | Filter State Key | Database Column | Table | Filter Type |
-|----------|-----------------|-----------------|-------|-------------|
-| Status | `centerStatusValues` | `center_status` | `centers` | Multi-select (include/exclude) |
-| Country | `centerCountryValues` | `center_country` | `centers` | Multi-select (include/exclude) |
-| State | `centerStateValues` | `center_state` | `centers` | Multi-select (include/exclude) |
-| City | `centerCityValues` | `center_city` | `centers` | Multi-select (include/exclude) |
-| Focus | `centerFocusValues` | `center_focus` | `centers` | Multi-select (include/exclude) |
-| Type | `centerTypeValues` | `center_type` | `centers` | Multi-select (include/exclude) |
-| Center Headcount | `centerEmployeesRangeValues` | `center_employees_range` | `centers` | Multi-select (include/exclude) |
-| Incorporation Timeline | `centerIncYearRange` | `center_inc_year` | `centers` | Range slider [min, max] |
-| Incorporation Timeline — "Include all" toggle | `centerIncYearIncludeNull` | `center_inc_year` | `centers` | Boolean toggle (include NULLs) |
-| Services Offered | `functionNameValues` | `function_name` | `functions` | Multi-select (include/exclude) |
-| Software In Use | `techSoftwareInUseKeywords` | `software_in_use` | `tech` | Keyword (include/exclude) |
+> **Naming trap:** the UI label "Industry" maps to `account_primary_category`, and "Sub Industry" maps to `account_hq_industry`. The column `account_hq_sub_industry` is not filterable; it appears only in the Account dialog and in exports.
 
-> **Note:** "Services Offered" filters via the `functions` table joined through `cn_unique_key`. "Software In Use" filters via the `tech` table joined through `cn_unique_key`.
+### 1.2 Centre Attributes
+
+| UI Label | Filter State Key | Database Column | Table | Filter Type | Notes |
+|----------|-----------------|-----------------|-------|-------------|-------|
+| Status | `centerStatusValues` | `center_status` | `centers` | Multi-select | |
+| Centre Type | `centerTypeValues` | `center_type` | `centers` | Multi-select | Config label is "Center Type"; sidebar renders "Centre Type" |
+| Services Offered | `functionNameValues` | `function_name` | `functions` | Multi-select | Joined through `cn_unique_key` |
+| City | `centerCityValues` | `center_city` | `centers` | Multi-select | |
+| Incorporation Timeline | `centerIncYearRange` | `center_inc_year` | `centers` | Range slider [min, max] | |
+| Incorporation Timeline: Include all | `centerIncYearIncludeNull` | `center_inc_year` | `centers` | Boolean toggle | |
+| Centre Headcount | `centerEmployeesRangeValues` | `center_employees_range` | `centers` | Multi-select | Config label is "Center Headcount" |
+| State | `centerStateValues` | `center_state` | `centers` | Multi-select | Premium |
+| Centre Focus | `centerFocusValues` | `center_focus` | `centers` | Multi-select | Premium. Config label is "Center Focus" |
+| Software In Use | `techSoftwareInUseKeywords` | `software_in_use` | `tech` | Keyword | Premium. Joined through `cn_unique_key`, matches with `ILIKE '%kw%'` |
+| Country | `centerCountryValues` | `center_country` | `centers` | Multi-select | Premium, `enabled: false` |
 
 ### 1.3 Prospect Attributes
 
-| UI Label | Filter State Key | Database Column | Table | Filter Type |
-|----------|-----------------|-----------------|-------|-------------|
-| Department | `prospectDepartmentValues` | `prospect_department` | `prospects` | Multi-select (include/exclude) |
-| Seniority Level | `prospectLevelValues` | `prospect_level` | `prospects` | Multi-select (include/exclude) |
-| City | `prospectCityValues` | `prospect_city` | `prospects` | Multi-select (include/exclude) |
-| Job Title | `prospectTitleKeywords` | `prospect_title` | `prospects` | Keyword (include/exclude) |
+This section has no "Show More" gating.
+
+| UI Label | Filter State Key | Database Column | Table | Filter Type | Notes |
+|----------|-----------------|-----------------|-------|-------------|-------|
+| Job Title | `prospectTitleKeywords` | `prospect_title` | `prospects` | Keyword | |
+| Role | `prospectHeadTypeValues` | `head_type` | `prospects` | Multi-select | Values such as "GCC Head", "HR Head" |
+| Seniority Level | `prospectLevelValues` | `prospect_level` | `prospects` | Multi-select | |
+| Department | `prospectDepartmentValues` | `prospect_department` | `prospects` | Multi-select | |
+| City | `prospectCityValues` | `prospect_city` | `prospects` | Multi-select | |
+| Engaged | `prospectEngagedValues` | `prospect_engaged` | `prospects` | Multi-select | Whether the prospect has engaged with a Bamboo Reports campaign |
 
 ### 1.4 Filter Types Reference
 
 | Filter Type | UI Control | Data Structure | Behavior |
 |-------------|-----------|----------------|----------|
-| **Multi-select (include/exclude)** | `EnhancedMultiSelect` dropdown | `FilterValue[]` — `{ value: string, mode: 'include' \| 'exclude' }` | Green badge = include, Red badge = exclude. Options show count of matching records. |
-| **Keyword (include/exclude)** | `TitleKeywordInput` text field | `FilterValue[]` — `{ value: string, mode: 'include' \| 'exclude' }` | Free-text entry with 300ms debounce. Matches partial strings in the target column. |
-| **Range slider** | `Slider` with min/max handles | `[number, number]` tuple | Logarithmic scaling for revenue. Linear for years. Filters records where column value falls within range. |
-| **Boolean toggle** | Checkbox | `boolean` | When enabled, includes records where the column value is NULL (no data). |
+| **Multi-select** | `EnhancedMultiSelect` dropdown | `FilterValue[]` (`{ value: string, mode: 'include' \| 'exclude' }`) | Green badge = include, red badge = exclude. Options show the count of matching records. |
+| **Keyword** | `TitleKeywordInput` (Account Name uses `AccountAutocomplete`) | `FilterValue[]` (`{ value: string, mode: 'include' \| 'exclude' }`) | A keyword is added on Enter. Matches partial strings with `ILIKE '%kw%'`. |
+| **Range slider** | `Slider` with min/max handles and inputs | `[number, number]` tuple | Keeps records whose column value falls within the range. |
+| **Boolean toggle** | "Include all" checkbox | `boolean` | When on, also keeps records where the column is NULL. |
+| **Single-select** | Segmented control (`ACCOUNT_VISIBILITY_OPTIONS`) | `"all" \| "gcc" \| "nonGcc"` | Used only by Account Visibility. |
 
 ---
 
 ## 2. Data Tables
 
-Each tab in the dashboard displays a paginated data table. Tables show 50 rows per page.
+Each tab can show a paginated data table. Page size comes from `itemsPerPage` in `app/page.tsx` (currently 51) and is sent to the query routes, which clamp it to `MAX_PAGE_SIZE = 100` (`lib/dashboard/entity-query.ts`).
+
+Column labels and which columns are user-hideable come from `TABLE_COLUMNS` in `lib/dashboard/table-column-preferences.ts` (`required: true` columns cannot be hidden; preferences are stored under the `br-table-columns:<dataset>` key). The tab components render the Centres labels with the British spelling.
 
 ### 2.1 Accounts Table
 
 **Source files:** `components/tabs/accounts-tab.tsx`, `components/tables/account-row.tsx`
 
-| Column Header | Database Column | Table | Display Type | Notes |
-|---------------|----------------|-------|-------------|-------|
-| *(Logo)* | `account_hq_website` | `accounts` | Company logo image | Brandfetch lookup by domain; falls back to a monogram badge |
-| Account Name | `account_global_legal_name` | `accounts` | Clickable text | Opens Account Details dialog on click |
-| *(NASSCOM badge)* | `account_nasscom_status` | `accounts` | Badge | Shows green "NASSCOM" badge when value is `"yes"` |
-| Industry | `account_hq_industry` | `accounts` | Text | — |
-| Revenue Range | `account_hq_revenue_range` | `accounts` | Text | Bucketed range string (e.g., "$1B-$5B") |
-| GCC Aggregate Headcount (India) | `account_center_employees_range` | `accounts` | Text | Bucketed range string (e.g., "1,001-5,000") |
+| Column Header | Column Key | Database Column | Table | Display Type | Notes |
+|---------------|-----------|-----------------|-------|-------------|-------|
+| *(Logo)* | | `account_hq_website` | `accounts` | Company logo | Brandfetch lookup by domain; falls back to a monogram |
+| Account Name | `name` (required) | `account_global_legal_name` | `accounts` | Clickable text | Opens the Account Details dialog |
+| *(NASSCOM chip)* | | `account_nasscom_status` | `accounts` | Chip | "NASSCOM" chip when the value is `yes` (case-insensitive) |
+| *(Visibility note chip)* | | `account_visibility`, `account_visibility_note` | `accounts` | Chip | Shows the note when `account_visibility = 'exclude'` and a note exists |
+| Sub Industry | `industry` | `account_hq_industry` | `accounts` | Text | |
+| Revenue Range | `revenue` | `account_hq_revenue_range` | `accounts` | Text | Bucketed range string |
+| GCC Aggregate Headcount (India) | `employees` | `account_center_employees_range` | `accounts` | Text | Bucketed range string |
 
-**Hidden fields used internally:**
-| Field | Database Column | Purpose |
-|-------|----------------|---------|
-| Location | `account_hq_city`, `account_hq_country` | Displayed in some contexts |
-| UUID | `uuid` | Recently-updated tracking |
-
-### 2.2 Centers Table
+### 2.2 Centres Table
 
 **Source files:** `components/tabs/centers-tab.tsx`, `components/tables/center-row.tsx`
 
-| Column Header | Database Column | Table | Display Type | Notes |
-|---------------|----------------|-------|-------------|-------|
-| *(Logo)* | `center_account_website` | `centers` | Company logo image | Brandfetch lookup by parent account domain |
-| Center Name | `center_name` | `centers` | Clickable text | Opens Center Details dialog on click; secondary line shows `account_global_legal_name` |
-| Location | `center_city` + `center_state` | `centers` | Computed text | Format: "City, State" |
-| Center Type | `center_type` | `centers` | Text | — |
-| Center Headcount | `center_employees_range` | `centers` | Text | Bucketed range string |
+| Column Header | Column Key | Database Column | Table | Display Type | Notes |
+|---------------|-----------|-----------------|-------|-------------|-------|
+| *(Logo)* | | `center_account_website` | `centers` | Company logo | Brandfetch lookup by parent account domain |
+| Centre Name | `name` (required) | `center_name` | `centers` | Clickable text | Opens the Centre Details dialog; second line shows `account_global_legal_name` |
+| Location | `location` | `center_city` + `center_state` | `centers` | Computed text | `formatCenterLocation` ("City, State") |
+| Centre Type | `type` | `center_type` | `centers` | Text | |
+| Centre Headcount | `employees` | `center_employees_range` | `centers` | Text | Bucketed range string |
 
-**Hidden fields used internally:**
-| Field | Database Column | Purpose |
-|-------|----------------|---------|
-| Account Name | `account_global_legal_name` | Linking to parent account |
-| Unique Key | `cn_unique_key` | Row identification |
-| UUID | `uuid` | Recently-updated tracking |
+The row context menu also uses `center_website` and `center_linkedin`. `cn_unique_key` identifies rows.
 
 ### 2.3 Prospects Table
 
 **Source files:** `components/tabs/prospects-tab.tsx`, `components/tables/prospect-row.tsx`
 
-| Column Header | Database Column | Table | Display Type | Notes |
-|---------------|----------------|-------|-------------|-------|
-| *(Avatar)* | `prospect_first_name`, `prospect_last_name` | `prospects` | Initials badge | Colored circle with first letters of first + last name |
-| Name | `prospect_full_name` or `prospect_first_name` + `prospect_last_name` | `prospects` | Clickable text | Opens Prospect Details dialog on click; secondary line shows `account_global_legal_name` |
-| Location | `prospect_city` + `prospect_state` + `prospect_country` | `prospects` | Computed text | Format: "City, State"; fall back to `Country` when city/state is missing |
-| Job Title | `prospect_title` | `prospects` | Text | — |
-| Department | `prospect_department` | `prospects` | Text | — |
+| Column Header | Column Key | Database Column | Table | Display Type | Notes |
+|---------------|-----------|-----------------|-------|-------------|-------|
+| *(Avatar)* | `avatar` (required) | `prospect_full_name` or `prospect_first_name` + `prospect_last_name` | `prospects` | Initials badge | |
+| Name | `name` (required) | `prospect_full_name` or `prospect_first_name` + `prospect_last_name` | `prospects` | Clickable text | Opens the Prospect Details dialog; second line shows `account_global_legal_name` |
+| Location | `location` | `prospect_city` + `prospect_state` + `prospect_country` | `prospects` | Computed text | `formatProspectLocation`: "City, State", falls back to country; `TBA` values are skipped |
+| Job Title | `title` | `prospect_title` | `prospects` | Text | |
+| Department | `department` | `prospect_department` | `prospects` | Text | |
 
-**Hidden fields used internally:**
-| Field | Database Column | Purpose |
-|-------|----------------|---------|
-| Email | `prospect_email` | Unique identification |
-| UUID | `uuid` | Recently-updated tracking |
-| Account | `account_global_legal_name` | Linking to parent account |
+The row context menu also uses `prospect_email` and `prospect_linkedin_url`. Row selection for export uses `ps_unique_key`.
 
-### 2.4 Services Table
+### 2.4 Services and Functions (not rendered)
 
-**Source files:** `components/tabs/services-tab.tsx`, `components/tables/service-row.tsx`
-
-| Column Header | Database Column | Table | Display Type | Notes |
-|---------------|----------------|-------|-------------|-------|
-| CN Unique Key | `cn_unique_key` | `services` | Muted text | Identifier linking to parent center |
-| Center Name | `center_name` | `services` | Text | Denormalized from `centers` table |
-| Primary Service | `primary_service` | `services` | Text | — |
-| Focus Region | `focus_region` | `services` | Text | — |
-| IT | `service_it` | `services` | Boolean indicator | Service capability flag |
-| ER&D | `service_erd` | `services` | Boolean indicator | Service capability flag |
-| FnA | `service_fna` | `services` | Boolean indicator | Service capability flag |
-| HR | `service_hr` | `services` | Boolean indicator | Service capability flag |
-| Procurement | `service_procurement` | `services` | Boolean indicator | Service capability flag |
-| Sales & Marketing | `service_sales_marketing` | `services` | Boolean indicator | Service capability flag |
-| Customer Support | `service_customer_support` | `services` | Boolean indicator | Service capability flag |
-| Others | `service_others` | `services` | Boolean indicator | Service capability flag |
-| Software Vendor | `software_vendor` | `services` | Text | — |
-| Software In Use | `software_in_use` | `services` | Text | — |
-
-### 2.5 Functions Table
-
-**Source file:** `components/tables/function-row.tsx`
-
-| Column Header | Database Column | Table | Display Type | Notes |
-|---------------|----------------|-------|-------------|-------|
-| CN Unique Key | `cn_unique_key` | `functions` | Muted text | Identifier linking to parent center |
-| Function Name | `function_name` | `functions` | Text | — |
+`components/tabs/services-tab.tsx` (`ServicesTab`), `components/tables/service-row.tsx` (`ServiceRow`) and `components/tables/function-row.tsx` (`FunctionRow`) are re-exported from their `index.ts` files but are not rendered anywhere in the app. Service data is shown only in the Centre Details dialog (section 3.2) and in the Services export sheet (section 8). Function data is used by the Services Offered filter and the Function chart.
 
 ---
 
 ## 3. Detail Dialogs (Popups)
 
-Clicking a row in any data table opens a detail dialog with comprehensive information about that entity.
+Clicking a row, grid card or map entry opens a detail dialog. Most rows are hidden when the value is empty (`MetaRow` and `KPITile` skip nulls).
 
 ### 3.1 Account Details Dialog
 
 **Source file:** `components/dialogs/account-details-tabbed-dialog.tsx`
 
-This is a tabbed dialog with three tabs: **Account Info**, **Centers**, and **Prospects**.
+A tabbed dialog with **Account Info**, **Centres** and **Prospects** tabs. The Centres and Prospects tabs appear only when the account has rows and the section is enabled. Related centres, prospects, services and tech load from the account-related API (`fetchAccountRelated` in `lib/dashboard/api-client.ts`) in server mode.
 
-#### Account Info Tab
+#### Header
 
-**Company Overview Section:**
+| UI Element | Database Column | Table |
+|------------|----------------|-------|
+| Logo | `account_hq_website` | `accounts` |
+| Title | `account_global_legal_name` | `accounts` |
+| Website icon link | `account_hq_website` | `accounts` |
+| LinkedIn icon link | `account_hq_linkedin_link` | `accounts` |
+| Subtitle | `account_hq_city` + `account_hq_state` + `account_hq_country` (falls back to `account_hq_region`) | `accounts` |
+
+#### Account Info Tab: Company Snapshot
 
 | UI Label | Database Column | Table |
 |----------|----------------|-------|
-| Account Type | `account_hq_company_type` | `accounts` |
-| HQ Stock Ticker | `account_hq_stock_ticker` | `ticker` (merged onto accounts server-side) |
 | About | `account_about` | `accounts` |
-| Key Offerings | `account_hq_key_offerings` | `accounts` |
-
-**Location Section:**
-
-| UI Label | Database Column | Table |
-|----------|----------------|-------|
-| Location | `account_hq_city` + `account_hq_country` | `accounts` |
+| Key Offerings | `account_hq_key_offerings` (one bullet per line) | `accounts` |
+| Account Type | `account_hq_company_type` | `accounts` |
+| Stock Ticker | `account_hq_stock_ticker` | `ticker` (merged onto accounts server-side) |
+| HQ Location | `account_hq_city` + `account_hq_state` | `accounts` |
+| Country | `account_hq_country` | `accounts` |
 | Region | `account_hq_region` | `accounts` |
-
-**Industry Information Section:**
-
-| UI Label | Database Column | Table |
-|----------|----------------|-------|
 | Industry | `account_hq_industry` | `accounts` |
 | Sub Industry | `account_hq_sub_industry` | `accounts` |
 | Primary Category | `account_primary_category` | `accounts` |
 | Primary Nature | `account_primary_nature` | `accounts` |
+| NASSCOM GCC Listing Status | `account_nasscom_status` | `accounts` |
+| Forbes 2000 Rank | `account_hq_forbes_2000_rank` (shown as `#N`) | `accounts` |
+| Fortune 500 Rank | `account_hq_fortune_500_rank` (shown as `#N`) | `accounts` |
 
-**Business Metrics Section:**
+> The dialog labels `account_hq_industry` as "Industry", while the filter sidebar and accounts table label the same column "Sub Industry".
 
-| UI Label | Database Column | Table |
-|----------|----------------|-------|
-| Revenue (in Millions) | `account_hq_revenue` | `accounts` |
-| Revenue Range | `account_hq_revenue_range` | `accounts` |
-| Total Employees | `account_hq_employee_count` | `accounts` |
-| Employees Range | `account_hq_employee_range` | `accounts` |
-| Total Center Employees | `account_center_employees` | `accounts` |
-| GCC Aggregate Headcount (India) | `account_center_employees_range` | `accounts` |
-
-**Financials Section** *(loaded via `getAccountFinancialInfo` server action — Yahoo Finance API):*
+#### Account Info Tab: Scale & Financials
 
 | UI Label | Data Source | Notes |
 |----------|------------|-------|
-| Stock Ticker | `financialData.inputTicker` | From `account_hq_stock_ticker` (ticker table, merged server-side) |
-| Exchange | `financialData.exchange` | Yahoo Finance API |
-| Market Cap | `financialData.marketCap` | Yahoo Finance API |
-| Net Profit | `financialData.netProfit` | Yahoo Finance API |
-| Annual Revenue (FY) chart | `financialData.annualRevenueSeries` | Array of `{ label, revenue }`, rendered as a Recharts area chart |
+| Revenue | `account_hq_revenue` (caption: `account_hq_revenue_range`) | Formatted in millions |
+| Market Cap | `financialData.marketCap` | Caption: ticker and exchange. Shown only when financial data loaded. |
+| Net Profit | `financialData.netProfit` | Same as above |
+| Employees | `account_hq_employee_count` (caption: `account_hq_employee_range`) | |
+| Annual Revenue (FY) chart | `financialData.annualRevenueSeries` | Array of `{ label, revenue }`, Recharts area chart |
 
-**Rankings & Recognition Section:**
+Financial data is fetched on the client by `requestAccountFinancialInfo(ticker)` in `lib/finance/request-client.ts`, which calls the authenticated, rate-limited `/api/financials?ticker=...` route. It loads only when the account has a ticker and the Account Info tab is open. It replaces the former `getAccountFinancialInfo` server action.
 
-| UI Label | Database Column | Table |
-|----------|----------------|-------|
-| Forbes Ranking | `account_hq_forbes_2000_rank` | `accounts` |
-| Fortune Ranking | `account_hq_fortune_500_rank` | `accounts` |
-| NASSCOM GCC Listing Status | `account_nasscom_status` | `accounts` |
+#### Account Info Tab: India Presence
 
-**India Operations Section:**
+Shown when the Centres section is enabled and the account has any of these values or any centres.
 
 | UI Label | Database Column | Table |
 |----------|----------------|-------|
-| First Center Established | `account_first_center_year` | `accounts` |
+| First Centre | `account_first_center_year` | `accounts` |
 | Years in India | `years_in_india` | `accounts` |
+| Centre Employees | `account_center_employees` | `accounts` |
+| GCC Aggregate Headcount (India) | `account_center_employees_range` | `accounts` |
 | Primary City | `account_primary_city` | `accounts` |
 | Hub Structure | `account_hub_structure` | `accounts` |
+| Centres Map | `centers` rows of this account (`lat`, `lng`, see section 6.1) | `centers` |
 
-**Links Section:**
+#### Account Info Tab: Technology Stack
 
-| UI Label | Database Column | Table |
-|----------|----------------|-------|
-| Website | `account_hq_website` | `accounts` |
-| LinkedIn | `account_hq_linkedin_link` | `accounts` |
+Tech treemap (section 4.2) over `tech` rows where `account_global_legal_name` matches.
 
-**Embedded Visualizations:**
+#### Centres Tab
 
-| Visualization | Data Source | Description |
-|---------------|------------|-------------|
-| Tech Treemap | `tech` table (filtered by `account_global_legal_name`) | Treemap of software tools grouped by `software_category` |
-| Centers Map | `centers` table (filtered by `account_global_legal_name`) | Map showing center locations using `lat`, `lng` |
+Quick filters: **Centre Type** (`center_type`) and **Headcount Range** (`center_employees_range`). Results are `CenterGridCard`s (`components/cards/center-grid-card.tsx`), 6 per page:
 
-#### Centers Tab (within Account Dialog)
-
-Shows a list of centers belonging to this account, each displaying:
-
-| UI Label | Database Column | Table |
-|----------|----------------|-------|
-| Center Name | `center_name` | `centers` |
-| Status | `center_status` | `centers` |
-| Location | `center_city` + `center_state` | `centers` |
+| Card Element | Database Column | Table |
+|--------------|----------------|-------|
+| Logo | `center_account_website` | `centers` |
+| Name + status dot | `center_name`, `center_status` | `centers` |
+| Account | `account_global_legal_name` | `centers` |
 | Type | `center_type` | `centers` |
+| Location | `center_city` + `center_state` | `centers` |
 | Headcount | `center_employees_range` | `centers` |
 
-#### Prospects Tab (within Account Dialog)
+#### Prospects Tab
 
-Shows a list of prospects/contacts for this account, each displaying:
+Quick filters: **Head Type** (`head_type`), **Department** (`prospect_department`), **Level** (`prospect_level`). Results are `ProspectGridCard`s (`components/cards/prospect-grid-card.tsx`), 6 per page:
 
-| UI Label | Database Column | Table |
-|----------|----------------|-------|
+| Card Element | Database Column | Table |
+|--------------|----------------|-------|
 | Name | `prospect_full_name` or `prospect_first_name` + `prospect_last_name` | `prospects` |
-| Account Name | `account_global_legal_name` | `prospects` |
+| Account | `account_global_legal_name` | `prospects` |
+| GCC Head / HR Head badge | `head_type` | `prospects` |
 | Location | `prospect_city` + `prospect_state` + `prospect_country` | `prospects` |
 | Department | `prospect_department` | `prospects` |
-| Seniority Level | `prospect_level` | `prospects` |
+| Level | `prospect_level` | `prospects` |
 
 ---
 
-### 3.2 Center Details Dialog
+### 3.2 Centre Details Dialog
 
 **Source file:** `components/dialogs/center-details-dialog.tsx`
 
-**Header:**
+In server mode, the centre's services and tech load from `/api/centers/[key]`.
+
+#### Header
+
+| UI Element | Database Column | Table |
+|------------|----------------|-------|
+| Breadcrumb | `account_global_legal_name` > `center_name` | `centers` |
+| Logo | `center_account_website` | `centers` |
+| Title | `center_name` | `centers` |
+| Website / LinkedIn icon links | `center_website`, `center_linkedin` | `centers` |
+| Status dot | `center_status` (Active Center, Upcoming, Non Operational) | `centers` |
+| Account link | `account_global_legal_name` (opens the Account dialog) | `centers` |
+
+#### Centre Snapshot
 
 | UI Label | Database Column | Table |
 |----------|----------------|-------|
-| Center Name | `center_name` | `centers` |
-| Account Name | `account_global_legal_name` | `centers` |
-| Status | `center_status` | `centers` |
-
-**Center Information Section:**
-
-| UI Label | Database Column | Table |
-|----------|----------------|-------|
-| Center Type | `center_type` | `centers` |
-| Center Focus | `center_focus` | `centers` |
-| Incorporation Year | `center_inc_year` | `centers` |
-| Employees | `center_employees` | `centers` |
-| Center Headcount | `center_employees_range` | `centers` |
-| Boardline Number | `center_boardline` | `centers` |
-| End Year | `center_end_year` | `centers` |
-| Announced Year | `announced_year` | `centers` |
-| Announced Month | `announced_month` | `centers` |
-
-**Location Section:**
-
-| UI Label | Database Column | Table |
-|----------|----------------|-------|
+| Primary Services | `primary_service` (one bullet per line) | `services` |
+| Focus Region | `focus_region` (one bullet per line) | `services` |
 | Address | `center_address` | `centers` |
+| Status | `center_status` ("Active Center" shown as "Active") | `centers` |
+| Centre Type | `center_type` | `centers` |
+| Centre Focus | `center_focus` | `centers` |
 | Micro Location | `center_micro_location` | `centers` |
-| City | `center_city` | `centers` |
-| State | `center_state` | `centers` |
-| Country | `center_country` | `centers` |
-| Region | `center_region` | `centers` |
+| Location | `center_city` + `center_state` | `centers` |
+| Country | `center_country` (hidden when `TBA` or when Location is just "India") | `centers` |
 | Zip Code | `center_zip_code` | `centers` |
-
-**Business Information Section** *(conditional — shown only if data exists):*
-
-| UI Label | Database Column | Table |
-|----------|----------------|-------|
-| Business Segment | `center_business_segment` | `centers` |
-| Business Sub-Segment | `center_business_sub_segment` | `centers` |
+| Boardline | `center_boardline` | `centers` |
 | Management Partner | `center_management_partner` | `centers` |
 | JV Status | `center_jv_status` | `centers` |
 | JV Name | `center_jv_name` | `centers` |
 
-**Services Offered Section** *(conditional — shown only if service data exists):*
+#### Scale & Timeline
 
 | UI Label | Database Column | Table |
 |----------|----------------|-------|
-| Primary Service | `primary_service` | `services` |
-| Focus Region | `focus_region` | `services` |
+| Employees | `center_employees` (caption: `center_employees_range`) | `centers` |
+| Incorporation Year | `center_inc_year` (caption: `center_timeline`) | `centers` |
+| Announced | `announced_month` + `announced_year` | `centers` |
+| End Year | `center_end_year` | `centers` |
+
+#### Services Offered
+
+Shown only when the centre has a `services` row with at least one non-empty category. Each category is a multi-line TEXT column rendered as one pill per line (`-` lines are skipped).
+
+| UI Label | Database Column | Table |
+|----------|----------------|-------|
 | IT Services | `service_it` | `services` |
+| AI Services | `service_ai` | `services` |
 | ER&D Services | `service_erd` | `services` |
 | Finance & Accounting | `service_fna` | `services` |
 | HR Services | `service_hr` | `services` |
@@ -377,52 +347,54 @@ Shows a list of prospects/contacts for this account, each displaying:
 | Customer Support | `service_customer_support` | `services` |
 | Other Services | `service_others` | `services` |
 
-**Links Section:**
+#### Technology Stack
 
-| UI Label | Database Column | Table |
-|----------|----------------|-------|
-| Website | `center_website` | `centers` |
-| LinkedIn | `center_linkedin` | `centers` |
+Tech treemap (section 4.2) over `tech` rows where `cn_unique_key` matches.
 
 ---
 
 ### 3.3 Prospect Details Dialog
 
-**Source file:** `components/dialogs/prospect-details-dialog.tsx`
+**Source files:** `components/dialogs/prospect-details-dialog.tsx`, `components/dialogs/prospect-engagement-timeline.tsx`
 
-**Header:**
+#### Header
 
-| UI Label | Database Column | Table |
-|----------|----------------|-------|
-| Name | `prospect_first_name` + `prospect_last_name` | `prospects` |
+| UI Element | Database Column | Table |
+|------------|----------------|-------|
+| Breadcrumb | `account_global_legal_name` > Prospects > name | `prospects` |
+| Initials / Name | `prospect_full_name` or `prospect_first_name` + `prospect_last_name` | `prospects` |
+| Account link | `account_global_legal_name` (opens the Account dialog) | `prospects` |
+| Email icon link | `prospect_email` | `prospects` |
+| LinkedIn icon link | `prospect_linkedin_url` | `prospects` |
+| GCC Head / HR Head badge | `head_type` | `prospects` |
+| Engaged badge | `prospect_engaged` (shown when the value is `yes`) | `prospects` |
 
-**Contact Information Section:**
-
-| UI Label | Database Column | Table |
-|----------|----------------|-------|
-| Email | `prospect_email` | `prospects` |
-| LinkedIn Profile | `prospect_linkedin_url` | `prospects` |
-
-**Professional Information Section:**
+#### Profile
 
 | UI Label | Database Column | Table |
 |----------|----------------|-------|
 | Job Title | `prospect_title` | `prospects` |
+| Email | `prospect_email` (with copy button) | `prospects` |
 | Department | `prospect_department` | `prospects` |
 | Level | `prospect_level` | `prospects` |
+| In Company Since | `prospect_in_company_year` | `prospects` |
+| Current Role Since | `prospect_current_year` | `prospects` |
+| Centre | `center_name` | `prospects` |
+| Location | `prospect_city` + `prospect_state` | `prospects` |
+| Country | `prospect_country` (hidden when `TBA` or when Location is just "India") | `prospects` |
 
-**Company Information Section:**
+#### Bamboo Reports Activity
 
-| UI Label | Database Column | Table |
-|----------|----------------|-------|
-| Account Name | `account_global_legal_name` | `prospects` |
-| Center Name | `center_name` | `prospects` |
+Shown only for engaged prospects with a `ps_unique_key`. Loaded from `/api/prospects/[id]/engagements`, which reads `subscribers` rows whose `prospect_email` matches the prospect.
 
-**Location Section:**
+| UI Element | Database Column | Table |
+|------------|----------------|-------|
+| Touchpoint date | `prospect_engaged_date` | `subscribers` |
+| Touchpoint kind (Registration, Download, Snapshot, Campaign) and name | `prospect_engaged_campaign` | `subscribers` |
 
-| UI Label | Database Column | Table |
-|----------|----------------|-------|
-| Location | `prospect_city` + `prospect_state` + `prospect_country` | `prospects` |
+#### More Contacts From {account}
+
+Other prospects of the same account, with quick filters **Head Type** (`head_type`), **Department** (`prospect_department`) and **Level** (`prospect_level`), shown as prospect grid cards.
 
 ---
 
@@ -430,335 +402,275 @@ Shows a list of prospects/contacts for this account, each displaying:
 
 ### 4.1 Pie / Donut Charts
 
-**Source files:** `components/charts/pie-chart-card.tsx`, `lib/utils/chart-helpers.ts`
+**Source files:** `lib/dashboard/charts.ts`, `lib/utils/chart-helpers.ts`, `components/charts/pie-chart-card.tsx`
 
-Pie charts are rendered using Highcharts as donut charts (inner radius 65%). Segments under 5% of the total are grouped into an "Others" category.
+Charts are Highcharts donuts (inner size 65%). Segments under 5% of the total (`OTHERS_THRESHOLD_PERCENT`) are grouped into "Others". The helpers keep the top 10 values by default (`calculateCityChartData` keeps the top 5 plus "Others").
 
-#### Account Charts
+#### Account Charts (Accounts tab, `getAccountChartData`)
 
-The Accounts tab renders four account pie charts, built by `getAccountChartData` in `lib/dashboard/charts.ts`. Each uses the `calculateChartData(accounts, field)` helper, which counts occurrences of each unique value in the specified column.
+| Chart Title | Data Key | Database Column | Table | Helper |
+|-------------|----------|----------------|-------|--------|
+| Country | `regionData` | `account_hq_country` | `accounts` | `calculateChartData` |
+| Industry | `primaryNatureData` | `account_primary_category` | `accounts` | `calculateChartData` |
+| Revenue Range | `revenueRangeData` | `account_hq_revenue_range` | `accounts` | `calculateChartData` |
+| GCC Aggregate Headcount (India) | `employeesRangeData` | `account_center_employees_range` | `accounts` | `calculateChartData` |
 
-| Chart Title | Database Column | Table | Aggregation |
-|-------------|----------------|-------|-------------|
-| Country | `account_hq_country` | `accounts` | Count of accounts per HQ country |
-| Industry | `account_primary_category` | `accounts` | Count of accounts per primary category |
-| Revenue Range | `account_hq_revenue_range` | `accounts` | Count of accounts per revenue bucket |
-| GCC Aggregate Headcount (India) | `account_center_employees_range` | `accounts` | Count of accounts per headcount bucket |
+#### Centre Charts (Centres tab, "Centre Analytics", `getCenterChartData`)
 
-#### Center Charts
+| Chart Title | Data Key | Database Column | Table | Helper |
+|-------------|----------|----------------|-------|--------|
+| Centre Type | `centerTypeData` | `center_type` | `centers` | `calculateCenterChartData` |
+| Centre Headcount | `employeesRangeData` | `center_employees_range` | `centers` | `calculateCenterChartData` |
+| City | `cityData` | `center_city` | `centers` | `calculateCityChartData` (top 5 + Others) |
+| Function | `functionData` | `function_name` | `functions` | `calculateFunctionChartData` (only functions of the visible `cn_unique_key` set) |
 
-These charts use the `calculateCenterChartData(centers, field)` helper with the same top-10 counting logic.
+#### Prospect Charts (Prospects tab, `getProspectChartData`)
 
-| Chart Title | Database Column | Table | Aggregation |
-|-------------|----------------|-------|-------------|
-| Center Type | `center_type` | `centers` | Count of centers per type |
-| Center Focus | `center_focus` | `centers` | Count of centers per focus |
-| Center Status | `center_status` | `centers` | Count of centers per status |
-| Center Headcount | `center_employees_range` | `centers` | Count of centers per headcount bucket |
-| Country | `center_country` | `centers` | Count of centers per country |
-| State | `center_state` | `centers` | Count of centers per state |
+| Chart Title | Data Key | Database Column | Table | Helper |
+|-------------|----------|----------------|-------|--------|
+| Department | `departmentData` | `prospect_department` | `prospects` | `calculateChartData` |
+| Level | `levelData` | `prospect_level` | `prospects` | `calculateChartData` |
 
-#### City Distribution Chart
+`getProspectChartData` also computes `cityData` (`prospect_city`), but the Prospects tab does not render it.
 
-Uses `calculateCityChartData(centers)` — a specialized helper that returns the top 5 cities by center count and groups the rest as "Others".
-
-| Chart Title | Database Column | Table | Aggregation |
-|-------------|----------------|-------|-------------|
-| City Distribution | `center_city` | `centers` | Top 5 cities + "Others" bucket |
-
-#### Function Distribution Chart
-
-Uses `calculateFunctionChartData(functions, centerKeys)` — filters functions by the currently visible center keys, then counts each `function_name`.
-
-| Chart Title | Database Column | Table | Aggregation |
-|-------------|----------------|-------|-------------|
-| Functions | `function_name` | `functions` | Count per function (filtered by visible `cn_unique_key` set) |
+`getReportChartData` builds the same series uncapped for the summary PDF (no prospect city series).
 
 ### 4.2 Tech Treemap
 
 **Source file:** `components/charts/tech-treemap.tsx`
 
-A Highcharts treemap with a two-level hierarchy. Rendered inside the Account Details dialog.
+A Highcharts treemap with a two-level hierarchy, rendered in the Technology Stack section of the Account and Centre dialogs.
 
 | Level | Database Column | Table | Description |
 |-------|----------------|-------|-------------|
-| Level 1 (Parent) | `software_category` | `tech` | Groups software tools into categories |
-| Level 2 (Child) | `software_in_use` | `tech` | Individual software tools within each category |
+| Level 1 (Parent) | `software_category` (empty becomes "Uncategorized") | `tech` | Category |
+| Level 2 (Child) | `software_in_use` (empty becomes "Unknown") | `tech` | Individual software within the category |
 
-**Aggregation:** Counts occurrences of each `software_in_use` within its `software_category`. Treemap tile size represents relative count. Color is assigned per category.
-
-**Filtering:** The treemap is scoped to the current account via `account_global_legal_name`.
+**Scoping:** by `account_global_legal_name` in the Account dialog, by `cn_unique_key` in the Centre dialog.
 
 ---
 
 ## 5. Summary Cards
 
-**Source file:** `components/dashboard/summary-cards.tsx`
+**Source files:** `components/dashboard/summary-cards.tsx`, `lib/dashboard/dashboard-core.ts` (`computeSummary`)
 
-The summary cards appear at the top of the dashboard showing filtered vs. total counts.
+Five cards at the top of the dashboard show filtered vs. total values. The counts are computed in SQL by `computeSummary`.
 
-| Card Title | Filtered Value Source | Total Value Source | Description |
-|------------|----------------------|--------------------|--------------------|
-| Accounts | Count of filtered `accounts` array | Count of all `accounts` array | Number of account entities matching current filters |
-| Centers | Count of filtered `centers` array | Count of all `centers` array | Number of center entities matching current filters |
-| Prospects | Count of filtered `prospects` array | Count of all `prospects` array | Number of prospect entities matching current filters |
-| Headcount | Sum of `center_employees` from filtered centers | Sum of `center_employees` from all centers | Aggregate employee headcount across visible centers |
+| Card Title | Filtered Value | Total Value | Clickable |
+|------------|----------------|-------------|-----------|
+| Accounts | `count(*)` of filtered `accounts` | `count(*)` of `accounts` | Yes |
+| Centres | `count(*)` of filtered `centers` | `count(*)` of `centers` | Yes |
+| Upcoming Centres | Filtered centres with `center_status = 'Upcoming'` | All centres with `center_status = 'Upcoming'` | No (overview stat) |
+| Prospects | `count(*)` of filtered `prospects` | `count(*)` of `prospects` | Yes |
+| Headcount | Sum of `center_employees` over filtered centres | Same over all centres | No (overview stat) |
 
-**Display format:** Each card shows "X of Y" where X is the filtered count (animated) and Y is the total count. In compact mode (sidebar open), large numbers use K/M notation.
+**Headcount rule:** centres whose `center_type` (lowercased) is `manufacturing`, `sales & marketing`, `bpo` or `distribution` are excluded from the sum. Centres with a NULL `center_type` are included. See `CENTER_METRICS` in `lib/dashboard/dashboard-core.ts`.
+
+**Display format:** each card shows the filtered value and the total. In compact mode (narrow cards), numbers use K/M notation truncated to one decimal.
 
 ---
 
 ## 6. Maps
 
+The Centres tab and (when `canAccessAccountsMapView()` allows it) the Accounts tab have a map view with a cluster map and a state choropleth. In server mode the aggregates arrive pre-computed (`cities`, `states` props).
+
 ### 6.1 Cluster Map
 
 **Source file:** `components/maps/centers-map.tsx`
 
-Renders center locations as clustered markers on an interactive MapLibre map.
+Centres are grouped by `center_city` into MapLibre cluster markers. Centres without `lat`/`lng` or city are skipped.
 
 | Data Field | Database Column | Table | Usage |
 |------------|----------------|-------|-------|
-| Latitude | `lat` | `centers` | Marker Y position |
-| Longitude | `lng` | `centers` | Marker X position |
-| Center Name | `center_name` | `centers` | Tooltip label |
-| Account Name | `account_global_legal_name` | `centers` | Tooltip context |
-| City | `center_city` | `centers` | Tooltip location |
+| Latitude / Longitude | `lat`, `lng` | `centers` | Marker position |
+| City | `center_city` | `centers` | Cluster key and label |
+| Country | `center_country` | `centers` | Cluster label |
+| Centre count | `count(*)` per city | `centers` | Tooltip |
+| Accounts count | distinct `account_global_legal_name` per city | `centers` | Tooltip |
+| Headcount | sum of `center_employees` per city | `centers` | Tooltip |
 
 ### 6.2 State Choropleth Map
 
 **Source file:** `components/maps/centers-choropleth-map.tsx`
 
-Renders a state-level heatmap overlay showing center density per administrative region.
+| Metric | Database Columns | Aggregation |
+|--------|-----------------|-------------|
+| Centre Count | `center_state`, `center_country_iso2` | Count per state |
+| Distinct Accounts | `account_global_legal_name` | Distinct count per state |
+| Headcount | `center_employees` | Sum per state |
 
-| Metric | Database Columns | Aggregation | Description |
-|--------|-----------------|-------------|-------------|
-| Center Count | `center_state`, `center_country_iso2` | `COUNT(*)` grouped by state | Number of centers in each state |
-| Distinct Accounts | `account_global_legal_name` | `COUNT(DISTINCT)` per state | Number of unique accounts per state |
-| Headcount | `center_employees` | `SUM` per state | Total employees per state |
-
-**Boundary matching:** Centers are matched to local administrative GeoJSON features using `center_country_iso2` (ISO2 country code) + `center_state` (state name). See `documentation/frontend/map-disputed-boundaries.md`.
+**Boundary matching:** centres are matched to GeoJSON features by `center_country_iso2` + `center_state`; `center_country` provides the country display name. See `documentation/frontend/map-disputed-boundaries.md`.
 
 ---
 
 ## 7. Notifications
 
-**Source file:** `hooks/use-notifications.ts`, `app/actions/notifications.ts`
+**Source files:** `hooks/use-notifications.ts`, `app/actions/notifications.ts`, `components/notifications/notification-dropdown.tsx`
 
-| UI Element | Data Source | Database Table | Description |
-|------------|------------|----------------|-------------|
-| Notification Bell (unread count) | Count of unread changes | `audit.field_change_events`, `audit.notification_reads` | Number of unviewed field changes |
-| Recently Updated Accounts | Changed accounts | `audit.field_change_events` joined to `accounts` | Grouped by `account_global_legal_name` |
-| Recently Updated Records | Changed records | `audit.field_change_events` | Grouped by table and record UUID |
+Only changes to `accounts`, `centers` and `prospects` are shown (`UI_VISIBLE_NOTIFICATION_TABLES`).
+
+| UI Element | Server Action | Database Tables | Description |
+|------------|---------------|-----------------|-------------|
+| Notification bell (unread count) | `getUnreadCount` | `audit.field_change_events`, `audit.user_notification_state` | Distinct changed records with `changed_at` after the user's `last_read_at` |
+| Activity dropdown summaries | `getUnreadSummaries` | Same | Grouped by `table_name` and change type |
+| Record list | `getUnreadRecordSummaries` | Same | One row per record (`record_uuid`, else `record_identity`, else `record_label`) |
+| Mark all as read | `markAllAsRead` | `audit.user_notification_state` | Upserts `last_read_at` for the user |
 
 ---
 
 ## 8. Export (Excel)
 
-**Source file:** `components/export/export-dialog.tsx`, `lib/utils/export-helpers.ts`
+**Source files:** `lib/exports/server-builder.ts` (`buildServerExport`), `app/api/exports/generate/route.ts`, `components/export/export-dialog.tsx`, `components/exports/exports-dialog.tsx`
 
-The Excel export generates a `.xlsx` file with multiple sheets. Each sheet corresponds to a filtered entity type.
+The export is built on the server with ExcelJS. Each sheet is a `SELECT *` of its table (all rows, or rows limited by the current filters, the selected accounts, the selected centre keys or the selected `ps_unique_key`s). **Column headers are the raw database column names**: there is no friendly-name mapping. The column set is every key present in the returned rows, in first-seen order. `account_hq_revenue` is normalized from BigInt/string to a number.
 
-**Sheets and their column sources:**
+| Sheet | Table | Row source |
+|-------|-------|-----------|
+| Accounts | `accounts` | `SELECT *` |
+| Centres | `centers` | `SELECT *` |
+| Services | `services` | `SELECT *` of rows whose `cn_unique_key` belongs to the exported centres |
+| Prospects | `prospects` | `SELECT *` |
 
-#### Accounts Sheet
+For the full column list of each sheet, see `etl/importer/master-schema.json`.
 
-Exports columns from the `accounts` table based on the currently filtered dataset. Key exported fields include:
-
-| Export Column | Database Column |
-|---------------|----------------|
-| Account Name | `account_global_legal_name` |
-| Industry | `account_hq_industry` |
-| Sub Industry | `account_hq_sub_industry` |
-| Category | `account_primary_category` |
-| Segment | `account_primary_nature` |
-| Region | `account_hq_region` |
-| Country | `account_hq_country` |
-| City | `account_hq_city` |
-| Revenue | `account_hq_revenue` |
-| Revenue Range | `account_hq_revenue_range` |
-| Employee Count | `account_hq_employee_count` |
-| HQ Employee Range | `account_hq_employee_range` |
-| Center Employees | `account_center_employees` |
-| Center Employees Range | `account_center_employees_range` |
-| Website | `account_hq_website` |
-| NASSCOM GCC Listing Status | `account_nasscom_status` |
-| Years in India | `years_in_india` |
-
-#### Centers Sheet
-
-Exports columns from the `centers` table:
-
-| Export Column | Database Column |
-|---------------|----------------|
-| Center Name | `center_name` |
-| Account Name | `account_global_legal_name` |
-| Status | `center_status` |
-| Type | `center_type` |
-| Focus | `center_focus` |
-| City | `center_city` |
-| State | `center_state` |
-| Country | `center_country` |
-| Employees Range | `center_employees_range` |
-| Inc Year | `center_inc_year` |
-
-#### Prospects Sheet
-
-Exports columns from the `prospects` table:
-
-| Export Column | Database Column |
-|---------------|----------------|
-| Name | `prospect_full_name` |
-| Title | `prospect_title` |
-| Department | `prospect_department` |
-| Level | `prospect_level` |
-| Email | `prospect_email` |
-| LinkedIn | `prospect_linkedin_url` |
-| City | `prospect_city` |
-| Country | `prospect_country` |
-| Account | `account_global_legal_name` |
-
-> **Access:** Export is restricted to users with the `admin` role (checked via `canExportData()` in `lib/auth/roles.ts`).
+> **Access:** export is restricted to the `admin` role (`canExportData()` in `lib/auth/roles.ts`, enforced in `app/api/exports/generate/route.ts`), with a rolling per-user rate limit backed by the `user_exports` table.
 
 ---
 
 ## Column Quick Reference
 
-A flat listing of every database column referenced in the UI, sorted by table.
+Columns referenced by the UI, by table. "Export" is omitted: every column of `accounts`, `centers`, `services` and `prospects` is exported.
 
 ### `accounts` table
 
 | Column | Used In |
 |--------|---------|
-| `account_about` | Account dialog (Company Overview) |
-| `account_center_employees` | Account dialog (Business Metrics), Summary cards (Headcount) |
-| `account_center_employees_range` | Filter, Accounts table, Account dialog, Charts, Export |
-| `account_data_coverage` | Filter |
-| `account_first_center_year` | Account dialog (India Operations) |
-| `account_global_legal_name` | Filter, Accounts table, Account/Center/Prospect dialogs, Export, Charts |
-| `account_hq_city` | Accounts table (hidden), Account dialog, Export |
-| `account_hq_company_type` | Account dialog (Company Overview) |
-| `account_hq_country` | Filter, Accounts table (hidden), Account dialog, Charts, Export |
-| `account_hq_employee_count` | Account dialog (Business Metrics), Export |
-| `account_hq_employee_range` | Filter, Account dialog, Charts, Export |
-| `account_hq_forbes_2000_rank` | Account dialog (Rankings) |
-| `account_hq_fortune_500_rank` | Account dialog (Rankings) |
-| `account_hq_industry` | Filter, Accounts table, Account dialog, Charts, Export |
-| `account_hq_key_offerings` | Account dialog (Company Overview) |
-| `account_hq_linkedin_link` | Account dialog (Links) |
-| `account_hq_region` | Filter, Account dialog, Charts |
-| `account_hq_revenue` | Filter (range), Account dialog (Business Metrics), Export |
-| `account_hq_revenue_range` | Accounts table, Account dialog, Charts, Export |
-| `account_hq_stock_ticker` | Account dialog (Company Overview, Financials); lives in the `ticker` table, merged onto accounts server-side |
-| `account_primary_city` | Account dialog (India Operations) |
-| `account_hub_structure` | Account dialog (India Operations) |
-| `account_hq_sub_industry` | Account dialog, Export |
-| `account_hq_website` | Accounts table (logo), Account dialog (Links), Export |
-| `account_nasscom_status` | Filter, Accounts table (badge), Account dialog, Charts |
-| `account_primary_category` | Filter, Account dialog, Charts, Export |
-| `account_primary_nature` | Filter, Account dialog, Charts, Export |
-| `account_source` | Filter |
-| `account_type` | Filter |
-| `uuid` | Recently-updated tracking |
-| `years_in_india` | Filter (range), Account dialog, Export |
+| `account_about` | Account dialog (Snapshot) |
+| `account_center_employees` | Account dialog (India Presence) |
+| `account_center_employees_range` | Filter, Accounts table, Account dialog, Charts |
+| `account_data_coverage` | Filter (disabled) |
+| `account_first_center_year` | Account dialog (India Presence) |
+| `account_global_legal_name` | Filters (Account Name, Account List), Accounts table, all dialogs, Tech treemap scoping |
+| `account_hq_city` | Account dialog (header, HQ Location) |
+| `account_hq_company_type` | Account dialog (Account Type) |
+| `account_hq_country` | Filter (HQ Country), Account dialog, Charts |
+| `account_hq_employee_count` | Account dialog (Scale & Financials) |
+| `account_hq_employee_range` | Filter (premium), Account dialog |
+| `account_hq_forbes_2000_rank` | Account dialog (Forbes 2000 Rank) |
+| `account_hq_fortune_500_rank` | Account dialog (Fortune 500 Rank) |
+| `account_hq_industry` | Filter (Sub Industry), Accounts table (Sub Industry), Account dialog (Industry) |
+| `account_hq_key_offerings` | Account dialog (Snapshot) |
+| `account_hq_linkedin_link` | Account dialog (header) |
+| `account_hq_region` | Filter (HQ Region, premium), Account dialog |
+| `account_hq_revenue` | Filter (range), Account dialog (Revenue) |
+| `account_hq_revenue_range` | Accounts table, Account dialog, Charts |
+| `account_hq_state` | Account dialog (header, HQ Location) |
+| `account_hq_stock_ticker` | Account dialog (Stock Ticker, financials lookup). Lives in the `ticker` table, merged onto accounts server-side |
+| `account_hq_sub_industry` | Account dialog (Sub Industry) |
+| `account_hq_website` | Accounts table (logo), Account dialog (logo, header link) |
+| `account_hub_structure` | Account dialog (India Presence) |
+| `account_nasscom_status` | Filter (premium), Accounts table (chip), Account dialog |
+| `account_primary_category` | Filter (Industry), Account dialog, Charts (Industry) |
+| `account_primary_city` | Account dialog (India Presence) |
+| `account_primary_nature` | Filter (Segment, premium), Account dialog |
+| `account_source` | Filter (disabled) |
+| `account_type` | Filter (disabled) |
+| `account_visibility` | Filter (Account Visibility), Accounts table (chip) |
+| `account_visibility_note` | Accounts table (chip) |
+| `years_in_india` | Filter (range), Account dialog (India Presence) |
 
 ### `centers` table
 
 | Column | Used In |
 |--------|---------|
-| `account_global_legal_name` | Centers table (hidden), Center dialog |
-| `announced_month` | Center dialog |
-| `announced_year` | Center dialog |
-| `center_account_website` | Centers table (logo) |
-| `center_address` | Center dialog (Location) |
-| `center_micro_location` | Center dialog (Location), shown only when present |
-| `center_boardline` | Center dialog |
-| `center_business_segment` | Center dialog (Business Info) |
-| `center_business_sub_segment` | Center dialog (Business Info) |
-| `center_city` | Filter, Centers table, Center dialog, Charts, Cluster map |
-| `center_country` | Filter, Centers table, Center dialog, Charts |
-| `center_country_iso2` | Choropleth map (tile matching) |
-| `center_employees` | Summary cards (Headcount), Choropleth map |
-| `center_employees_range` | Filter, Centers table, Center dialog, Charts, Export |
-| `center_end_year` | Center dialog |
-| `center_focus` | Filter, Center dialog, Charts |
-| `center_inc_year` | Filter (range), Center dialog, Export |
-| `center_jv_name` | Center dialog (Business Info) |
-| `center_jv_status` | Center dialog (Business Info) |
-| `center_linkedin` | Center dialog (Links) |
-| `center_management_partner` | Center dialog (Business Info) |
-| `center_name` | Centers table, Center dialog, Cluster map, Export |
-| `center_region` | Center dialog (Location) |
-| `center_state` | Filter, Center dialog, Charts, Choropleth map |
-| `center_status` | Filter, Center dialog, Charts, Export |
-| `center_type` | Filter, Centers table, Center dialog, Charts, Export |
-| `center_website` | Center dialog (Links) |
-| `center_zip_code` | Center dialog (Location) |
-| `cn_unique_key` | Centers table (hidden), Center dialog, Services/Functions join key |
-| `lat` | Cluster map, Choropleth map |
-| `lng` | Cluster map, Choropleth map |
-| `uuid` | Recently-updated tracking |
+| `account_global_legal_name` | Centres table, Centre dialog, Maps |
+| `announced_month` | Centre dialog (Announced) |
+| `announced_year` | Centre dialog (Announced) |
+| `center_account_website` | Centres table (logo), Centre dialog (logo), grid cards |
+| `center_address` | Centre dialog (Snapshot) |
+| `center_boardline` | Centre dialog (Boardline) |
+| `center_city` | Filter, Centres table, Centre dialog, Charts (City), Cluster map |
+| `center_country` | Filter (disabled), Centre dialog, Maps |
+| `center_country_iso2` | Choropleth map (boundary matching) |
+| `center_employees` | Summary cards (Headcount), Centre dialog, Maps |
+| `center_employees_range` | Filter, Centres table, Centre dialog, Charts, grid cards |
+| `center_end_year` | Centre dialog (End Year) |
+| `center_focus` | Filter (premium), Centre dialog |
+| `center_inc_year` | Filter (range), Centre dialog |
+| `center_jv_name` | Centre dialog |
+| `center_jv_status` | Centre dialog |
+| `center_linkedin` | Centre dialog (header), row context menu |
+| `center_management_partner` | Centre dialog |
+| `center_micro_location` | Centre dialog |
+| `center_name` | Centres table, Centre dialog, grid cards |
+| `center_state` | Filter (premium), Centres table, Centre dialog, Choropleth map |
+| `center_status` | Filter, Summary cards (Upcoming Centres), Centre dialog, grid cards |
+| `center_timeline` | Centre dialog (Incorporation Year caption) |
+| `center_type` | Filter, Centres table, Centre dialog, Charts, Summary cards (headcount exclusion) |
+| `center_website` | Centre dialog (header), row context menu |
+| `center_zip_code` | Centre dialog |
+| `cn_unique_key` | Row identity, join key for `services`, `functions`, `tech` |
+| `lat`, `lng` | Cluster map |
 
 ### `services` table
 
 | Column | Used In |
 |--------|---------|
-| `center_name` | Services table |
-| `cn_unique_key` | Services table |
-| `focus_region` | Services table, Center dialog |
-| `primary_service` | Services table, Center dialog |
-| `service_customer_support` | Services table, Center dialog |
-| `service_erd` | Services table, Center dialog |
-| `service_fna` | Services table, Center dialog |
-| `service_hr` | Services table, Center dialog |
-| `service_it` | Services table, Center dialog |
-| `service_others` | Services table, Center dialog |
-| `service_procurement` | Services table, Center dialog |
-| `service_sales_marketing` | Services table, Center dialog |
-| `software_in_use` | Services table |
-| `software_vendor` | Services table |
+| `cn_unique_key` | Join to the centre |
+| `primary_service` | Centre dialog (Primary Services) |
+| `focus_region` | Centre dialog (Focus Region) |
+| `service_it`, `service_ai`, `service_erd`, `service_fna`, `service_hr`, `service_procurement`, `service_sales_marketing`, `service_customer_support`, `service_others` | Centre dialog (Services Offered) |
 
 ### `functions` table
 
 | Column | Used In |
 |--------|---------|
-| `cn_unique_key` | Functions table, Filter join |
-| `function_name` | Filter, Functions table, Charts |
+| `cn_unique_key` | Filter join, Function chart scoping |
+| `function_name` | Filter (Services Offered), Charts (Function) |
 
 ### `tech` table
 
 | Column | Used In |
 |--------|---------|
-| `account_global_legal_name` | Tech treemap (scoping) |
-| `cn_unique_key` | Filter join |
-| `software_category` | Tech treemap (Level 1 grouping) |
-| `software_in_use` | Filter (keyword), Tech treemap (Level 2) |
+| `account_global_legal_name` | Tech treemap scoping (Account dialog) |
+| `cn_unique_key` | Filter join, Tech treemap scoping (Centre dialog) |
+| `software_category` | Tech treemap (Level 1) |
+| `software_in_use` | Filter (Software In Use), Tech treemap (Level 2) |
 
 ### `prospects` table
 
 | Column | Used In |
 |--------|---------|
-| `account_global_legal_name` | Prospects table (hidden), Prospect dialog |
-| `center_name` | Prospect dialog, Account dialog (Prospects tab) |
-| `prospect_city` | Filter, Prospects table, Prospect dialog, Export |
-| `prospect_country` | Prospects table, Prospect dialog, Export |
-| `prospect_department` | Filter, Prospects table, Prospect dialog, Export |
-| `prospect_email` | Prospect dialog, Export |
-| `prospect_first_name` | Prospects table (avatar), Prospect dialog |
-| `prospect_full_name` | Prospects table, Export |
-| `prospect_last_name` | Prospects table (avatar), Prospect dialog |
-| `prospect_level` | Filter, Prospect dialog, Account dialog (Prospects tab), Export |
-| `prospect_linkedin_url` | Prospect dialog, Export |
-| `prospect_state` | Prospect dialog |
-| `prospect_title` | Filter (keyword), Prospects table, Prospect dialog, Export |
-| `last_review_date` | Internal only (no UI), Export |
-| `email_verification_date` | Internal only (no UI), Export |
-| `contact_status` | Internal only (no UI), Export |
-| `uuid` | Recently-updated tracking |
+| `account_global_legal_name` | Prospects table, Prospect dialog, Account dialog (Prospects tab) |
+| `center_name` | Prospect dialog (Centre) |
+| `head_type` | Filter (Role), Prospect dialog and grid card badges, quick filters (Head Type) |
+| `prospect_city` | Filter, Prospects table, Prospect dialog |
+| `prospect_country` | Prospects table (fallback), Prospect dialog |
+| `prospect_current_year` | Prospect dialog (Current Role Since) |
+| `prospect_department` | Filter, Prospects table, Prospect dialog, Charts |
+| `prospect_email` | Prospect dialog, row context menu, engagement lookup |
+| `prospect_engaged` | Filter (Engaged), Prospect dialog (Engaged badge) |
+| `prospect_first_name`, `prospect_last_name` | Name fallback, avatar initials |
+| `prospect_full_name` | Prospects table, Prospect dialog |
+| `prospect_in_company_year` | Prospect dialog (In Company Since) |
+| `prospect_level` | Filter (Seniority Level), Prospect dialog, Charts (Level) |
+| `prospect_linkedin_url` | Prospect dialog, row context menu |
+| `prospect_state` | Prospects table, Prospect dialog |
+| `prospect_title` | Filter (Job Title), Prospects table, Prospect dialog |
+| `ps_unique_key` | Row selection for export, engagement timeline |
+
+### `subscribers` table
+
+| Column | Used In |
+|--------|---------|
+| `prospect_email` | Engagement lookup (matched to the prospect) |
+| `prospect_engaged_date` | Prospect dialog (Bamboo Reports Activity) |
+| `prospect_engaged_campaign` | Prospect dialog (Bamboo Reports Activity) |
 
 ### Audit tables
 
-| Column | Table | Used In |
-|--------|-------|---------|
-| Various change fields | `audit.field_change_events` | Notifications |
-| Read status | `audit.notification_reads` | Notification bell unread count |
-| Import metadata | `audit.import_runs` | Data import tracking |
+| Table | Used In |
+|-------|---------|
+| `audit.field_change_events` | Notifications |
+| `audit.user_notification_state` | Notification unread state (`last_read_at`) |
+| `audit.import_runs` | ETL import tracking (no UI) |

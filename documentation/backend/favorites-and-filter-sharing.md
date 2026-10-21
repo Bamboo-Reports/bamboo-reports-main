@@ -30,9 +30,10 @@ RLS: every policy scopes to `auth.uid() = user_id`. Full CRUD, no cross-user vis
 
 - Tracks the current Supabase session internally (does not take `userId` as a prop) via `getSession()` + `onAuthStateChange`.
 - `loadFavorites()` fetches all rows for the current user, newest first. **Fails open**: a query error (for example, the migration hasn't been applied yet) logs via `devError` and leaves `favorites` as an empty array rather than throwing, so the rest of the app keeps working.
-- `isFavorite(type, id)` — O(1) lookup against a `Set` built from `favoriteKeys` (`useMemo`).
-- `toggleFavorite(item)` — the primary entry point for star/unstar UI. Guards against a double-click race with `togglingRef` (a `Set` of in-flight keys): a second toggle on the same entity while one is still in flight is ignored rather than double-adding or double-removing.
-- `addFavorites(items)` / `removeFavorite(type, id)` / `removeFavorites(items)` / `clearFavorites()` — bulk and single operations, each firing a PostHog event (`FAVORITE_ADDED` / `FAVORITE_REMOVED`) with `bulk: items.length > 1` on multi-item calls.
+- `isFavorite(type, id)`: O(1) lookup against a `Set` built from `favoriteKeys` (`useMemo`).
+- `toggleFavorite(item)`: the primary entry point for star/unstar UI. Guards against a double-click race with `togglingRef` (a `Set` of in-flight keys): a second toggle on the same entity while one is still in flight is ignored rather than double-adding or double-removing.
+- `addFavorites(items)` / `removeFavorite(type, id)` / `removeFavorites(items)`: bulk and single operations, each firing a PostHog event (`FAVORITE_ADDED` / `FAVORITE_REMOVED`) with `bulk: items.length > 1` on multi-item calls.
+- `clearFavorites()`: deletes every favorite for the current user and empties local state. It fires no PostHog event.
 
 All mutation methods return `boolean` (or `{ ok, added } | null` for `toggleFavorite`) instead of throwing, so callers can show a toast on failure without a try/catch.
 
@@ -53,7 +54,7 @@ Lets the owner of a saved filter share it with a specific teammate by email. The
 | `shared_with_email` | `text` | Denormalized, so the owner's UI can show who a share was sent to without a join |
 | `created_at` | `timestamptz` | |
 
-`UNIQUE (filter_id, shared_with_user_id)` — a filter can only be shared with the same user once.
+`UNIQUE (filter_id, shared_with_user_id)`: a filter can only be shared with the same user once.
 
 Migration: `sql/filter-shares-migration.sql`.
 
@@ -72,7 +73,16 @@ Both are `REVOKE ALL ... FROM PUBLIC, anon` then `GRANT EXECUTE ... TO authentic
 
 ### Reading This as a Migration Order Dependency
 
-`filter-shares-migration.sql` assumes `public.saved_filters` and `public.profiles` already exist (see [Supabase Auth Setup](supabase-auth-setup.md) and [Saved Filters](supabase-saved-filters.md)). Apply migrations in this order for a fresh project: `supabase-auth-setup` → `supabase-saved-filters` → `filter-shares-migration` → `user-favorites-migration` (the last two are independent of each other).
+`filter-shares-migration.sql` assumes `public.saved_filters` and `public.profiles` already exist (see [Supabase Auth Setup](supabase-auth-setup.md) and [Saved Filters](supabase-saved-filters.md)). Apply migrations in this order for a fresh project (files are in `documentation/backend/sql/` unless noted):
+
+1. `supabase-auth-setup` (create `profiles` and `set_updated_at()`), with `lib/tour/migration.sql` run before its column grants, since they name `tour_completed_at` / `tour_version`. On an existing project without `role`, `profiles-role-migration.sql` goes here too, also after the tour migration.
+2. `supabase-saved-filters` (`saved_filters`).
+3. `filter-shares-migration.sql` (needs `saved_filters` and `profiles`; defines `lookup_profile_by_email`).
+4. `user-favorites-migration.sql` (only needs `auth.users`; independent of 2 and 3).
+5. `account-lists-migration.sql` (only needs `auth.users`; defines its own trigger function).
+6. `account-list-shares-migration.sql` (needs `account_lists` from 5 and `lookup_profile_by_email` from 3).
+7. `user-exports-schema.sql` and `rate-limits-migration.sql` (each only needs `auth.users`; independent).
+8. `supabase-security-hardening-migration.sql` last: it alters `set_updated_at()`, re-grants the tour columns, and enables RLS / revokes grants on `profiles`, `saved_filters`, `filter_shares`, `user_favorites` and `user_exports`, so all of those must already exist.
 
 ---
 

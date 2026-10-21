@@ -36,7 +36,7 @@ This is a **client-side** guard only. It protects the UI from rendering for sign
 
 ## 3. Server-Side Request Auth: `lib/auth/server.ts`
 
-For API routes (not Server Actions, which run in the authenticated request context automatically), authentication is verified explicitly:
+For API routes and Server Actions, authentication is verified explicitly. Server Actions do not get an authenticated context for free: the actions in `app/actions/notifications.ts` take an `accessToken` argument from the client and pass it to `resolveAuthenticatedUserId` before touching data.
 
 ```typescript
 extractBearerToken(authHeader: string | null): string | null
@@ -45,7 +45,7 @@ resolveAuthenticatedUserId(accessToken: string): Promise<string>
 
 `extractBearerToken` parses `Authorization: Bearer <token>` headers. `resolveAuthenticatedUserId` calls `supabase.auth.getUser(token)` with a module-level, non-persisting Supabase client (`persistSession: false`) and returns the verified `user.id`, throwing if the token is missing, malformed, or rejected by Supabase.
 
-Successful validations are cached in-process for 60 seconds (`TOKEN_CACHE_TTL_MS`, max 500 entries with oldest-entry eviction) so warm dashboard requests skip the Supabase auth round trip. The accepted tradeoff: a revoked token keeps working for up to 60 seconds on instances that saw it recently, which is acceptable for read-only dashboard data. Failed validations are never cached.
+Successful validations are cached in-process for 60 seconds (`TOKEN_CACHE_TTL_MS`, max 500 entries with oldest-entry eviction) so warm dashboard requests skip the Supabase auth round trip. The accepted tradeoff: a revoked token keeps working for up to 60 seconds on instances that saw it recently, which is acceptable for read-only dashboard data. Failed validations are never cached. Concurrent validations of the same token are deduplicated through an in-flight promise map (`inflight`), so a page load that fires several data requests at once with a cold cache makes one Supabase call instead of one per request.
 
 Route handlers that need to know who's calling (for example, the exports and server-mode data routes) use this pair to turn a raw header into a trusted user ID before doing anything else. There is no separate role check baked into this helper: routes that need `admin` (exports) fetch the caller's `profiles.role` themselves and call `canExportData()`.
 
@@ -64,8 +64,9 @@ Zod schemas used by the auth forms (`app/(auth)/*/page.tsx`, framed by `componen
 
 | Location | Check |
 |----------|-------|
-| `components/export/*` | Export button disabled unless `canExportData(userRole)`. |
-| `app/api/exports/*` route handlers | Re-check role server-side; never trust a client-disabled button as the only guard. |
+| `app/page.tsx` | Computes `canExport = canExportData(userRole)` and passes it as the `canExport` prop to `FiltersSidebar` (and gates the per-table `onDownloadSelection` handlers on it). |
+| `app/api/exports/generate/route.ts` | Re-checks the caller's `profiles.role` server-side and returns 403 unless `canExportData()`; never trust a client-disabled button as the only guard. |
+| `app/api/exports/route.ts`, `app/api/exports/[id]/download/route.ts` | No role check: they only list or serve the caller's own exports (rows are filtered by, or must match, the authenticated `user_id`). |
 | `hooks/use-auth-guard.ts` | Redirects unauthenticated sessions before any protected UI mounts. |
 
 The rule for new admin-only features: enforce the check in the route handler or Server Action, not only in the component. The UI check is a convenience, not the security boundary.

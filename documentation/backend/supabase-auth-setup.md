@@ -14,6 +14,7 @@ Ensure these are set in your `.env.local` (for local development) and your deplo
 | :--- | :--- | :--- |
 | `NEXT_PUBLIC_SUPABASE_URL` | The unique API URL for your Supabase project. | **Yes** |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | The public API key (safe for browser use). Used by the client to authenticate. | **Yes** |
+| `SUPABASE_SERVICE_ROLE_KEY` | The service-role secret key (Project Settings → API). Server-only, never prefix with `NEXT_PUBLIC_`. Used by `getSupabaseServiceRoleClient()` in `lib/supabase/server.ts`, which bypasses RLS for exports, rate limits and other trusted server operations. | **Yes** |
 
 ---
 
@@ -53,6 +54,8 @@ create unique index if not exists profiles_user_id_key on public.profiles(user_i
 ### 2.2 Row Level Security (RLS) Policies
 
 RLS is **mandatory**. Without it, the table is publicly inaccessible or (if misconfigured) publicly writable. These policies ensure users can only access their own data.
+
+> **Order matters:** the column grant in step 5 names `tour_completed_at` and `tour_version`, which are added by `lib/tour/migration.sql`. Run that file after creating the table (2.1) and before this block, otherwise the `grant update (...)` fails with a missing-column error.
 
 ```sql
 -- 1. Enable RLS
@@ -110,9 +113,11 @@ before update on public.profiles
 for each row execute function public.set_updated_at();
 ```
 
+This definition leaves `search_path` unset. `sql/supabase-security-hardening-migration.sql` pins it with `alter function public.set_updated_at() set search_path = '';` (alongside other grant and policy tightening). Run that migration last, after this trigger and the other base migrations (`profiles-role-migration.sql`, saved filters, `filter-shares-migration.sql`, `user-favorites-migration.sql`, `user-exports-schema.sql`, `lib/tour/migration.sql`) exist, since it alters objects they create. It is safe to re-run.
+
 ### 2.4 Add Roles to Existing `profiles` Tables
 
-If your `profiles` table already exists without the `role` column, run this migration:
+If your `profiles` table already exists without the `role` column, run this migration (run `lib/tour/migration.sql` first; the final `grant update` references the tour columns):
 
 ```sql
 alter table public.profiles add column if not exists role text;

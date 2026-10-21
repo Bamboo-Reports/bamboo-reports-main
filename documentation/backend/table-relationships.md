@@ -1,6 +1,6 @@
 # Table Relationships Reference
 
-> **Scope:** How the core data tables are interlinked — from the ETL foreign-key constraints all the way through the dashboard's DB queries and client-side filtering logic.
+> **Scope:** How the core data tables are interlinked, from the ETL foreign-key constraints through the dashboard's server-side SQL.
 
 ---
 
@@ -69,30 +69,37 @@ Defined in `etl/importer/tables.py` → `CONSTRAINTS_SQL`. All child tables casc
 
 ## ETL Import Order
 
-Tables are imported in dependency order so parent records always exist before child records are written:
+`IMPORT_ORDER` in `etl/importer/tables.py` lists the tables in dependency order:
 
 ```
 accounts → ticker → alias → centers → services → functions → tech → prospects → subscribers
 ```
 
+The loader (`etl/importer/load.py`) does not rely on that order for integrity, though: it writes every table concurrently with a `ThreadPoolExecutor` (each table is dropped with `CASCADE` and recreated), and only after all tables have loaded does it run `apply_constraints` (`etl/importer/database.py`), which adds the primary keys and foreign keys from `CONSTRAINTS_SQL`, followed by indexes and `ANALYZE`. The order is used for selecting tables and for display.
+
 ---
 
-## Dashboard Linking — Verified Consistent ✅
+## Dashboard Linking
 
-The dashboard honours the same linking columns at every layer. No discrepancies found.
+The dashboard honours the same linking columns at every layer.
 
 ### DB-Level Queries (`lib/dashboard/filtering-sql.ts`, `lib/dashboard/account-related.ts`, `lib/exports/server-builder.ts`)
 
-| Join | Column | Source |
+The filter SQL does not join tables; it links them with `IN (SELECT ...)` membership against CTEs (`acc0`, `func_centers`, `prospect_accounts`, `surviving_centers`, `final_accounts`) built in `buildWith`.
+
+| Link | Column | Source |
 |------|--------|--------|
-| `centers` → `accounts` | `account_global_legal_name` | Summary metrics SQL — `LEFT JOIN accounts a ON a.account_global_legal_name = c.account_global_legal_name` |
-| `prospects` → `accounts` | `account_global_legal_name` | Summary metrics SQL — `LEFT JOIN accounts a ON a.account_global_legal_name = p.account_global_legal_name` |
-| Services export filter | `cn_unique_key` | `WHERE cn_unique_key = ANY(${centerKeys})` |
-| Prospects export filter | `account_global_legal_name` | `WHERE account_global_legal_name = ANY(${names})` |
+| `centers` → `accounts` | `account_global_legal_name` | `filtering-sql.ts`: `account_global_legal_name in (select account_global_legal_name from acc0)` |
+| `centers` → `functions` | `cn_unique_key` | `filtering-sql.ts`: `cn_unique_key in (select cn_unique_key from func_centers)` |
+| `centers` → `tech` (software filter) | `cn_unique_key` | `filtering-sql.ts`: `cn_unique_key in (select cn_unique_key from tech where ...)` |
+| `prospects` → `accounts` | `account_global_legal_name` | `filtering-sql.ts`: `prospect_accounts` CTE matched on `account_global_legal_name` |
+| Account detail services | `cn_unique_key` | `account-related.ts`: `where cn_unique_key in (select cn_unique_key from centers where account_global_legal_name = $1)` |
+| Services export filter | `cn_unique_key` | `server-builder.ts`: `WHERE cn_unique_key = ANY(${centerKeys})` |
+| Prospects export filter | `account_global_legal_name` | `server-builder.ts`: `WHERE account_global_legal_name = ANY(${names})` |
 
-### Client-Side Filtering (`lib/dashboard/filtering.ts`)
+### In-Memory Reference (`lib/dashboard/filtering.ts`)
 
-Data is fetched flat (no DB-level joins for the main dashboard payload) and linked in-memory using Sets:
+Client-side filtering was retired with the full-payload dashboard route on 2026-09-05 (#249). `lib/dashboard/filtering.ts` is kept as the reference implementation that the SQL parity tests (`tests/unit/filtering-sql-*.test.ts`, `tests/integration/filtering-sql-*.test.ts`) compare `filtering-sql.ts` against; at runtime the dashboard passes it empty arrays. It links rows in memory with Sets on the same columns:
 
 | Filter logic | Linking column |
 |--------------|----------------|
@@ -104,7 +111,7 @@ Data is fetched flat (no DB-level joins for the main dashboard payload) and link
 
 ### Prisma Schema (`prisma/schema.prisma`)
 
-Only `AccountWarehouse` (`accounts`) and `CenterWarehouse` (`centers`) are modelled as Prisma models. The remaining tables (`services`, `functions`, `tech`, `prospects`, `alias`, `ticker`) are queried via raw SQL (`$queryRaw`). Prisma does not define `@relation` fields between them — joins and linking happen in query logic and client-side filters instead, which is appropriate for a read-only BI warehouse.
+Only `AccountWarehouse` (`accounts`) and `CenterWarehouse` (`centers`) are modelled as Prisma models. The remaining tables (`services`, `functions`, `tech`, `prospects`, `alias`, `ticker`, `subscribers`) are queried via raw SQL (`$queryRaw` or the parameterized statements run by `lib/db/warehouse.ts`). Prisma does not define `@relation` fields between them; linking happens in the SQL query logic instead, which is appropriate for a read-only BI warehouse.
 
 ---
 
@@ -112,10 +119,10 @@ Only `AccountWarehouse` (`accounts`) and `CenterWarehouse` (`centers`) are model
 
 | Table | Description | Links to |
 |-------|-------------|----------|
-| `audit.import_runs` | Log of every ETL run | — |
+| `audit.import_runs` | Log of every ETL run | none |
 | `audit.field_change_events` | Field-level change log per record | `import_runs` via `import_run_id` |
-| `audit.notification_reads` | Which users have read which change events | `field_change_events` via `change_event_id` |
-| `audit.user_notification_state` | Per-user bookmark of last-read timestamp | — |
+| `audit.notification_reads` | Legacy per-event read log. The ETL (`etl/importer/changes.py`) still creates it and folds it into `user_notification_state`, but the app no longer reads or writes it | `field_change_events` via `change_event_id` |
+| `audit.user_notification_state` | Per-user bookmark of last-read timestamp (`user_id`, `last_read_at`), read and written by `app/actions/notifications.ts` | none |
 
 ---
 
@@ -125,7 +132,8 @@ Only `AccountWarehouse` (`accounts`) and `CenterWarehouse` (`centers`) are model
 |------|---------|
 | `etl/importer/tables.py` | Single source of truth for `CONSTRAINTS_SQL`, `TABLE_DEFS`, and `IMPORT_ORDER` |
 | `prisma/schema.prisma` | Prisma models for `accounts` and `centers` |
-| `lib/dashboard/filtering-sql.ts` | Server-side filter cascade with DB-level joins (accounts, centers, functions, tech, prospects) |
-| `lib/dashboard/filtering.ts` | Client-side in-memory linking and filter propagation |
+| `etl/importer/load.py` | Concurrent table load, then constraints, indexes and `ANALYZE` |
+| `lib/dashboard/filtering-sql.ts` | Server-side filter cascade as SQL membership CTEs (accounts, centers, functions, tech, prospects) |
+| `lib/dashboard/filtering.ts` | In-memory reference implementation used by the SQL parity tests |
 | `lib/exports/server-builder.ts` | Export queries filtered by `account_global_legal_name` / `cn_unique_key` |
 | `documentation/backend/schema-migration-guide.md` | Full column definitions and migration history |

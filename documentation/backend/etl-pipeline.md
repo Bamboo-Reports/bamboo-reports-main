@@ -31,18 +31,20 @@ One invocation of the importer can do any combination of: header validation, imp
 ```
 python -m importer (cli.main)
   ├─ check_sheet_headers()      Diff each worksheet's header row vs master-schema.json
-  ├─ run_import()               Pull sheets → clean → diff vs DB → replace tables → log changes
-  ├─ apply_constraints()        Re-apply PKs/FKs (CONSTRAINTS_SQL)
-  ├─ apply_indexes()            Re-apply per-table indexes (TABLE_DEFS[*]["indexes"])
-  ├─ analyze_tables()           ANALYZE each reloaded table so the planner has statistics before the purge
+  ├─ run_import()               Pull sheets → clean → diff vs DB → replace tables → log changes, then (not in a dry run):
+  │    ├─ apply_constraints()   Re-apply PKs/FKs (CONSTRAINTS_SQL)
+  │    ├─ apply_indexes()       Re-apply per-table indexes (TABLE_DEFS[*]["indexes"])
+  │    └─ analyze_tables()      ANALYZE each reloaded table so the planner has statistics before the purge
+  ├─ purge_dashboard_cache()    Delete the app's dash:* Redis keys (prod imports only, see §1b)
   ├─ run_snapshot()             Dump DB column/row/size stats to a JSON file on disk
-  ├─ run_validate()             Compare DB column types vs master-schema.json
-  └─ purge_dashboard_cache()    Delete the app's dash:* Redis keys (prod imports only, see §1b)
+  └─ run_validate()             Compare DB column types vs master-schema.json
 ```
+
+The constraints, indexes and `ANALYZE` steps live inside `run_import()` (`importer/load.py`), and `cli.main()` calls the purge right after `run_import()` returns, before the snapshot and schema check. `--index` without an import runs `apply_indexes()` and `analyze_tables()` on their own.
 
 **Input source.** A single Google Sheet (`SPREADSHEET_ID`), one worksheet per table. The worksheet-name-to-table-name mapping is `WORKSHEET_MAP`, derived from `TABLE_DEFS[*]["worksheet"]` (currently 1:1: `accounts`, `alias`, `ticker`, `centers`, `services`, `functions`, `tech`, `prospects`, `subscribers`). Sheets are read with `gspread` + `gspread_dataframe.get_as_dataframe(evaluate_formulas=True, header=0)`, then fully-blank rows and `Unnamed:*` columns are dropped.
 
-**Cleaning.** `clean_dataframe` coerces each column to its `master-schema.json` type. Every value is also stripped of invisible characters (`INVISIBLE_CHARS_RE`: zero-width space U+200B, zero-width non-joiner U+200C, zero-width joiner U+200D, BOM U+FEFF, soft hyphen U+00AD) before numeric parsing in `clean_dataframe` and in `normalize_change_value` / `normalize_text_value`. These are paste artifacts that render as nothing in Google Sheets but corrupt keys, sorting, and search in the warehouse (the "Freudenberg SE" incident, see `documentation/2026-07-29-perf-and-data-hygiene.md`); commit `e526d53`.
+**Cleaning.** `clean_dataframe` coerces each column to its `master-schema.json` type. Every value is also stripped of invisible characters (`INVISIBLE_CHARS_RE`: zero-width space U+200B, zero-width non-joiner U+200C, zero-width joiner U+200D, BOM U+FEFF, soft hyphen U+00AD) before numeric parsing in `clean_dataframe` and in `normalize_change_value` / `normalize_text_value`. These are paste artifacts that render as nothing in Google Sheets but corrupt keys, sorting, and search in the warehouse (the "Freudenberg SE" incident, see the historical session log [`../archive/2026-07-29-perf-and-data-hygiene.md`](../archive/2026-07-29-perf-and-data-hygiene.md)); commit `e526d53`.
 
 **DB connection.** `sqlalchemy.create_engine(CONN_STRING, pool_pre_ping=True)` where the URL is `DATABASE_URL_DEV` or `DATABASE_URL_PROD`, chosen by `--target dev|prod` (default `dev`, so prod is only written when named) at the start of `cli.main()`. All DDL/DML connections set `isolation_level="AUTOCOMMIT"`, so each statement (or each `to_sql` batch) commits independently, there is no wrapping transaction across a table's import.
 
@@ -59,7 +61,7 @@ The web app caches dashboard responses in a shared Upstash Redis under `dash:*` 
 - It is skipped with a notice when `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` (or `KV_REST_API_URL`/`KV_REST_API_TOKEN`) are unset, and a purge failure logs a warning without failing the import.
 - On the app side, `lib/cache/memory.ts` caps L1 (in-process) cache residency at 5 minutes when Redis is configured, so the purge reaches warm serverless instances quickly.
 
-Until 2026-10-21 this lived in a second copy of the script (`etl/V2/main_cache_purge.py`, with `main.py` as the no-purge backup); the two were merged into the importer package, and `--no-purge` replaces the backup. Context: `documentation/2026-07-29-perf-and-data-hygiene.md`, `documentation/security-249-progress.md`.
+Until 2026-10-21 this lived in a second copy of the script (`etl/V2/main_cache_purge.py`, with `main.py` as the no-purge backup); the two were merged into the importer package, and `--no-purge` replaces the backup. Historical context: [`../archive/2026-07-29-perf-and-data-hygiene.md`](../archive/2026-07-29-perf-and-data-hygiene.md), [`../archive/security-249-progress.md`](../archive/security-249-progress.md).
 
 ---
 
@@ -71,10 +73,12 @@ Until 2026-10-21 this lived in a second copy of the script (`etl/V2/main_cache_p
 |---|---|---|
 | `audit.import_runs` | `create_import_run` / `finalize_import_run` | One row per `run_import()` invocation: status, tables targeted, counts, error message |
 | `audit.field_change_events` | `insert_change_events` | One row per changed field, or per row added/removed, on a tracked table |
-| `audit.notification_reads` | (dashboard app, not the ETL) | Per-user read receipts on change events |
-| `audit.user_notification_state` | (dashboard app, plus a one-time backfill in `ensure_notification_tables`) | Per-user last-read bookmark |
+| `audit.notification_reads` | Nothing (legacy) | Former per-user, per-event read receipts. The app no longer reads or writes it; see below |
+| `audit.user_notification_state` | The dashboard app, plus a backfill from `notification_reads` in `ensure_notification_tables` | Per-user last-read bookmark, the only read state the app uses |
 
 `ensure_notification_tables` also handles legacy migration: if `public.import_runs` / `public.field_change_events` / `public.notification_reads` exist but their `audit.*` counterparts don't, it moves them into the `audit` schema (`ALTER TABLE ... SET SCHEMA audit`), then patches columns that may be missing on older rows (`table_name`, `record_uuid`, `record_identity`, `record_label`), and drops legacy columns (`account_uuid`, `account_global_legal_name`) from `field_change_events`.
+
+`audit.notification_reads` is a leftover of the per-event read model that `audit.user_notification_state` replaced (historical migration: [`../archive/sql/notification-simplification-migration.sql`](../archive/sql/notification-simplification-migration.sql), whose final `DROP TABLE` is left commented out). `ensure_notification_tables` still runs `CREATE TABLE IF NOT EXISTS` and an index on it, then seeds `user_notification_state` from it (`GREATEST` of the existing bookmark and the latest `read_at`). So the table stays in place on every import, and if it is ever dropped the next import recreates it empty, which makes the backfill a no-op.
 
 ### What counts as a "change"
 
@@ -105,13 +109,13 @@ etl/import.sh --target prod              # weekly prod import (asks to confirm)
 Under the hood it runs the importer with uv; the same flags work directly, from the repo root with `uv run --directory etl` (or from `etl/` with plain `uv run`):
 
 ```bash
-uv run --directory etl python -m importer                  # default: import -> snapshot -> validate -> index, into dev
-uv run --directory etl python -m importer --target prod    # the same into prod, then purge the dashboard cache
-uv run --directory etl python -m importer --import         # import -> snapshot
+uv run --directory etl python -m importer                  # default: headers -> import (constraints, indexes, ANALYZE) -> snapshot -> schema check, into dev
+uv run --directory etl python -m importer --target prod    # the same into prod, with the dashboard cache purge right after the import (before the snapshot)
+uv run --directory etl python -m importer --import         # headers -> import -> snapshot (no schema check)
 uv run --directory etl python -m importer --dry-run        # full import pipeline, diffing included, no DB writes
 uv run --directory etl python -m importer --validate       # schema validation only
 uv run --directory etl python -m importer --schema         # snapshot only
-uv run --directory etl python -m importer --index          # (re)apply indexes only
+uv run --directory etl python -m importer --index          # (re)apply indexes and ANALYZE only
 uv run --directory etl python -m importer --check-headers  # diff sheet headers vs master-schema.json, no DB connection changes
 uv run --directory etl python -m importer --table centers  # restrict any of the above to one table
 uv run --directory etl python -m importer --no-purge       # prod import without the cache purge
@@ -153,8 +157,8 @@ A missing `SPREADSHEET_ID` or URL for the chosen `--target` aborts as soon as th
 - No cross-table transaction. Every SQL connection is `AUTOCOMMIT`. If table 5 of 8 fails mid-`run_import`, tables 1-4 are already dropped-and-replaced in Postgres; there is no automatic rollback of already-committed table writes.
 - `run_import` wraps the whole per-table loop in `try/except`. On any exception: logs it (`logger.exception`), and if an `import_run_id` exists and it's not a dry run, calls `finalize_import_run(..., status="failed", ..., error_message=str(e)[:1000])`, then re-raises. So a failed run is always recorded in `audit.import_runs` with `status = 'failed'` before the process exits non-zero.
 - Header validation is a pre-flight gate: `run_import` mode always calls `check_sheet_headers()` first (even in `--dry-run`) and aborts before touching the DB if any target worksheet is missing schema columns (duplicates or missing columns are `FAIL`; extra sheet columns are only a `WARN`).
-- `--dry-run` runs the full download/clean/diff pipeline and prints the same summary table (including projected `Field Changes`/`Added`/`Removed` counts) but skips `ensure_notification_tables`, `create_import_run`, the `DROP`+`to_sql` write, `insert_change_events`, `apply_constraints`, `apply_indexes`, and `run_snapshot`. Nothing hits the DB except the initial connectivity check and (if not `--check-headers` alone) the header read.
-- `main()` also catches `KeyboardInterrupt` (exit 130) and any other top-level exception (exit 1) around the whole `main()` call.
+- `--dry-run` runs the full download/clean/diff pipeline and prints the same summary table (including projected `Field Changes`/`Added`/`Removed` counts) but skips `ensure_notification_tables`, `create_import_run`, the `DROP`+`to_sql` write, `insert_change_events`, `apply_constraints`, `apply_indexes`, `analyze_tables`, the cache purge and `run_snapshot`. The DB is still read: the initial connectivity check, and `fetch_existing_table_snapshot` for every table so the projected change counts are real. Nothing is written.
+- Inside `main()`, any exception after the engine is created is caught, the run ends with a failed verdict panel, and the process exits 1. The `python -m importer` entry point is `run()`, which wraps `main()` and catches `KeyboardInterrupt` (prints "Stopped.", exit 130) and any other unexpected exception (exit 1).
 
 ---
 
@@ -196,9 +200,10 @@ uv run --directory etl python -m sheets.validate               # all phases
 uv run --directory etl python -m sheets.validate --force       # continue past a failing phase
 uv run --directory etl python -m sheets.validate --limit 50    # more rows per detail table (default 20)
 uv run --directory etl python -m sheets.validate --highlight   # colour failing rows and cells in the sheet
+uv run --directory etl python -m sheets.validate --exclude tech,functions   # skip these sheets in every phase (results are partial)
 ```
 
-`sheets/validate/` is split by phase: `sheet_cache.py` (every sheet read once), `table_format.py` (Phase 0 per sheet), `cell_checks.py` (0, 0B, 0C), `relation_checks.py` (1 to 3), `highlights.py` and `cli.py`; `options.py` holds the run's flags.
+`sheets/validate/` is split by phase: `sheet_cache.py` (every sheet read once), `table_format.py` (Phase 0 per sheet), `cell_checks.py` (0, 0B, 0C), `relation_checks.py` (1 to 3), `highlights.py` and `cli.py`; `phases.py` holds the per-phase result type and the run order the summary lists, and `options.py` holds the run's flags (including the `--exclude` sheet set).
 
 The output is one compact table per phase (every sheet or rule with its counts and a ✓, ! or ✗), detail tables only for what failed, then a summary of every phase and a verdict panel that says what to run next. The importer and both sheet tools share this look through `etl/common/tui.py`.
 
@@ -244,6 +249,12 @@ uv run --directory etl python -m sheets.cleanup --report changes.csv   # full ch
 
 Typical order: `etl/cleanup.sh`, then `etl/cleanup.sh --apply`, then `etl/validate.sh`, then `etl/import.sh`.
 
+### Weekly prod run
+
+- The weekly flow is `etl/cleanup.sh --apply`, then `etl/validate.sh` (fails on format or invisible-character problems), then `etl/import.sh --target prod` (import plus the automatic cache purge, §1b). No manual cache clearing is needed. Without `--target prod` the import goes to dev and the cache is left alone.
+- After a prod import, the first dashboard load pays one cold recompute (about 5s for facets, measured 2026-07-29), then the cache stays warm for the week. Cache warming was considered and deferred.
+- The app's Vercel env should carry `DASHBOARD_CACHE_TTL_MS=691200000` (8 days) so cached responses outlive the week; the purge, not TTL expiry, is what invalidates them.
+
 ---
 
 ## Related Files
@@ -264,5 +275,6 @@ Typical order: `etl/cleanup.sh`, then `etl/cleanup.sh --apply`, then `etl/valida
 | `etl/importer/import_logs/snapshot/` | Per-run JSON DB snapshots (`run_snapshot`) |
 | `documentation/backend/table-relationships.md` | FK constraints, import order, table hierarchy |
 | `documentation/backend/schema-migration-guide.md` | Column-level schema reference |
-| `documentation/2026-07-29-perf-and-data-hygiene.md` | Cache-cadence and invisible-character incident write-up |
-| `documentation/security-249-progress.md` | Redis cache layer and ETL purge integration notes |
+| `documentation/archive/2026-07-29-perf-and-data-hygiene.md` | Historical: cache-cadence and invisible-character incident write-up |
+| `documentation/archive/security-249-progress.md` | Historical: Redis cache layer and ETL purge integration notes |
+| `documentation/archive/sql/notification-simplification-migration.sql` | Historical: the move from `notification_reads` to `user_notification_state` |
