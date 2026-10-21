@@ -8,6 +8,7 @@ import os
 import urllib.parse
 from typing import Dict, List
 
+import certifi
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import Engine
 
@@ -20,7 +21,11 @@ from .tables import CONSTRAINTS_SQL, TABLE_DEFS
 
 
 def get_engine(url: str) -> Engine:
-    return create_engine(url, pool_pre_ping=True)
+    # sslmode=require in the .env URLs encrypts but never checks the server
+    # certificate. Override it to verify the chain and hostname against the
+    # certifi bundle (psycopg2-binary's bundled OpenSSL has no system store).
+    connect_args = {"sslmode": "verify-full", "sslrootcert": certifi.where()}
+    return create_engine(url, pool_pre_ping=True, connect_args=connect_args)
 
 
 def database_host(url: str) -> str:
