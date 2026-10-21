@@ -30,6 +30,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { resolveExportDownloadUrl } from "@/lib/exports/request-client"
+import { captureEvent } from "@/lib/analytics/client"
+import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 
 type ExportRow = {
   id: string
@@ -99,7 +101,9 @@ export function ExportsDialog({ open, onOpenChange }: ExportsDialogProps) {
         return
       }
       const payload = await res.json()
-      setExports(payload.exports ?? [])
+      const rows: ExportRow[] = payload.exports ?? []
+      setExports(rows)
+      captureEvent(ANALYTICS_EVENTS.EXPORTS_HISTORY_OPENED, { exports_count: rows.length })
     } catch (err) {
       devError(err)
       setError("Failed to load exports.")
@@ -125,8 +129,21 @@ export function ExportsDialog({ open, onOpenChange }: ExportsDialogProps) {
       }
       const url = await resolveExportDownloadUrl(row.id)
       window.open(url, "_self")
+      const createdAt = Date.parse(row.created_at)
+      captureEvent(ANALYTICS_EVENTS.EXPORT_DOWNLOAD_CLICKED, {
+        export_id: row.id,
+        source: "exports_history",
+        export_age_hours: Number.isNaN(createdAt)
+          ? null
+          : Math.max(0, Math.round(((Date.now() - createdAt) / 3_600_000) * 10) / 10),
+      })
     } catch (err) {
       devError(err)
+      captureEvent(ANALYTICS_EVENTS.EXPORT_DOWNLOAD_FAILED, {
+        export_id: row.id,
+        source: "exports_history",
+        error_message: err instanceof Error ? err.message : "Unknown download error",
+      })
       setError(err instanceof Error ? err.message : "Failed to download export.")
     } finally {
       setTimeout(() => setDownloadingId(null), 1500)

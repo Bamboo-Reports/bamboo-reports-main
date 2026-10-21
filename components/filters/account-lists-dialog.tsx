@@ -20,6 +20,8 @@ import {
 import { AccountListUploadDialog } from "@/components/filters/account-list-upload-dialog"
 import { useAccountLists, type AccountListShare } from "@/contexts/account-lists-context"
 import type { AccountList } from "@/lib/accounts/account-lists"
+import { captureEvent } from "@/lib/analytics/client"
+import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 
 interface AccountListsDialogProps {
   open: boolean
@@ -74,6 +76,10 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
     setShareSuccess(null)
     const result = await shareList(listToShare.id, shareEmail)
     if (result.success) {
+      captureEvent(ANALYTICS_EVENTS.ACCOUNT_LIST_SHARED, {
+        account_list_id: listToShare.id,
+        accounts_count: listToShare.accounts.length,
+      })
       setShareSuccess(`Shared with ${shareEmail.trim()}.`)
       setShareEmail("")
       setCurrentShares(await getListShares(listToShare.id))
@@ -86,7 +92,10 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
   const handleUnshare = useCallback(
     async (share: AccountListShare) => {
       const ok = await unshareList(share.list_id, share.shared_with_user_id)
-      if (ok) setCurrentShares((prev) => prev.filter((s) => s.id !== share.id))
+      if (ok) {
+        captureEvent(ANALYTICS_EVENTS.ACCOUNT_LIST_UNSHARED, { account_list_id: share.list_id })
+        setCurrentShares((prev) => prev.filter((s) => s.id !== share.id))
+      }
     },
     [unshareList]
   )
@@ -106,24 +115,35 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
     const name = renameValue.trim()
     if (!name) return
     const updated = await updateList(renamingId, { name })
-    if (!updated) toast.error("Could not rename the list.")
+    if (updated) captureEvent(ANALYTICS_EVENTS.ACCOUNT_LIST_RENAMED, { account_list_id: renamingId })
+    else toast.error("Could not rename the list.")
     setRenamingId(null)
   }, [renamingId, renameValue, updateList])
 
   const confirmDelete = useCallback(async () => {
     if (!listToDelete) return
     const ok = await deleteList(listToDelete.id)
-    if (ok) toast.success(`Deleted "${listToDelete.name}".`)
-    else toast.error("Could not delete the list.")
+    if (ok) {
+      captureEvent(ANALYTICS_EVENTS.ACCOUNT_LIST_DELETED, {
+        account_list_id: listToDelete.id,
+        accounts_count: listToDelete.accounts.length,
+      })
+      toast.success(`Deleted "${listToDelete.name}".`)
+    } else toast.error("Could not delete the list.")
     setListToDelete(null)
   }, [listToDelete, deleteList])
 
   const handleApply = useCallback(
     (list: AccountList) => {
+      captureEvent(ANALYTICS_EVENTS.ACCOUNT_LIST_APPLIED, {
+        account_list_id: list.id,
+        is_owner: list.user_id === userId,
+        accounts_count: list.accounts.length,
+      })
       onApply(list)
       onOpenChange(false)
     },
-    [onApply, onOpenChange]
+    [onApply, onOpenChange, userId]
   )
 
   const renderList = (list: AccountList, own: boolean) => {

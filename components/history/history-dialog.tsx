@@ -16,6 +16,8 @@ import { cn } from "@/lib/utils"
 import { getPaginatedData } from "@/lib/utils/helpers"
 import { ENTITY_TYPE_META, formatTimeAgo } from "@/lib/dashboard/entity-display"
 import type { RecentItem } from "@/hooks/use-recent-items"
+import { captureEvent } from "@/lib/analytics/client"
+import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 
 const ITEMS_PER_PAGE = 10
 
@@ -58,7 +60,10 @@ export function HistoryDialog({
                 variant="ghost"
                 size="sm"
                 className="mt-1 gap-1.5 text-muted-foreground hover:text-destructive"
-                onClick={onClearHistory}
+                onClick={() => {
+                  captureEvent(ANALYTICS_EVENTS.HISTORY_CLEARED, { record_count: recentItems.length })
+                  onClearHistory()
+                }}
               >
                 <RiDeleteBinLine className="h-3.5 w-3.5" />
                 Clear history

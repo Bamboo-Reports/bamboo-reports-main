@@ -10,6 +10,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useNotifications } from "@/hooks/use-notifications"
+import { captureEvent } from "@/lib/analytics/client"
+import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import {
   formatSummaryTitle,
   formatRelativeEventDate,
@@ -34,15 +36,17 @@ export function NotificationDropdown() {
     void loadNotifications()
   }, [isOpen, hasSession, loadNotifications])
 
+  const totalRecords = notificationSummaries.reduce((sum, s) => sum + s.record_count, 0)
+
   const handleOpenChange = (open: boolean) => {
+    if (open) captureEvent(ANALYTICS_EVENTS.NOTIFICATIONS_OPENED, { unread_count: unreadCount })
     setIsOpen(open)
   }
 
   const handleMarkAllRead = async () => {
+    captureEvent(ANALYTICS_EVENTS.NOTIFICATIONS_MARKED_READ, { record_count: totalRecords })
     await markAllAsRead()
   }
-
-  const totalRecords = notificationSummaries.reduce((sum, s) => sum + s.record_count, 0)
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>

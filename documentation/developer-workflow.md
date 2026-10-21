@@ -123,8 +123,8 @@ If UI alignment needs tuning:
 
 ### 2.7 Adding Analytics Events
 
-1. **Define the event** in `lib/analytics/events.ts`.
-2. **Track it** using helpers from `lib/analytics/tracking.ts`.
+1. **Define the event** in `lib/analytics/events.ts` (`ANALYTICS_EVENTS` for the browser, `SERVER_ANALYTICS_EVENTS` for API routes).
+2. **Track it** with `captureEvent` from `lib/analytics/client.ts` (helpers in `lib/analytics/tracking.ts`), or `captureServerEvent` from `lib/analytics/server.ts` in a Route Handler, passing the authenticated user ID as `distinctId`.
 3. **Verify** in the PostHog dashboard that events are flowing.
 
 ---

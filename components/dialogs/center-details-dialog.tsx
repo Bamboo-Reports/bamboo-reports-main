@@ -15,6 +15,8 @@ import { DialogBreadcrumb } from "@/components/ui/dialog-breadcrumb"
 import { TechTreemap } from "@/components/charts/tech-treemap"
 import { formatCenterLocation } from "@/lib/utils/helpers"
 import { fetchCenterDetail } from "@/lib/dashboard/api-client"
+import { captureEvent } from "@/lib/analytics/client"
+import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { Skeleton } from "@/components/ui/skeleton"
 
 interface CenterDetailsDialogProps {
@@ -200,6 +202,9 @@ export function CenterDetailsDialog({
                       rel="noopener noreferrer"
                       className="text-muted-foreground transition-colors hover:text-primary"
                       title={center.center_website}
+                      onClick={() =>
+                        captureEvent(ANALYTICS_EVENTS.OUTBOUND_LINK_CLICKED, { entity: "center", link_type: "website" })
+                      }
                     >
                       <RiGlobalLine className="h-4 w-4" />
                     </a>
@@ -215,6 +220,9 @@ export function CenterDetailsDialog({
                       rel="noopener noreferrer"
                       className="text-muted-foreground transition-colors hover:text-[#0A66C2]"
                       title="LinkedIn"
+                      onClick={() =>
+                        captureEvent(ANALYTICS_EVENTS.OUTBOUND_LINK_CLICKED, { entity: "center", link_type: "linkedin" })
+                      }
                     >
                       <RiLinkedinBoxLine className="h-4 w-4" />
                     </a>
@@ -231,7 +239,10 @@ export function CenterDetailsDialog({
                 {onAccountOpen ? (
                   <button
                     type="button"
-                    onClick={() => onAccountOpen(center.account_global_legal_name)}
+                    onClick={() => {
+                      captureEvent(ANALYTICS_EVENTS.RELATED_RECORD_OPENED, { parent_entity: "center", entity: "account" })
+                      onAccountOpen(center.account_global_legal_name)
+                    }}
                     className="ml-1.5 inline-flex h-5 w-5 translate-y-0.5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     aria-label={`Open account details for ${center.account_global_legal_name}`}
                     title={`Open account details for ${center.account_global_legal_name}`}

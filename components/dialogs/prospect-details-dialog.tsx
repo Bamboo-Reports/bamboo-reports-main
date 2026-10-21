@@ -22,6 +22,8 @@ import { GridSkeletonCards } from "@/components/ui/data-skeletons"
 import { EngagedBadge } from "@/components/ui/engaged-badge"
 import { ProspectEngagementTimeline } from "@/components/dialogs/prospect-engagement-timeline"
 import { isEngagedProspect } from "@/lib/dashboard/engagements"
+import { captureEvent } from "@/lib/analytics/client"
+import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 
 interface ProspectDetailsDialogProps {
   prospect: Prospect | null
@@ -55,25 +57,32 @@ function SectionHeader({ title }: { title: string }) {
 
 function QuickFilterGroup({
   label,
+  filterKey,
   options,
   selected,
   onToggle,
   onClear,
 }: {
   label: string
+  filterKey: string
   options: Array<{ name: string; count: number }>
   selected: Set<string>
   onToggle: (value: string) => void
   onClear: () => void
 }) {
   if (options.length === 0) return null
+  const trackFilterChange = (action: "toggle" | "clear") =>
+    captureEvent(ANALYTICS_EVENTS.RECORD_DIALOG_FILTER_CHANGED, { entity: "prospect", filter_key: filterKey, action })
   const totalCount = options.reduce((s, o) => s + o.count, 0)
   return (
     <div className="flex items-center gap-2 flex-wrap">
       <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide shrink-0">{label}</span>
       <button
         type="button"
-        onClick={onClear}
+        onClick={() => {
+          trackFilterChange("clear")
+          onClear()
+        }}
         className={`text-xs px-2.5 py-1 rounded-full border transition-colors inline-flex items-center gap-1.5 ${selected.size === 0 ? "bg-primary text-primary-foreground border-primary" : "bg-background/40 text-muted-foreground border-border/60 hover:bg-background/60"}`}
       >
         All
@@ -85,7 +94,10 @@ function QuickFilterGroup({
           <button
             key={opt.name}
             type="button"
-            onClick={() => onToggle(opt.name)}
+            onClick={() => {
+              trackFilterChange("toggle")
+              onToggle(opt.name)
+            }}
             className={`text-xs px-2.5 py-1 rounded-full border transition-colors inline-flex items-center gap-1.5 ${active ? "bg-primary text-primary-foreground border-primary" : "bg-background/40 text-foreground border-border/60 hover:bg-background/60"}`}
           >
             {opt.name}
@@ -285,7 +297,10 @@ export function ProspectDetailsDialog({
                     {onAccountOpen ? (
                       <button
                         type="button"
-                        onClick={() => onAccountOpen(p.account_global_legal_name)}
+                        onClick={() => {
+                          captureEvent(ANALYTICS_EVENTS.RELATED_RECORD_OPENED, { parent_entity: "prospect", entity: "account" })
+                          onAccountOpen(p.account_global_legal_name)
+                        }}
                         className="ml-1.5 inline-flex h-5 w-5 translate-y-0.5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         aria-label={`Open account details for ${p.account_global_legal_name}`}
                         title={`Open account details for ${p.account_global_legal_name}`}
@@ -300,6 +315,7 @@ export function ProspectDetailsDialog({
                 {p.prospect_email ? (
                   <a
                     href={`mailto:${p.prospect_email}`}
+                    onClick={() => captureEvent(ANALYTICS_EVENTS.CONTACT_EMAIL_CLICKED, { entity: "prospect" })}
                     className="text-muted-foreground hover:text-primary transition-colors"
                     title={p.prospect_email}
                     aria-label="Send email"
@@ -314,6 +330,9 @@ export function ProspectDetailsDialog({
                     rel="noopener noreferrer"
                     className="text-muted-foreground hover:text-[#0A66C2] transition-colors"
                     title="View LinkedIn"
+                    onClick={() =>
+                      captureEvent(ANALYTICS_EVENTS.OUTBOUND_LINK_CLICKED, { entity: "prospect", link_type: "linkedin" })
+                    }
                     aria-label="View LinkedIn profile"
                   >
                     <RiLinkedinBoxLine className="h-4 w-4" />
@@ -359,6 +378,7 @@ export function ProspectDetailsDialog({
                         <button
                           type="button"
                           onClick={() => {
+                            captureEvent(ANALYTICS_EVENTS.CONTACT_EMAIL_COPIED, { entity: "prospect" })
                             copy(p.prospect_email!, "Email")
                             setCopied(true)
                             setTimeout(() => setCopied(false), 1500)
@@ -418,6 +438,7 @@ export function ProspectDetailsDialog({
               <div className="space-y-2">
                 <QuickFilterGroup
                   label="Head Type"
+                  filterKey="prospect_head_type"
                   options={headTypeOptions}
                   selected={headTypeFilter}
                   onToggle={(v) => toggleInSet(setHeadTypeFilter, v)}
@@ -425,6 +446,7 @@ export function ProspectDetailsDialog({
                 />
                 <QuickFilterGroup
                   label="Department"
+                  filterKey="prospect_department"
                   options={deptOptions}
                   selected={deptFilter}
                   onToggle={(v) => toggleInSet(setDeptFilter, v)}
@@ -432,6 +454,7 @@ export function ProspectDetailsDialog({
                 />
                 <QuickFilterGroup
                   label="Level"
+                  filterKey="prospect_level"
                   options={levelOptions}
                   selected={levelFilter}
                   onToggle={(v) => toggleInSet(setLevelFilter, v)}
@@ -446,6 +469,7 @@ export function ProspectDetailsDialog({
                         key={`${contact.prospect_first_name}-${contact.prospect_last_name}-${(contactsPage - 1) * CONTACTS_PER_PAGE + idx}`}
                         prospect={contact}
                         onClick={() => {
+                          captureEvent(ANALYTICS_EVENTS.RELATED_RECORD_OPENED, { parent_entity: "prospect", entity: "prospect" })
                           setCurrent(contact)
                           setHeadTypeFilter(new Set())
                           setDeptFilter(new Set())
@@ -460,7 +484,11 @@ export function ProspectDetailsDialog({
                     currentPage={contactsPage}
                     totalItems={filteredContacts.length}
                     itemsPerPage={CONTACTS_PER_PAGE}
-                    onPageChange={setContactsPage}
+                    onPageChange={(update) => {
+                      const page = typeof update === "function" ? update(contactsPage) : update
+                      captureEvent(ANALYTICS_EVENTS.RECORD_DIALOG_PAGE_CHANGED, { entity: "prospect", list: "contacts", page })
+                      setContactsPage(page)
+                    }}
                     dataLength={filteredContacts.length}
                   />
                 </div>

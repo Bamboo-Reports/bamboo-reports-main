@@ -2,8 +2,12 @@
 
 import { useCallback, useMemo } from "react"
 import { useRowSelection } from "@/hooks/use-row-selection"
+import { captureEvent } from "@/lib/analytics/client"
+import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 
 interface UseTableRowSelectionParams<T> {
+  /** Entity name reported with selection analytics. */
+  entity: "account" | "center" | "prospect"
   /** Full (filtered) dataset, used for the selectable key set and pruning. */
   items: T[]
   /** Entities on the current page, used for the header "select all" state. */
@@ -19,6 +23,7 @@ interface UseTableRowSelectionParams<T> {
  * selectable.
  */
 export function useTableRowSelection<T>({
+  entity,
   items,
   pageItems,
   getKey,
@@ -27,7 +32,34 @@ export function useTableRowSelection<T>({
     () => items.map(getKey).filter((key): key is string => Boolean(key)),
     [items, getKey]
   )
-  const { selected, toggle, toggleMany, clear } = useRowSelection(availableKeys)
+  const { selected, toggle, toggleMany: toggleManyKeys, clear } = useRowSelection(availableKeys)
+
+  // Only user-driven checkbox changes are tracked; pruning after a filter
+  // change goes through useRowSelection directly and stays silent.
+  const trackSelection = useCallback(
+    (keys: string[], checked: boolean, method: "row" | "all") => {
+      const next = new Set(selected)
+      for (const key of keys) {
+        if (checked) next.add(key)
+        else next.delete(key)
+      }
+      captureEvent(ANALYTICS_EVENTS.ROWS_SELECTED, {
+        entity,
+        selected_count: next.size,
+        method,
+        action: checked ? "select" : "deselect",
+      })
+    },
+    [selected, entity]
+  )
+
+  const toggleMany = useCallback(
+    (keys: string[], checked: boolean) => {
+      trackSelection(keys, checked, "all")
+      toggleManyKeys(keys, checked)
+    },
+    [trackSelection, toggleManyKeys]
+  )
 
   const pageKeys = useMemo(
     () => pageItems.map(getKey).filter((key): key is string => Boolean(key)),
@@ -40,9 +72,11 @@ export function useTableRowSelection<T>({
   const handleRowSelectChange = useCallback(
     (item: T, checked: boolean) => {
       const key = getKey(item)
-      if (key) toggle(key, checked)
+      if (!key) return
+      trackSelection([key], checked, "row")
+      toggle(key, checked)
     },
-    [toggle, getKey]
+    [toggle, getKey, trackSelection]
   )
 
   return {

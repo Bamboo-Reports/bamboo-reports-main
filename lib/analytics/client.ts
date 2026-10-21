@@ -123,6 +123,13 @@ export const initAnalytics = () => {
     },
   })
 
+  // Super properties ride on every event so dashboards can split by deploy
+  const appVersion = process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?.slice(0, 7)
+  posthog.register({
+    app_env: process.env.NEXT_PUBLIC_VERCEL_ENV || process.env.NODE_ENV,
+    ...(appVersion ? { app_version: appVersion } : {}),
+  })
+
   isInitialized = true
 }
 
@@ -163,10 +170,16 @@ export const identifyUser = ({
   id,
   email,
   authProvider,
+  role,
+  firstName,
+  lastName,
 }: {
   id: string
   email?: string | null
   authProvider?: string
+  role?: string | null
+  firstName?: string | null
+  lastName?: string | null
 }) => {
   if (!id || !isAnalyticsEnabled()) {
     return
@@ -175,13 +188,23 @@ export const identifyUser = ({
   initAnalytics()
 
   const emailDomain = email?.split("@")[1] ?? null
+  const name = [firstName, lastName].filter(Boolean).join(" ").trim()
+  const now = new Date().toISOString()
 
-  posthog.identify(id, {
-    ...(email ? { email } : {}),
-    ...(emailDomain ? { email_domain: emailDomain } : {}),
-    ...(authProvider ? { auth_provider: authProvider } : {}),
-    last_seen_at: new Date().toISOString(),
-  })
+  posthog.identify(
+    id,
+    {
+      ...(email ? { email } : {}),
+      ...(emailDomain ? { email_domain: emailDomain } : {}),
+      ...(authProvider ? { auth_provider: authProvider } : {}),
+      ...(role ? { role } : {}),
+      ...(name ? { name } : {}),
+      ...(firstName ? { first_name: firstName } : {}),
+      ...(lastName ? { last_name: lastName } : {}),
+      last_seen_at: now,
+    },
+    { first_seen_at: now }
+  )
 }
 
 export const resetAnalytics = () => {

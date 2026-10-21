@@ -4,6 +4,8 @@ import { createLogger } from "@/lib/logger"
 import { queryWarehouse } from "@/lib/db/warehouse"
 import { sortEngagements } from "@/lib/dashboard/engagements"
 import type { ProspectEngagement } from "@/lib/types"
+import { captureServerEvent } from "@/lib/analytics/server"
+import { SERVER_ANALYTICS_EVENTS } from "@/lib/analytics/events"
 
 export const dynamic = "force-dynamic"
 
@@ -44,6 +46,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       text: `select prospect_engaged_date, prospect_engaged_campaign from subscribers
         where lower(prospect_email) = (select lower(prospect_email) from prospects where ps_unique_key = $1 limit 1)`,
       values: [id],
+    })
+    captureServerEvent({
+      distinctId: userId,
+      event: SERVER_ANALYTICS_EVENTS.ENGAGEMENTS_SERVED,
+      properties: { touchpoints_count: rows.length },
     })
     return json({ engagements: sortEngagements(rows) })
   } catch (err) {

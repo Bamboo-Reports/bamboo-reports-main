@@ -229,6 +229,7 @@ The per-directory breakdown (every `components/`, `hooks/` and `lib/` module and
 | `NEXT_PUBLIC_POSTHOG_HOST` | No | PostHog host URL. Leave unset to use the `/ingest` reverse proxy in `next.config.mjs`. |
 | `NEXT_PUBLIC_ENABLE_ANALYTICS` | No | Set to `true` to enable PostHog during local development. |
 | `NEXT_PUBLIC_POSTHOG_DEBUG` | No | Set to `true` to enable PostHog debug logging. |
+| `POSTHOG_HOST` | No | PostHog host for server-side events from API routes. Defaults to `https://us.i.posthog.com`. |
 | `NEXT_PUBLIC_NOTIFICATIONS_ENABLED` | No | Feature flag: `enabled` or `disabled`. |
 | `NEXT_PUBLIC_MAINTENANCE_MODE` | No | Set to `true` to show a maintenance page instead of the dashboard. |
 | `NEXT_PUBLIC_ENVIRONMENT_LABEL` | No | Environment tag displayed in the UI: `DEV`, `PROD`, or empty. |
@@ -318,7 +319,9 @@ Product analytics integrated via `posthog-js`. Tracks:
 - Dashboard page views and session duration
 - Filter interactions and saved filter usage
 - Export actions and tab navigation
-- User identification tied to Supabase user ID
+- User identification tied to Supabase user ID, with role and name as person properties
+- `app_env` and `app_version` super properties on every client event, so data splits by deployment
+- Server-side events from API routes via `posthog-node` (`lib/analytics/server.ts`): export generated, denied, rate limited, failed and downloaded, account list matching, financials and engagements served
 - Session replay, dead clicks, and unhandled exceptions (plus errors caught by `app/global-error.tsx` and the map error boundary)
 
 Events go through the `/ingest` reverse proxy in `next.config.mjs` so ad blockers do not drop them. Configuration: set `NEXT_PUBLIC_POSTHOG_KEY` (US Cloud project).

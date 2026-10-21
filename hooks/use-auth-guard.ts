@@ -3,6 +3,16 @@ import { useRouter } from "next/navigation"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { DEFAULT_USER_ROLE, normalizeUserRole, type UserRole } from "@/lib/auth/roles"
 import { devError } from "@/lib/utils/dev-log"
+import { captureEvent, resetAnalytics } from "@/lib/analytics/client"
+import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
+
+// Set by the header's sign-out button, which tracks auth_signed_out itself, so
+// the listener below only reports sign-outs the user did not ask for.
+let manualSignOutPending = false
+
+export const markManualSignOut = () => {
+  manualSignOutPending = true
+}
 
 export function useAuthGuard() {
   const router = useRouter()
@@ -18,6 +28,7 @@ export function useAuthGuard() {
     // events all report the same user, so share one role fetch per user. Callers
     // still await it, so authReady never flips before the role has landed.
     let roleLoad: { userId: string; promise: Promise<void> } | null = null
+    let hadSession = false
 
     const fetchUserRole = async (currentUserId: string) => {
       try {
@@ -60,6 +71,7 @@ export function useAuthGuard() {
         setAuthReady(true)
         return
       }
+      hadSession = true
       setUserId(session.user.id)
       setUserEmail(session.user.email ?? null)
       await loadUserRole(session.user.id)
@@ -70,9 +82,15 @@ export function useAuthGuard() {
       setAuthReady(true)
     })
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (!isMounted) return
       if (!session) {
+        if (hadSession && !manualSignOutPending) {
+          captureEvent(ANALYTICS_EVENTS.AUTH_SESSION_EXPIRED, { auth_event: event })
+          resetAnalytics()
+        }
+        manualSignOutPending = false
+        hadSession = false
         roleLoad = null
         setUserId(null)
         setUserEmail(null)
@@ -80,6 +98,7 @@ export function useAuthGuard() {
         router.replace("/signin")
         return
       }
+      hadSession = true
       setUserId(session.user.id)
       setUserEmail(session.user.email ?? null)
       void loadUserRole(session.user.id)

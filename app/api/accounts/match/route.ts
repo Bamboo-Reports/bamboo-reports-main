@@ -13,6 +13,8 @@ import {
   type AccountMatchIndex,
   type AliasIndexRow,
 } from "@/lib/accounts/account-match"
+import { captureServerEvent } from "@/lib/analytics/server"
+import { SERVER_ANALYTICS_EVENTS } from "@/lib/analytics/events"
 
 export const dynamic = "force-dynamic"
 
@@ -84,6 +86,16 @@ export async function POST(request: Request) {
     const results = matchAccountList(parsed.names, index)
     const limited = await limitedPromise
     if (!limited.ok) return limited.response
+    captureServerEvent({
+      distinctId: userId,
+      event: SERVER_ANALYTICS_EVENTS.ACCOUNT_LIST_MATCH_PROCESSED,
+      properties: {
+        input_count: parsed.names.length,
+        matched_count: results.filter((result) => result.status === "matched").length,
+        review_count: results.filter((result) => result.status === "review").length,
+        not_found_count: results.filter((result) => result.status === "not_found").length,
+      },
+    })
     return json({ results })
   } catch (err) {
     logger.error("account_match_failed", { error: err })

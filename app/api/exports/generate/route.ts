@@ -12,6 +12,8 @@ import {
   type ServerExportDatasetKey,
 } from "@/lib/exports/server-builder"
 import { parseFilters, resolveAccess } from "@/lib/dashboard/filters-request"
+import { captureServerEvent } from "@/lib/analytics/server"
+import { SERVER_ANALYTICS_EVENTS } from "@/lib/analytics/events"
 
 export const dynamic = "force-dynamic"
 // Full-dataset workbook builds are slow; allow up to 60s on Vercel.
@@ -87,7 +89,18 @@ async function resolveUserRole(supabase: SupabaseClient, userId: string): Promis
 
 const VALID_DATASETS: ServerExportDatasetKey[] = ["accounts", "centers", "services", "prospects"]
 
+const errorMessage = (err: unknown) => (err instanceof Error ? err.message : String(err))
+
+function trackGenerationFailed(userId: string, stage: string, err: unknown, role?: UserRole) {
+  captureServerEvent({
+    distinctId: userId,
+    event: SERVER_ANALYTICS_EVENTS.EXPORT_GENERATION_FAILED,
+    properties: { stage, error_message: errorMessage(err), ...(role ? { role } : {}) },
+  })
+}
+
 export async function POST(request: Request) {
+  const startedAt = Date.now()
   const token = extractBearerToken(request.headers.get("authorization"))
   if (!token) return json({ error: "Missing authorization token" }, 401)
 
@@ -107,11 +120,13 @@ export async function POST(request: Request) {
     role = await resolveUserRole(supabase, userId)
   } catch (err) {
     logger.error("role_check_failed", { error: err, user_id: userId })
+    trackGenerationFailed(userId, "role_check", err)
     return json({ error: "Failed to verify export permissions" }, 500)
   }
 
   if (!canExportData(role)) {
     logger.warn("generate_denied", { user_id: userId, role })
+    captureServerEvent({ distinctId: userId, event: SERVER_ANALYTICS_EVENTS.EXPORT_DENIED, properties: { role } })
     return json({ error: "Export access denied" }, 403)
   }
 
@@ -140,6 +155,11 @@ export async function POST(request: Request) {
   }
 
   if (await isRateLimited(supabase, userId)) {
+    captureServerEvent({
+      distinctId: userId,
+      event: SERVER_ANALYTICS_EVENTS.EXPORT_RATE_LIMITED,
+      properties: { role, datasets, rate_limit_per_hour: EXPORT_RATE_LIMIT_MAX },
+    })
     return json({ error: "Export rate limit reached. Please wait before generating more exports." }, 429)
   }
 
@@ -160,6 +180,7 @@ export async function POST(request: Request) {
         })
   } catch (err) {
     logger.error("build_failed", { error: err })
+    trackGenerationFailed(userId, "build", err, role)
     return json({ error: "Failed to build export" }, 500)
   }
 
@@ -178,6 +199,7 @@ export async function POST(request: Request) {
   })
   if (upload.error) {
     logger.error("storage_upload_failed", { error: upload.error })
+    trackGenerationFailed(userId, "storage_upload", upload.error, role)
     return json({ error: "Failed to archive export" }, 500)
   }
 
@@ -209,6 +231,7 @@ export async function POST(request: Request) {
 
   if (insert.error) {
     logger.error("insert_failed", { error: insert.error })
+    trackGenerationFailed(userId, "insert", insert.error, role)
     await supabase.storage.from(USER_EXPORTS_BUCKET).remove([storagePath])
     return json({ error: "Failed to record export" }, 500)
   }
@@ -218,6 +241,22 @@ export async function POST(request: Request) {
     user_id: userId,
     total_rows: totalRows,
     bytes: buffer.byteLength,
+  })
+
+  captureServerEvent({
+    distinctId: userId,
+    event: SERVER_ANALYTICS_EVENTS.EXPORT_GENERATED,
+    properties: {
+      export_id: exportId,
+      role,
+      datasets,
+      row_counts: datasetRowCounts,
+      total_rows: totalRows,
+      file_size_bytes: buffer.byteLength,
+      is_filtered: Boolean(body.isFiltered),
+      export_mode: body.filters ? "filters" : "keys",
+      duration_ms: Date.now() - startedAt,
+    },
   })
 
   return json({

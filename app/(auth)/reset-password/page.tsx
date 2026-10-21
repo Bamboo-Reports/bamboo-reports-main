@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AuthShell } from "@/components/auth/auth-shell"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { captureEvent } from "@/lib/analytics/client"
+import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { updatePasswordSchema, type UpdatePasswordValues } from "@/lib/validators/auth"
 
 type Status = "checking" | "ready" | "invalid"
@@ -37,6 +39,7 @@ export default function ResetPasswordPage() {
     let resolved = false
 
     const markReady = () => {
+      if (!resolved) captureEvent(ANALYTICS_EVENTS.AUTH_PASSWORD_RECOVERY_LINK_OPENED)
       resolved = true
       setStatus("ready")
     }
@@ -66,9 +69,14 @@ export default function ResetPasswordPage() {
     const { error } = await supabase.auth.updateUser({ password: values.password })
 
     if (error) {
+      captureEvent(ANALYTICS_EVENTS.AUTH_PASSWORD_RESET_FAILED, {
+        error_message: error.message,
+      })
       setSubmitError(error.message)
       return
     }
+
+    captureEvent(ANALYTICS_EVENTS.AUTH_PASSWORD_RESET_SUCCEEDED)
 
     // Sign the recovery session out so the user re-authenticates with the new
     // password. This also avoids dropping them onto the app while still on a

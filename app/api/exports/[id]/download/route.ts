@@ -2,6 +2,8 @@ import { extractBearerToken, resolveAuthenticatedUserId } from "@/lib/auth/serve
 import { enforceRateLimit } from "@/lib/rate-limit/server"
 import { createLogger } from "@/lib/logger"
 import { getSupabaseServiceRoleClient, USER_EXPORTS_BUCKET } from "@/lib/supabase/server"
+import { captureServerEvent } from "@/lib/analytics/server"
+import { SERVER_ANALYTICS_EVENTS } from "@/lib/analytics/events"
 
 export const dynamic = "force-dynamic"
 
@@ -88,6 +90,12 @@ export async function GET(
     logger.error("signed_url_failed", { error: signedErr })
     return jsonError(500, "Failed to generate download URL")
   }
+
+  captureServerEvent({
+    distinctId: userId,
+    event: SERVER_ANALYTICS_EVENTS.EXPORT_DOWNLOADED,
+    properties: { export_id: exportRow.id },
+  })
 
   if (request.headers.get("accept")?.includes("application/json")) {
     return new Response(JSON.stringify({ url: signed.signedUrl }), {

@@ -277,7 +277,6 @@ export function useSavedFilters() {
       captureEvent(ANALYTICS_EVENTS.SAVED_FILTER_SHARED, {
         saved_filter_id: filterId,
         saved_filter_name: filter ? normalizeTrackedText(filter.name) : null,
-        shared_with_email: normalizeTrackedText(email),
       })
 
       return { success: true }

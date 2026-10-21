@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState, type ComponentType } from "react"
 import { RiDownload2Line, RiFileChartLine, RiMegaphoneLine, RiRefreshLine, RiUserAddLine } from "@remixicon/react"
 import type { ProspectEngagement } from "@/lib/types"
 import { fetchProspectEngagements } from "@/lib/dashboard/api-client"
+import { captureEvent } from "@/lib/analytics/client"
+import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import {
   daysBetween,
   engagementKind,
@@ -124,7 +126,10 @@ export function ProspectEngagementTimeline({ psUniqueKey }: { psUniqueKey: strin
         ) : failed ? (
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-muted-foreground">Could not load this prospect&apos;s campaign activity.</p>
-            <Button type="button" variant="outline" size="sm" onClick={() => setAttempt((n) => n + 1)}>
+            <Button type="button" variant="outline" size="sm" onClick={() => {
+                captureEvent(ANALYTICS_EVENTS.ENGAGEMENTS_RETRY_CLICKED)
+                setAttempt((n) => n + 1)
+              }}>
               <RiRefreshLine aria-hidden />
               Try again
             </Button>

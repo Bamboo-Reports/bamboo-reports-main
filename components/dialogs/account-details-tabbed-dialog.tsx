@@ -29,6 +29,8 @@ import { requestAccountFinancialInfo } from "@/lib/finance/request-client"
 import { fetchAccountRelated, type AccountRelatedResponse } from "@/lib/dashboard/api-client"
 import { isSectionEnabled } from "@/lib/config/dashboard-access"
 import { PaginationControls } from "@/components/ui/pagination-controls"
+import { captureEvent } from "@/lib/analytics/client"
+import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import {
   ChartContainer,
   ChartTooltip,
@@ -65,25 +67,32 @@ function sortByCount(items: string[]): Array<{ name: string; count: number }> {
 
 function QuickFilterGroup({
   label,
+  filterKey,
   options,
   selected,
   onToggle,
   onClear,
 }: {
   label: string
+  filterKey: string
   options: Array<{ name: string; count: number }>
   selected: Set<string>
   onToggle: (value: string) => void
   onClear: () => void
 }) {
   if (options.length === 0) return null
+  const trackFilterChange = (action: "toggle" | "clear") =>
+    captureEvent(ANALYTICS_EVENTS.RECORD_DIALOG_FILTER_CHANGED, { entity: "account", filter_key: filterKey, action })
   const totalCount = options.reduce((s, o) => s + o.count, 0)
   return (
     <div className="flex items-center gap-2 flex-wrap">
       <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide shrink-0">{label}</span>
       <button
         type="button"
-        onClick={onClear}
+        onClick={() => {
+          trackFilterChange("clear")
+          onClear()
+        }}
         className={`text-xs px-2.5 py-1 rounded-full border transition-colors inline-flex items-center gap-1.5 ${selected.size === 0 ? "bg-primary text-primary-foreground border-primary" : "bg-background/40 text-muted-foreground border-border/60 hover:bg-background/60"}`}
       >
         All
@@ -95,7 +104,10 @@ function QuickFilterGroup({
           <button
             key={opt.name}
             type="button"
-            onClick={() => onToggle(opt.name)}
+            onClick={() => {
+              trackFilterChange("toggle")
+              onToggle(opt.name)
+            }}
             className={`text-xs px-2.5 py-1 rounded-full border transition-colors inline-flex items-center gap-1.5 ${active ? "bg-primary text-primary-foreground border-primary" : "bg-background/40 text-foreground border-border/60 hover:bg-background/60"}`}
           >
             {opt.name}
@@ -368,12 +380,34 @@ export function AccountDetailsDialog({
     })
   }
 
+  const handleTabChange = (tab: string) => {
+    captureEvent(ANALYTICS_EVENTS.RECORD_TAB_CHANGED, { entity: "account", tab, record_id: accountName })
+    setActiveTab(tab)
+  }
+
+  // PaginationControls hands over an updater, so resolve it against the current page
+  const changeListPage = (
+    list: "centers" | "prospects",
+    currentPage: number,
+    setPage: React.Dispatch<React.SetStateAction<number>>,
+    update: number | ((prev: number) => number)
+  ) => {
+    const page = typeof update === "function" ? update(currentPage) : update
+    captureEvent(ANALYTICS_EVENTS.RECORD_DIALOG_PAGE_CHANGED, { entity: "account", list, page })
+    setPage(page)
+  }
+
+  const trackOutboundLink = (linkType: "website" | "linkedin") =>
+    captureEvent(ANALYTICS_EVENTS.OUTBOUND_LINK_CLICKED, { entity: "account", link_type: linkType })
+
   const handleCenterClick = (center: Center) => {
+    captureEvent(ANALYTICS_EVENTS.RELATED_RECORD_OPENED, { parent_entity: "account", entity: "center" })
     setSelectedCenter(center)
     setIsCenterDialogOpen(true)
   }
 
   const handleProspectClick = (prospect: Prospect) => {
+    captureEvent(ANALYTICS_EVENTS.RELATED_RECORD_OPENED, { parent_entity: "account", entity: "prospect" })
     setSelectedProspect(prospect)
     setIsProspectDialogOpen(true)
   }
@@ -415,6 +449,9 @@ export function AccountDetailsDialog({
         setFinancialData(null)
         setFinancialTickerLoaded(ticker)
         setFinancialError(response.error || "Unable to fetch financial data")
+        captureEvent(ANALYTICS_EVENTS.FINANCIALS_LOAD_FAILED, {
+          error_message: response.error || "Unable to fetch financial data",
+        })
       }
 
       setFinancialLoading(false)
@@ -454,6 +491,7 @@ export function AccountDetailsDialog({
                         rel="noopener noreferrer"
                         className="text-muted-foreground hover:text-primary transition-colors"
                         title={account.account_hq_website}
+                        onClick={() => trackOutboundLink("website")}
                       >
                         <RiGlobalLine className="h-4 w-4" />
                       </a>
@@ -465,6 +503,7 @@ export function AccountDetailsDialog({
                         rel="noopener noreferrer"
                         className="text-muted-foreground hover:text-[#0A66C2] transition-colors"
                         title="LinkedIn"
+                        onClick={() => trackOutboundLink("linkedin")}
                       >
                         <RiLinkedinBoxLine className="h-4 w-4" />
                       </a>
@@ -478,7 +517,7 @@ export function AccountDetailsDialog({
             </DialogTitle>
           </DialogHeader>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-6">
             <TabsList className={`grid w-full ${relatedLoading ? `grid-cols-${1 + (canViewCenters ? 1 : 0) + (canViewProspects ? 1 : 0)}` : accountCenters.length > 0 && accountProspects.length > 0 ? "grid-cols-3" : accountCenters.length > 0 || accountProspects.length > 0 ? "grid-cols-2" : "grid-cols-1"}`}>
               <TabsTrigger value="info" className="flex items-center gap-2">
                 <RiBuildingLine className="h-4 w-4" />
@@ -698,6 +737,7 @@ export function AccountDetailsDialog({
                 <div className="space-y-2">
                   <QuickFilterGroup
                     label="Centre Type"
+                    filterKey="center_type"
                     options={centerTypeOptions}
                     selected={centerTypeFilter}
                     onToggle={(v) => toggleInSet(setCenterTypeFilter, v)}
@@ -705,6 +745,7 @@ export function AccountDetailsDialog({
                   />
                   <QuickFilterGroup
                     label="Headcount Range"
+                    filterKey="center_headcount"
                     options={centerHeadcountOptions}
                     selected={centerHeadcountFilter}
                     onToggle={(v) => toggleInSet(setCenterHeadcountFilter, v)}
@@ -726,7 +767,7 @@ export function AccountDetailsDialog({
                       currentPage={centerPage}
                       totalItems={filteredCenters.length}
                       itemsPerPage={ITEMS_PER_PAGE}
-                      onPageChange={setCenterPage}
+                      onPageChange={(update) => changeListPage("centers", centerPage, setCenterPage, update)}
                       dataLength={filteredCenters.length}
                     />
                   </div>
@@ -742,6 +783,7 @@ export function AccountDetailsDialog({
                 <div className="space-y-2">
                   <QuickFilterGroup
                     label="Head Type"
+                    filterKey="prospect_head_type"
                     options={prospectHeadTypeOptions}
                     selected={prospectHeadTypeFilter}
                     onToggle={(v) => toggleInSet(setProspectHeadTypeFilter, v)}
@@ -749,6 +791,7 @@ export function AccountDetailsDialog({
                   />
                   <QuickFilterGroup
                     label="Department"
+                    filterKey="prospect_department"
                     options={prospectDeptOptions}
                     selected={prospectDeptFilter}
                     onToggle={(v) => toggleInSet(setProspectDeptFilter, v)}
@@ -756,6 +799,7 @@ export function AccountDetailsDialog({
                   />
                   <QuickFilterGroup
                     label="Level"
+                    filterKey="prospect_level"
                     options={prospectLevelOptions}
                     selected={prospectLevelFilter}
                     onToggle={(v) => toggleInSet(setProspectLevelFilter, v)}
@@ -777,7 +821,7 @@ export function AccountDetailsDialog({
                       currentPage={prospectPage}
                       totalItems={filteredProspects.length}
                       itemsPerPage={ITEMS_PER_PAGE}
-                      onPageChange={setProspectPage}
+                      onPageChange={(update) => changeListPage("prospects", prospectPage, setProspectPage, update)}
                       dataLength={filteredProspects.length}
                     />
                   </div>

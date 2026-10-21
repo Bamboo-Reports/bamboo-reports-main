@@ -2,6 +2,8 @@ import { extractBearerToken, resolveAuthenticatedUserId } from "@/lib/auth/serve
 import { createLogger } from "@/lib/logger"
 import { enforceRateLimit } from "@/lib/rate-limit/server"
 import { fetchAccountFinancialInfo } from "@/lib/finance/financial-info"
+import { captureServerEvent } from "@/lib/analytics/server"
+import { SERVER_ANALYTICS_EVENTS } from "@/lib/analytics/events"
 
 export const dynamic = "force-dynamic"
 
@@ -43,5 +45,10 @@ export async function GET(request: Request) {
 
   const result = await fetchAccountFinancialInfo(ticker)
   logger.info("financials_served", { user_id: userId, success: result.success })
+  captureServerEvent({
+    distinctId: userId,
+    event: SERVER_ANALYTICS_EVENTS.FINANCIALS_SERVED,
+    properties: { ticker: ticker.trim().toUpperCase(), success: result.success },
+  })
   return json(result)
 }

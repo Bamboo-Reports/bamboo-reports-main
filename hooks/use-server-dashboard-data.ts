@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { devError } from "@/lib/utils/dev-log"
+import { captureEvent } from "@/lib/analytics/client"
+import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { sanitizeFilters } from "@/lib/config/filters"
 import { createDefaultFilters } from "@/lib/dashboard/defaults"
 import {
@@ -203,6 +205,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
     const requestId = ++coreRequestRef.current
     const wireFilters = JSON.parse(effectiveKey) as Filters
     const bypass = { noCache: noCache() }
+    const startedAt = Date.now()
     setIsFetching(true)
 
     const summaryPromise = cachedSummary
@@ -236,11 +239,17 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
       .then(() => {
         if (coreRequestRef.current !== requestId) return
         setError(null)
+        captureEvent(ANALYTICS_EVENTS.DATA_LOAD_SUCCEEDED, {
+          duration_ms: Date.now() - startedAt,
+          is_refresh: bypass.noCache,
+        })
       })
       .catch((err) => {
         if (coreRequestRef.current !== requestId) return
         devError("dashboard summary/facets fetch failed:", err)
-        setError(err instanceof Error ? err.message : "Failed to load dashboard data")
+        const message = err instanceof Error ? err.message : "Failed to load dashboard data"
+        setError(message)
+        captureEvent(ANALYTICS_EVENTS.DATA_LOAD_FAILED, { error_message: message })
       })
       .finally(() => {
         if (coreRequestRef.current === requestId) {

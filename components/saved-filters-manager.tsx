@@ -422,7 +422,10 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
           className="h-9 w-9 rounded-full shrink-0"
           title="Account lists: upload a client account list and apply it as a filter"
           aria-label="Account lists"
-          onClick={() => setAccountListsOpen(true)}
+          onClick={() => {
+            captureEvent(ANALYTICS_EVENTS.ACCOUNT_LISTS_MANAGE_OPENED)
+            setAccountListsOpen(true)
+          }}
           data-tour="account-lists-button"
         >
           <RiListCheck3 className="h-4 w-4" />

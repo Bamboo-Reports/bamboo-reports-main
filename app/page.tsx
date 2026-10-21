@@ -432,13 +432,23 @@ function DashboardContent(): React.JSX.Element | null {
     []
   )
 
+  // Identify in its own effect so a late role update re-identifies without
+  // restarting the tracked session below
   useEffect(() => {
     if (!authReady || !userId) {
       return
     }
 
     ensureAnalyticsSession()
-    identifyUser({ id: userId, email: userEmail, authProvider: "email" })
+    identifyUser({ id: userId, email: userEmail, authProvider: "email", role: userRole })
+  }, [authReady, userId, userEmail, userRole])
+
+  useEffect(() => {
+    if (!authReady || !userId) {
+      return
+    }
+
+    ensureAnalyticsSession()
 
     hasTrackedDashboardLoadRef.current = false
     sessionStartRef.current = Date.now()
@@ -968,6 +978,51 @@ function DashboardContent(): React.JSX.Element | null {
     setActiveSection(section)
   }, [])
 
+  // Records opened from global search or history mirror the tab-level
+  // record_opened / record_closed pair so dwell time stays comparable
+  const searchOpenedRecordRef = useRef<{ entity: string; recordId: string; openedAt: number } | null>(null)
+
+  const trackSearchRecordClosed = useCallback(
+    (closeReason: "dialog_closed" | "switch_to_another_record") => {
+      const opened = searchOpenedRecordRef.current
+      if (!opened) {
+        return
+      }
+      searchOpenedRecordRef.current = null
+      captureEvent(ANALYTICS_EVENTS.RECORD_CLOSED, {
+        entity: opened.entity,
+        record_id: opened.recordId,
+        dwell_seconds: Math.max(0, Math.round((Date.now() - opened.openedAt) / 1000)),
+        close_reason: closeReason,
+      })
+    },
+    []
+  )
+
+  const trackSearchRecordOpened = useCallback(
+    (record: {
+      entity: string
+      recordId: string
+      recordLabel: string
+      openedFrom: "global_search" | "history" | "related_account_link"
+    }) => {
+      trackSearchRecordClosed("switch_to_another_record")
+      searchOpenedRecordRef.current = {
+        entity: record.entity,
+        recordId: record.recordId,
+        openedAt: Date.now(),
+      }
+      captureEvent(ANALYTICS_EVENTS.RECORD_OPENED, {
+        entity: record.entity,
+        record_id: record.recordId,
+        record_label: record.recordLabel,
+        source_view: currentScreenView,
+        opened_from: record.openedFrom,
+      })
+    },
+    [trackSearchRecordClosed, currentScreenView]
+  )
+
   const handleSearchResultSelect = useCallback(
     (result: SearchResult) => {
       handleSearchClose()
@@ -992,6 +1047,13 @@ function DashboardContent(): React.JSX.Element | null {
         return
       }
 
+      trackSearchRecordOpened({
+        entity: result.type,
+        recordId: result.id,
+        recordLabel: result.title,
+        openedFrom: "global_search",
+      })
+
       if (result.type === "account") {
         setSearchSelectedAccount(result.data as Account)
         setSearchAccountDialogOpen(true)
@@ -1003,15 +1065,24 @@ function DashboardContent(): React.JSX.Element | null {
         setSearchProspectDialogOpen(true)
       }
     },
-    [handleSearchClose, addRecentItem, addRecentSearch, searchQuery]
+    [handleSearchClose, addRecentItem, addRecentSearch, searchQuery, trackSearchRecordOpened]
   )
 
   const handleSearchRecentItemSelect = useCallback(
-    (item: RecentItem) => {
+    (item: RecentItem, source: "global_search" | "history_dialog") => {
       handleSearchClose()
       captureEvent(ANALYTICS_EVENTS.SEARCH_RECENT_ITEM_SELECTED, {
         result_type: item.type,
+        source,
       })
+
+      const trackOpened = () =>
+        trackSearchRecordOpened({
+          entity: item.type,
+          recordId: item.id,
+          recordLabel: item.title,
+          openedFrom: source === "history_dialog" ? "history" : "global_search",
+        })
 
       // Fetch the record and open its dialog
       if (item.type === "account") {
@@ -1022,6 +1093,7 @@ function DashboardContent(): React.JSX.Element | null {
         fetchAccountRelated(item.id)
           .then((res) => {
             if (!res.account) return
+            trackOpened()
             setSearchSelectedAccount(res.account)
             setSearchAccountDialogOpen(true)
           })
@@ -1033,6 +1105,7 @@ function DashboardContent(): React.JSX.Element | null {
         }
         fetchCenterDetail(item.id)
           .then((res) => {
+            trackOpened()
             setSearchSelectedCenter(res.center)
             setSearchCenterDialogOpen(true)
           })
@@ -1044,17 +1117,78 @@ function DashboardContent(): React.JSX.Element | null {
         }
         fetchProspectById(item.id)
           .then((res) => {
+            trackOpened()
             setSearchSelectedProspect(res.prospect)
             setSearchProspectDialogOpen(true)
           })
           .catch(() => toast.info("This prospect is not available right now."))
       }
     },
-    [handleSearchClose, accountsEnabled, centersEnabled, prospectsEnabled]
+    [handleSearchClose, accountsEnabled, centersEnabled, prospectsEnabled, trackSearchRecordOpened]
+  )
+
+  const handleGlobalSearchRecentItemSelect = useCallback(
+    (item: RecentItem) => handleSearchRecentItemSelect(item, "global_search"),
+    [handleSearchRecentItemSelect]
+  )
+
+  const handleHistoryItemSelect = useCallback(
+    (item: RecentItem) => handleSearchRecentItemSelect(item, "history_dialog"),
+    [handleSearchRecentItemSelect]
+  )
+
+  const handleSearchAccountDialogOpenChange = useCallback(
+    (open: boolean) => {
+      setSearchAccountDialogOpen(open)
+      if (!open) trackSearchRecordClosed("dialog_closed")
+    },
+    [trackSearchRecordClosed]
+  )
+
+  const handleSearchCenterDialogOpenChange = useCallback(
+    (open: boolean) => {
+      setSearchCenterDialogOpen(open)
+      if (!open) trackSearchRecordClosed("dialog_closed")
+    },
+    [trackSearchRecordClosed]
+  )
+
+  const handleSearchProspectDialogOpenChange = useCallback(
+    (open: boolean) => {
+      setSearchProspectDialogOpen(open)
+      if (!open) trackSearchRecordClosed("dialog_closed")
+    },
+    [trackSearchRecordClosed]
+  )
+
+  const openSearchRelatedAccount = useCallback(
+    (parentEntity: "center" | "prospect", accountName: string) => {
+      // related_record_opened is captured by the dialog that owns the link
+      fetchAccountRelated(accountName)
+        .then((res) => {
+          if (!res.account) return
+          if (parentEntity === "center") {
+            setSearchCenterDialogOpen(false)
+          } else {
+            setSearchProspectDialogOpen(false)
+          }
+          trackSearchRecordOpened({
+            entity: "account",
+            recordId: res.account.account_global_legal_name,
+            recordLabel: res.account.account_global_legal_name,
+            openedFrom: "related_account_link",
+          })
+          setSearchSelectedAccount(res.account)
+          setSearchAccountDialogOpen(true)
+        })
+        .catch(() => toast.info("This account is not available right now."))
+    },
+    [trackSearchRecordOpened]
   )
 
   const handleSearchRecentSearchSelect = useCallback(
     (query: string) => {
+      captureEvent(ANALYTICS_EVENTS.SEARCH_RECENT_QUERY_SELECTED, { query })
       setSearchQuery(query)
     },
     [setSearchQuery]
@@ -1078,9 +1212,16 @@ function DashboardContent(): React.JSX.Element | null {
         case "refresh":
           serverData.reload()
           break
-        case "toggle-theme":
-          setTheme(resolvedTheme === "dark" ? "light" : "dark")
+        case "toggle-theme": {
+          const nextTheme = resolvedTheme === "dark" ? "light" : "dark"
+          captureEvent(ANALYTICS_EVENTS.THEME_CHANGED, {
+            theme: nextTheme,
+            previous_theme: resolvedTheme,
+            source: "search_action",
+          })
+          setTheme(nextTheme)
           break
+        }
       }
     },
     [handleSearchClose, handleSectionSelect, serverData, setTheme, resolvedTheme]
@@ -1146,7 +1287,7 @@ function DashboardContent(): React.JSX.Element | null {
         open={historyDialogOpen}
         onOpenChange={setHistoryDialogOpen}
         recentItems={recentItems}
-        onItemSelect={handleSearchRecentItemSelect}
+        onItemSelect={handleHistoryItemSelect}
         onClearHistory={clearRecentItems}
       />
 
@@ -1160,7 +1301,7 @@ function DashboardContent(): React.JSX.Element | null {
         recentItems={recentItems}
         recentSearches={recentSearches}
         onSelectResult={handleSearchResultSelect}
-        onSelectRecentItem={handleSearchRecentItemSelect}
+        onSelectRecentItem={handleGlobalSearchRecentItemSelect}
         onSelectRecentSearch={handleSearchRecentSearchSelect}
         onSelectAction={handleSearchActionSelect}
       />
@@ -1174,7 +1315,7 @@ function DashboardContent(): React.JSX.Element | null {
           services={services}
           tech={tech}
           open={searchAccountDialogOpen}
-          onOpenChange={setSearchAccountDialogOpen}
+          onOpenChange={handleSearchAccountDialogOpenChange}
           fetchRelated
         />
       )}
@@ -1184,18 +1325,9 @@ function DashboardContent(): React.JSX.Element | null {
           services={services}
           tech={tech}
           open={searchCenterDialogOpen}
-          onOpenChange={setSearchCenterDialogOpen}
+          onOpenChange={handleSearchCenterDialogOpenChange}
           fetchDetail
-          onAccountOpen={(accountName) => {
-            const openAccount = (account: Account) => {
-              setSearchCenterDialogOpen(false)
-              setSearchSelectedAccount(account)
-              setSearchAccountDialogOpen(true)
-            }
-            fetchAccountRelated(accountName)
-              .then((res) => res.account && openAccount(res.account))
-              .catch(() => toast.info("This account is not available right now."))
-          }}
+          onAccountOpen={(accountName) => openSearchRelatedAccount("center", accountName)}
         />
       )}
       {prospectsEnabled && (
@@ -1203,18 +1335,9 @@ function DashboardContent(): React.JSX.Element | null {
           prospect={searchSelectedProspect}
           allProspects={prospects}
           open={searchProspectDialogOpen}
-          onOpenChange={setSearchProspectDialogOpen}
+          onOpenChange={handleSearchProspectDialogOpenChange}
           fetchRelated
-          onAccountOpen={(accountName) => {
-            const openAccount = (account: Account) => {
-              setSearchProspectDialogOpen(false)
-              setSearchSelectedAccount(account)
-              setSearchAccountDialogOpen(true)
-            }
-            fetchAccountRelated(accountName)
-              .then((res) => res.account && openAccount(res.account))
-              .catch(() => toast.info("This account is not available right now."))
-          }}
+          onAccountOpen={(accountName) => openSearchRelatedAccount("prospect", accountName)}
         />
       )}
 
@@ -1237,6 +1360,7 @@ function DashboardContent(): React.JSX.Element | null {
             rowCounts={exportPayload.rowCounts}
             allowedDatasets={exportPayload.allowedDatasets}
             compact={Boolean(exportPayload.allowedDatasets)}
+            exportScope={exportScope ? "selection" : "all"}
             onExportCompleted={handleExportCompleted}
           />
           <FiltersSidebar
