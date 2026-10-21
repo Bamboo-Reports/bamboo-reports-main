@@ -25,6 +25,7 @@ Options:
   -h, --help           Show this help.
 
 Steps, always run in this order:
+  columns      unnamed columns with data deleted (kept if a formula reads them)
   chips        smart chips to plain text, dropdowns removed
   artifacts    #N/A and #REF! typed as text cleared, HTML entities decoded
   invisible    zero-width characters, BOMs, soft hyphens stripped

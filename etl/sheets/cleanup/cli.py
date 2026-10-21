@@ -13,6 +13,7 @@ from common.google import get_gspread_client, safe_api_call
 from common.tui import console
 from sheets.rules import ALL_SHEETS
 
+from .columns import COLUMN_LEFTOVERS, step_columns
 from .formats import step_formats
 from .links import LINK_LEFTOVERS, step_links
 from .lists import step_lists
@@ -22,6 +23,7 @@ from .workbook import Change, Workbook
 
 # -- Runner -------------------------------------------------------------------
 STEPS = [
+    ("columns", step_columns),
     ("chips", step_chips),
     ("artifacts", step_artifacts),
     ("invisible", step_invisible),
@@ -34,6 +36,7 @@ STEPS = [
 STEP_NAMES = [name for name, _ in STEPS]
 # One line under each step's heading.
 STEP_INFO = {
+    "columns": "Unnamed columns with data deleted, unless a formula reads from them.",
     "chips": "Smart chips turned into plain text; dropdowns removed.",
     "artifacts": "Spreadsheet error values typed as text, and HTML entities.",
     "invisible": "Zero-width characters, BOMs, soft hyphens, direction marks.",
@@ -123,9 +126,19 @@ def write_report(path: str, changes: list[Change], skipped: list[Change]) -> Non
 def print_manual_review(wb: Workbook, show: int) -> None:
     """What the run found but will not change: link lines that are still not
     URLs, and fixes that landed on formula cells."""
-    if not LINK_LEFTOVERS and not wb.skipped_formulas:
+    if not LINK_LEFTOVERS and not wb.skipped_formulas and not COLUMN_LEFTOVERS:
         return
     tui.section("Needs a person")
+    if COLUMN_LEFTOVERS:
+        tui.line(
+            "warn",
+            f"{tui.plural(len(COLUMN_LEFTOVERS), 'unnamed column')} kept: formulas read from them. "
+            "Name the column, or point the formulas elsewhere and run again.",
+        )
+        kept = tui.table("Sheet", "Column", "Cells#", "Read by~")
+        for sheet, letter, filled, readers in COLUMN_LEFTOVERS:
+            kept.add_row(sheet, letter, tui.num(filled), tui.clip("; ".join(readers), 70))
+        tui.print_table(kept)
     if LINK_LEFTOVERS:
         tui.line("warn", f"{tui.plural(len(LINK_LEFTOVERS), 'link line')} still not a URL after cleaning.")
         leftovers = tui.table("Sheet", "Cell", "Column", "Line~")
@@ -151,7 +164,7 @@ def print_manual_review(wb: Workbook, show: int) -> None:
         tui.print_table(formulas)
 
 
-def confirm_write(cells: int, title: str, assume_yes: bool) -> bool:
+def confirm_write(what: str, title: str, assume_yes: bool) -> bool:
     """Ask before writing. --yes skips the question; without a terminal to
     ask on, --yes is required."""
     if assume_yes:
@@ -161,7 +174,7 @@ def confirm_write(cells: int, title: str, assume_yes: bool) -> bool:
         return False
     console.print()
     return Confirm.ask(
-        f"  Write [bold]{tui.num(cells)}[/bold] cell(s) to [bold]{title}[/bold]?",
+        f"  Change [bold]{what}[/bold] in [bold]{title}[/bold]?",
         console=console,
         default=False,
     )
@@ -215,7 +228,17 @@ def main() -> None:
     print_manual_review(wb, args.limit)
 
     tui.section("Summary")
-    touched = len({(ch.sheet, ch.row, ch.col) for ch in wb.changes})
+    touched = len({(ch.sheet, ch.row, ch.col) for ch in wb.changes if ch.step != "columns"})
+    dropped = sum(len(cols) for cols in wb.dropped_columns.values())
+    # "3 cells and 1 column": a deleted column is not counted as a cell.
+    what = " and ".join(
+        part
+        for part in (
+            tui.plural(touched, "cell") if touched or not dropped else "",
+            tui.plural(dropped, "column") if dropped else "",
+        )
+        if part
+    )
     rows = []
     for number, (name, _) in enumerate(steps, start=1):
         n = sum(1 for ch in wb.changes if ch.step == name)
@@ -226,7 +249,7 @@ def main() -> None:
     if args.report:
         write_report(args.report, wb.changes, wb.skipped_formulas)
 
-    needs_person = len(LINK_LEFTOVERS) + len(wb.skipped_formulas)
+    needs_person = len(LINK_LEFTOVERS) + len(wb.skipped_formulas) + len(COLUMN_LEFTOVERS)
     review_step = (
         [f"{tui.plural(needs_person, 'item')} under [bold]Needs a person[/bold] above can't be fixed automatically."]
         if needs_person
@@ -240,7 +263,7 @@ def main() -> None:
     if not args.apply:
         tui.verdict(
             "warn",
-            f"Dry run · {tui.plural(touched, 'cell')} would change",
+            f"Dry run · {what} would change",
             [
                 "[bold]--apply[/bold] writes these changes (you are asked to confirm first).",
                 *([] if args.report else ["[bold]--report changes.csv[/bold] saves every change for review."]),
@@ -249,7 +272,7 @@ def main() -> None:
         )
         return
 
-    if not confirm_write(touched, spreadsheet.title, args.yes):
+    if not confirm_write(what, spreadsheet.title, args.yes):
         tui.verdict("warn", "Nothing written", ["Re-run with [bold]--apply[/bold] when ready."])
         return
 

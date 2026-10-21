@@ -208,7 +208,7 @@ Config comes from `etl/.env` (`SPREADSHEET_ID`, `GOOGLE_SA_FILE`), the same file
 
 | Phase | Check |
 |---|---|
-| 0 | Per-column format/enum/nullable rules (`ALL_RULES`) for all nine tables, including `subscribers` and the prospects `prospect_phone` (10 digits) and `prospect_engaged` (Yes/No) columns. Also the header row: data under a blank header, columns no rule covers, duplicated headers and rule columns missing from the sheet (the import drops unnamed and unknown columns silently, and the importer's `--check-headers` only warns about them) |
+| 0 | Per-column format/enum/nullable rules (`ALL_RULES`) for all nine tables, including `subscribers` and the prospects `prospect_phone` (10 digits) and `prospect_engaged` (Yes/No) columns. Also the header row: data under a blank header, columns no rule covers, duplicated headers and rule columns missing from the sheet (the import drops unnamed and unknown columns silently, and the importer's `--check-headers` only warns about them; cleanup's `columns` step deletes unnamed ones) |
 | 0B | Invisible characters: flags cells containing zero-width chars, BOM, or soft hyphen, with exact sheet/row/column |
 | 0C | Every cell is plain text: no smart chips (a people chip holding an email looks like text but VLOOKUP and MATCH skip it) and no dropdowns. Read from cell metadata, one extra API call per sheet |
 | 1 | Uniqueness of key columns: `accounts.account_global_legal_name`, `centers.cn_unique_key`, `services.cn_unique_key`, `prospects.ps_unique_key`, and in `subscribers` the combination of email, campaign and date (the same engagement entered twice) |
@@ -220,6 +220,7 @@ Config comes from `etl/.env` (`SPREADSHEET_ID`, `GOOGLE_SA_FILE`), the same file
 
 | Step | What it fixes |
 |---|---|
+| `columns` | Columns with data but no header deleted (the import drops them anyway). A column a formula still reads from is kept and listed under Needs a person. Deleted after every other write, so other fixes keep their positions |
 | `chips` | Smart chips turned into plain text (a link chip keeps its URL) and dropdowns removed, through the Sheets batchUpdate API |
 | `artifacts` | Spreadsheet error values typed as text (`#N/A`, `#REF!`) cleared; HTML entities (`&amp;`, `&nbsp;`) decoded |
 | `invisible` | Zero-width characters, BOM, soft hyphen, bidi controls in every cell (Phase 0B) |
@@ -229,7 +230,7 @@ Config comes from `etl/.env` (`SPREADSHEET_ID`, `GOOGLE_SA_FILE`), the same file
 | `formats` | Values Phase 0 would reject that have one obvious fix: dates to `6-May-2025`, full month names, `2015.0` years, allowed-value casing/spacing, ISO `IN`, email `mailto:`, domain case and Cyrillic/Greek lookalike letters, phones to 10 digits, ALL CAPS or all-lowercase prospect names capitalised |
 | `references` | Child-sheet keys that match the parent except for case, curly quotes or dash style take the parent's spelling; stale `cn_unique_key` prefixes are rebuilt and renamed in every key sheet (Phase 2 case warnings) |
 
-Formula cells are never written (many columns are formulas, such as `tech.account_global_legal_name` and the range columns); a fix a step wanted on one is listed at the end instead. Order matters: entities, invisible characters and whitespace go first so every later step sees clean text, and references run last because names only compare equal once both sheets are clean. Column rules (`ALL_RULES`, `VALIDATION_RULES`, `INVISIBLE_CHARS`) live in `etl/sheets/rules.py`, imported by both tools, so a rule change applies to both. Each step lives in its own module: `text.py` (chips, artifacts, invisible, whitespace), `lists.py`, `links.py`, `formats.py`, `references.py`; `workbook.py` is the in-memory copy and the single write.
+Formula cells are never written (many columns are formulas, such as `tech.account_global_legal_name` and the range columns); a fix a step wanted on one is listed at the end instead. Order matters: entities, invisible characters and whitespace go first so every later step sees clean text, and references run last because names only compare equal once both sheets are clean. Column rules (`ALL_RULES`, `VALIDATION_RULES`, `INVISIBLE_CHARS`) live in `etl/sheets/rules.py`, imported by both tools, so a rule change applies to both. Each step lives in its own module: `columns.py`, `text.py` (chips, artifacts, invisible, whitespace), `lists.py`, `links.py`, `formats.py`, `references.py`; `workbook.py` is the in-memory copy and the single write.
 
 ```bash
 etl/cleanup.sh --report changes.csv                                  # the wrapper: same flags, --help, works from any directory

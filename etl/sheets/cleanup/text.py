@@ -1,4 +1,4 @@
-"""Steps 1 to 4: chips and dropdowns, spreadsheet artifacts, invisible
+"""Steps 2 to 5: chips and dropdowns, spreadsheet artifacts, invisible
 characters and whitespace."""
 
 import html
@@ -12,7 +12,7 @@ from sheets.rules import INVISIBLE_CHARS, INVISIBLE_CHARS_RE
 from .workbook import FIRST_DATA_ROW, Workbook
 
 
-# -- Step 1: chips and dropdowns ----------------------------------------------
+# -- Step 2: chips and dropdowns ----------------------------------------------
 def step_chips(wb: Workbook) -> None:
     """Every cell should be plain text. Chips and dropdowns are found from
     cell metadata (see cell_meta.py), one extra API read per sheet."""
@@ -37,7 +37,7 @@ def step_chips(wb: Workbook) -> None:
             wb.mark("chips", sheet, dropdown.row - FIRST_DATA_ROW, dropdown.col, "dropdown", "dropdown removed")
 
 
-# -- Step 2: paste artifacts --------------------------------------------------
+# -- Step 3: paste artifacts --------------------------------------------------
 # HTML entities left behind by copying from a page's source ('64 &amp; 65').
 # Only these few are decoded: a bare '&' followed by text is real data.
 HTML_ENTITY_RE = re.compile(r"&(amp|nbsp|quot|apos|lt|gt|#\d{1,6}|#x[0-9a-fA-F]{1,5});")
@@ -56,7 +56,7 @@ def step_artifacts(wb: Workbook) -> None:
                 wb.set("artifacts", sheet, r, c, decoded, "HTML entity")
 
 
-# -- Step 3: invisible characters ---------------------------------------------
+# -- Step 4: invisible characters ---------------------------------------------
 def step_invisible(wb: Workbook) -> None:
     for sheet in wb.editable:
         for r, c, value in wb.cells(sheet):
@@ -66,7 +66,7 @@ def step_invisible(wb: Workbook) -> None:
                 wb.set("invisible", sheet, r, c, INVISIBLE_CHARS_RE.sub("", value), kinds)
 
 
-# -- Step 4: whitespace -------------------------------------------------------
+# -- Step 5: whitespace -------------------------------------------------------
 # Unicode spaces that render like a normal space but are a different code
 # point. All of them become a plain ASCII space.
 EXOTIC_SPACES_RE = re.compile("[\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]")

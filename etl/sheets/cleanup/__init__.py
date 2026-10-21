@@ -8,29 +8,34 @@ touched by several steps is written once, with its final value.
 
 Steps, in the order they run (the order matters, see the notes):
 
-  1. chips        Smart chips become plain text and dropdowns are removed,
+  1. columns      Columns with data but no header are deleted. The import
+                  drops them anyway, so they are leftovers (prospects
+                  column H held 25,537 VLOOKUPs into a deleted sheet). A
+                  column a formula still reads from is kept and listed.
+                  Deleted last, after every other write.
+  2. chips        Smart chips become plain text and dropdowns are removed,
                   so every cell is plain text. A people chip holding an
                   email looks like text but VLOOKUP and MATCH skip it.
                   Found from cell metadata (sheets/cell_meta.py, validate 0C).
-  2. artifacts    Spreadsheet error values typed as text (#N/A, #REF!) are
+  3. artifacts    Spreadsheet error values typed as text (#N/A, #REF!) are
                   cleared, and HTML entities from copied page source
                   ('64 &amp; 65', '&nbsp;') are decoded.
-  3. invisible    Strip zero-width characters, BOMs, soft hyphens and
+  4. invisible    Strip zero-width characters, BOMs, soft hyphens and
                   bidirectional controls from every cell. (validate 0B)
-  4. whitespace   Trim cells and lines, collapse double spaces, turn tabs,
+  5. whitespace   Trim cells and lines, collapse double spaces, turn tabs,
                   non-breaking and other exotic spaces into plain spaces,
                   turn \\r into real line breaks. Line breaks are kept.
-  5. lists        Free-text list columns (services service columns,
+  6. lists        Free-text list columns (services service columns,
                   accounts key offerings): one item per line, no bullets,
                   no duplicates. In services, all-lowercase words are
                   capitalised and focus_region lines like 'India Global'
                   are split in two.
-  6. links        Link columns: one URL per line, bullets, wrapping quotes
+  7. links        Link columns: one URL per line, bullets, wrapping quotes
                   and separators removed, tracking parameters (utm_*, trk,
                   originalSubdomain) and #:~:text= highlights dropped,
                   LinkedIn hosts made consistent. Lines that are still not
                   URLs are listed for a manual look and never changed.
-  7. formats      Values that validate Phase 0 would reject but that have
+  8. formats      Values that validate Phase 0 would reject but that have
                   one obvious correct form:
                     - dates     '06-May-25', '6 May 2025', '2025-05-06'
                                 become '6-May-2025'
@@ -44,7 +49,7 @@ Steps, in the order they run (the order matters, see the notes):
                     - phones    '+91 98765 43210' becomes '9876543210'
                     - names     prospect names in ALL CAPS or all lowercase
                                 get each word capitalised
-  8. references   Key columns in child sheets that match the parent sheet
+  9. references   Key columns in child sheets that match the parent sheet
                   except for casing, curly quotes or dash style are
                   rewritten to the parent's exact spelling (this includes
                   subscribers emails against prospects). A cn_unique_key

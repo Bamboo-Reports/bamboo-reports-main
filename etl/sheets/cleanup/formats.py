@@ -1,4 +1,4 @@
-"""Step 7: values with one obvious correct form (dates, months, years,
+"""Step 8: values with one obvious correct form (dates, months, years,
 choices, ISO codes, emails, phones, names)."""
 
 import re
@@ -14,7 +14,7 @@ def rule_desc(rule: dict) -> str:
     return re.sub(r"\s+", " ", rule.get("Description", "")).strip().lower()
 
 
-# -- Step 7: formats ----------------------------------------------------------
+# -- Step 8: formats ----------------------------------------------------------
 MONTHS = [datetime(2000, m, 1).strftime("%B") for m in range(1, 13)]
 MONTH_LOOKUP = {m.lower(): m for m in MONTHS} | {m[:3].lower(): m for m in MONTHS} | {"sept": "September"}
 

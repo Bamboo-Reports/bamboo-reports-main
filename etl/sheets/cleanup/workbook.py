@@ -50,6 +50,13 @@ class Workbook:
         # Keys are (sheet, row_idx, col_idx).
         self.chip_cells: set[tuple[str, int, int]] = set()
         self.dropdown_cells: set[tuple[str, int, int]] = set()
+        # Unnamed columns to delete, as 0-based indices per sheet. Deleted
+        # after every other write, so all other changes keep their positions;
+        # set() and mark() ignore cells in them.
+        self.dropped_columns: dict[str, set[int]] = {}
+        # Formula text per sheet, keyed (row_idx, col_idx), so a column is
+        # only deleted when no formula reads from it.
+        self.formula_text: dict[str, dict[tuple[int, int], str]] = {}
 
     def load(self, sheet: str) -> bool:
         """Read a worksheet if not read yet. False if it does not exist."""
@@ -76,12 +83,13 @@ class Workbook:
         # columns in accounts and centers).
         formula_data = safe_api_call(lambda: ws.get_all_values(value_render_option="FORMULA"))
         time.sleep(0.5)
-        self._formulas[sheet] = {
-            (r, c)
+        self.formula_text[sheet] = {
+            (r, c): v
             for r, row in enumerate(formula_data[1:])
             for c, v in enumerate(row)
             if isinstance(v, str) and v.startswith("=")
         }
+        self._formulas[sheet] = set(self.formula_text[sheet])
         self._ws[sheet] = ws
         self._rows[sheet] = rows
         self._original[sheet] = [list(r) for r in rows]
@@ -130,6 +138,8 @@ class Workbook:
         """Record a fix to a cell's type, not its text: kind 'chip' turns a
         chip into plain text, 'dropdown' removes the dropdown. The value is
         unchanged, so the change shows the same text before and after."""
+        if col_idx in self.dropped_columns.get(sheet, ()):
+            return
         value = self.get(sheet, row_idx, col_idx)
         change = Change(
             step=step,
@@ -150,6 +160,8 @@ class Workbook:
 
     def set(self, step: str, sheet: str, row_idx: int, col_idx: int, value: str, note: str = "") -> None:
         """row_idx and col_idx are 0-based positions in the data rows."""
+        if col_idx in self.dropped_columns.get(sheet, ()):
+            return
         before = self.get(sheet, row_idx, col_idx)
         if before == value:
             return
@@ -171,6 +183,23 @@ class Workbook:
             row.append("")
         row[col_idx] = value
         self.changes.append(change)
+
+    def drop_column(self, step: str, sheet: str, col_idx: int, filled: int, example: str, letter: str) -> None:
+        """Queue an unnamed column for deletion. Recorded as one change on
+        its header cell; write() deletes it after everything else."""
+        self.dropped_columns.setdefault(sheet, set()).add(col_idx)
+        self.changes.append(
+            Change(
+                step=step,
+                sheet=sheet,
+                row=1,
+                col=col_idx + 1,
+                column=f"{letter} (no header)",
+                before=f"{filled:,} filled cells, such as {example}",
+                after="(column deleted)",
+                note="unnamed column removed",
+            )
+        )
 
     def cells(self, sheet: str):
         """Every non-empty (row_idx, col_idx, value) in a sheet's data rows."""
@@ -208,7 +237,25 @@ class Workbook:
                 f"Turned {tui.plural(len(self.chip_cells), 'chip')} into text, removed "
                 f"{tui.plural(len(self.dropdown_cells), 'dropdown cell')}.",
             )
+        if self.dropped_columns:
+            self._delete_columns()
+            n = sum(len(cols) for cols in self.dropped_columns.values())
+            tui.line("pass", f"Deleted {tui.plural(n, 'unnamed column')}.")
         return written
+
+    def _delete_columns(self) -> None:
+        """Delete the queued columns, right-most first in each sheet so the
+        earlier deletions do not shift the later ones."""
+        requests = [
+            {
+                "deleteDimension": {
+                    "range": {"sheetId": self._ws[sheet].id, "dimension": "COLUMNS", "startIndex": c, "endIndex": c + 1}
+                }
+            }
+            for sheet, cols in sorted(self.dropped_columns.items())
+            for c in sorted(cols, reverse=True)
+        ]
+        safe_api_call(lambda: self.spreadsheet.batch_update({"requests": requests}))
 
     def _write_cell_types(self) -> None:
         """Apply the chip and dropdown fixes with the Sheets batchUpdate API:

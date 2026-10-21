@@ -244,7 +244,7 @@ def check_columns(cache: SheetCache, table_name: str) -> list[tuple[int, str, st
             filled = sum(1 for row in rows if idx < len(row) and str(row[idx]).strip())
             if filled:
                 issues.append(
-                    (1, f"{letter} (no header)", f"No header, {filled:,} cells filled; not imported, delete the column")
+                    (1, f"{letter} (no header)", f"No header, {filled:,} cells filled; not imported, etl/cleanup.sh deletes it")
                 )
         elif header in seen:
             issues.append((1, f"{letter} ({header})", "Duplicate header: the name is used by an earlier column"))

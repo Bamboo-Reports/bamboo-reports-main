@@ -1,11 +1,11 @@
-"""Step 5: free-text list columns, one item per line."""
+"""Step 6: free-text list columns, one item per line."""
 
 import re
 
 from .links import LEADING_BULLET
 from .workbook import Workbook
 
-# -- Step 5: list text columns ------------------------------------------------
+# -- Step 6: list text columns ------------------------------------------------
 LIST_COLUMNS = {
     "services": [
         "primary_service",

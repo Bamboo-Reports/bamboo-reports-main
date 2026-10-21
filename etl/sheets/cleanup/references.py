@@ -1,4 +1,4 @@
-"""Step 8: child-sheet keys rewritten to the parent sheet's exact spelling."""
+"""Step 9: child-sheet keys rewritten to the parent sheet's exact spelling."""
 
 from common import tui
 from sheets.rules import VALIDATION_RULES
@@ -6,7 +6,7 @@ from sheets.rules import VALIDATION_RULES
 from .formats import DASHES_RE
 from .workbook import FIRST_DATA_ROW, Workbook
 
-# -- Step 8: references across sheets -----------------------------------------
+# -- Step 9: references across sheets -----------------------------------------
 # Sheets that carry cn_unique_key. When a key is renamed in 'centers', the
 # same rename is applied to every one of these.
 KEY_SHEETS = ["centers", "services", "functions", "tech"]

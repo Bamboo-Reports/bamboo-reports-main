@@ -1,4 +1,4 @@
-"""Step 6: link columns, one clean URL per line."""
+"""Step 7: link columns, one clean URL per line."""
 
 import re
 
@@ -11,7 +11,7 @@ from .workbook import FIRST_DATA_ROW, Workbook
 LEADING_BULLET = re.compile(r"^([-•·*]+\s*)+")
 
 
-# -- Step 6: link columns -----------------------------------------------------
+# -- Step 7: link columns -----------------------------------------------------
 # Every column that holds one or more URLs. Columns named *_source_type,
 # account_source and center_employees_linkedin hold text or numbers and are
 # deliberately absent.
