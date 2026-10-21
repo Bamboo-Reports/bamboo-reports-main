@@ -234,8 +234,8 @@ Technologies for storing and querying data.
 |---|---|
 | **What it is** | An open-source Firebase alternative built on PostgreSQL |
 | **Version** | 2.106.x (JS client) |
-| **Why we use it** | Provides authentication, user profiles, saved filter/favorite/account list storage, export audit metadata, and private export Storage. Built-in Row-Level Security (RLS) ensures data isolation between users without custom middleware |
-| **Tables managed** | `public.profiles`, `public.saved_filters`, `public.filter_shares`, `public.user_favorites`, `public.account_lists`, `public.account_list_shares`, `public.user_exports` |
+| **Why we use it** | Provides authentication, user profiles, saved filter and account list storage, export audit metadata, and private export Storage. Built-in Row-Level Security (RLS) ensures data isolation between users without custom middleware |
+| **Tables managed** | `public.profiles`, `public.saved_filters`, `public.filter_shares`, `public.account_lists`, `public.account_list_shares`, `public.user_exports` |
 | **Access pattern** | Supabase JS client/service-role APIs; not Prisma |
 | **Package** | `@supabase/supabase-js` |
 
@@ -400,7 +400,7 @@ Third-party services the application communicates with at runtime.
 | Service | Purpose | Required | Environment Variable |
 |---------|---------|----------|---------------------|
 | **Neon PostgreSQL** | Primary BI data warehouse | Yes | `DATABASE_URL`; `DIRECT_URL` optional for Prisma CLI |
-| **Supabase** | Authentication, profiles, saved filters, favorites, account lists, export Storage, rate-limit fallback RPC | Yes | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` for server-side Storage/export operations |
+| **Supabase** | Authentication, profiles, saved filters, account lists, export Storage, rate-limit fallback RPC | Yes | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` for server-side Storage/export operations |
 | **Carto Positron** | Basemap tiles for geospatial views | Yes | None |
 | **Brandfetch** | Company logo images | No | `NEXT_PUBLIC_BRANDFETCH_CLIENT_ID` |
 | **Upstash Redis** | L2 response cache and rate-limit counters (optional; L1-only cache and Supabase RPC rate limits without it) | No | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` (or `KV_REST_API_*`) |

@@ -3,4 +3,4 @@
 
 ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS tour_completed_at timestamptz DEFAULT NULL,
-  ADD COLUMN IF NOT EXISTS tour_version integer DEFAULT NULL;
+  ADD COLUMN IF NOT EXISTS tour_version integer DEFAULT 0;

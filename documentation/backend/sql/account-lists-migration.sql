@@ -64,5 +64,5 @@ CREATE POLICY "Users can delete their own account lists"
   ON public.account_lists FOR DELETE
   USING (auth.uid() = user_id);
 
-REVOKE ALL ON public.account_lists FROM anon;
+REVOKE ALL ON public.account_lists FROM anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.account_lists TO authenticated;

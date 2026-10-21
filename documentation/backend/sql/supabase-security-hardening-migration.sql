@@ -4,7 +4,7 @@
 -- Prerequisite: assumes the base RLS policies from profiles-role-migration.sql,
 -- filter-shares-migration.sql, supabase-saved-filters.md, and
 -- user-exports-schema.sql are already in place (owner-scoped INSERT/UPDATE on
--- profiles, per-user policies on saved_filters/filter_shares/user_favorites).
+-- profiles, per-user policies on saved_filters/filter_shares).
 -- This file tightens grants and reads on top of those; it does not recreate them.
 
 -- Profiles must only be directly readable by their owner. Email-based sharing
@@ -64,7 +64,6 @@ alter function public.set_updated_at() set search_path = '';
 alter table public.profiles enable row level security;
 alter table public.saved_filters enable row level security;
 alter table public.filter_shares enable row level security;
-alter table public.user_favorites enable row level security;
 alter table public.user_exports enable row level security;
 
 -- Remove Supabase's broad default table grants, then grant only the operations
@@ -74,7 +73,6 @@ revoke all on table
   public.profiles,
   public.saved_filters,
   public.filter_shares,
-  public.user_favorites,
   public.user_exports
 from anon;
 
@@ -82,7 +80,6 @@ revoke all on table
   public.profiles,
   public.saved_filters,
   public.filter_shares,
-  public.user_favorites,
   public.user_exports
 from authenticated;
 
@@ -103,8 +100,6 @@ grant select, insert, update, delete
   on table public.saved_filters to authenticated;
 grant select, insert, update, delete
   on table public.filter_shares to authenticated;
-grant select, insert, update, delete
-  on table public.user_favorites to authenticated;
 
 -- Export records and objects are accessed only through authenticated Next.js
 -- routes backed by the service role and short-lived signed URLs.

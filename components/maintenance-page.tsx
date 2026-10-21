@@ -15,8 +15,8 @@ export function MaintenancePage() {
             Down for maintenance
           </h1>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            Bamboo Reports is being updated and will be back shortly. Your saved filters and
-            favorites are safe, and no action is needed on your side.
+            Bamboo Reports is being updated and will be back shortly. Your saved filters are
+            safe, and no action is needed on your side.
           </p>
 
           <p className="mt-6 flex items-center gap-2.5 rounded-lg border border-chart-3/30 bg-chart-3/10 px-4 py-3 text-sm text-foreground">

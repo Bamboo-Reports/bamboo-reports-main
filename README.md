@@ -95,11 +95,10 @@ Bamboo Reports provides a unified view of business entities (**Accounts**, **Cen
 - **Feature Flag:** Toggle via `NEXT_PUBLIC_NOTIFICATIONS_ENABLED` environment variable.
 
 ### Personalization
-- **Favorites:** Star any account, center, or prospect and revisit it from a dedicated list (`components/favorites`), private per user.
 - **Recently Viewed History:** Automatic tracking of recently opened detail dialogs.
 - **Guided Product Tour:** Auto-starting, replayable `driver.js` walkthrough for first-time users, with per-browser and per-account completion tracking.
 
-> **Details:** See [Favorites & Filter Sharing](documentation/backend/favorites-and-filter-sharing.md) and [Product Tour](documentation/frontend/product-tour.md).
+> **Details:** See [Filter Sharing](documentation/backend/filter-sharing.md) and [Product Tour](documentation/frontend/product-tour.md).
 
 ---
 
@@ -374,7 +373,7 @@ Detailed documentation for specific subsystems lives in the `documentation/` fol
 | [**Supabase Auth**](documentation/backend/supabase-auth-setup.md) | Setting up the `profiles` table, RLS policies, and auth triggers |
 | [**RBAC & Auth Guards**](documentation/backend/rbac-and-auth-guards.md) | Role enforcement, client-side session guard, server-side token verification |
 | [**Saved Filters**](documentation/backend/supabase-saved-filters.md) | Technical spec for the saved filters JSON structure |
-| [**Favorites & Filter Sharing**](documentation/backend/favorites-and-filter-sharing.md) | Favorites and filter-sharing tables, RLS model, and hooks |
+| [**Filter Sharing**](documentation/backend/filter-sharing.md) | Filter-sharing table, RLS model, lookup functions, and Supabase migration order |
 | [**User Exports & Audit Log**](documentation/backend/user-exports.md) | Server-side export generation, Storage archive, and audit table |
 | [**Product Tour**](documentation/frontend/product-tour.md) | Guided onboarding walkthrough, completion tracking, and versioning |
 | [**Logo Integration**](documentation/frontend/logo-integration.md) | Setup and usage guide for the Brandfetch logo integration |

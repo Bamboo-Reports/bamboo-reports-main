@@ -2,8 +2,8 @@ import { RiBriefcaseLine, RiBuilding2Line, RiGroupLine } from "@remixicon/react"
 export type EntityDisplayType = "account" | "center" | "prospect"
 
 /**
- * Relative-time label shared by the history and favorites lists. Accepts an
- * epoch number or an ISO string; returns "" for an unparseable value.
+ * Relative-time label for the history list. Accepts an epoch number or an ISO
+ * string; returns "" for an unparseable value.
  */
 export function formatTimeAgo(value: number | string): string {
   const ts = typeof value === "number" ? value : new Date(value).getTime()

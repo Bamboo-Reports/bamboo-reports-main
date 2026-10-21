@@ -125,7 +125,7 @@ Without Redis credentials the original Supabase path is used. Migration: [`sql/r
 
 - Table `public.rate_limit_counters` with PK `(user_id, bucket_key, window_start)`, RLS enabled, all access revoked from `anon` and `authenticated`. Only the service role touches it.
 - Function `increment_rate_limit(user, bucket, window_start)`: `security definer`, empty `search_path`, executable by `service_role` only. Atomic upsert-increment returning the new count.
-- Stale windows are never read once passed; an optional scheduled `DELETE` prunes rows older than a day.
+- Stale windows are never read once passed; a daily pg_cron job (`prune-rate-limit-counters`, 03:17 UTC, `sql/rate-limits-prune-cron-migration.sql`) deletes rows older than a day.
 
 ### Enforced routes and buckets
 

@@ -113,7 +113,7 @@ before update on public.profiles
 for each row execute function public.set_updated_at();
 ```
 
-This definition leaves `search_path` unset. `sql/supabase-security-hardening-migration.sql` pins it with `alter function public.set_updated_at() set search_path = '';` (alongside other grant and policy tightening). Run that migration last, after this trigger and the other base migrations (`profiles-role-migration.sql`, saved filters, `filter-shares-migration.sql`, `user-favorites-migration.sql`, `user-exports-schema.sql`, `lib/tour/migration.sql`) exist, since it alters objects they create. It is safe to re-run.
+This definition leaves `search_path` unset. `sql/supabase-security-hardening-migration.sql` pins it with `alter function public.set_updated_at() set search_path = '';` (alongside other grant and policy tightening). Run it after this trigger and the other base migrations (`profiles-role-migration.sql`, saved filters, `filter-shares-migration.sql`, `user-exports-schema.sql`, `lib/tour/migration.sql`) exist, since it alters objects they create, and follow it with `sql/supabase-2026-10-cleanup-migration.sql`. Both are safe to re-run. The full order is in [Filter Sharing](filter-sharing.md#reading-this-as-a-migration-order-dependency).
 
 ### 2.4 Add Roles to Existing `profiles` Tables
 
