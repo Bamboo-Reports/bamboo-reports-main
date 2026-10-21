@@ -7,7 +7,7 @@ A modern Business Intelligence dashboard built with Next.js App Router, React, a
 </p>
 
 <p align="center">
-  <a href="https://nextjs.org/"><img src="https://img.shields.io/badge/Next.js-16.2-000000?style=flat-square&logo=next.js&logoColor=white&labelColor=1B1F24" alt="Next.js 16.2" /></a>
+  <a href="https://nextjs.org/"><img src="https://img.shields.io/badge/Next.js-16.2-4A525C?style=flat-square&logo=next.js&logoColor=white&labelColor=1B1F24" alt="Next.js 16.2" /></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19.2-087EA4?style=flat-square&logo=react&logoColor=61DAFB&labelColor=1B1F24" alt="React 19.2" /></a>
   <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white&labelColor=1B1F24" alt="TypeScript 5" /></a>
   <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/Tailwind_CSS-3.4-0E7490?style=flat-square&logo=tailwindcss&logoColor=38BDF8&labelColor=1B1F24" alt="Tailwind CSS 3.4" /></a>
@@ -15,7 +15,7 @@ A modern Business Intelligence dashboard built with Next.js App Router, React, a
 </p>
 
 <p align="center">
-  <a href="https://vercel.com"><img src="https://img.shields.io/badge/Hosting-Vercel-000000?style=flat-square&logo=vercel&logoColor=white&labelColor=1B1F24" alt="Hosting: Vercel" /></a>
+  <a href="https://vercel.com"><img src="https://img.shields.io/badge/Hosting-Vercel-4A525C?style=flat-square&logo=vercel&logoColor=white&labelColor=1B1F24" alt="Hosting: Vercel" /></a>
   <a href="https://supabase.com"><img src="https://img.shields.io/badge/Auth-Supabase-249361?style=flat-square&logo=supabase&logoColor=3ECF8E&labelColor=1B1F24" alt="Auth: Supabase" /></a>
   <a href="https://neon.tech/"><img src="https://img.shields.io/badge/DB-Neon_Postgres-00805A?style=flat-square&logo=postgresql&logoColor=00E699&labelColor=1B1F24" alt="DB: Neon Postgres" /></a>
   <a href="https://posthog.com/"><img src="https://img.shields.io/badge/Analytics-PostHog-1D4AFF?style=flat-square&logo=posthog&logoColor=F9BD2B&labelColor=1B1F24" alt="Analytics: PostHog" /></a>
