@@ -279,7 +279,8 @@ def main() -> None:
     written = wb.write()
     tui.verdict(
         "pass",
-        f"Wrote {tui.plural(sum(written.values()), 'cell')} to {tui.plural(len(written), 'sheet')}",
+        f"Wrote {tui.plural(sum(written.values()), 'cell')} to {tui.plural(len(written), 'sheet')}"
+        + (f", deleted {tui.plural(dropped, 'column')}" if dropped else ""),
         ["[bold]uv run --directory etl python -m sheets.validate[/bold] shows what is left to fix by hand.", *review_step],
     )
 
