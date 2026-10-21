@@ -1,7 +1,7 @@
 /**
  * Headcount totals exclude employees from these center types.
- * Keep this list in sync with the SQL filter in
- * app/actions/data.ts (getDashboardSummaryMetrics).
+ * Keep this list in sync with the SQL filter in CENTER_METRICS
+ * (lib/dashboard/dashboard-core.ts).
  */
 export const HEADCOUNT_EXCLUDED_CENTER_TYPES = [
   "Manufacturing",

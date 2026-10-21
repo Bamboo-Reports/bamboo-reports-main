@@ -9,14 +9,15 @@ This guide documents the migration from the legacy column naming (uppercase, spa
 
 ## 1. Quick Summary
 
-- Core Tables: `accounts`, `ticker`, `centers`, `services`, `functions`, `tech`, `prospects`, `alias`.
-- Audit Tables: `audit.import_runs`, `audit.field_change_events`, `audit.notification_reads`.
+- Core Tables: `accounts`, `ticker`, `centers`, `services`, `functions`, `tech`, `prospects`, `alias`, `subscribers`.
+- Audit Tables: `audit.import_runs`, `audit.field_change_events`, `audit.user_notification_state` (the app tracks read state as a per-user last-read timestamp; the legacy `audit.notification_reads` table is only folded into it by the ETL).
 - Naming Convention: strict `snake_case`.
 - Primary keys and table relationships: see `documentation/backend/table-relationships.md`.
 - Linkage:
   - `centers` links to `accounts` via `account_global_legal_name`.
   - `services`, `functions`, and `tech` link to `centers` via `cn_unique_key`.
   - `tech`, `prospects`, `alias`, and `ticker` also link to `accounts` via `account_global_legal_name`.
+  - `subscribers` links to `prospects` via `lower(prospect_email)` (logical link, no FK).
 
 ---
 
@@ -25,39 +26,44 @@ This guide documents the migration from the legacy column naming (uppercase, spa
 ### 2.1 Table: `accounts`
 Description: Top-level company entity with HQ details, global metrics, and aggregate India presence fields.
 
-Notable columns:
+Columns (all 46, grouped):
 - Keys and metadata: `account_global_legal_name` (PK), `uuid`, `account_last_update_date`
 - Classification: `account_nasscom_status`, `account_nasscom_member_status`, `account_data_coverage`, `account_source`, `account_type`
+- Profile: `account_about`, `account_hq_company_type`, `account_hq_key_offerings`, `account_key_offerings_source_link`
 - HQ profile: `account_hq_address`, `account_hq_city`, `account_hq_state`, `account_hq_zip_code`, `account_hq_country`, `account_hq_region`, `account_hq_boardline`, `account_hq_website`, `account_hq_linkedin_link`
 - Industry and positioning: `account_hq_sub_industry`, `account_hq_industry`, `account_primary_category`, `account_primary_nature`
+- Rankings: `account_hq_forbes_2000_rank`, `account_hq_fortune_500_rank`
 - Financials: `account_hq_revenue`, `account_hq_revenue_range`, `account_hq_fy_end`, `account_hq_revenue_year`, `account_hq_revenue_source_type`, `account_hq_revenue_source_link`
 - Workforce: `account_hq_employee_count`, `account_hq_employee_range`, `account_hq_employee_source_type`, `account_hq_employee_source_link`, `account_center_employees`, `account_center_employees_range`
 - India timeline and presence: `account_first_center_year`, `years_in_india`, `account_primary_city`, `account_hub_structure`
-- Notes and coverage: `account_comments`, `account_coverage`
+- Notes: `account_comments`
 - Visibility: `account_visibility` (`include` / `exclude`, default `include`), `account_visibility_note` (human-readable exclusion reason)
+
+The stock ticker is not an `accounts` column; it lives in `ticker` (see 2.8).
 
 ### 2.2 Table: `centers`
 Description: Delivery centers or office locations.
 
-Notable columns:
+Columns (all 42, grouped):
 - Keys and metadata: `cn_unique_key` (PK), `uuid`, `last_update_date`
 - Linkage: `account_global_legal_name`
 - Timeline: `center_inc_year`, `announced_year`, `announced_month`, `center_end_year`, `center_first_year`, `center_timeline`
 - Identity and profile: `center_name`, `center_status`, `center_type`, `center_focus`, `center_management_partner`, `center_jv_status`, `center_jv_name`
-- Location: `center_address`, `center_micro_location`, `center_city`, `center_state`, `center_zip_code`, `center_country`, `center_country_iso2`, `center_region`, `lat`, `lng`
+- Location: `center_address`, `center_micro_location`, `center_city`, `center_state`, `center_zip_code`, `center_country`, `center_country_iso2`, `lat`, `lng`
 - Contact and source fields: `center_boardline`, `center_account_website`, `center_website`, `center_linkedin`, `center_source_link`, `center_inc_year_notes`, `center_inc_year_updated_link`
-- Capacity and notes: `center_employees`, `center_employees_range`, `center_employees_range_source_link`, `center_services`, `center_comments`
-- Segment fields: `center_business_segment`, `center_business_sub_segment`
+- Headcount: `center_employees`, `center_employees_range`, `center_employees_article`, `center_employees_article_source_link`, `center_employees_linkedin`, `center_employees_range_linkedin_source_link`, `center_employees_comment`
+- Services and notes: `center_services`, `center_comments`
 
 ### 2.3 Table: `services`
 Description: Service-line rows linked to centers.
 
-Notable columns:
+Columns (all 34, grouped):
 - Keys and metadata: `cn_unique_key` (service row identity, see `documentation/backend/table-relationships.md`), `uuid`, `last_update_date`
 - Linkage: `cn_unique_key`, `account_global_legal_name`
 - Denormalized center fields: `center_name`, `center_type`, `center_focus`, `center_city`
-- Service taxonomy: `primary_service`, `focus_region`, `service_it`, `service_erd`, `service_fna`, `service_hr`, `service_procurement`, `service_sales_marketing`, `service_customer_support`, `service_others`
-- Tech fields: `software_vendor`, `software_in_use`
+- Service taxonomy, each with a `*_link` source column: `primary_service` / `primary_service_link`, `focus_region` / `focus_region_link`, `service_it` / `service_it_link`, `service_ai` / `service_ai_link`, `service_erd` / `service_erd_link`, `service_fna` / `service_fna_link`, `service_hr` / `service_hr_link`, `service_procurement` / `service_procurement_link`, `service_sales_marketing` / `service_sales_marketing_link`, `service_customer_support` / `service_customer_support_link`, `service_others` / `service_others_link`
+- Tech fields: `software_vendor`, `software_in_use`, `software_source_link`
+- Notes: `service_comments`
 
 ### 2.4 Table: `functions`
 Description: Function rows linked to centers.
@@ -95,11 +101,12 @@ Columns:
 - `prospect_full_name`, `prospect_first_name`, `prospect_last_name`
 - `prospect_title`, `prospect_in_company_year`, `prospect_current_year`
 - `prospect_department`, `prospect_level`, `head_type`
-- `prospect_linkedin_url`, `prospect_other_source_url`, `prospect_email`
+- `prospect_linkedin_url`, `prospect_other_source_url`, `prospect_email`, `prospect_phone`
+- `prospect_engaged`
 - `prospect_city`, `prospect_state`, `prospect_country`
 
 ### 2.7 Table: `alias`
-Description: Alternate names and brands for an account, sourced from the "alias" sheet. Powers alias-aware account search (global search and the account filter autocomplete). Linked to `accounts` by a foreign key on `account_global_legal_name` with `ON UPDATE CASCADE` / `ON DELETE CASCADE`.
+Description: Alternate names and brands for an account, sourced from the "alias" sheet. Powers alias-aware account search (global search and the account filter autocomplete). Linked to `accounts` by a foreign key on `account_global_legal_name` with `ON UPDATE CASCADE` / `ON DELETE CASCADE`. The ETL creates and loads the table itself (`etl/importer/tables.py`); no manual migration is needed.
 
 Columns:
 - `uuid`
@@ -120,6 +127,15 @@ Columns:
 - `account_hq_stock_ticker`
 - `notes`
 
+### 2.9 Table: `subscribers`
+Description: Campaign engagement rows (one per prospect per campaign). Linked to `prospects` logically by `lower(prospect_email)`, with no foreign key because `prospects.prospect_email` is not unique; see `documentation/backend/table-relationships.md`.
+
+Columns:
+- `uuid`
+- `prospect_engaged_date`
+- `prospect_email`
+- `prospect_engaged_campaign`
+
 > Relationship reference: `documentation/backend/table-relationships.md`.
 
 ---
@@ -138,14 +154,16 @@ Columns:
 - Center <-> Tech: software filters map through `tech.cn_unique_key`.
 - Prospects: linked primarily by `account_global_legal_name`.
 - Alias: linked to accounts by `account_global_legal_name`; alias rows feed account search but are not a filterable entity.
+- Subscribers: linked to prospects by `lower(prospect_email)`.
 
 ---
 
 ## 4. Developer Notes for Maintainers
 
-### 4.1 Data Fetching (`app/actions/data.ts`)
+### 4.1 Data Fetching (`app/api/**`, `lib/dashboard/filtering-sql.ts`)
+- Dashboard reads go through Route Handlers that translate filters to parameterized SQL in `lib/dashboard/filtering-sql.ts`; see `documentation/backend/server-dashboard-mode.md`.
 - Queries use `snake_case` column names.
-- When adding a new filter, update both query and in-memory filtering paths.
+- When adding a new filter, update `lib/dashboard/filtering-sql.ts` and the in-memory reference in `lib/dashboard/filtering.ts` so the SQL parity tests keep passing.
 
 ### 4.2 Type Definitions (`lib/types.ts`)
 - Keep interfaces aligned with `etl/importer/master-schema.json`.
@@ -166,4 +184,4 @@ Columns:
 ## 5. Deployment & Tools
 - Build: `npm run build`
 - Lint: `npm run lint`
-- CI/CD: Vercel uses `pnpm install --no-frozen-lockfile` to handle potential lockfile mismatches.
+- Package manager: npm (`package-lock.json` is the committed lockfile).

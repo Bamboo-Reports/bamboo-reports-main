@@ -6,63 +6,12 @@ This guide is for developers maintaining or extending the Bamboo Reports applica
 
 ## 1. Setup & Installation
 
-### Prerequisites
-- Node.js 20.9+
-- npm (v9+)
-- Access to the Neon DB connection string
-- Access to the Supabase project credentials
+Setup lives in the root README so there is one copy to maintain:
 
-### Local Environment
-
-1. **Clone & Install:**
-    ```bash
-    git clone https://github.com/Bamboo-Reports/bamboo-reports-nextjs.git
-    cd bamboo-reports-nextjs
-    npm install
-    ```
-
-2. **Environment Variables:**
-    Copy `.env.example` to `.env.local` and fill in the secrets.
-    ```bash
-    cp .env.example .env.local
-    ```
-
-    Required variables:
-    - `DATABASE_URL` — Neon PostgreSQL pooled runtime connection string used by Prisma for warehouse data
-    - `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL
-    - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase public key
-    - `SUPABASE_SERVICE_ROLE_KEY` — Server-only secret for the export audit log and Storage archive (see [User Exports](backend/user-exports.md))
-
-    Optional variables:
-    - `DIRECT_URL` — Direct Neon connection string for Prisma CLI commands
-    - `DASHBOARD_CACHE_TTL_MS` — Response cache TTL override (code default 10 min; 8 days recommended since the ETL purges the cache weekly)
-    - `EXPORT_RATE_LIMIT_PER_HOUR` — Max exports per user per rolling hour, default 20
-    - `DATA_RATE_LIMIT_PER_MIN` — Max requests per user per minute on data endpoints, default 60
-    - `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` — Optional Redis L2 for the response cache (see [Caching and Rate Limiting](backend/caching-and-rate-limiting.md))
-    - `NEXT_PUBLIC_POSTHOG_KEY` / `NEXT_PUBLIC_POSTHOG_HOST` — Analytics
-    - `NEXT_PUBLIC_BRANDFETCH_CLIENT_ID` — Company logos (Brandfetch)
-    - `NEXT_PUBLIC_NOTIFICATIONS_ENABLED` — Set to `enabled` to activate notifications
-    - `NEXT_PUBLIC_MAINTENANCE_MODE`: set to `true` to show a maintenance page instead of the dashboard
-    - `NEXT_PUBLIC_ENVIRONMENT_LABEL` — Set to `DEV` or `PROD` for environment badge
-
-3. **Run Development Server:**
-    ```bash
-    npm run dev
-    ```
-    Open [http://localhost:3000](http://localhost:3000).
-
-### Available Scripts
-
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start development server with hot reload |
-| `npm run build` | Create production build |
-| `npm run start` | Start production server |
-| `npm run lint` | Run ESLint checks |
-| `npm run typecheck` | Run TypeScript compiler checks |
-| `npm run test` | Run Vitest test suite |
-| `npm run test:watch` | Run Vitest in watch mode |
-| `npm run prisma:generate` | Regenerate the Prisma Client after a schema change |
+- Prerequisites, clone, install and first run: [Getting Started](../README.md#getting-started)
+- Every environment variable, required and optional: [Environment Variables](../README.md#environment-variables)
+- npm scripts: [Available Scripts](../README.md#available-scripts)
+- ETL commands: [ETL Pipeline](backend/etl-pipeline.md)
 
 ---
 
@@ -95,7 +44,7 @@ To add a new filter (e.g., "Founded Year") to the sidebar:
     If users should be able to save this filter, ensure the key is included in the filter serialization logic in `components/saved-filters-manager.tsx`.
 
 6. **Update the server-side SQL translation:**
-    Server mode translates filters to SQL in `lib/dashboard/filtering-sql.ts`. Every new filter must be implemented there too, and covered by the parity suite (`tests/unit/filtering-sql-parity.test.ts`) so the client and server engines stay equivalent. See [Server-Mode Dashboard](backend/server-dashboard-mode.md).
+    Server mode translates filters to SQL in `lib/dashboard/filtering-sql.ts`. Every new filter must be implemented there and covered by the parity suite (`tests/unit/filtering-sql-parity.test.ts`). The old client engine, `lib/dashboard/filtering.ts`, no longer runs in the app; it survives only as the reference implementation that suite compares the SQL against. See [Server-Mode Dashboard](backend/server-dashboard-mode.md).
 
 ### 2.2 Adjusting Deployment Access or Premium Filters
 
@@ -150,7 +99,7 @@ If you modify the database schema (e.g., rename a column), see [ETL Pipeline](ba
 4. **Update `lib/types.ts`** to match the new column names.
 5. **Update the projections** in `lib/dashboard/entity-columns.ts` and the SQL in `lib/dashboard/filtering-sql.ts` to use the new column names.
 6. **Update filter helpers** in `lib/utils/filter-helpers.ts` if filters reference the changed columns.
-7. **Update `documentation/frontend/filter-column-ui-label-map.json`** if UI labels changed.
+7. **Update `lib/config/filters.ts`** if a filter's `column` or UI label changed (it is the source of truth for filter labels and columns).
 
 ### 2.6 Adjusting Dashboard Panel Height
 
@@ -230,22 +179,32 @@ If UI alignment needs tuning:
     - `fix: resolve overflow in sidebar`
     - `docs: update readme`
     - `refactor: extract filter logic into hook`
-3. **PRs:** Ensure `npm run lint` and `npm run build` pass before merging.
+3. **PRs:** CI (`.github/workflows/test.yml`) runs `npm run typecheck` and `npm test` on every pull request; both must pass before merging. Run `npm run lint` locally too.
 4. **Branch Protection:** PRs target the `main` branch. Merges deploy automatically to Vercel.
 
 ---
 
 ## 5. Troubleshooting
 
+This is the single troubleshooting table for the app; the README links here.
+
 | Issue | Check | Solution |
 | :--- | :--- | :--- |
-| **Styles missing** | `globals.css` | Ensure Tailwind directives are present and `tailwind.config.ts` includes content paths for `app/` and `components/`. |
-| **Auth redirect loop** | Supabase config | Verify `NEXT_PUBLIC_SUPABASE_URL` and `ANON_KEY`. Check `useAuthGuard` hook behavior. |
+| **"Database connection failed"** | Neon scaling or network | The Neon instance may be sleeping. Retry after a few seconds and verify `DATABASE_URL`. For Prisma CLI issues, also verify `DIRECT_URL`. |
+| **"The dashboard could not load" screen** | Summary request failed | The alert on that screen shows the raw server message. Retry, then check the Neon instance and `DATABASE_URL`. |
 | **Slow queries** | `lib/dashboard/filtering-sql.ts` | Run `EXPLAIN ANALYZE` on the generated SQL in the Neon console; the range clause shape matters (see the comment on `rangeClause`). |
+| **Charts not rendering** | Data issue | Check the browser console, then the `/api/dashboard/charts` response in the network tab. |
+| **Auth errors (401/403)** | Supabase config | Verify `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Check RLS policies in the Supabase dashboard. |
+| **Auth redirect loop** | Supabase config | Verify the same Supabase variables and check `useAuthGuard` behavior. |
+| **Styles missing** | `globals.css` | Ensure Tailwind directives are present and `tailwind.config.ts` includes content paths for `app/` and `components/`. |
 | **Map not rendering** | Basemap or local boundary request | Check browser requests to `basemaps.cartocdn.com` and confirm `public/data/admin-1.geojson` is available. |
-| **Notifications not appearing** | Feature flag | Set `NEXT_PUBLIC_NOTIFICATIONS_ENABLED=enabled` in `.env.local`. Restart dev server. |
-| **Unexpected map boundaries** | Basemap boundary layers remain visible | Verify `hideBasemapBoundaries` runs after map load and the local boundary overlay loads. See `documentation/frontend/map-disputed-boundaries.md`. |
-| **Export button disabled** | User role | Only `admin` role can export. Update the `role` column in `public.profiles`. |
-| **PostHog events missing** | Environment variables | Verify `NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_POSTHOG_HOST` are set. Check that `providers.tsx` is wrapping the app. |
+| **Unexpected map boundaries** | Basemap boundary layers remain visible | Verify `hideBasemapBoundaries` runs after map load and the local boundary overlay loads. See [Map Boundaries](frontend/map-disputed-boundaries.md). |
+| **Notifications not appearing** | Feature flag | Set `NEXT_PUBLIC_NOTIFICATIONS_ENABLED=enabled` in `.env.local` and restart the dev server. |
+| **Export button disabled** | User role | Only `admin` users can export. Update the `role` column in `public.profiles`. |
+| **Export fails with "Failed to archive export"** | Storage bucket | Create a **private** bucket named exactly `user-exports` in the Supabase dashboard. |
+| **Export fails with "relation 'public.user_exports' does not exist"** | Schema SQL not run | Run `documentation/backend/sql/user-exports-schema.sql` against the Supabase project. |
+| **"My exports" dialog empty after a successful export** | Dev-server module cache | Hard-refresh the page and restart `next dev`. |
+| **PostHog events missing** | Environment variables | Verify `NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_POSTHOG_HOST` are set and that `providers.tsx` wraps the app. |
 | **Company logos not loading** | Brandfetch client ID | Set `NEXT_PUBLIC_BRANDFETCH_CLIENT_ID`. If Brandfetch has no logo for the domain, the monogram fallback is expected. |
-| **Financial data missing** | Yahoo Finance | The Yahoo Finance API can be rate-limited. Check server action logs for errors. |
+| **Financial data missing** | Yahoo Finance | The Yahoo Finance API can be rate-limited. Check the `/api/financials` route logs. |
+| **Skeleton and loaded layout do not line up** | Shell changed without the skeleton | Update `components/states/loading-state.tsx` or the relevant `data-skeletons.tsx` primitive. See [Standalone Screens](frontend/standalone-screens.md). |

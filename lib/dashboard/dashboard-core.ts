@@ -112,8 +112,8 @@ export function computeFacets(filters: Filters, access: FilterAccess, opts: { by
   )
 }
 
-// Centers count + upcoming + headcount in one pass. Headcount excludes the same
-// center types as getDashboardSummaryMetrics (app/actions/data.ts).
+// Centers count + upcoming + headcount in one pass. Headcount excludes the
+// center types in HEADCOUNT_EXCLUDED_CENTER_TYPES (lib/dashboard/headcount.ts).
 const CENTER_METRICS =
   "count(*)::int as centers, " +
   "sum(case when center_status = 'Upcoming' then 1 else 0 end)::int as upcoming, " +

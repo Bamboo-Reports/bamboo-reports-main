@@ -11,7 +11,6 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "bench": "vitest run --config vitest.bench.config.ts",
     "start": "next start"
   },
   "dependencies": {

@@ -6,7 +6,8 @@ configuration, component usage, and troubleshooting.
 
 > **Context:** Used to enhance the visual identity of Accounts and Centers
 > in tables and dialogs. Replaced the earlier Logo.dev integration on
-> 2026-07-29 (see `documentation/2026-07-29-perf-and-data-hygiene.md`).
+> 2026-07-29 (see the historical session log
+> [`../archive/2026-07-29-perf-and-data-hygiene.md`](../archive/2026-07-29-perf-and-data-hygiene.md)).
 
 ---
 
@@ -94,7 +95,7 @@ interface CompanyLogoProps {
 | Variant | Container Size | Requested Size (retina) | Use Case |
 | :--- | :--- | :--- | :--- |
 | `sm` | 32px | 160px | Data Tables (`AccountRow`, `CenterRow`) |
-| `md` | 48px | 200px | Detail Dialog Headers |
+| `md` | 48px | 200px | Detail Dialog Headers, Grid Cards (`account-grid-card`, `center-grid-card`) |
 | `lg` | 64px | 256px | Large Summary Cards (Future) |
 | `xl` | 96px | 300px | Profile / Hero Pages (Future) |
 
