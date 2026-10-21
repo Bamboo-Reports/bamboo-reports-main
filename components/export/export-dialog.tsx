@@ -61,6 +61,8 @@ interface ExportDialogProps {
   allowedDatasets?: ExportDatasetKey[]
   /** Compact single-dataset layout for selection exports (no dataset picker). */
   compact?: boolean
+  /** Whether the dialog exports the whole (filtered) dataset or a row selection; analytics only. */
+  exportScope?: "all" | "selection"
   onExportCompleted?: () => void
 }
 
@@ -115,6 +117,7 @@ export function ExportDialog({
   rowCounts,
   allowedDatasets,
   compact = false,
+  exportScope = "all",
   onExportCompleted,
 }: ExportDialogProps) {
   const countOf = (key: ExportDatasetKey) => rowCounts?.[key] ?? data[key].length
@@ -345,6 +348,9 @@ export function ExportDialog({
       setExportResult(result)
 
       captureEvent(ANALYTICS_EVENTS.EXPORT_COMPLETED, {
+        export_id: result.id,
+        total_rows: result.totalRows,
+        export_scope: exportScope,
         selected_datasets: selectedDatasets,
         selected_dataset_count: selectedDatasets.length,
         is_filtered: isFiltered,
@@ -369,7 +375,8 @@ export function ExportDialog({
   }
 
   const handleDialogOpenChange = (nextOpen: boolean) => {
-    if (open && !nextOpen && !isExporting) {
+    // Closing after a finished export is not a cancellation
+    if (open && !nextOpen && !isExporting && !exportResult) {
       const selectedDatasets = getSelectedDatasets(selection)
       captureEvent(ANALYTICS_EVENTS.EXPORT_CANCELLED, {
         selected_dataset_count: totalSelected,
@@ -408,10 +415,20 @@ export function ExportDialog({
         size="sm"
         className="gap-2"
         onClick={async () => {
+          captureEvent(ANALYTICS_EVENTS.EXPORT_DOWNLOAD_CLICKED, {
+            export_id: exportResult.id,
+            source: "export_dialog",
+            total_rows: exportResult.totalRows,
+          })
           try {
             const url = await resolveExportDownloadUrl(exportResult.id)
             window.open(url, "_self")
           } catch (err) {
+            captureEvent(ANALYTICS_EVENTS.EXPORT_DOWNLOAD_FAILED, {
+              export_id: exportResult.id,
+              source: "export_dialog",
+              error_message: err instanceof Error ? err.message : "Unknown download error",
+            })
             setError(err instanceof Error ? err.message : "Failed to download export.")
           }
         }}
@@ -460,7 +477,7 @@ export function ExportDialog({
               </Button>
             ) : (
               <>
-                <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={fillingBar}>
+                <Button variant="ghost" onClick={() => handleDialogOpenChange(false)} disabled={fillingBar}>
                   Cancel
                 </Button>
                 <Button onClick={handleExport} disabled={fillingBar || totalSelected === 0}>
@@ -620,7 +637,7 @@ export function ExportDialog({
             <>
               <Button
                 variant="ghost"
-                onClick={() => onOpenChange(false)}
+                onClick={() => handleDialogOpenChange(false)}
                 disabled={fillingBar}
               >
                 Cancel

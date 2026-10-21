@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AuthShell } from "@/components/auth/auth-shell"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { captureEvent } from "@/lib/analytics/client"
+import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { forgotPasswordSchema, type ForgotPasswordValues } from "@/lib/validators/auth"
 
 export default function ForgotPasswordPage() {
@@ -36,9 +38,16 @@ export default function ForgotPasswordPage() {
     })
 
     if (error) {
+      captureEvent(ANALYTICS_EVENTS.AUTH_PASSWORD_RESET_REQUEST_FAILED, {
+        error_message: error.message,
+      })
       setSubmitError(error.message)
       return
     }
+
+    captureEvent(ANALYTICS_EVENTS.AUTH_PASSWORD_RESET_REQUESTED, {
+      email_domain: values.email.split("@")[1] ?? null,
+    })
 
     // Always show success so the form does not reveal whether an email exists.
     setSent(true)

@@ -271,6 +271,7 @@ export function AccountsTab({
     somePageSelected,
     handleRowSelectChange,
   } = useTableRowSelection({
+    entity: "account",
     items: server ? pageAccounts : accounts,
     pageItems: pageAccounts,
     getKey: getAccountKey,
@@ -553,6 +554,7 @@ export function AccountsTab({
 
       {/* Floating selection action bar */}
       <SelectionActionBar
+        entity="account"
         show={accountsView === "data" && selectedNames.size > 0}
         count={selectedNames.size}
         onClear={clearSelection}

@@ -75,6 +75,56 @@ export const ANALYTICS_EVENTS = {
   SEARCH_RECENT_ITEM_SELECTED: "search_recent_item_selected",
   SEARCH_ACTION_SELECTED: "search_action_selected",
   SEARCH_CLOSED: "search_closed",
+  SEARCH_RECENT_QUERY_SELECTED: "search_recent_query_selected",
+  AUTH_SESSION_EXPIRED: "auth_session_expired",
+  AUTH_PASSWORD_RESET_REQUESTED: "auth_password_reset_requested",
+  AUTH_PASSWORD_RESET_REQUEST_FAILED: "auth_password_reset_request_failed",
+  AUTH_PASSWORD_RECOVERY_LINK_OPENED: "auth_password_recovery_link_opened",
+  AUTH_PASSWORD_RESET_SUCCEEDED: "auth_password_reset_succeeded",
+  AUTH_PASSWORD_RESET_FAILED: "auth_password_reset_failed",
+  EXPORT_DOWNLOAD_CLICKED: "export_download_clicked",
+  EXPORT_DOWNLOAD_FAILED: "export_download_failed",
+  EXPORTS_HISTORY_OPENED: "exports_history_opened",
+  ACCOUNT_LIST_SHARED: "account_list_shared",
+  ACCOUNT_LIST_UNSHARED: "account_list_unshared",
+  ACCOUNT_LIST_RENAMED: "account_list_renamed",
+  ACCOUNT_LIST_DELETED: "account_list_deleted",
+  ACCOUNT_LIST_APPLIED: "account_list_applied",
+  ACCOUNT_LISTS_MANAGE_OPENED: "account_lists_manage_opened",
+  ACCOUNT_LIST_PARSE_FAILED: "account_list_parse_failed",
+  RECORD_TAB_CHANGED: "record_tab_changed",
+  RECORD_DIALOG_PAGE_CHANGED: "record_dialog_page_changed",
+  RECORD_DIALOG_FILTER_CHANGED: "record_dialog_filter_changed",
+  RELATED_RECORD_OPENED: "related_record_opened",
+  ENGAGEMENTS_RETRY_CLICKED: "engagements_retry_clicked",
+  FINANCIALS_LOAD_FAILED: "financials_load_failed",
+  CONTACT_EMAIL_COPIED: "contact_email_copied",
+  CONTACT_EMAIL_CLICKED: "contact_email_clicked",
+  OUTBOUND_LINK_CLICKED: "outbound_link_clicked",
+  ROWS_SELECTED: "rows_selected",
+  ROW_SELECTION_CLEARED: "row_selection_cleared",
+  SELECTION_EXPORT_CLICKED: "selection_export_clicked",
+  THEME_CHANGED: "theme_changed",
+  NOTIFICATIONS_OPENED: "notifications_opened",
+  NOTIFICATIONS_MARKED_READ: "notifications_marked_read",
+  HISTORY_OPENED: "history_opened",
+  HISTORY_CLEARED: "history_cleared",
+  PROFILE_MENU_OPENED: "profile_menu_opened",
 } as const
 
 export type AnalyticsEventName = (typeof ANALYTICS_EVENTS)[keyof typeof ANALYTICS_EVENTS]
+
+// Captured from API routes via lib/analytics/server.ts, keyed to the same
+// Supabase user id the browser identifies with.
+export const SERVER_ANALYTICS_EVENTS = {
+  EXPORT_GENERATED: "export_generated",
+  EXPORT_DENIED: "export_denied",
+  EXPORT_RATE_LIMITED: "export_rate_limited",
+  EXPORT_GENERATION_FAILED: "export_generation_failed",
+  EXPORT_DOWNLOADED: "export_downloaded",
+  ACCOUNT_LIST_MATCH_PROCESSED: "account_list_match_processed",
+  FINANCIALS_SERVED: "financials_served",
+  ENGAGEMENTS_SERVED: "engagements_served",
+} as const
+
+export type ServerAnalyticsEventName = (typeof SERVER_ANALYTICS_EVENTS)[keyof typeof SERVER_ANALYTICS_EVENTS]

@@ -299,6 +299,7 @@ export function CentersTab({
     somePageSelected,
     handleRowSelectChange,
   } = useTableRowSelection({
+    entity: "center",
     items: server ? pageCenters : centers,
     pageItems: pageCenters,
     getKey: getCenterKey,
@@ -607,6 +608,7 @@ export function CentersTab({
       />
 
       <SelectionActionBar
+        entity="center"
         show={centersView === "data" && selectedKeys.size > 0}
         count={selectedKeys.size}
         onClear={clearSelection}

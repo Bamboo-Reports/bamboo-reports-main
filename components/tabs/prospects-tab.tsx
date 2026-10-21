@@ -286,6 +286,7 @@ export function ProspectsTab({
     somePageSelected,
     handleRowSelectChange,
   } = useTableRowSelection({
+    entity: "prospect",
     items: server ? pageProspects : prospects,
     pageItems: pageProspects,
     getKey: getProspectRecordIdUtil,
@@ -527,6 +528,7 @@ export function ProspectsTab({
       />
 
       <SelectionActionBar
+        entity="prospect"
         show={prospectsView === "data" && selectedKeys.size > 0}
         count={selectedKeys.size}
         onClear={clearSelection}

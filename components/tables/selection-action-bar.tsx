@@ -3,8 +3,12 @@
 import { useEffect, useState } from "react"
 import { RiCloseLine, RiDownloadLine } from "@remixicon/react"
 import { Button } from "@/components/ui/button"
+import { captureEvent } from "@/lib/analytics/client"
+import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 
 interface SelectionActionBarProps {
+  /** Entity name reported with selection analytics. */
+  entity: "account" | "center" | "prospect"
   /** Whether the bar should be visible (e.g. in data view with rows selected). */
   show: boolean
   /** Number of selected rows. Held during the exit animation so it never flickers to 0. */
@@ -14,7 +18,7 @@ interface SelectionActionBarProps {
 }
 
 /** Floating bottom-center bar for selective export. Animates in and out. */
-export function SelectionActionBar({ show, count, onClear, onExport }: SelectionActionBarProps) {
+export function SelectionActionBar({ entity, show, count, onClear, onExport }: SelectionActionBarProps) {
   const [mounted, setMounted] = useState(false)
   const [exiting, setExiting] = useState(false)
   const [displayCount, setDisplayCount] = useState(0)
@@ -51,13 +55,19 @@ export function SelectionActionBar({ show, count, onClear, onExport }: Selection
           variant="ghost"
           size="icon"
           className="h-8 w-8 rounded-full"
-          onClick={onClear}
+          onClick={() => {
+            captureEvent(ANALYTICS_EVENTS.ROW_SELECTION_CLEARED, { entity, selected_count: count })
+            onClear()
+          }}
           aria-label="Clear selection"
         >
           <RiCloseLine className="h-4 w-4" />
         </Button>
         <span className="text-sm font-medium">{displayCount} selected</span>
-        <Button size="sm" className="h-8 gap-2 rounded-full px-4 text-xs" onClick={onExport}>
+        <Button size="sm" className="h-8 gap-2 rounded-full px-4 text-xs" onClick={() => {
+            captureEvent(ANALYTICS_EVENTS.SELECTION_EXPORT_CLICKED, { entity, selected_count: count })
+            onExport()
+          }}>
           <RiDownloadLine className="h-3.5 w-3.5" />
           Export
         </Button>

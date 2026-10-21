@@ -14,12 +14,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { NotificationDropdown } from '@/components/notifications/notification-dropdown'
-import { captureEvent, resetAnalytics } from '@/lib/analytics/client'
+import { captureEvent, identifyUser, resetAnalytics } from '@/lib/analytics/client'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { getEnvironmentLabel } from '@/lib/config/environment'
 import { normalizeUserRole } from '@/lib/auth/roles'
 import { NOTIFICATIONS_ENABLED } from '@/lib/config/notifications'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
+import { markManualSignOut } from '@/hooks/use-auth-guard'
 import type { Profile } from '@/lib/types'
 
 interface HeaderProps {
@@ -73,7 +74,16 @@ function ProfileThemeSwitcher() {
               role="tab"
               aria-selected={isActive}
               disabled={!mounted}
-              onClick={() => setTheme(option.value)}
+              onClick={() => {
+                if (option.value !== activeTheme) {
+                  captureEvent(ANALYTICS_EVENTS.THEME_CHANGED, {
+                    theme: option.value,
+                    previous_theme: activeTheme,
+                    source: 'profile_menu',
+                  })
+                }
+                setTheme(option.value)
+              }}
               className={
                 isActive
                   ? "inline-flex items-center justify-center gap-1.5 rounded-lg bg-background px-2 py-1.5 text-xs font-semibold text-foreground shadow-sm ring-1 ring-border/60 transition-colors"
@@ -120,6 +130,13 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
         return
       }
       setProfile(data)
+      identifyUser({
+        id: userId,
+        email: data.email,
+        role: normalizeUserRole(data.role),
+        firstName: data.first_name,
+        lastName: data.last_name,
+      })
     }
 
     const loadProfile = (userId: string) => {
@@ -169,6 +186,7 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
     captureEvent(ANALYTICS_EVENTS.AUTH_SIGNED_OUT, {
       auth_provider: "email",
     })
+    markManualSignOut()
     await supabase.auth.signOut()
     resetAnalytics()
     router.replace('/signin')
@@ -255,7 +273,11 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
               />
             </Button>
             {NOTIFICATIONS_ENABLED ? <NotificationDropdown /> : null}
-            <DropdownMenu>
+            <DropdownMenu
+              onOpenChange={(open) => {
+                if (open) captureEvent(ANALYTICS_EVENTS.PROFILE_MENU_OPENED)
+              }}
+            >
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8" title="Profile" aria-label="Open profile menu">
                   <RiUserLine className="h-4 w-4" />
@@ -340,7 +362,10 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
                   {onOpenHistory && (
                     <DropdownMenuItem
                       className="flex flex-1 flex-col items-center justify-center gap-1 cursor-pointer rounded-md border border-border/60 bg-muted/20 px-2 py-2.5 text-[11px] font-medium text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 focus:border-border focus:bg-muted/60 focus:text-foreground"
-                      onSelect={() => onOpenHistory()}
+                      onSelect={() => {
+                        captureEvent(ANALYTICS_EVENTS.HISTORY_OPENED, { source: 'profile_menu' })
+                        onOpenHistory()
+                      }}
                     >
                       <RiTimeLine className="h-4 w-4" />
                       History

@@ -1,9 +1,11 @@
 "use client"
 
+import { useEffect } from "react"
 import { RiRefreshLine } from "@remixicon/react"
 import { BrandPage } from "@/components/brand/brand-page"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { captureError } from "@/lib/analytics/client"
 import "./globals.css"
 
 /**
@@ -18,6 +20,10 @@ export default function GlobalError({
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  useEffect(() => {
+    captureError(error, { boundary: "global", digest: error.digest })
+  }, [error])
+
   return (
     <html lang="en">
       <body>

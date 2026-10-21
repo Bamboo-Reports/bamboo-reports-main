@@ -242,8 +242,9 @@ Alias rows power alias-aware account search: the global search (`components/sear
 ### 5.4 PostHog Analytics
 -   Initialized in `app/providers.tsx` and `lib/analytics/client.ts`.
 -   **Event tracking:** Defined in `lib/analytics/events.ts`, executed via helpers in `lib/analytics/tracking.ts`.
--   **Events tracked:** Page views, filter interactions, export actions, tab navigation, session duration.
--   **User identification:** Tied to Supabase user ID for cross-session tracking.
+-   **Events tracked:** Page views, filter interactions, export actions, tab navigation, session duration, record dialogs (tabs, pagination, in-dialog filters, related records, outbound links), row selection, password reset, account list management, notifications, history and theme changes.
+-   **User identification:** Tied to Supabase user ID for cross-session tracking, with `role`, `name`, `first_name` and `last_name` person properties. Every client event carries `app_env` and `app_version` super properties.
+-   **Server-side events:** `lib/analytics/server.ts` wraps `posthog-node` and sends `SERVER_ANALYTICS_EVENTS` (export generated, denied, rate limited, generation failed and downloaded, account list match processed, financials served, engagements served) from API routes after the response, keyed to the authenticated Supabase user ID so they join the browser person. It is a no-op unless the client analytics would be enabled.
 
 ### 5.5 Vercel Analytics
 -   Automatic Core Web Vitals tracking via `@vercel/analytics`.

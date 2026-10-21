@@ -150,13 +150,16 @@ export function AccountListUploadDialog({ open, onOpenChange, existingList = nul
   const handleFile = useCallback(async (file: File) => {
     setParseError(null)
     const lower = file.name.toLowerCase()
+    const fileExt = lower.includes(".") ? lower.slice(lower.lastIndexOf(".")) : null
     if (!ACCEPTED_EXTENSIONS.some((ext) => lower.endsWith(ext))) {
+      captureEvent(ANALYTICS_EVENTS.ACCOUNT_LIST_PARSE_FAILED, { reason: "unsupported_type", file_ext: fileExt })
       setParseError("Unsupported file type. Upload a CSV, TSV, TXT or XLSX file.")
       return
     }
     try {
       const parsed = lower.endsWith(".xlsx") || lower.endsWith(".xls") ? await readSpreadsheet(file) : parseDelimitedText(await file.text())
       if (parsed.rows.length === 0) {
+        captureEvent(ANALYTICS_EVENTS.ACCOUNT_LIST_PARSE_FAILED, { reason: "empty_file", file_ext: fileExt })
         setParseError("The file has no rows to import.")
         return
       }
@@ -167,6 +170,7 @@ export function AccountListUploadDialog({ open, onOpenChange, existingList = nul
       if (!filterName) setFilterName(file.name.replace(/\.[^.]+$/, ""))
     } catch (err) {
       devError("account list parse failed:", err)
+      captureEvent(ANALYTICS_EVENTS.ACCOUNT_LIST_PARSE_FAILED, { reason: "read_error", file_ext: fileExt })
       setParseError("Could not read that file. Try saving it as CSV and uploading again.")
     }
   }, [filterName])
