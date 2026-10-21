@@ -76,3 +76,12 @@ create index if not exists filter_shares_owner_user_id_idx
   on public.filter_shares (owner_user_id);
 create index if not exists account_list_shares_owner_user_id_idx
   on public.account_list_shares (owner_user_id);
+
+-- 5. Account list grants match the other browser tables (2026-10-21) ----------
+-- The account list migrations only revoked Supabase's default grants from anon,
+-- so authenticated kept TRUNCATE, TRIGGER and REFERENCES as well. Reset to the
+-- four operations the app uses, as the hardening migration does elsewhere.
+revoke all on table public.account_lists, public.account_list_shares
+  from anon, authenticated;
+grant select, insert, update, delete
+  on table public.account_lists, public.account_list_shares to authenticated;

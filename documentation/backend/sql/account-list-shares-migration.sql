@@ -44,7 +44,7 @@ CREATE POLICY "Users can view account lists shared with them"
     )
   );
 
-REVOKE ALL ON public.account_list_shares FROM anon;
+REVOKE ALL ON public.account_list_shares FROM anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.account_list_shares TO authenticated;
 
 -- Owner emails of lists shared with the caller, scoped to the share relationship.
