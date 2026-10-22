@@ -493,7 +493,7 @@ export function AccountDetailsDialog({
                         href={account.account_hq_linkedin_link.startsWith("http") ? account.account_hq_linkedin_link : `https://${account.account_hq_linkedin_link}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring hover:text-[#0A66C2]"
+                        className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring hover:text-primary"
                         title="LinkedIn"
                         aria-label="Open LinkedIn page"
                         onClick={() => trackOutboundLink("linkedin")}

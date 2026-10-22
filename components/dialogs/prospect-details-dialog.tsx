@@ -321,7 +321,7 @@ export function ProspectDetailsDialog({
                     href={p.prospect_linkedin_url.startsWith("http") ? p.prospect_linkedin_url : `https://${p.prospect_linkedin_url}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring hover:text-[#0A66C2]"
+                    className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring hover:text-primary"
                     title="View LinkedIn"
                     onClick={() =>
                       captureEvent(ANALYTICS_EVENTS.OUTBOUND_LINK_CLICKED, { entity: "prospect", link_type: "linkedin" })
@@ -337,7 +337,7 @@ export function ProspectDetailsDialog({
                   </Badge>
                 ) : null}
                 {p.head_type === "HR Head" ? (
-                  <Badge className="font-normal border-transparent bg-orange-100 text-orange-700 hover:bg-orange-100/80 dark:bg-orange-500/15 dark:text-orange-300">
+                  <Badge className="font-normal border-transparent bg-primary/15 text-primary hover:bg-primary/20">
                     HR Head
                   </Badge>
                 ) : null}

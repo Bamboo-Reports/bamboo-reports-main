@@ -74,7 +74,7 @@ export const ProspectGridCard = memo(({ prospect, onClick }: ProspectGridCardPro
               )}
               {prospect.head_type === "HR Head" && (
                 <Badge
-                  className="shrink-0 font-normal border-transparent bg-orange-100 text-orange-700 hover:bg-orange-100/80 dark:bg-orange-500/15 dark:text-orange-300"
+                  className="shrink-0 font-normal border-transparent bg-primary/15 text-primary hover:bg-primary/20"
                 >
                   HR Head
                 </Badge>
