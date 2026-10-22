@@ -189,7 +189,7 @@ export function ExportsDialog({ open, onOpenChange }: ExportsDialogProps) {
                   </TableHeader>
                   <TableBody>
                     {Array.from({ length: 6 }).map((_, i) => (
-                      <TableRow key={i} className="animate-stagger">
+                      <TableRow key={i}>
                         <TableCell><div className="skeleton-loading rounded h-3 w-28" /></TableCell>
                         <TableCell><div className="skeleton-loading rounded h-3 w-48" /></TableCell>
                         <TableCell><div className="skeleton-loading rounded h-3 w-32" /></TableCell>

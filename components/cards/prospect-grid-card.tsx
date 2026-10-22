@@ -40,7 +40,7 @@ export const ProspectGridCard = memo(({ prospect, onClick }: ProspectGridCardPro
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <Card
-          className="h-full animate-stagger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className="h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           tabIndex={0}
           role="button"
           aria-label={`View details for ${fullName || "prospect"}`}
