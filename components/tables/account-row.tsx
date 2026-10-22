@@ -38,7 +38,7 @@ export const AccountRow = memo(({ account, onOpen, visibleColumns, selectable, i
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <TableRow
-          className="cursor-pointer hover:bg-muted/50 transition-colors focus-visible:bg-muted/70 animate-stagger"
+          className="cursor-pointer hover:bg-muted/50 transition-colors focus-visible:bg-muted/70"
           onClick={handleOpen}
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === " ") {
