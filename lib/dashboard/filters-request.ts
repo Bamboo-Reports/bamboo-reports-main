@@ -20,12 +20,27 @@ const VALUE_ARRAY_KEYS = [
   "prospectLevelValues", "prospectEngagedValues", "prospectCityValues", "prospectTitleKeywords",
 ] as const
 
-function coerceFilterValues(input: unknown): FilterValue[] {
+// Free-text keyword filters: each keyword becomes an ilike clause.
+const KEYWORD_KEYS = new Set<string>(["accountGlobalLegalNameKeywords", "techSoftwareInUseKeywords", "prospectTitleKeywords"])
+
+// Size caps for untrusted filter payloads, so one request cannot be made
+// arbitrarily expensive (#294). Well above anything the dashboard sends: a
+// value list holds at most every account (about 2.8K), the longest stored
+// value is a prospect title (801 chars), and keywords are typed one by one.
+// Matches the export route's MAX_FILTER_VALUES.
+export const MAX_FILTER_VALUES = 5000
+export const MAX_FILTER_VALUE_LENGTH = 1000
+export const MAX_FILTER_KEYWORDS = 50
+export const MAX_FILTER_KEYWORD_LENGTH = 200
+
+function coerceFilterValues(input: unknown, limits: { count: number; length: number }): FilterValue[] {
   if (!Array.isArray(input)) return []
   const out: FilterValue[] = []
   for (const item of input) {
+    if (out.length >= limits.count) break
     if (item && typeof item === "object" && typeof (item as { value?: unknown }).value === "string") {
       const value = (item as { value: string }).value
+      if (value.length > limits.length) continue
       const mode = (item as { mode?: unknown }).mode === "exclude" ? "exclude" : "include"
       out.push({ value, mode })
     }
@@ -49,14 +64,18 @@ function coerceRange(input: unknown, fallback: [number, number]): [number, numbe
 
 /**
  * Safely coerce an untrusted request body into a valid, sanitized Filters
- * object. Unknown/malformed fields fall back to defaults, and disabled filters
- * are reset (sanitizeFilters), matching the client before it runs the engine.
+ * object. Unknown/malformed fields fall back to defaults, value lists past the
+ * size caps above are cut off, and disabled filters are reset (sanitizeFilters),
+ * matching the client before it runs the engine.
  */
 export function parseFilters(input: unknown): Filters {
   const src = input && typeof input === "object" ? (input as Record<string, unknown>) : {}
   const overrides: Partial<Filters> = {}
   for (const key of VALUE_ARRAY_KEYS) {
-    ;(overrides as Record<string, FilterValue[]>)[key] = coerceFilterValues(src[key])
+    const limits = KEYWORD_KEYS.has(key)
+      ? { count: MAX_FILTER_KEYWORDS, length: MAX_FILTER_KEYWORD_LENGTH }
+      : { count: MAX_FILTER_VALUES, length: MAX_FILTER_VALUE_LENGTH }
+    ;(overrides as Record<string, FilterValue[]>)[key] = coerceFilterValues(src[key], limits)
   }
   overrides.accountHqRevenueRange = coerceRange(src.accountHqRevenueRange, DEFAULT_REVENUE_RANGE)
   overrides.accountYearsInIndiaRange = coerceRange(src.accountYearsInIndiaRange, DEFAULT_YEARS_IN_INDIA_RANGE)
