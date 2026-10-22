@@ -252,7 +252,7 @@ export const PieChartCard = memo(({
     <Card className="border shadow-sm">
       <CardHeader className="pb-3">
         <CardTitle className="text-base font-semibold flex items-center gap-2">
-          <RiPieChartLine className="h-4 w-4 text-[hsl(var(--chart-1))]" />
+          <RiPieChartLine className="h-4 w-4 text-primary" />
           {title}
         </CardTitle>
       </CardHeader>
