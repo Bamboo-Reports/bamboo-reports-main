@@ -260,7 +260,7 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
               onClick={onRefresh}
               disabled={refreshing}
               aria-busy={refreshing}
-              className="h-8 px-3 group"
+              className="h-8 px-3"
               title={refreshing ? 'Refreshing…' : 'Refresh'}
               aria-label={refreshing ? 'Refreshing data' : 'Refresh data'}
             >
@@ -268,7 +268,7 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
                 className={
                   refreshing
                     ? 'h-4 w-4 animate-spin'
-                    : 'h-4 w-4 group-hover:rotate-180 transition-transform duration-300'
+                    : 'h-4 w-4'
                 }
               />
             </Button>
