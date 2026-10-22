@@ -22,20 +22,24 @@ Steps, in the order they run (the order matters, see the notes):
                   ('64 &amp; 65', '&nbsp;') are decoded.
   4. invisible    Strip zero-width characters, BOMs, soft hyphens and
                   bidirectional controls from every cell. (validate 0B)
-  5. whitespace   Trim cells and lines, collapse double spaces, turn tabs,
+  5. lookalikes   Cyrillic or Greek letters that look Latin, inside a
+                  Latin word, become that Latin letter ('Ѕuchismita' with a
+                  Cyrillic Ѕ). Words written wholly in another alphabet are
+                  left alone. (validate 0D)
+  6. whitespace   Trim cells and lines, collapse double spaces, turn tabs,
                   non-breaking and other exotic spaces into plain spaces,
                   turn \\r into real line breaks. Line breaks are kept.
-  6. lists        Free-text list columns (services service columns,
+  7. lists        Free-text list columns (services service columns,
                   accounts key offerings): one item per line, no bullets,
                   no duplicates. In services, all-lowercase words are
                   capitalised and focus_region lines like 'India Global'
                   are split in two.
-  7. links        Link columns: one URL per line, bullets, wrapping quotes
+  8. links        Link columns: one URL per line, bullets, wrapping quotes
                   and separators removed, tracking parameters (utm_*, trk,
                   originalSubdomain) and #:~:text= highlights dropped,
                   LinkedIn hosts made consistent. Lines that are still not
                   URLs are listed for a manual look and never changed.
-  8. formats      Values that validate Phase 0 would reject but that have
+  9. formats      Values that validate Phase 0 would reject but that have
                   one obvious correct form:
                     - dates     '06-May-25', '6 May 2025', '2025-05-06'
                                 become '6-May-2025'
@@ -49,7 +53,7 @@ Steps, in the order they run (the order matters, see the notes):
                     - phones    '+91 98765 43210' becomes '9876543210'
                     - names     prospect names in ALL CAPS or all lowercase
                                 get each word capitalised
-  9. references   Key columns in child sheets that match the parent sheet
+  10. references  Key columns in child sheets that match the parent sheet
                   except for casing, curly quotes or dash style are
                   rewritten to the parent's exact spelling (this includes
                   subscribers emails against prospects). A cn_unique_key
@@ -59,20 +63,22 @@ Steps, in the order they run (the order matters, see the notes):
 
 Why this order: chips go first so the text they leave behind goes through
 every later step like any other value. Entities decode into non-breaking spaces and invisible
-characters, so they go first. Invisible characters and stray spaces hide
-inside values, so they go next and every later step sees clean text.
+characters, so they go first. Invisible characters, look-alike letters and
+stray spaces hide inside values, so they go next and every later step sees
+clean text.
 Lists and links split and dedupe lines, which only works once the
 whitespace is tidy. Formats compare against fixed allowed values, so they
 run on tidy text too. References run last because they compare names
 across sheets, and two names only compare equal once both sides have been
-through 2 to 7.
+through 2 to 8.
 
 Formula cells are never written: many columns are formulas
 (tech.account_global_legal_name, the range columns in accounts and
 centers), and writing a value would replace the formula. A fix a step
 wanted on one is listed at the end instead.
 
-The column rules (ALL_RULES, VALIDATION_RULES, INVISIBLE_CHARS) come from
+The column rules (ALL_RULES, VALIDATION_RULES, INVISIBLE_CHARS,
+LOOKALIKE_LETTERS) come from
 sheets/rules.py, the same module validate uses, so both always agree.
 
 Dry run by default: prints what would change without touching the

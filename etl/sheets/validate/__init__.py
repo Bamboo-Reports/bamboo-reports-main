@@ -22,6 +22,12 @@ Validates Google Sheets data in several phases:
       email is skipped by VLOOKUP) and no dropdowns. Read from cell metadata,
       one extra API call per sheet.
 
+  Phase 0D - Look-alike Letters
+      Flags Cyrillic or Greek letters that look Latin inside a Latin word
+      ("Ѕuchismita" with a Cyrillic Ѕ): they sort, search and join as a
+      different character. A word written wholly in another alphabet is
+      left alone.
+
   Phase 1 - Uniqueness Checks
       Ensures primary key columns contain no duplicates:
         - accounts.account_global_legal_name

@@ -11,7 +11,12 @@ from common.tui import console
 from sheets.rules import ALL_SHEETS
 
 from . import options
-from .cell_checks import check_all_tables_format, check_chips_and_dropdowns, check_invisible_characters
+from .cell_checks import (
+    check_all_tables_format,
+    check_chips_and_dropdowns,
+    check_invisible_characters,
+    check_lookalike_letters,
+)
 from .highlights import apply_highlights
 from .options import is_excluded
 from .phases import PHASES, PhaseResult
@@ -159,6 +164,7 @@ def main() -> None:
         check_all_tables_format,
         check_invisible_characters,
         check_chips_and_dropdowns,
+        check_lookalike_letters,
         check_uniqueness,
         check_references,
         check_completeness,

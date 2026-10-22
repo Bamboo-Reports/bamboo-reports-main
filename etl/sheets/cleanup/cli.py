@@ -18,7 +18,7 @@ from .formats import step_formats
 from .links import LINK_LEFTOVERS, step_links
 from .lists import step_lists
 from .references import step_references
-from .text import step_artifacts, step_chips, step_invisible, step_whitespace
+from .text import step_artifacts, step_chips, step_invisible, step_lookalikes, step_whitespace
 from .workbook import Change, Workbook
 
 # -- Runner -------------------------------------------------------------------
@@ -27,6 +27,7 @@ STEPS = [
     ("chips", step_chips),
     ("artifacts", step_artifacts),
     ("invisible", step_invisible),
+    ("lookalikes", step_lookalikes),
     ("whitespace", step_whitespace),
     ("lists", step_lists),
     ("links", step_links),
@@ -40,6 +41,7 @@ STEP_INFO = {
     "chips": "Smart chips turned into plain text; dropdowns removed.",
     "artifacts": "Spreadsheet error values typed as text, and HTML entities.",
     "invisible": "Zero-width characters, BOMs, soft hyphens, direction marks.",
+    "lookalikes": "Cyrillic or Greek letters that look Latin, inside Latin words.",
     "whitespace": "Stray, doubled and non-standard spaces; line breaks are kept.",
     "lists": "One item per line in the services and key-offerings list columns.",
     "links": "One clean URL per line in every link column.",

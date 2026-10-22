@@ -1,5 +1,5 @@
-"""Steps 2 to 5: chips and dropdowns, spreadsheet artifacts, invisible
-characters and whitespace."""
+"""Steps 2 to 6: chips and dropdowns, spreadsheet artifacts, invisible
+characters, look-alike letters and whitespace."""
 
 import html
 import re
@@ -7,7 +7,7 @@ import re
 from common import tui
 from common.google import safe_api_call
 from sheets import cell_meta
-from sheets.rules import INVISIBLE_CHARS, INVISIBLE_CHARS_RE
+from sheets.rules import INVISIBLE_CHARS, INVISIBLE_CHARS_RE, describe_lookalike, find_lookalikes, replace_lookalikes
 
 from .workbook import FIRST_DATA_ROW, Workbook
 
@@ -66,7 +66,21 @@ def step_invisible(wb: Workbook) -> None:
                 wb.set("invisible", sheet, r, c, INVISIBLE_CHARS_RE.sub("", value), kinds)
 
 
-# -- Step 5: whitespace -------------------------------------------------------
+# -- Step 5: look-alike letters -----------------------------------------------
+def step_lookalikes(wb: Workbook) -> None:
+    """Cyrillic or Greek letters that look Latin, inside Latin words, become
+    the Latin letter ("Ѕuchismita" to "Suchismita"). Words written wholly in
+    another alphabet are left alone. Shown in the preview like every step,
+    so each swap can be reviewed before --apply. (validate 0D)"""
+    for sheet in wb.editable:
+        for r, c, value in wb.cells(sheet):
+            hits = find_lookalikes(value)
+            if hits:
+                kinds = ", ".join(describe_lookalike(ch) for ch in sorted(set(hits)))
+                wb.set("lookalikes", sheet, r, c, replace_lookalikes(value), kinds)
+
+
+# -- Step 6: whitespace -------------------------------------------------------
 # Unicode spaces that render like a normal space but are a different code
 # point. All of them become a plain ASCII space.
 EXOTIC_SPACES_RE = re.compile("[\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]")
