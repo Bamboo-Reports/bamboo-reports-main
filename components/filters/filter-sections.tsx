@@ -665,8 +665,8 @@ export function CenterFiltersSection({
               />
             </div>
             <div className="flex justify-between text-xs text-muted-foreground px-2">
-              <span>{centerIncYearRange.min.toLocaleString()}</span>
-              <span>{centerIncYearRange.max.toLocaleString()}</span>
+              <span>{centerIncYearRange.min}</span>
+              <span>{centerIncYearRange.max}</span>
             </div>
           </div>
           )}
