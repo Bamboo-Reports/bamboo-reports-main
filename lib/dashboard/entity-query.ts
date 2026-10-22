@@ -102,6 +102,30 @@ function textOrder(column: string, direction: "asc" | "desc"): string {
   )
 }
 
+// Bucket label columns ("<10Mn", "10Mn - 50Mn", ">50Bn", "5K - 10K"). As text
+// they interleave ("<10Mn, >50Bn, 101Mn - 250Mn"), so they sort by the bucket's
+// lower bound instead. The label is used rather than the numeric source column
+// because some rows carry a bucket with a zero or missing number.
+const RANGE_SORT_COLUMNS = new Set([
+  "account_hq_revenue_range",
+  "account_hq_employee_range",
+  "account_center_employees_range",
+  "center_employees_range",
+])
+
+/**
+ * Lower bound of a bucket label: "<X" sorts first, otherwise the first number
+ * scaled by its unit (K, Mn, Bn). Nulls go last regardless of direction.
+ */
+function rangeOrder(column: string, direction: "asc" | "desc"): string {
+  const number = `substring(${column} from '[0-9]+(?:\\.[0-9]+)?')::numeric`
+  const unit = `case substring(${column} from '^[^0-9]*[0-9.]+\\s*([A-Za-z]*)') when 'K' then 1e3 when 'Mn' then 1e6 when 'Bn' then 1e9 else 1 end`
+  return (
+    `case when ${column} is null then 1 else 0 end asc, ` +
+    `case when ${column} like '<%' then -1 else ${number} * ${unit} end ${direction}`
+  )
+}
+
 /**
  * Resolves the ORDER BY for a page request, always ending in a tiebreak that
  * makes the ordering total.
@@ -122,7 +146,9 @@ export function resolveOrder(entity: QueryEntity, sort: SortSpec | undefined): s
   const base = NUMERIC_SORT_COLUMNS.has(column)
     ? // NULLS LAST keeps empty values at the end regardless of direction.
       `${column} ${direction} nulls last`
-    : textOrder(column, direction)
+    : RANGE_SORT_COLUMNS.has(column)
+      ? rangeOrder(column, direction)
+      : textOrder(column, direction)
 
   const extra = cfg.tiebreak.filter((tiebreakColumn) => tiebreakColumn !== column)
   if (extra.length === 0) return base
