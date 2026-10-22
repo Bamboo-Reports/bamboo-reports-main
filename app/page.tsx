@@ -34,6 +34,7 @@ import {
   type FacetRanges,
 } from "@/lib/dashboard/api-client"
 import { useGlobalSearch } from "@/hooks/use-global-search"
+import { useRecordOpener } from "@/hooks/use-record-opener"
 import { useRecentItems } from "@/hooks/use-recent-items"
 import { buildSummaryReport } from "@/lib/reports/summary-report"
 import {
@@ -1064,6 +1065,8 @@ function DashboardContent(): React.JSX.Element | null {
     [handleSearchClose, addRecentItem, addRecentSearch, searchQuery, trackSearchRecordOpened]
   )
 
+  const openRecord = useRecordOpener()
+
   const handleSearchRecentItemSelect = useCallback(
     (item: RecentItem, source: "global_search" | "history_dialog") => {
       handleSearchClose()
@@ -1086,41 +1089,52 @@ function DashboardContent(): React.JSX.Element | null {
           toast.info(getSectionUnavailableMessage("accounts"))
           return
         }
-        fetchAccountRelated(item.id)
-          .then((res) => {
-            if (!res.account) return
+        openRecord({
+          label: "account",
+          load: () => fetchAccountRelated(item.id).then((res) => res.account),
+          onLoaded: (account) => {
             trackOpened()
-            setSearchSelectedAccount(res.account)
+            setSearchSelectedAccount(account)
             setSearchAccountDialogOpen(true)
-          })
-          .catch(() => toast.info("This account is not available right now."))
+          },
+          notFoundMessage: "This account could not be found.",
+          errorMessage: "This account is not available right now.",
+        })
       } else if (item.type === "center") {
         if (!centersEnabled) {
           toast.info(getSectionUnavailableMessage("centers"))
           return
         }
-        fetchCenterDetail(item.id)
-          .then((res) => {
+        openRecord({
+          label: "centre",
+          load: () => fetchCenterDetail(item.id).then((res) => res.center),
+          onLoaded: (center) => {
             trackOpened()
-            setSearchSelectedCenter(res.center)
+            setSearchSelectedCenter(center)
             setSearchCenterDialogOpen(true)
-          })
-          .catch(() => toast.info("This centre is not available right now."))
+          },
+          notFoundMessage: "This centre could not be found.",
+          errorMessage: "This centre is not available right now.",
+        })
       } else if (item.type === "prospect") {
         if (!prospectsEnabled) {
           toast.info(getSectionUnavailableMessage("prospects"))
           return
         }
-        fetchProspectById(item.id)
-          .then((res) => {
+        openRecord({
+          label: "prospect",
+          load: () => fetchProspectById(item.id).then((res) => res.prospect),
+          onLoaded: (prospect) => {
             trackOpened()
-            setSearchSelectedProspect(res.prospect)
+            setSearchSelectedProspect(prospect)
             setSearchProspectDialogOpen(true)
-          })
-          .catch(() => toast.info("This prospect is not available right now."))
+          },
+          notFoundMessage: "This prospect could not be found.",
+          errorMessage: "This prospect is not available right now.",
+        })
       }
     },
-    [handleSearchClose, accountsEnabled, centersEnabled, prospectsEnabled, trackSearchRecordOpened]
+    [handleSearchClose, accountsEnabled, centersEnabled, prospectsEnabled, trackSearchRecordOpened, openRecord]
   )
 
   const handleGlobalSearchRecentItemSelect = useCallback(
@@ -1160,9 +1174,10 @@ function DashboardContent(): React.JSX.Element | null {
   const openSearchRelatedAccount = useCallback(
     (parentEntity: "center" | "prospect", accountName: string) => {
       // related_record_opened is captured by the dialog that owns the link
-      fetchAccountRelated(accountName)
-        .then((res) => {
-          if (!res.account) return
+      openRecord({
+        label: "account",
+        load: () => fetchAccountRelated(accountName).then((res) => res.account),
+        onLoaded: (account) => {
           if (parentEntity === "center") {
             setSearchCenterDialogOpen(false)
           } else {
@@ -1170,16 +1185,18 @@ function DashboardContent(): React.JSX.Element | null {
           }
           trackSearchRecordOpened({
             entity: "account",
-            recordId: res.account.account_global_legal_name,
-            recordLabel: res.account.account_global_legal_name,
+            recordId: account.account_global_legal_name,
+            recordLabel: account.account_global_legal_name,
             openedFrom: "related_account_link",
           })
-          setSearchSelectedAccount(res.account)
+          setSearchSelectedAccount(account)
           setSearchAccountDialogOpen(true)
-        })
-        .catch(() => toast.info("This account is not available right now."))
+        },
+        notFoundMessage: "This account could not be found.",
+        errorMessage: "This account is not available right now.",
+      })
     },
-    [trackSearchRecordOpened]
+    [trackSearchRecordOpened, openRecord]
   )
 
   const handleSearchRecentSearchSelect = useCallback(
