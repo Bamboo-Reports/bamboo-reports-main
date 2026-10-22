@@ -48,7 +48,10 @@ describe("History dialog clear (#311)", () => {
     fireEvent.click(screen.getByRole("button", { name: /Clear history/ }))
     expect(props.onClearHistory).toHaveBeenCalledTimes(1)
 
-    expect(toast).toHaveBeenCalledWith("History cleared", expect.objectContaining({ action: expect.objectContaining({ label: "Undo" }) }))
+    expect(toast).toHaveBeenCalledWith(
+      "History cleared",
+      expect.objectContaining({ duration: 10_000, action: expect.objectContaining({ label: "Undo" }) })
+    )
     const options = vi.mocked(toast).mock.calls[0][1] as unknown as { action: { onClick: () => void } }
     options.action.onClick()
     expect(props.onRestoreHistory).toHaveBeenCalledWith(items)

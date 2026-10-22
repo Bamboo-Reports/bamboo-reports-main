@@ -21,6 +21,7 @@ import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 
 const ITEMS_PER_PAGE = 10
+const UNDO_WINDOW_MS = 10_000
 
 interface HistoryDialogProps {
   open: boolean
@@ -78,7 +79,9 @@ export function HistoryDialog({
                   const cleared = recentItems
                   captureEvent(ANALYTICS_EVENTS.HISTORY_CLEARED, { record_count: cleared.length })
                   onClearHistory()
+                  // Longer than the 4s default so there is time to reach Undo.
                   toast("History cleared", {
+                    duration: UNDO_WINDOW_MS,
                     action: { label: "Undo", onClick: () => onRestoreHistory(cleared) },
                   })
                 }}
