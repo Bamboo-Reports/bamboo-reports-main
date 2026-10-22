@@ -32,12 +32,15 @@ export async function GET(request: Request, { params }: { params: Promise<{ name
   } catch {
     return json({ error: "Invalid or expired token" }, 401)
   }
-  // Not awaited yet: the counter bumps while the (usually cached) payload is
-  // fetched; the outcome gates the response below.
+  // Started now so the counter round trip overlaps the request parsing below;
+  // awaited before any warehouse work so an over-limit caller never reaches it.
   const limitedPromise = enforceRateLimit({ userId, bucket: "accounts:related" })
 
   const { name: rawName } = await params
   let name: string
+  const limited = await limitedPromise
+  if (!limited.ok) return limited.response
+
   try {
     name = decodeURIComponent(rawName)
   } catch {
@@ -52,8 +55,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ name
       () => getAccountRelated(name, resolveAccess()),
       { bypassRead: request.headers.get("x-no-cache") === "1" }
     )
-    const limited = await limitedPromise
-    if (!limited.ok) return limited.response
     if (!result.account && result.centers.length === 0 && result.prospects.length === 0 && result.tech.length === 0) {
       return json({ error: "Account not found" }, 404)
     }

@@ -13,6 +13,7 @@ import {
   fetchDashboardFacets,
   fetchDashboardSummary,
   fetchEntityPage,
+  isAbortError,
   type CentersMapResponse,
   type ChartsResponse,
   type EntityPage,
@@ -199,6 +200,18 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
     return () => clearTimeout(timer)
   }, [enabled, filtersKey, effectiveKey])
 
+  // One AbortController per filter state (and refresh): moving on cancels
+  // every request still in flight for the previous state, prefetches
+  // included, so rapid filtering does not keep the server computing states
+  // nobody will see (#293). Declared before the fetch effects so a new state
+  // has its controller before they run. Aborted requests are never reported.
+  const stateAbortRef = useRef<AbortController | null>(null)
+  useEffect(() => {
+    const controller = new AbortController()
+    stateAbortRef.current = controller
+    return () => controller.abort()
+  }, [effectiveKey, refreshKey])
+
   // Summary + facets: always needed (cards + sidebar are always visible).
   // Two parallel requests, applied independently: the summary is a handful of
   // count statements and lands well before the facets (23 grouped lists in
@@ -219,7 +232,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
       return
     }
     const wireFilters = JSON.parse(effectiveKey) as Filters
-    const bypass = { noCache: noCache() }
+    const bypass = { noCache: noCache(), signal: stateAbortRef.current?.signal }
     const startedAt = Date.now()
     setIsFetching(true)
 
@@ -260,7 +273,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
         })
       })
       .catch((err) => {
-        if (coreRequestRef.current !== requestId) return
+        if (coreRequestRef.current !== requestId || isAbortError(err)) return
         devError("dashboard summary/facets fetch failed:", err)
         const message = err instanceof Error ? err.message : "Failed to load dashboard data"
         reportError(message)
@@ -285,7 +298,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
       setAppliedKeys((prev) => ({ ...prev, charts: effectiveKey }))
       return
     }
-    fetchDashboardCharts(JSON.parse(effectiveKey) as Filters, { noCache: noCache() })
+    fetchDashboardCharts(JSON.parse(effectiveKey) as Filters, { noCache: noCache(), signal: stateAbortRef.current?.signal })
       .then((res) => {
         if (chartsRequestRef.current !== requestId) return
         lruSet(chartsCache, effectiveKey, res)
@@ -293,7 +306,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
         setAppliedKeys((prev) => ({ ...prev, charts: effectiveKey }))
       })
       .catch((err) => {
-        if (chartsRequestRef.current !== requestId) return
+        if (chartsRequestRef.current !== requestId || isAbortError(err)) return
         devError("dashboard charts fetch failed:", err)
         reportError(err instanceof Error ? err.message : "Failed to load charts")
         setAppliedKeys((prev) => ({ ...prev, charts: effectiveKey }))
@@ -310,7 +323,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
       setAppliedKeys((prev) => ({ ...prev, map: effectiveKey }))
       return
     }
-    fetchCentersMap(JSON.parse(effectiveKey) as Filters, { noCache: noCache() })
+    fetchCentersMap(JSON.parse(effectiveKey) as Filters, { noCache: noCache(), signal: stateAbortRef.current?.signal })
       .then((res) => {
         if (mapRequestRef.current !== requestId) return
         lruSet(mapCache, effectiveKey, res)
@@ -318,7 +331,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
         setAppliedKeys((prev) => ({ ...prev, map: effectiveKey }))
       })
       .catch((err) => {
-        if (mapRequestRef.current !== requestId) return
+        if (mapRequestRef.current !== requestId || isAbortError(err)) return
         devError("centres map fetch failed:", err)
         reportError(err instanceof Error ? err.message : "Failed to load the map")
         setAppliedKeys((prev) => ({ ...prev, map: effectiveKey }))
@@ -340,19 +353,23 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
   }, [views, pages, sorts])
   useEffect(() => {
     if (!enabled || !effectiveKey) return
+    const signal = stateAbortRef.current?.signal
     const timer = setTimeout(() => {
       const wireFilters = JSON.parse(effectiveKey) as Filters
-      const bypass = { noCache: noCache() }
+      const bypass = { noCache: noCache(), signal }
+      const logFailure = (what: string) => (err: unknown) => {
+        if (!isAbortError(err)) devError(`${what} prefetch failed:`, err)
+      }
 
       if (!viewsRef.current.needCharts && !chartsCache.has(effectiveKey)) {
         fetchDashboardCharts(wireFilters, bypass)
           .then((res) => lruSet(chartsCache, effectiveKey, res))
-          .catch((err) => devError("charts prefetch failed:", err))
+          .catch(logFailure("charts"))
       }
       if (!viewsRef.current.needMap && !mapCache.has(effectiveKey)) {
         fetchCentersMap(wireFilters, bypass)
           .then((res) => lruSet(mapCache, effectiveKey, res))
-          .catch((err) => devError("map prefetch failed:", err))
+          .catch(logFailure("map"))
       }
       for (const entity of ["accounts", "centers", "prospects"] as const) {
         if (viewsRef.current.activeEntity === entity) continue
@@ -362,7 +379,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
         if (pageCache.has(cacheKey)) continue
         fetchEntityPage(entity, wireFilters, pagesRef.current[entity], pageSize, sort, bypass)
           .then((res) => lruSet(pageCache, cacheKey, res as EntityPage<Record<string, unknown>>))
-          .catch((err) => devError(`${entity} page prefetch failed:`, err))
+          .catch(logFailure(`${entity} page`))
       }
     }, 400)
     return () => clearTimeout(timer)
@@ -392,21 +409,38 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
   }, [enabled, views.needMap, scaleStates])
 
   // Per-entity paginated rows: only the active section fetches; the others
-  // fetch on first activation (and then hit the cache).
+  // fetch on first activation (and then hit the cache). Each table has its own
+  // controller, so a page, sort or filter change cancels that table's previous
+  // request (#293).
+  const entityAbortRef = useRef<Record<"accounts" | "centers" | "prospects", AbortController | null>>({
+    accounts: null,
+    centers: null,
+    prospects: null,
+  })
+  useEffect(() => {
+    const controllers = entityAbortRef.current
+    return () => {
+      for (const controller of Object.values(controllers)) controller?.abort()
+    }
+  }, [])
   const loadEntityPage = useCallback(
     (entity: "accounts" | "centers" | "prospects", page: number, sort: EntitySort | null) => {
       if (!effectiveKey) return
       const sortKey = sort ? `${sort.column}:${sort.direction}` : ""
       const cacheKey = `${entity}:${effectiveKey}:${page}:${sortKey}`
       const requestId = ++entityRequestRef.current[entity]
+      entityAbortRef.current[entity]?.abort()
+      entityAbortRef.current[entity] = null
       const cached = pageCache.get(cacheKey)
       if (cached) {
         setEntityPages((prev) => ({ ...prev, [entity]: cached }))
         setAppliedKeys((prev) => ({ ...prev, pages: { ...prev.pages, [entity]: cacheKey } }))
         return
       }
+      const controller = new AbortController()
+      entityAbortRef.current[entity] = controller
       const wireFilters = JSON.parse(effectiveKey) as Filters
-      fetchEntityPage(entity, wireFilters, page, pageSize, sort, { noCache: noCache() })
+      fetchEntityPage(entity, wireFilters, page, pageSize, sort, { noCache: noCache(), signal: controller.signal })
         .then((res) => {
           if (entityRequestRef.current[entity] !== requestId) return
           lruSet(pageCache, cacheKey, res as EntityPage<Record<string, unknown>>)
@@ -414,7 +448,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
           setAppliedKeys((prev) => ({ ...prev, pages: { ...prev.pages, [entity]: cacheKey } }))
         })
         .catch((err) => {
-          if (entityRequestRef.current[entity] !== requestId) return
+          if (entityRequestRef.current[entity] !== requestId || isAbortError(err)) return
           devError(`${entity} page fetch failed:`, err)
           reportError(err instanceof Error ? err.message : `Failed to load ${entity}`)
           setAppliedKeys((prev) => ({ ...prev, pages: { ...prev.pages, [entity]: cacheKey } }))

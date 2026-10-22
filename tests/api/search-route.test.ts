@@ -55,6 +55,8 @@ describe("search route", () => {
     rateLimitMocks.enforceRateLimit.mockResolvedValueOnce({ ok: false, response: new Response("{}", { status: 429 }) })
     const res = await get("acme")
     expect(res.status).toBe(429)
+    // Checked before computing: an over-limit caller never reaches the warehouse.
+    expect(warehouseMocks.queryWarehouse).not.toHaveBeenCalled()
   })
 
   it("returns grouped results with titles/subtitles and totals", async () => {

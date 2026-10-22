@@ -31,12 +31,15 @@ export async function GET(request: Request) {
   } catch {
     return json({ error: "Invalid or expired token" }, 401)
   }
-  // Not awaited yet: the RPC runs while the (usually cached) lookup resolves;
-  // the outcome gates the response below.
+  // Started now so the counter round trip overlaps the request parsing below;
+  // awaited before any warehouse work so an over-limit caller never reaches it.
   const limitedPromise = enforceRateLimit({ userId, bucket: "autocomplete" })
 
   const term = (new URL(request.url).searchParams.get("q") ?? "").toLowerCase().trim()
   if (term.length < MIN_QUERY_LENGTH) return json({ suggestions: [] })
+
+  const limited = await limitedPromise
+  if (!limited.ok) return limited.response
 
   try {
     const body = await getOrCompute(
@@ -75,8 +78,6 @@ export async function GET(request: Request) {
       },
       { bypassRead: request.headers.get("x-no-cache") === "1" }
     )
-    const limited = await limitedPromise
-    if (!limited.ok) return limited.response
     return json(body)
   } catch (err) {
     logger.error("autocomplete_failed", { error: err })

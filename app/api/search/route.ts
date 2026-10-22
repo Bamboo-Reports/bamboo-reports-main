@@ -55,8 +55,8 @@ export async function GET(request: Request) {
   } catch {
     return json({ error: "Invalid or expired token" }, 401)
   }
-  // Not awaited yet: the RPC runs while the (usually cached) search resolves;
-  // the outcome gates the response below.
+  // Started now so the counter round trip overlaps the request parsing below;
+  // awaited before any warehouse work so an over-limit caller never reaches it.
   const limitedPromise = enforceRateLimit({ userId, bucket: "search" })
 
   const term = (new URL(request.url).searchParams.get("q") ?? "").toLowerCase().trim()
@@ -64,6 +64,9 @@ export async function GET(request: Request) {
   if (term.length < MIN_QUERY_LENGTH) {
     return json({ accounts: empty, centers: empty, prospects: empty, total: 0 })
   }
+
+  const limited = await limitedPromise
+  if (!limited.ok) return limited.response
 
   try {
     const body = await getOrCompute(
@@ -128,8 +131,6 @@ export async function GET(request: Request) {
       },
       { bypassRead: request.headers.get("x-no-cache") === "1" }
     )
-    const limited = await limitedPromise
-    if (!limited.ok) return limited.response
     return json(body)
   } catch (err) {
     logger.error("search_failed", { error: err })

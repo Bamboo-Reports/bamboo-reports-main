@@ -66,5 +66,7 @@ describe("account match route", () => {
   it("returns the rate limit response when exceeded", async () => {
     rateLimitMocks.enforceRateLimit.mockResolvedValue({ ok: false, response: new Response("slow down", { status: 429 }) })
     expect((await post({ names: ["Infosys"] })).status).toBe(429)
+    // Checked before computing: an over-limit caller never reaches the warehouse.
+    expect(warehouseMocks.queryWarehouse).not.toHaveBeenCalled()
   })
 })

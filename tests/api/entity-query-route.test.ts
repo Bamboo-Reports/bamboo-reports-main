@@ -45,6 +45,8 @@ describe("entity query routes", () => {
     rateLimitMocks.enforceRateLimit.mockResolvedValueOnce({ ok: false, response: new Response("{}", { status: 429 }) })
     const res = await post(accountsQuery, "https://x/api/accounts/query", { filters: {} })
     expect(res.status).toBe(429)
+    // Checked before computing: an over-limit caller never reaches the warehouse.
+    expect(warehouseMocks.queryWarehouse).not.toHaveBeenCalled()
   })
 
   it("returns rows + total + page + pageSize", async () => {

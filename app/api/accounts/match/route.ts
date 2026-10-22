@@ -70,6 +70,8 @@ export async function POST(request: Request) {
   } catch {
     return json({ error: "Invalid or expired token" }, 401)
   }
+  // Started now so the counter round trip overlaps the request parsing below;
+  // awaited before any warehouse work so an over-limit caller never reaches it.
   const limitedPromise = enforceRateLimit({ userId, bucket: "accounts:match", maxPerWindow: 20 })
 
   let body: unknown
@@ -81,11 +83,12 @@ export async function POST(request: Request) {
   const parsed = parseMatchRequestNames(body)
   if ("error" in parsed) return json({ error: parsed.error }, 400)
 
+  const limited = await limitedPromise
+  if (!limited.ok) return limited.response
+
   try {
     const index = await loadIndex(request.headers.get("x-no-cache") === "1")
     const results = matchAccountList(parsed.names, index)
-    const limited = await limitedPromise
-    if (!limited.ok) return limited.response
     captureServerEvent({
       distinctId: userId,
       event: SERVER_ANALYTICS_EVENTS.ACCOUNT_LIST_MATCH_PROCESSED,

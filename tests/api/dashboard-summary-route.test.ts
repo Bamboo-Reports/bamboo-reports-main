@@ -55,8 +55,8 @@ describe("dashboard summary route", () => {
     })
     const res = await post({ filters: {} })
     expect(res.status).toBe(429)
-    // The rate-limit RPC now runs concurrently with the compute, so warehouse
-    // queries may fire; the 429 still gates the response.
+    // Checked before computing: an over-limit caller never reaches the warehouse.
+    expect(warehouseMocks.queryWarehouse).not.toHaveBeenCalled()
   })
 
   it("returns filtered + full metrics for an authenticated request", async () => {
