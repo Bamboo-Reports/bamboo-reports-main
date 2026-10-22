@@ -69,8 +69,9 @@ to authenticated
 using (auth.uid() = user_id);
 
 -- 3. Insert Policy: Users can create their own profile
--- (Usually triggered by a signup flow or a trigger on auth.users).
--- New self-service profiles must start as viewers.
+-- Accounts are created by an admin (there is no signup page); the sign-in
+-- page inserts the profile on a user's first sign-in if it is missing.
+-- Profiles created from the browser must start as viewers.
 create policy "Profiles are insertable by owner"
 on public.profiles
 for insert

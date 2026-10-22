@@ -3,6 +3,12 @@ const nextConfig = {
   compress: true,
   // PostHog reverse proxy (see lib/analytics/client.ts). PostHog API paths use trailing slashes.
   skipTrailingSlashRedirect: true,
+  async redirects() {
+    return [
+      // Accounts are created by an admin; the self-service signup page is gone (#304).
+      { source: "/signup", destination: "/signin", permanent: true },
+    ]
+  },
   async rewrites() {
     return [
       { source: "/ingest/static/:path*", destination: "https://us-assets.i.posthog.com/static/:path*" },

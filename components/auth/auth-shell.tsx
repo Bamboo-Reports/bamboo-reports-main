@@ -14,8 +14,8 @@ interface AuthShellProps {
 }
 
 /**
- * Shared frame for the sign-in, sign-up and password pages: the brand page
- * frame with a plain card for the form and a footer link under it.
+ * Shared frame for the sign-in and password pages: the brand page frame with
+ * a plain card for the form and a footer line under it.
  */
 export function AuthShell({ title, description, children, footer, formCardClassName }: AuthShellProps) {
   return (
