@@ -57,6 +57,8 @@ interface SummaryCardsProps {
   totalHeadcount: number
   activeView: "accounts" | "centers" | "prospects"
   onSelect: (view: "accounts" | "centers" | "prospects") => void
+  /** Opens the Centres view filtered to upcoming centres. */
+  onSelectUpcoming?: () => void
   /** A newer filter state is loading; the shown numbers are the previous state's. */
   updating?: boolean
 }
@@ -78,6 +80,7 @@ export const SummaryCards = React.memo(function SummaryCards({
   totalHeadcount,
   activeView,
   onSelect,
+  onSelectUpcoming,
   updating = false,
 }: SummaryCardsProps): React.JSX.Element {
   const accountsEnabled = isSectionEnabled("accounts")
@@ -109,6 +112,11 @@ export const SummaryCards = React.memo(function SummaryCards({
       sidebar?.removeEventListener('transitionend', check)
     }
   }, [])
+  const activateCard = (id: string) => {
+    if (id === 'upcoming-centers') onSelectUpcoming?.()
+    else onSelect(id as "accounts" | "centers" | "prospects")
+  }
+
   const cards = [
     {
       id: 'accounts' as const,
@@ -139,11 +147,9 @@ export const SummaryCards = React.memo(function SummaryCards({
       total: totalUpcomingCentersCount,
       icon: RiTimeLine,
       iconClassName: 'text-primary',
-      interactive: false,
+      interactive: centersEnabled && Boolean(onSelectUpcoming),
       procured: centersEnabled,
-      message: centersEnabled
-        ? "Upcoming Centres is an overview stat. Only Accounts, Centres, and Prospects open as views."
-        : getSectionUnavailableMessage("centers"),
+      message: centersEnabled ? null : getSectionUnavailableMessage("centers"),
     },
     {
       id: 'prospects' as const,
@@ -183,10 +189,10 @@ export const SummaryCards = React.memo(function SummaryCards({
             key={card.title}
             role={card.interactive ? "button" : undefined}
             tabIndex={card.interactive ? 0 : undefined}
-            aria-pressed={card.interactive ? activeView === card.id : undefined}
+            aria-pressed={card.interactive && card.id !== 'upcoming-centers' ? activeView === card.id : undefined}
             onClick={(() => {
               if (card.interactive) {
-                return () => onSelect(card.id as "accounts" | "centers" | "prospects")
+                return () => activateCard(card.id)
               }
               const message = card.message
               if (!message) return undefined
@@ -195,7 +201,7 @@ export const SummaryCards = React.memo(function SummaryCards({
             onKeyDown={card.interactive ? (event) => {
               if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault()
-                onSelect(card.id as "accounts" | "centers" | "prospects")
+                activateCard(card.id)
               }
             } : undefined}
             className={cn(

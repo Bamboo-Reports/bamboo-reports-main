@@ -54,6 +54,7 @@ import {
   getSectionUnavailableMessage,
   isSectionEnabled,
 } from "@/lib/config/dashboard-access"
+import { isFilterEnabled } from "@/lib/config/filters"
 import { useProductTour } from "@/hooks/use-product-tour"
 import { formatRevenueInMillions } from "@/lib/utils/helpers"
 import type { SearchResult } from "@/lib/search"
@@ -977,6 +978,22 @@ function DashboardContent(): React.JSX.Element | null {
     setActiveSection(section)
   }, [])
 
+  // The Upcoming Centres card opens the Centres view filtered to upcoming centres (#349).
+  const handleUpcomingSelect = useCallback(() => {
+    if (!isSectionEnabled("centers")) {
+      toast.info(getSectionUnavailableMessage("centers"))
+      return
+    }
+    setPendingFilters((prev) => ({
+      ...prev,
+      centerStatusValues: [{ value: "Upcoming", mode: "include" }],
+    }))
+    setActiveSection("centers")
+    toast.info("Showing upcoming centres. Clear the Status filter to see all centres.", {
+      id: "summary-upcoming-filter",
+    })
+  }, [setPendingFilters])
+
   // Records opened from global search or history mirror the tab-level
   // record_opened / record_closed pair so dwell time stays comparable
   const searchOpenedRecordRef = useRef<{ entity: string; recordId: string; openedAt: number } | null>(null)
@@ -1414,6 +1431,7 @@ function DashboardContent(): React.JSX.Element | null {
                   {...summaryCounts}
                   activeView={activeSection}
                   onSelect={handleSectionSelect}
+                  onSelectUpcoming={isFilterEnabled("centerStatusValues") ? handleUpcomingSelect : undefined}
                   updating={serverData.pending.summary}
                 />
 
