@@ -57,7 +57,6 @@ interface CentersTabProps {
   currentPage: number
   setCurrentPage: (page: number | ((prev: number) => number)) => void
   itemsPerPage: number
-  onRecordOpened?: (item: { type: "center" | "account"; id: string; title: string; subtitle: string }) => void
   onDownloadSelection?: (scope: { dataset: "centers"; centerKeys: string[] }) => void
   server?: TabServerProps | null
   mapData?: { cities: CityAggregate[]; states: StateAggregate[]; scaleStates?: StateAggregate[] | null } | null
@@ -83,7 +82,6 @@ export function CentersTab({
   currentPage,
   setCurrentPage,
   itemsPerPage,
-  onRecordOpened,
   onDownloadSelection,
   server,
   mapData,
@@ -141,12 +139,6 @@ export function CentersTab({
       openedFrom,
       center,
     }
-    onRecordOpened?.({
-      type: "center",
-      id: center.cn_unique_key ?? "",
-      title: center.center_name ?? "Unknown Centre",
-      subtitle: formatCenterLocation(center.center_city, center.center_state),
-    })
     captureEvent(ANALYTICS_EVENTS.RECORD_OPENED, {
       entity: "center",
       record_id: center.cn_unique_key,
@@ -156,18 +148,12 @@ export function CentersTab({
       opened_from: openedFrom,
       has_center_key: Boolean(center.cn_unique_key),
     })
-  }, [isDialogOpen, onRecordOpened, centersView, dataLayout])
+  }, [isDialogOpen, centersView, dataLayout])
 
   const openAccount = (account: Account) => {
     setIsDialogOpen(false)
     setSelectedAccount(account)
     setIsAccountDialogOpen(true)
-    onRecordOpened?.({
-      type: "account",
-      id: account.account_global_legal_name,
-      title: account.account_global_legal_name,
-      subtitle: [account.account_hq_city, account.account_hq_country].filter(Boolean).join(", "),
-    })
     captureEvent(ANALYTICS_EVENTS.RECORD_OPENED, {
       entity: "account",
       record_id: account.account_global_legal_name,

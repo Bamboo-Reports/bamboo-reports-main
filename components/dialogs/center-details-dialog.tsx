@@ -19,6 +19,8 @@ import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { Skeleton } from "@/components/ui/skeleton"
 import { RelatedLoadError } from "./related-load-error"
+import { useRecordHistory } from "@/contexts/record-history-context"
+import { centerHistoryItem } from "@/lib/dashboard/record-history"
 
 interface CenterDetailsDialogProps {
   center: Center | null
@@ -90,6 +92,11 @@ export function CenterDetailsDialog({
 }: CenterDetailsDialogProps) {
   const detailKey = fetchDetail && open ? (center?.cn_unique_key ?? "") : ""
   const { data: detail, loading: detailLoading, error: detailError, retry: retryDetail } = useCenterDetail(detailKey)
+
+  const recordOpened = useRecordHistory()
+  React.useEffect(() => {
+    if (open && center) recordOpened(centerHistoryItem(center))
+  }, [open, center, recordOpened])
 
   if (!center) return null
 

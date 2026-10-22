@@ -25,6 +25,8 @@ import { ProspectEngagementTimeline } from "@/components/dialogs/prospect-engage
 import { isEngagedProspect } from "@/lib/dashboard/engagements"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
+import { useRecordHistory } from "@/contexts/record-history-context"
+import { prospectHistoryItem } from "@/lib/dashboard/record-history"
 
 interface ProspectDetailsDialogProps {
   prospect: Prospect | null
@@ -137,6 +139,12 @@ export function ProspectDetailsDialog({
   }, [prospect])
 
   const p = current
+
+  // Records the shown prospect, including contacts switched to from More Contacts (#310).
+  const recordOpened = useRecordHistory()
+  useEffect(() => {
+    if (open && current) recordOpened(prospectHistoryItem(current))
+  }, [open, current, recordOpened])
 
   const relatedAccount = fetchRelated && open ? (p?.account_global_legal_name ?? "") : ""
   const { data: related, loading: relatedFetching, error: relatedError, retry: retryRelated } = useAccountRelated(relatedAccount)

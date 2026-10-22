@@ -35,6 +35,7 @@ import {
 } from "@/lib/dashboard/api-client"
 import { useGlobalSearch } from "@/hooks/use-global-search"
 import { useRecordOpener } from "@/hooks/use-record-opener"
+import { RecordHistoryProvider } from "@/contexts/record-history-context"
 import { useRecentItems } from "@/hooks/use-recent-items"
 import { buildSummaryReport } from "@/lib/reports/summary-report"
 import {
@@ -1023,12 +1024,6 @@ function DashboardContent(): React.JSX.Element | null {
   const handleSearchResultSelect = useCallback(
     (result: SearchResult) => {
       handleSearchClose()
-      addRecentItem({
-        type: result.type,
-        id: result.id,
-        title: result.title,
-        subtitle: result.subtitle,
-      })
       if (searchQuery.trim()) {
         addRecentSearch(searchQuery.trim())
       }
@@ -1062,7 +1057,7 @@ function DashboardContent(): React.JSX.Element | null {
         setSearchProspectDialogOpen(true)
       }
     },
-    [handleSearchClose, addRecentItem, addRecentSearch, searchQuery, trackSearchRecordOpened]
+    [handleSearchClose, addRecentSearch, searchQuery, trackSearchRecordOpened]
   )
 
   const openRecord = useRecordOpener()
@@ -1279,6 +1274,7 @@ function DashboardContent(): React.JSX.Element | null {
   }
 
   return (
+    <RecordHistoryProvider recordOpened={addRecentItem}>
     <div className="h-screen bg-[radial-gradient(circle_at_top_right,_hsl(var(--primary)/0.14),_transparent_36%),radial-gradient(circle_at_0%_45%,_hsl(var(--chart-3)/0.10),_transparent_34%),hsl(var(--background))] flex flex-col overflow-hidden">
       <TopProgressBar
         active={
@@ -1440,7 +1436,6 @@ function DashboardContent(): React.JSX.Element | null {
                       currentPage={accountsPage}
                       setCurrentPage={setAccountsPage}
                       itemsPerPage={itemsPerPage}
-                      onRecordOpened={addRecentItem}
                       onDownloadSelection={canExport ? handleDownloadSelection : undefined}
                     />
                   )}
@@ -1466,7 +1461,6 @@ function DashboardContent(): React.JSX.Element | null {
                       currentPage={centersPage}
                       setCurrentPage={setCentersPage}
                       itemsPerPage={itemsPerPage}
-                      onRecordOpened={addRecentItem}
                       onDownloadSelection={canExport ? handleDownloadSelection : undefined}
                     />
                   )}
@@ -1489,7 +1483,6 @@ function DashboardContent(): React.JSX.Element | null {
                       currentPage={prospectsPage}
                       setCurrentPage={setProspectsPage}
                       itemsPerPage={itemsPerPage}
-                      onRecordOpened={addRecentItem}
                       onDownloadSelection={canExport ? handleDownloadSelection : undefined}
                     />
                   )}
@@ -1500,6 +1493,7 @@ function DashboardContent(): React.JSX.Element | null {
         </main>
       )}
     </div>
+    </RecordHistoryProvider>
   )
 }
 
