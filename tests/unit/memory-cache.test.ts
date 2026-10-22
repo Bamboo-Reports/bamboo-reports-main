@@ -38,6 +38,28 @@ describe("in-memory dashboard cache", () => {
     expect(fn).toHaveBeenCalledTimes(1)
   })
 
+  it("keeps a forced refresh's in-flight entry when an older overlapping request settles (#292)", async () => {
+    let failOld!: (err: Error) => void
+    let finishRefresh!: (value: string) => void
+    const old = getOrCompute("k", 1000, () => new Promise<string>((_, reject) => (failOld = reject)))
+    const refresh = getOrCompute("k", 1000, () => new Promise<string>((resolve) => (finishRefresh = resolve)), {
+      bypassRead: true,
+    })
+
+    // The older request fails (so nothing is cached) while the refresh is still running.
+    failOld(new Error("boom"))
+    await expect(old).rejects.toThrow("boom")
+
+    // A later identical request must share the refresh, not start its own computation.
+    const later = vi.fn(async () => "value-later")
+    const shared = getOrCompute("k", 1000, later)
+    finishRefresh("value-refresh")
+
+    expect(await refresh).toBe("value-refresh")
+    expect(await shared).toBe("value-refresh")
+    expect(later).not.toHaveBeenCalled()
+  })
+
   it("bypassRead recomputes but repopulates the cache", async () => {
     let n = 0
     const fn = vi.fn(async () => `value-${++n}`)
