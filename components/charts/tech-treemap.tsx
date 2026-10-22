@@ -117,6 +117,8 @@ export const TechTreemap = memo(({
     return nodes
   }, [tech])
 
+  const toolCount = React.useMemo(() => data.filter((node) => node.parent).length, [data])
+
   const totalLeafValue = React.useMemo(
     () => data.reduce((sum, node) => sum + (typeof node.value === "number" ? node.value : 0), 0),
     [data]
@@ -153,7 +155,10 @@ export const TechTreemap = memo(({
                 fontFamily: "'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
               },
             },
-            title: { text: showTitle ? title : undefined, align: "left" },
+            // Hidden when the card shows its own heading, but still names the chart region.
+            title: showTitle
+              ? { text: title, align: "left" }
+              : { text: title, floating: true, style: { display: "none" } },
             credits: { enabled: false },
             navigation: {
               breadcrumbs: {
@@ -163,7 +168,9 @@ export const TechTreemap = memo(({
             accessibility: {
               enabled: true,
               landmarkVerbosity: "one",
-              description: `${title}. Treemap showing ${data.length} technology nodes grouped by category.`,
+              // Replaces the generated "Chart with N data points", which counted category nodes.
+              typeDescription: "Treemap",
+              description: `${title}. ${toolCount} ${toolCount === 1 ? "tool" : "tools"} in ${data.length - toolCount} ${data.length - toolCount === 1 ? "category" : "categories"}.`,
               point: {
                 valueDescriptionFormat: "{point.name}, {point.value}.",
               },
