@@ -294,7 +294,7 @@ export function ProspectDetailsDialog({
                           captureEvent(ANALYTICS_EVENTS.RELATED_RECORD_OPENED, { parent_entity: "prospect", entity: "account" })
                           onAccountOpen(p.account_global_legal_name)
                         }}
-                        className="ml-1.5 inline-flex h-5 w-5 translate-y-0.5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        className="ml-1 -my-1 inline-flex h-6 w-6 translate-y-0.5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         aria-label={`Open account details for ${p.account_global_legal_name}`}
                         title={`Open account details for ${p.account_global_legal_name}`}
                       >
@@ -304,12 +304,12 @@ export function ProspectDetailsDialog({
                   </p>
                 ) : null}
               </div>
-              <div className="flex items-center gap-2 shrink-0 mt-1">
+              <div className="flex items-center gap-0.5 shrink-0">
                 {p.prospect_email ? (
                   <a
                     href={`mailto:${p.prospect_email}`}
                     onClick={() => captureEvent(ANALYTICS_EVENTS.CONTACT_EMAIL_CLICKED, { entity: "prospect" })}
-                    className="text-muted-foreground hover:text-primary transition-colors"
+                    className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring hover:text-primary"
                     title={p.prospect_email}
                     aria-label="Send email"
                   >
@@ -321,7 +321,7 @@ export function ProspectDetailsDialog({
                     href={p.prospect_linkedin_url.startsWith("http") ? p.prospect_linkedin_url : `https://${p.prospect_linkedin_url}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-[#0A66C2] transition-colors"
+                    className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring hover:text-[#0A66C2]"
                     title="View LinkedIn"
                     onClick={() =>
                       captureEvent(ANALYTICS_EVENTS.OUTBOUND_LINK_CLICKED, { entity: "prospect", link_type: "linkedin" })
@@ -376,7 +376,7 @@ export function ProspectDetailsDialog({
                             setCopied(true)
                             setTimeout(() => setCopied(false), 1500)
                           }}
-                          className="p-1 rounded text-muted-foreground hover:bg-background/60 hover:text-foreground transition-colors shrink-0"
+                          className="p-1.5 rounded text-muted-foreground hover:bg-background/60 hover:text-foreground transition-colors shrink-0"
                           title={copied ? "Copied!" : "Copy email"}
                           aria-label="Copy email"
                         >

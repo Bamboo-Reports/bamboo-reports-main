@@ -180,7 +180,7 @@ export function CenterDetailsDialog({
             <div className="flex-1">
               <div className="flex flex-wrap items-center gap-3">
                 <span>{center.center_name}</span>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-0.5">
                   {center.center_website ? (
                     <a
                       href={
@@ -190,8 +190,9 @@ export function CenterDetailsDialog({
                       }
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-muted-foreground transition-colors hover:text-primary"
+                      className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring hover:text-primary"
                       title={center.center_website}
+                      aria-label="Open centre website"
                       onClick={() =>
                         captureEvent(ANALYTICS_EVENTS.OUTBOUND_LINK_CLICKED, { entity: "center", link_type: "website" })
                       }
@@ -208,8 +209,9 @@ export function CenterDetailsDialog({
                       }
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-muted-foreground transition-colors hover:text-[#0A66C2]"
+                      className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring hover:text-[#0A66C2]"
                       title="LinkedIn"
+                      aria-label="Open LinkedIn page"
                       onClick={() =>
                         captureEvent(ANALYTICS_EVENTS.OUTBOUND_LINK_CLICKED, { entity: "center", link_type: "linkedin" })
                       }
@@ -233,7 +235,7 @@ export function CenterDetailsDialog({
                       captureEvent(ANALYTICS_EVENTS.RELATED_RECORD_OPENED, { parent_entity: "center", entity: "account" })
                       onAccountOpen(center.account_global_legal_name)
                     }}
-                    className="ml-1.5 inline-flex h-5 w-5 translate-y-0.5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    className="ml-1 -my-1 inline-flex h-6 w-6 translate-y-0.5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     aria-label={`Open account details for ${center.account_global_legal_name}`}
                     title={`Open account details for ${center.account_global_legal_name}`}
                   >

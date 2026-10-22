@@ -29,7 +29,7 @@ export function DialogBreadcrumb({ items }: DialogBreadcrumbProps) {
               <button
                 type="button"
                 onClick={item.onClick}
-                className="hover:text-foreground transition-colors truncate max-w-[220px]"
+                className="-my-1 rounded-sm py-1 hover:text-foreground transition-colors truncate max-w-[220px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 title={item.label}
               >
                 {item.label}
