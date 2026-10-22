@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from "react"
 import { Marker } from "@vis.gl/react-maplibre"
+import { RiCloseLine } from "@remixicon/react"
+import { Button } from "@/components/ui/button"
 import { devError } from "@/lib/utils/dev-log"
 
 interface SearchResult {
@@ -83,27 +85,31 @@ export function DebugLocationSearch({ mapRef }: DebugLocationSearchProps) {
             className="w-full bg-transparent px-1 py-1 text-sm outline-none placeholder:text-muted-foreground"
           />
           {pin && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon-xs"
               onClick={() => {
                 setPin(null)
                 setQuery("")
                 setResults([])
               }}
-              className="px-1 text-muted-foreground hover:text-foreground"
+              className="shrink-0 text-muted-foreground"
               aria-label="Clear pin"
             >
-              ✕
-            </button>
+              <RiCloseLine />
+            </Button>
           )}
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="xs"
             onClick={handleSearch}
-            disabled={searching}
-            className="rounded-md px-2 py-1 text-sm font-medium text-primary hover:bg-accent disabled:opacity-50"
+            loading={searching}
+            className="shrink-0 text-primary"
           >
-            {searching ? "..." : "Search"}
-          </button>
+            Search
+          </Button>
         </div>
         {results.length > 0 && (
           <ul className="mt-1 max-h-64 overflow-auto rounded-lg border border-border/80 bg-popover/95 shadow-lg backdrop-blur-md">

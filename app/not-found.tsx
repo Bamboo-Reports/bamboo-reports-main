@@ -17,7 +17,7 @@ export default function NotFound() {
             where you left it.
           </p>
 
-          <Button asChild className="mt-6 h-10 w-full sm:w-auto">
+          <Button asChild size="lg" className="mt-6 w-full sm:w-auto">
             <Link href="/">Back to the dashboard</Link>
           </Button>
         </div>

@@ -502,9 +502,8 @@ export function AccountsTab({
                       <Button
                         type="button"
                         variant="outline"
-                        size="sm"
+                        size="icon-sm"
                         onClick={() => handleSort("name")}
-                        className="h-8 w-8 px-0"
                         aria-label="Sort by account name"
                         aria-pressed={sort.key === "name" && sort.direction !== null}
                       >

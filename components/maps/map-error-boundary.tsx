@@ -1,6 +1,7 @@
 "use client"
 
 import React from "react"
+import { Button } from "@/components/ui/button"
 import { devError } from "@/lib/utils/dev-log"
 import { captureError } from "@/lib/analytics/client"
 
@@ -46,13 +47,13 @@ export class MapErrorBoundary extends React.Component<Props, State> {
                 {this.state.error?.stack || "No stack trace available"}
               </pre>
             </details>
-            <button
+            <Button
               type="button"
               onClick={() => this.setState({ hasError: false, error: null })}
-              className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded text-sm hover:bg-primary/90"
+              className="mt-4"
             >
-              Try Again
-            </button>
+              Try again
+            </Button>
           </div>
         </div>
       )

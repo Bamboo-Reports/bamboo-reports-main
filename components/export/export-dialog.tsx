@@ -413,7 +413,6 @@ export function ExportDialog({
       </div>
       <Button
         size="sm"
-        className="gap-2"
         onClick={async () => {
           captureEvent(ANALYTICS_EVENTS.EXPORT_DOWNLOAD_CLICKED, {
             export_id: exportResult.id,
@@ -472,12 +471,12 @@ export function ExportDialog({
 
           <DialogFooter className="gap-2 sm:gap-0">
             {showResult ? (
-              <Button variant="ghost" onClick={() => onOpenChange(false)}>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Close
               </Button>
             ) : (
               <>
-                <Button variant="ghost" onClick={() => handleDialogOpenChange(false)} disabled={fillingBar}>
+                <Button variant="outline" onClick={() => handleDialogOpenChange(false)} disabled={fillingBar}>
                   Cancel
                 </Button>
                 <Button onClick={handleExport} disabled={fillingBar || totalSelected === 0}>
@@ -512,8 +511,7 @@ export function ExportDialog({
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
-                size="sm"
-                className="h-7 px-3 text-xs"
+                size="xs"
                 onClick={() => handleSelectAll(true)}
                 disabled={isExporting}
               >
@@ -521,8 +519,7 @@ export function ExportDialog({
               </Button>
               <Button
                 variant="ghost"
-                size="sm"
-                className="h-7 px-3 text-xs"
+                size="xs"
                 onClick={() => handleSelectAll(false)}
                 disabled={isExporting}
               >
@@ -618,7 +615,7 @@ export function ExportDialog({
         <DialogFooter className="gap-2 sm:gap-0">
           {showResult ? (
             <>
-              <Button variant="ghost" onClick={() => onOpenChange(false)}>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Close
               </Button>
               <Button
@@ -636,7 +633,7 @@ export function ExportDialog({
           ) : (
             <>
               <Button
-                variant="ghost"
+                variant="outline"
                 onClick={() => handleDialogOpenChange(false)}
                 disabled={fillingBar}
               >

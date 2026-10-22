@@ -53,8 +53,8 @@ export function SelectionActionBar({ entity, show, count, onClear, onExport }: S
       >
         <Button
           variant="ghost"
-          size="icon"
-          className="h-8 w-8 rounded-full"
+          size="icon-sm"
+          className="rounded-full"
           onClick={() => {
             captureEvent(ANALYTICS_EVENTS.ROW_SELECTION_CLEARED, { entity, selected_count: count })
             onClear()
@@ -64,7 +64,7 @@ export function SelectionActionBar({ entity, show, count, onClear, onExport }: S
           <RiCloseLine className="h-4 w-4" />
         </Button>
         <span className="text-sm font-medium">{displayCount} selected</span>
-        <Button size="sm" className="h-8 gap-2 rounded-full px-4 text-xs" onClick={() => {
+        <Button size="sm" className="rounded-full px-4" onClick={() => {
             captureEvent(ANALYTICS_EVENTS.SELECTION_EXPORT_CLICKED, { entity, selected_count: count })
             onExport()
           }}>

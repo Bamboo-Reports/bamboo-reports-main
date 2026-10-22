@@ -39,7 +39,6 @@ export function PaginationControls({
             variant="outline"
             size="sm"
             onClick={onExport}
-            className="flex items-center gap-2 h-8"
           >
             <RiDownloadLine className="h-4 w-4" />
             {exportLabel}
@@ -53,7 +52,6 @@ export function PaginationControls({
             size="sm"
             onClick={() => onPageChange((prev) => Math.max(prev - 1, 1))}
             disabled={currentPage === 1}
-            className="h-8"
           >
             Previous
           </Button>
@@ -67,7 +65,6 @@ export function PaginationControls({
               onPageChange((prev) => Math.min(prev + 1, totalPages))
             }
             disabled={currentPage === totalPages}
-            className="h-8"
           >
             Next
           </Button>

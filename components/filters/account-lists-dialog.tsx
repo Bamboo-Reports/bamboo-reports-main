@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react"
 import { RiArrowDownSLine, RiArrowUpSLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiGroupLine, RiListCheck3, RiPencilLine, RiPlayLine, RiRefreshLine, RiShareLine, RiUploadLine } from "@remixicon/react"
 import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
@@ -166,10 +166,10 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
                               autoFocus
                               aria-label="List name"
                             />
-                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={commitRename} aria-label="Save name" disabled={!renameValue.trim() || loading}>
+                            <Button size="icon-sm" variant="ghost" onClick={commitRename} aria-label="Save name" disabled={!renameValue.trim() || loading}>
                               <RiCheckLine className="h-4 w-4" />
                             </Button>
-                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setRenamingId(null)} aria-label="Cancel rename">
+                            <Button size="icon-sm" variant="ghost" onClick={() => setRenamingId(null)} aria-label="Cancel rename">
                               <RiCloseLine className="h-4 w-4" />
                             </Button>
                           </div>
@@ -187,27 +187,27 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
                         </p>
                       </div>
                       <div className="flex shrink-0 items-center gap-0.5">
-                        <Button size="sm" variant="outline" className="h-8" onClick={() => handleApply(list)} title="Apply this list to the dashboard">
+                        <Button size="sm" variant="outline" onClick={() => handleApply(list)} title="Apply this list to the dashboard">
                           <RiPlayLine className="h-3.5 w-3.5" />
                           Apply
                         </Button>
                         {own && (
                           <>
-                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openShare(list)} aria-label={`Share ${list.name}`} title="Share">
+                            <Button size="icon-sm" variant="ghost" onClick={() => openShare(list)} aria-label={`Share ${list.name}`} title="Share">
                               <RiShareLine className="h-3.5 w-3.5" />
                             </Button>
-                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => startRename(list)} aria-label={`Rename ${list.name}`} title="Rename">
+                            <Button size="icon-sm" variant="ghost" onClick={() => startRename(list)} aria-label={`Rename ${list.name}`} title="Rename">
                               <RiPencilLine className="h-3.5 w-3.5" />
                             </Button>
-                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openUpload(list)} aria-label={`Update ${list.name} from a file`} title="Update from a new file">
+                            <Button size="icon-sm" variant="ghost" onClick={() => openUpload(list)} aria-label={`Update ${list.name} from a file`} title="Update from a new file">
                               <RiRefreshLine className="h-3.5 w-3.5" />
                             </Button>
-                            <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setListToDelete(list)} aria-label={`Delete ${list.name}`} title="Delete">
+                            <Button size="icon-sm" variant="ghost-destructive" onClick={() => setListToDelete(list)} aria-label={`Delete ${list.name}`} title="Delete">
                               <RiDeleteBinLine className="h-3.5 w-3.5" />
                             </Button>
                           </>
                         )}
-                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setExpandedId(expanded ? null : list.id)} aria-label={expanded ? "Hide accounts" : "Show accounts"} aria-expanded={expanded}>
+                        <Button size="icon-sm" variant="ghost" onClick={() => setExpandedId(expanded ? null : list.id)} aria-label={expanded ? "Hide accounts" : "Show accounts"} aria-expanded={expanded}>
                           {expanded ? <RiArrowUpSLine className="h-4 w-4" /> : <RiArrowDownSLine className="h-4 w-4" />}
                         </Button>
                       </div>
@@ -309,7 +309,7 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
                     }
                   }}
                 />
-                <Button onClick={handleShare} disabled={!shareEmail.trim() || sharing} size="sm" className="shrink-0">
+                <Button onClick={handleShare} disabled={!shareEmail.trim() || sharing} size="lg" className="shrink-0">
                   {sharing ? "Sharing..." : "Share"}
                 </Button>
               </div>
@@ -325,9 +325,9 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
                       <span className="truncate">{share.shared_with_email}</span>
                       <Button
                         type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        variant="ghost-destructive"
+                        size="icon-xs"
+                        className="shrink-0"
                         onClick={() => handleUnshare(share)}
                         aria-label={`Stop sharing with ${share.shared_with_email}`}
                       >
@@ -354,7 +354,7 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction onClick={confirmDelete} className={buttonVariants({ variant: "destructive" })}>
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

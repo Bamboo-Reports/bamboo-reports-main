@@ -150,19 +150,8 @@ export default function ResetPasswordPage() {
               <AlertDescription>{submitError}</AlertDescription>
             </Alert>
           ) : null}
-          <Button
-            className="h-10 w-full"
-            type="submit"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <>
-                <RiLoader4Line className="mr-2 h-4 w-4 animate-spin" />
-                Updating password
-              </>
-            ) : (
-              "Update password"
-            )}
+          <Button size="lg" className="w-full" type="submit" loading={isSubmitting}>
+            {isSubmitting ? "Updating password" : "Update password"}
           </Button>
         </form>
       )}

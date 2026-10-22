@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect, useMemo, memo } from "react"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -278,8 +278,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
           <DropdownMenuTrigger asChild>
             <Button
               variant="outline"
-              size="sm"
-              className="flex-1 justify-between h-9"
+              className="flex-1 justify-between"
             >
               <div className="flex items-center gap-2 truncate">
                 <RiFolderOpenLine className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -312,8 +311,8 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
                   <Button
                     type="button"
                     variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 mr-2 shrink-0 text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors duration-150"
+                    size="icon-xs"
+                    className="mr-2 shrink-0 text-muted-foreground"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleOpenShareDialog(filter)
@@ -357,10 +356,10 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="w-full justify-start text-xs h-8 font-normal text-muted-foreground hover:text-foreground"
+                    className="w-full justify-start font-normal text-muted-foreground"
                     onClick={() => setManageDialogOpen(true)}
                   >
-                    <RiSettings4Line className="h-3.5 w-3.5 mr-2" />
+                    <RiSettings4Line className="h-3.5 w-3.5" />
                     {myFilters.length > 5 || sharedWithMeFilters.length > 5
                       ? `Manage all filters (${myFilters.length + sharedWithMeFilters.length})...`
                       : "Manage all filters..."}
@@ -378,7 +377,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
               variant="outline"
               size="icon"
               disabled={totalActiveFilters === 0}
-              className="h-9 w-9 rounded-full shrink-0"
+              className="shrink-0"
               title="Save current filters"
               aria-label="Save current filters"
             >
@@ -405,7 +404,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
               </div>
             </div>
             <DialogFooter>
-              <Button variant="ghost" onClick={() => setSaveDialogOpen(false)}>
+              <Button variant="outline" onClick={() => setSaveDialogOpen(false)}>
                 Cancel
               </Button>
               <Button onClick={handleSaveFilter} disabled={!filterName.trim() || loading}>
@@ -419,7 +418,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
           type="button"
           variant="outline"
           size="icon"
-          className="h-9 w-9 rounded-full shrink-0"
+          className="shrink-0"
           title="Account lists: upload a client account list and apply it as a filter"
           aria-label="Account lists"
           onClick={() => {
@@ -441,7 +440,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
               variant="outline"
               size="sm"
               onClick={onReset}
-              className="w-full h-8 text-xs font-medium"
+              className="w-full"
             >
               Reset
             </Button>
@@ -451,7 +450,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
               variant="default"
               size="sm"
               onClick={handleExportAction}
-              className="w-full h-8 text-xs font-medium"
+              className="w-full"
               aria-label={canExport ? "Export data" : "Export data (admin only)"}
               title={canExport ? "Export data" : "Only admins can export data"}
               data-tour="export-button"
@@ -468,7 +467,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
           size="sm"
           onClick={onGenerateReport}
           disabled={isGeneratingReport}
-          className="w-full h-8 text-xs font-medium"
+          className="w-full"
           aria-label="Download summary report as PDF"
           title="Download a PDF with the current counts and applied filters"
           data-tour="summary-report-button"
@@ -498,8 +497,8 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
             <Button
               type="button"
               variant="ghost"
-              size="icon"
-              className="h-7 w-7 text-amber-800 hover:bg-amber-500/10 hover:text-amber-900 dark:text-amber-200 dark:hover:bg-amber-400/20 dark:hover:text-amber-50"
+              size="icon-xs"
+              className="text-amber-800 hover:bg-amber-500/10 hover:text-amber-900 dark:text-amber-200 dark:hover:bg-amber-400/20 dark:hover:text-amber-50"
               onClick={handleDismissExportAccessError}
               aria-label="Dismiss export access warning"
             >
@@ -580,7 +579,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
             <AlertDialogCancel onClick={() => setFilterToDelete(null)}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDeleteFilter}
-              className="bg-destructive hover:bg-destructive/90"
+              className={buttonVariants({ variant: "destructive" })}
               disabled={loading}
             >
               {loading ? "Deleting..." : "Delete"}
@@ -610,7 +609,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setEditingFilter(null)}>
+            <Button variant="outline" onClick={() => setEditingFilter(null)}>
               Cancel
             </Button>
             <Button onClick={handleUpdateFilter} disabled={!editName.trim() || loading}>
@@ -670,7 +669,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
                 <Button
                   onClick={handleShareFilter}
                   disabled={!shareEmail.trim() || loading}
-                  size="sm"
+                  size="lg"
                   className="shrink-0"
                 >
                   {loading ? "Sharing..." : "Share"}
@@ -697,9 +696,9 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
                       <span className="truncate">{share.shared_with_email}</span>
                       <Button
                         type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0"
+                        variant="ghost-destructive"
+                        size="icon-xs"
+                        className="shrink-0"
                         onClick={() => handleUnshareFilter(share)}
                         aria-label={`Revoke access for ${share.shared_with_email}`}
                       >

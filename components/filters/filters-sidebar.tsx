@@ -156,9 +156,8 @@ export function FiltersSidebar({
         <div className="flex h-full flex-col items-center gap-2">
           <Button
             variant="ghost"
-            size="icon"
+            size="icon-lg"
             onClick={onToggleCollapse}
-            className="h-10 w-10"
             title="Expand filters sidebar"
             aria-label="Expand filters sidebar"
             aria-expanded={false}
@@ -167,7 +166,7 @@ export function FiltersSidebar({
             <RiArrowRightSLine className="h-4 w-4" />
           </Button>
           <div
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-sidebar-border bg-background/70 text-primary"
+            className="flex h-10 w-10 items-center justify-center rounded-md border border-sidebar-border bg-background/70 text-primary"
             title="FILTERS"
           >
             <RiFilterLine className="h-4 w-4" />
@@ -180,20 +179,17 @@ export function FiltersSidebar({
             <Button
               key={label}
               variant="ghost"
-              size="icon"
+              size="icon-lg"
               onClick={() => handleCollapsedIconClick(section)}
               disabled={!isSectionEnabled(section as "accounts" | "centers" | "prospects")}
-              className={cn(
-                'h-10 w-10 rounded-xl border border-transparent bg-secondary/20 transition-colors hover:bg-secondary/30',
-                iconClass
-              )}
+              className={iconClass}
               title={label}
               aria-label={label}
             >
               <Icon className="h-4 w-4" />
             </Button>
           ))}
-          <div className="mt-auto flex h-10 min-w-10 items-center justify-center rounded-xl border border-sidebar-border bg-background/70 px-2 text-[11px] font-semibold text-foreground">
+          <div className="mt-auto flex h-10 min-w-10 items-center justify-center rounded-md border border-sidebar-border bg-background/70 px-2 text-[11px] font-semibold text-foreground">
             {totalActiveFilters}
           </div>
         </div>
@@ -218,7 +214,7 @@ export function FiltersSidebar({
               variant="ghost"
               size="icon"
               onClick={onToggleCollapse}
-              className="h-9 w-9 shrink-0"
+              className="shrink-0"
               title="Collapse filters sidebar"
               aria-label="Collapse filters sidebar"
               aria-expanded={true}

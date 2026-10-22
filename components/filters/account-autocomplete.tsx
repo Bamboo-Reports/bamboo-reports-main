@@ -444,8 +444,8 @@ export function AccountAutocomplete({
                       <Button
                         type="button"
                         variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0 hover:bg-green-100 dark:hover:bg-green-900/20"
+                        size="icon-xs"
+                        className="hover:bg-green-500/15"
                         onClick={(e) => {
                           e.stopPropagation()
                           handleSelectAccount(suggestion.name, 'include')
@@ -458,8 +458,8 @@ export function AccountAutocomplete({
                       <Button
                         type="button"
                         variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0 hover:bg-red-100 dark:hover:bg-red-900/20"
+                        size="icon-xs"
+                        className="hover:bg-red-500/15"
                         onClick={(e) => {
                           e.stopPropagation()
                           handleSelectAccount(suggestion.name, 'exclude')

@@ -344,7 +344,7 @@ export function AccountFiltersSection({
                 setShowMoreAccountFilters((prev) => !prev)
               }}
               aria-expanded={canShowMoreAccountFilters ? showMoreAccountFilters : false}
-              className="group h-9 rounded-full border-border/70 bg-muted/40 px-4 text-xs font-medium text-foreground shadow-sm transition-all hover:border-border hover:bg-muted/70 hover:shadow-md"
+              className="group"
             >
               {canShowMoreAccountFilters
                 ? (showMoreAccountFilters ? "Show Less" : "Show More")
@@ -702,7 +702,7 @@ export function CenterFiltersSection({
                 setShowMoreCenterFilters((prev) => !prev)
               }}
               aria-expanded={canShowMoreCenterFilters ? showMoreCenterFilters : false}
-              className="group h-9 rounded-full border-border/70 bg-muted/40 px-4 text-xs font-medium text-foreground shadow-sm transition-all hover:border-border hover:bg-muted/70 hover:shadow-md"
+              className="group"
             >
               {canShowMoreCenterFilters
                 ? (showMoreCenterFilters ? "Show Less" : "Show More")

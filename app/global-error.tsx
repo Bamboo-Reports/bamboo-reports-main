@@ -42,8 +42,8 @@ export default function GlobalError({
                 </p>
               ) : null}
 
-              <Button onClick={reset} className="mt-6 h-10 w-full sm:w-auto">
-                <RiRefreshLine className="mr-2 h-4 w-4" />
+              <Button onClick={reset} size="lg" className="mt-6 w-full sm:w-auto">
+                <RiRefreshLine />
                 Try again
               </Button>
             </div>
