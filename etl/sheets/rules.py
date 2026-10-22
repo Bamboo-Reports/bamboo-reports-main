@@ -1,11 +1,13 @@
 """
 Rules shared by validate and cleanup: allowed formats and values per column
 (ALL_RULES), uniqueness, reference and completeness rules, service coverage,
-and the invisible characters both tools look for. Constants only, so either
-tool can import it without side effects.
+and the invisible characters and look-alike letters both tools look for.
+Constants and small pure helpers only, so either tool can import it without
+side effects.
 """
 
 import re
+import unicodedata
 
 # -- Shared patterns ----------------------------------------------------------
 # Practical email validator (not full RFC 5322, but rejects the common bad
@@ -44,6 +46,59 @@ INVISIBLE_CHARS = {
     "\u2069": "pop directional isolate",
 }
 INVISIBLE_CHARS_RE = re.compile("[" + "".join(INVISIBLE_CHARS) + "]")
+
+# Cyrillic and Greek letters that look exactly like a Latin one, mapped to
+# that Latin letter. Pasted into a Latin word they look right but sort, search
+# and join as a different character: "Ѕuchismita" (Cyrillic Ѕ) sorted before
+# every A and missed a search for "Suchismita" (#284).
+LOOKALIKE_LETTERS = {
+    # Cyrillic capitals: А В Е К М Н О Р С Т Х Ѕ І Ј
+    "\u0410": "A", "\u0412": "B", "\u0415": "E", "\u041a": "K", "\u041c": "M",
+    "\u041d": "H", "\u041e": "O", "\u0420": "P", "\u0421": "C", "\u0422": "T",
+    "\u0425": "X", "\u0405": "S", "\u0406": "I", "\u0408": "J",
+    # Cyrillic small: а е о р с у х ѕ і ј
+    "\u0430": "a", "\u0435": "e", "\u043e": "o", "\u0440": "p", "\u0441": "c",
+    "\u0443": "y", "\u0445": "x", "\u0455": "s", "\u0456": "i", "\u0458": "j",
+    # Greek capitals: Α Β Ε Ζ Η Ι Κ Μ Ν Ο Ρ Τ Υ Χ
+    "\u0391": "A", "\u0392": "B", "\u0395": "E", "\u0396": "Z", "\u0397": "H",
+    "\u0399": "I", "\u039a": "K", "\u039c": "M", "\u039d": "N", "\u039f": "O",
+    "\u03a1": "P", "\u03a4": "T", "\u03a5": "Y", "\u03a7": "X",
+    # Greek small omicron: ο
+    "\u03bf": "o",
+}
+_LOOKALIKE_TABLE = str.maketrans(LOOKALIKE_LETTERS)
+# A word is a run of letters in any alphabet. Only words that also hold a
+# Latin letter count: a word written wholly in Cyrillic or Greek is real data.
+_WORD_RE = re.compile(r"[^\W\d_]+")
+_LATIN_LETTER_RE = re.compile(r"[A-Za-z]")
+
+
+def find_lookalikes(value: str) -> list[str]:
+    """Look-alike letters inside words that also contain Latin letters."""
+    hits: list[str] = []
+    for word in _WORD_RE.findall(value):
+        if _LATIN_LETTER_RE.search(word):
+            hits.extend(ch for ch in word if ch in LOOKALIKE_LETTERS)
+    return hits
+
+
+def _in_mixed_words(value: str, fix_word) -> str:
+    return _WORD_RE.sub(lambda m: fix_word(m.group(0)) if _LATIN_LETTER_RE.search(m.group(0)) else m.group(0), value)
+
+
+def replace_lookalikes(value: str) -> str:
+    """Swap look-alike letters for their Latin twin, only in mixed words."""
+    return _in_mixed_words(value, lambda word: word.translate(_LOOKALIKE_TABLE))
+
+
+def mark_lookalikes(value: str) -> str:
+    """'<Ѕ>uchismita': wraps each flagged letter, for report previews."""
+    return _in_mixed_words(value, lambda word: "".join(f"<{ch}>" if ch in LOOKALIKE_LETTERS else ch for ch in word))
+
+
+def describe_lookalike(char: str) -> str:
+    """'Cyrillic Capital Letter Dze (U+0405) for 'S'', for reports."""
+    return f"{unicodedata.name(char).title()} (U+{ord(char):04X}) for '{LOOKALIKE_LETTERS[char]}'"
 
 # -- Validation Rule Definitions ----------------------------------------------
 SERVICE_COVERAGE_RULES = [

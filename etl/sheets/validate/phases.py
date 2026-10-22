@@ -28,6 +28,7 @@ PHASES = [
     ("Phase 0", "Format"),
     ("Phase 0B", "Invisible characters"),
     ("Phase 0C", "Chips and dropdowns"),
+    ("Phase 0D", "Look-alike letters"),
     ("Phase 1", "Uniqueness"),
     ("Phase 2", "References"),
     ("Phase 2B", "Completeness"),

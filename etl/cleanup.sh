@@ -29,6 +29,7 @@ Steps, always run in this order:
   chips        smart chips to plain text, dropdowns removed
   artifacts    #N/A and #REF! typed as text cleared, HTML entities decoded
   invisible    zero-width characters, BOMs, soft hyphens stripped
+  lookalikes   Cyrillic or Greek look-alike letters in Latin words made Latin
   whitespace   trims, double spaces, tabs and exotic spaces
   lists        list columns: one item per line, no bullets or duplicates
   links        link columns: one clean URL per line

@@ -1,12 +1,19 @@
 """Cell-level phases: format (0), invisible characters (0B), chips and
-dropdowns (0C)."""
+dropdowns (0C), look-alike letters (0D)."""
 
 import gspread
 
 from common import tui
 from common.google import safe_api_call
 from sheets import cell_meta
-from sheets.rules import ALL_SHEETS, INVISIBLE_CHARS, INVISIBLE_CHARS_RE
+from sheets.rules import (
+    ALL_SHEETS,
+    INVISIBLE_CHARS,
+    INVISIBLE_CHARS_RE,
+    describe_lookalike,
+    find_lookalikes,
+    mark_lookalikes,
+)
 
 from . import options
 from .highlights import record_issue
@@ -178,4 +185,47 @@ def check_chips_and_dropdowns(cache: SheetCache) -> PhaseResult:
 
     details = tui.table("Sheet", "Row#", "Column", "Kind", "Shows~", title="Cells")
     tui.capped(details, findings, options.detail_limit, "cell")
+    return result
+
+
+# -- Phase 0D: Look-alike letters -----------------------------------------------
+
+
+def check_lookalike_letters(cache: SheetCache) -> PhaseResult:
+    """Flag Cyrillic or Greek letters that look Latin inside Latin words
+    ("Ѕuchismita" with a Cyrillic Ѕ). They pass every other check but sort,
+    search and join as a different character (#284). Words written wholly
+    in another alphabet are left alone."""
+    tui.section("Phase 0D · Look-alike letters")
+    result = PhaseResult("Phase 0D", "Look-alike letters", fixable=True)
+
+    offenders: list[tuple[str, int, str, str, str]] = []
+    for table in [t for t in ALL_SHEETS if not is_excluded(t)]:
+        try:
+            headers, rows = cache.get_data(table)
+        except gspread.exceptions.WorksheetNotFound:
+            tui.line("skip", f"'{table}' not found, skipped.")
+            continue
+
+        for row_idx, row in enumerate(rows, start=2):
+            for col_idx, value in enumerate(row):
+                hits = find_lookalikes(str(value))
+                if not hits:
+                    continue
+                kinds = ", ".join(describe_lookalike(ch) for ch in sorted(set(hits)))
+                # Mark each look-alike so the report shows where it sits.
+                preview = tui.clip(mark_lookalikes(str(value)), 50)
+                offenders.append((table, row_idx, header_name(headers, col_idx), kinds, preview))
+                record_issue(table, row_idx, col_idx)
+
+    if not offenders:
+        tui.line("pass", "No look-alike letters from other alphabets.")
+        result.detail = "none found"
+        return result
+
+    result.errors = len(offenders)
+    result.detail = f"{tui.plural(len(offenders), 'cell')}"
+    tui.line("fail", f"{tui.plural(len(offenders), 'cell')} mix Latin with look-alike Cyrillic or Greek letters.")
+    details = tui.table("Sheet", "Row#", "Column", "Character(s)", "Value (marked <x>)~")
+    tui.capped(details, offenders, options.detail_limit, "cell")
     return result

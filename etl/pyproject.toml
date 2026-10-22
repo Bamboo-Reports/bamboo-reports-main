@@ -16,7 +16,10 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["ruff"]
+dev = [
+    "pytest>=9.1.1",
+    "ruff",
+]
 
 [tool.uv]
 package = false
@@ -32,3 +35,9 @@ ignore = ["E501"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["common", "importer", "sheets"]
+
+[tool.pytest.ini_options]
+# The ETL modules import each other as top-level packages (common, importer,
+# sheets), the same way `uv run --directory etl python -m ...` runs them.
+pythonpath = ["."]
+testpaths = ["tests"]

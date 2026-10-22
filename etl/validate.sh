@@ -10,8 +10,8 @@ usage() {
 Usage: etl/validate.sh [options]
 
 Checks the source Google Sheet in phases (format, invisible characters,
-chips and dropdowns, uniqueness, references, completeness, engagement flags,
-service coverage). Stops at the first failing phase unless --force.
+chips and dropdowns, look-alike letters, uniqueness, references, completeness,
+engagement flags, service coverage). Stops at the first failing phase unless --force.
 
 Options:
   --force              Run every phase instead of stopping at the first failure.
