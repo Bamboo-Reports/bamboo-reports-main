@@ -1,7 +1,7 @@
 import type { AccountVisibilityMode, ChartData, Filters, FilterValue } from "@/lib/types"
 import { FILTER_METADATA } from "@/lib/analytics/filter-metadata"
 import { formatRevenueInMillions } from "@/lib/utils/helpers"
-import { PIE_CHART_COLORS } from "@/lib/utils/chart-helpers"
+import { PIE_CHART_COLORS, orderChartSegments } from "@/lib/utils/chart-helpers"
 
 // FILTER_METADATA labels double as analytics values, so they keep "Center".
 // The report shows the UI spelling.
@@ -397,7 +397,8 @@ export function buildReportChart(title: string, countLabel: string, data: ChartD
     })
   }
 
-  return { title, countLabel, total, segments: major, othersMembers }
+  // Range buckets in range order and any "Others" last, like the dashboard donuts (#350).
+  return { title, countLabel, total, segments: orderChartSegments(major), othersMembers }
 }
 
 export function buildReportChartGroups(
