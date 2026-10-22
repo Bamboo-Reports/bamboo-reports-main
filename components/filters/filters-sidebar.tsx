@@ -198,7 +198,7 @@ export function FiltersSidebar({
       <div
         ref={scrollRef}
         className={cn(
-          'absolute inset-y-0 left-0 w-[320px] overflow-y-auto p-4 space-y-3 transition-all duration-200 ease-out motion-reduce:transition-none',
+          'absolute inset-y-0 left-0 w-[320px] overflow-y-auto scrollbar-gutter-stable p-4 space-y-3 transition-all duration-200 ease-out motion-reduce:transition-none',
           isCollapsed ? 'opacity-0 translate-x-1 pointer-events-none' : 'opacity-100 translate-x-0 pointer-events-auto'
         )}
       >
