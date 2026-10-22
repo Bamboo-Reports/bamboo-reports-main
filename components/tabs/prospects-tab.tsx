@@ -22,7 +22,7 @@ import { ProspectDetailsDialog } from "@/components/dialogs/prospect-details-dia
 import { AccountDetailsDialog } from "@/components/dialogs/account-details-tabbed-dialog"
 import { getPaginatedData, formatProspectLocation } from "@/lib/utils/helpers"
 import { ViewSwitcher } from "@/components/ui/view-switcher"
-import { SortButton } from "@/components/ui/sort-button"
+import { SortButton, getAriaSort } from "@/components/ui/sort-button"
 import { PaginationControls } from "@/components/ui/pagination-controls"
 import { TableColumnMenu } from "@/components/tables/table-column-menu"
 import { useTableColumnPreferences } from "@/hooks/use-table-column-preferences"
@@ -397,7 +397,7 @@ export function ProspectsTab({
             <CardContent className="p-0 flex flex-col flex-1 overflow-hidden">
               <div ref={scrollContainerRef} key={dataLayout} className="flex-1 overflow-auto view-content">
                 {dataLayout === "table" ? (
-                  <Table className="table-fixed">
+                  <Table className="table-fixed" aria-label="Prospects">
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-[44px]">
@@ -411,22 +411,22 @@ export function ProspectsTab({
                         <TableHead className="w-16"></TableHead>
                         )}
                         {isColumnVisible("name") && (
-                        <TableHead className="w-[220px]">
+                        <TableHead className="w-[220px]" aria-sort={getAriaSort("name", sort.key, sort.direction)}>
                           <SortButton label="Name" sortKey="name" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
                         )}
                         {isColumnVisible("location") && (
-                        <TableHead className="w-[200px]">
+                        <TableHead className="w-[200px]" aria-sort={getAriaSort("location", sort.key, sort.direction)}>
                           <SortButton label="Location" sortKey="location" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
                         )}
                         {isColumnVisible("title") && (
-                        <TableHead className="w-[180px]">
+                        <TableHead className="w-[180px]" aria-sort={getAriaSort("title", sort.key, sort.direction)}>
                           <SortButton label="Job Title" sortKey="title" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
                         )}
                         {isColumnVisible("department") && (
-                        <TableHead className="w-[180px]">
+                        <TableHead className="w-[180px]" aria-sort={getAriaSort("department", sort.key, sort.direction)}>
                           <SortButton label="Department" sortKey="department" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
                         )}

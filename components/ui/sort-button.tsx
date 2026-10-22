@@ -11,6 +11,16 @@ interface SortButtonProps<T extends string = string> {
   onClick: (key: T) => void
 }
 
+/** Value for the sortable column header's aria-sort attribute. */
+export function getAriaSort<T extends string>(
+  sortKey: T,
+  currentKey: T,
+  direction: "asc" | "desc" | null
+): "ascending" | "descending" | "none" {
+  if (currentKey !== sortKey || direction === null) return "none"
+  return direction === "asc" ? "ascending" : "descending"
+}
+
 export function SortButton<T extends string = string>({
   label,
   sortKey,

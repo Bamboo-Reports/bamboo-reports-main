@@ -33,16 +33,8 @@ export const CenterRow = memo(({ center, onOpen, visibleColumns, selectable, isS
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <TableRow
-          className="cursor-pointer hover:bg-muted/50 transition-colors focus-visible:bg-muted/70"
+          className="cursor-pointer hover:bg-muted/50 transition-colors focus-within:bg-muted/70"
           onClick={handleOpen}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
-              event.preventDefault()
-              handleOpen()
-            }
-          }}
-          tabIndex={0}
-          aria-label={`View centre details for ${center.center_name || "center"}`}
         >
           {selectable && (
           <TableCell
@@ -68,9 +60,17 @@ export const CenterRow = memo(({ center, onOpen, visibleColumns, selectable, isS
                 theme="auto"
               />
               <div className="min-w-0">
-                <div className="truncate" title={center.center_name || "N/A"}>
+                <button
+                  type="button"
+                  className="block max-w-full truncate rounded-sm text-left hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  title={center.center_name || "N/A"}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    handleOpen()
+                  }}
+                >
                   {center.center_name || "N/A"}
-                </div>
+                </button>
                 <div
                   className="truncate text-xs font-normal text-muted-foreground"
                   title={center.account_global_legal_name || "N/A"}

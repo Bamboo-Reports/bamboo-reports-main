@@ -134,7 +134,8 @@ export function CompanyLogo({
 
       <Image
         src={logoUrl.toString()}
-        alt={`${companyName} logo`}
+        // Always shown next to the company name, so the logo is decorative.
+        alt=""
         fill
         // Brandfetch already serves exact-size WebP, and its bot protection
         // blocks the Next image optimizer's server-side fetch. Load directly
