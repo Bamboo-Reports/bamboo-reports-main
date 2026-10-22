@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
+import { toast } from "sonner"
 import { RiDeleteBinLine, RiTimeLine } from "@remixicon/react"
 import {
   Dialog,
@@ -27,6 +28,8 @@ interface HistoryDialogProps {
   recentItems: RecentItem[]
   onItemSelect: (item: RecentItem) => void
   onClearHistory: () => void
+  /** Restores the items that were just cleared (the Undo on the "History cleared" toast). */
+  onRestoreHistory: (items: RecentItem[]) => void
 }
 
 export function HistoryDialog({
@@ -35,13 +38,24 @@ export function HistoryDialog({
   recentItems,
   onItemSelect,
   onClearHistory,
+  onRestoreHistory,
 }: HistoryDialogProps) {
   const [page, setPage] = useState(1)
+  const contentRef = useRef<HTMLDivElement>(null)
   const paginated = getPaginatedData(recentItems, page, ITEMS_PER_PAGE) as RecentItem[]
 
   return (
     <Dialog open={open} onOpenChange={(next) => { onOpenChange(next); if (!next) setPage(1) }}>
-      <DialogContent className="h-screen w-screen max-w-none overflow-hidden rounded-none p-0 sm:max-w-none glassmorphism-dialog flex flex-col">
+      <DialogContent
+        ref={contentRef}
+        // Focus the dialog itself, not its first button: that is Clear history,
+        // so Enter right after opening would wipe it (#311).
+        onOpenAutoFocus={(event) => {
+          event.preventDefault()
+          contentRef.current?.focus()
+        }}
+        className="h-screen w-screen max-w-none overflow-hidden rounded-none p-0 sm:max-w-none glassmorphism-dialog flex flex-col"
+      >
         <DialogHeader className="border-b border-border/60 px-6 py-5 shrink-0">
           <div className="flex items-start justify-between pr-10">
             <div>
@@ -61,8 +75,12 @@ export function HistoryDialog({
                 size="sm"
                 className="mt-1 gap-1.5 text-muted-foreground hover:text-destructive"
                 onClick={() => {
-                  captureEvent(ANALYTICS_EVENTS.HISTORY_CLEARED, { record_count: recentItems.length })
+                  const cleared = recentItems
+                  captureEvent(ANALYTICS_EVENTS.HISTORY_CLEARED, { record_count: cleared.length })
                   onClearHistory()
+                  toast("History cleared", {
+                    action: { label: "Undo", onClick: () => onRestoreHistory(cleared) },
+                  })
                 }}
               >
                 <RiDeleteBinLine className="h-3.5 w-3.5" />

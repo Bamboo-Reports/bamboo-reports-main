@@ -278,6 +278,7 @@ function DashboardContent(): React.JSX.Element | null {
     addRecentItem,
     addRecentSearch,
     clearRecentItems,
+    restoreRecentItems,
   } = useRecentItems()
 
   // Search-triggered detail dialogs (separate from tab-level dialogs)
@@ -1298,6 +1299,7 @@ function DashboardContent(): React.JSX.Element | null {
         recentItems={recentItems}
         onItemSelect={handleHistoryItemSelect}
         onClearHistory={clearRecentItems}
+        onRestoreHistory={restoreRecentItems}
       />
 
       <GlobalSearch
