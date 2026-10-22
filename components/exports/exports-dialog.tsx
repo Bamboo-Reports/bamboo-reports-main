@@ -64,6 +64,14 @@ function formatIp(ip: string | null): string {
   return ip
 }
 
+// Dataset keys are stored lowercase; show the UI spelling ("Centres").
+const DATASET_LABELS: Record<string, string> = {
+  accounts: "Accounts",
+  centers: "Centres",
+  services: "Services",
+  prospects: "Prospects",
+}
+
 interface ExportsDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -239,7 +247,7 @@ export function ExportsDialog({ open, onOpenChange }: ExportsDialogProps) {
                                 variant="secondary"
                                 className="text-[10px] capitalize"
                               >
-                                {d}
+                                {DATASET_LABELS[d] ?? d}
                               </Badge>
                             ))}
                           </div>
@@ -365,7 +373,7 @@ function ExportDetailsDialog({
                     className="rounded-lg border border-border/50 bg-background/50 px-3 py-2 dark:bg-white/5"
                   >
                     <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground capitalize">
-                      {d}
+                      {DATASET_LABELS[d] ?? d}
                     </p>
                     <p className="text-lg font-semibold tabular-nums">
                       {(row.row_counts?.[d] ?? 0).toLocaleString()}

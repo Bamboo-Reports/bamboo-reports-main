@@ -244,7 +244,7 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
   // ── Center Attributes ───────────────────────────────────────────────
   {
     id: "centers",
-    label: "Center Attributes",
+    label: "Centre Attributes",
     enabled: true,
     showMoreEnabled: true,
     premiumFilterKeys: [
@@ -264,7 +264,7 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       },
       {
         key: "centerTypeValues",
-        label: "Center Type",
+        label: "Centre Type",
         enabled: true,
         type: "multi-select",
         column: "center_type",
@@ -307,7 +307,7 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       },
       {
         key: "centerEmployeesRangeValues",
-        label: "Center Headcount",
+        label: "Centre Headcount",
         enabled: true,
         type: "multi-select",
         column: "center_employees_range",
@@ -323,7 +323,7 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       },
       {
         key: "centerFocusValues",
-        label: "Center Focus",
+        label: "Centre Focus",
         enabled: true,
         type: "multi-select",
         column: "center_focus",

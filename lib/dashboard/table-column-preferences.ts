@@ -16,10 +16,10 @@ export const TABLE_COLUMNS = {
     { key: "employees", label: "GCC Aggregate Headcount (India)" },
   ],
   centers: [
-    { key: "name", label: "Center Name", required: true },
+    { key: "name", label: "Centre Name", required: true },
     { key: "location", label: "Location" },
-    { key: "type", label: "Center Type" },
-    { key: "employees", label: "Center Headcount" },
+    { key: "type", label: "Centre Type" },
+    { key: "employees", label: "Centre Headcount" },
   ],
   prospects: [
     { key: "avatar", label: "Avatar", required: true },

@@ -3,6 +3,10 @@ import { FILTER_METADATA } from "@/lib/analytics/filter-metadata"
 import { formatRevenueInMillions } from "@/lib/utils/helpers"
 import { PIE_CHART_COLORS } from "@/lib/utils/chart-helpers"
 
+// FILTER_METADATA labels double as analytics values, so they keep "Center".
+// The report shows the UI spelling.
+const toDisplayLabel = (label: string) => label.replace(/\bCenter\b/g, "Centre")
+
 /**
  * Builds the data model behind the downloadable summary PDF: the headline
  * counts shown in the dashboard summary cards plus a human-readable list of
@@ -20,7 +24,7 @@ export interface ReportMetric {
   total: number
 }
 
-export type ReportFilterGroup = "Scope" | "Account" | "Center" | "Prospect"
+export type ReportFilterGroup = "Scope" | "Account" | "Centre" | "Prospect"
 
 export interface ReportFilterRow {
   group: ReportFilterGroup
@@ -132,7 +136,7 @@ export interface BuildSummaryReportInput {
 
 const GROUP_LABEL: Record<"account" | "center" | "prospect", ReportFilterGroup> = {
   account: "Account",
-  center: "Center",
+  center: "Centre",
   prospect: "Prospect",
 }
 
@@ -229,7 +233,7 @@ export function buildReportFilterRows(
     const { included, excluded } = splitByMode(values)
     if (included.length === 0 && excluded.length === 0) return null
     const meta = FILTER_METADATA[key]
-    return { group: GROUP_LABEL[meta.group], label: meta.label, included, excluded }
+    return { group: GROUP_LABEL[meta.group], label: toDisplayLabel(meta.label), included, excluded }
   }
 
   const accountKeys = LIST_FILTER_KEYS.filter((key) => FILTER_METADATA[key].group === "account")
@@ -283,11 +287,11 @@ export function buildReportFilterRows(
   if (isRangeActive(filters.centerIncYearRange, baselineRanges.centerIncYear)) {
     const [min, max] = filters.centerIncYearRange
     rows.push(rangeRow({
-      group: "Center",
-      label: FILTER_METADATA.centerIncYearRange.label,
+      group: "Centre",
+      label: toDisplayLabel(FILTER_METADATA.centerIncYearRange.label),
       value: `${min} to ${max}`,
       includeNull: filters.centerIncYearIncludeNull,
-      noun: "Centers",
+      noun: "Centres",
     }))
   }
 
@@ -318,15 +322,15 @@ export function buildReportMetrics(
   if (enabledSections.centers) {
     metrics.push({
       id: "centers",
-      label: "Centers",
-      description: "Delivery and capability centers",
+      label: "Centres",
+      description: "Delivery and capability centres",
       filtered: counts.filteredCentersCount,
       total: counts.totalCentersCount,
     })
     metrics.push({
       id: "upcomingCenters",
-      label: "Upcoming Centers",
-      description: "Centers with an Upcoming status",
+      label: "Upcoming Centres",
+      description: "Centres with an Upcoming status",
       filtered: counts.filteredUpcomingCentersCount,
       total: counts.totalUpcomingCentersCount,
     })
@@ -424,14 +428,14 @@ export function buildReportChartGroups(
     const src = sources.centers
     groups.push({
       section: "centers",
-      title: "Centers",
+      title: "Centres",
       matching: counts.filteredCentersCount,
       databaseTotal: counts.totalCentersCount,
       charts: [
-        buildReportChart("Center Type", "Centers", src.centerTypeData),
-        buildReportChart("Center Headcount", "Centers", src.employeesRangeData),
-        buildReportChart("City", "Centers", src.cityData),
-        buildReportChart("Function", "Centers", src.functionData),
+        buildReportChart("Centre Type", "Centres", src.centerTypeData),
+        buildReportChart("Centre Headcount", "Centres", src.employeesRangeData),
+        buildReportChart("City", "Centres", src.cityData),
+        buildReportChart("Function", "Centres", src.functionData),
       ],
     })
   }
