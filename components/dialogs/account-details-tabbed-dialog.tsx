@@ -464,7 +464,7 @@ export function AccountDetailsDialog({
             <DialogDescription className="sr-only">
               Account profile details, centers, prospects, services, technology, and financial information.
             </DialogDescription>
-            <DialogTitle className="text-2xl font-bold flex items-center gap-3">
+            <div className="text-2xl font-bold flex items-center gap-3">
               <CompanyLogo
                 domain={account.account_hq_website ?? undefined}
                 companyName={account.account_global_legal_name}
@@ -473,7 +473,7 @@ export function AccountDetailsDialog({
               />
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <span>{account.account_global_legal_name}</span>
+                  <DialogTitle className="text-2xl font-bold leading-tight">{account.account_global_legal_name}</DialogTitle>
                   <div className="flex items-center gap-0.5">
                     {account.account_hq_website && (
                       <a
@@ -507,7 +507,7 @@ export function AccountDetailsDialog({
                   {[account.account_hq_city, account.account_hq_state, account.account_hq_country].filter(Boolean).join(", ") || account.account_hq_region}
                 </p>
               </div>
-            </DialogTitle>
+            </div>
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-6">

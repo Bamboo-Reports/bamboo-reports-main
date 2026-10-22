@@ -170,7 +170,7 @@ export function CenterDetailsDialog({
           <DialogDescription className="sr-only">
             Centre profile details, services, technology usage, location, and related account information.
           </DialogDescription>
-          <DialogTitle className="flex items-center gap-3 text-2xl font-bold">
+          <div className="flex items-center gap-3 text-2xl font-bold">
             <CompanyLogo
               domain={center.center_account_website ?? undefined}
               companyName={center.account_global_legal_name}
@@ -179,7 +179,7 @@ export function CenterDetailsDialog({
             />
             <div className="flex-1">
               <div className="flex flex-wrap items-center gap-3">
-                <span>{center.center_name}</span>
+                <DialogTitle className="text-2xl font-bold leading-tight">{center.center_name}</DialogTitle>
                 <div className="flex items-center gap-0.5">
                   {center.center_website ? (
                     <a
@@ -244,7 +244,7 @@ export function CenterDetailsDialog({
                 ) : null}
               </p>
             </div>
-          </DialogTitle>
+          </div>
         </DialogHeader>
 
         <div className="mt-6 space-y-8">

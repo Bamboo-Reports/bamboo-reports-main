@@ -184,6 +184,8 @@ export function AccountFiltersSection({
                 min={revenueRange.min}
                 max={revenueRange.max}
                 step={Math.max(1, Math.floor((revenueRange.max - revenueRange.min) / 1000))}
+                thumbLabels={["HQ Company Revenue minimum", "HQ Company Revenue maximum"]}
+                formatValueText={formatRevenueInMillions}
                 className="w-full"
               />
             </div>
@@ -289,6 +291,8 @@ export function AccountFiltersSection({
                 min={yearsInIndiaRange.min}
                 max={yearsInIndiaRange.max}
                 step={1}
+                thumbLabels={["Years In India minimum", "Years In India maximum"]}
+                formatValueText={(years) => `${years} ${years === 1 ? "year" : "years"}`}
                 className="w-full"
               />
             </div>
@@ -664,6 +668,7 @@ export function CenterFiltersSection({
                 min={centerIncYearRange.min}
                 max={centerIncYearRange.max}
                 step={1}
+                thumbLabels={["Incorporation year from", "Incorporation year to"]}
                 className="w-full"
               />
             </div>

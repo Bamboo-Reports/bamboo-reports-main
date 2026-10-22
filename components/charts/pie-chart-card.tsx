@@ -148,14 +148,24 @@ export const PieChartCard = memo(({
         type: "pie",
         backgroundColor: "transparent",
       },
-      title: { text: undefined },
+      // The visible title is the card heading. A hidden chart title names the
+      // Highcharts region and SVG, which otherwise read "Chart" / "Interactive chart".
+      title: { text: title, floating: true, style: { display: "none" } },
       credits: { enabled: false },
       accessibility: {
         enabled: true,
         landmarkVerbosity: "one",
         description: `${title}. ${seriesData.length} segments. ${countLabel} total ${total.toLocaleString()}.`,
         point: {
-          valueDescriptionFormat: "{xDescription}. {point.y} {series.name}.",
+          // Highcharts strips "<..." as HTML, which emptied labels like "<50".
+          descriptionFormatter: (point) => {
+            const name = String(point.name ?? "")
+              .replace(/^\s*<\s*/, "under ")
+              .replace(/^\s*>\s*/, "over ")
+            const value = typeof point.y === "number" ? point.y : 0
+            const percent = total > 0 ? Math.round((value / total) * 100) : 0
+            return `${name}: ${value.toLocaleString()}, ${percent}%.`
+          },
         },
       },
       legend: {

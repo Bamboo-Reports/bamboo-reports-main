@@ -277,13 +277,13 @@ export function ProspectDetailsDialog({
           <DialogDescription className="sr-only">
             Prospect profile details, contact information, account linkage, and related contacts.
           </DialogDescription>
-          <DialogTitle className="flex items-center gap-3 text-2xl font-bold">
+          <div className="flex items-center gap-3 text-2xl font-bold">
             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
               <span className="text-lg font-bold text-primary">{initials}</span>
             </div>
             <div className="flex flex-1 min-w-0 items-start justify-between gap-4">
               <div className="min-w-0">
-                <span className="block leading-tight">{fullName}</span>
+                <DialogTitle className="block text-2xl font-bold leading-tight">{fullName}</DialogTitle>
                 {p.account_global_legal_name ? (
                   <p className="mt-1 text-sm font-normal text-muted-foreground">
                     {p.account_global_legal_name}
@@ -344,7 +344,7 @@ export function ProspectDetailsDialog({
                 {isEngagedProspect(p) ? <EngagedBadge /> : null}
               </div>
             </div>
-          </DialogTitle>
+          </div>
         </DialogHeader>
 
         <div ref={scrollRef} className="mt-6 space-y-8">
