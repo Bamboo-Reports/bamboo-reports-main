@@ -1,4 +1,5 @@
 import type { Filters, FilterValue, AccountVisibilityMode } from "@/lib/types"
+import { accountNameMatchForms } from "@/lib/utils/filter-helpers"
 
 /**
  * Server-side SQL translation of the client filter engine in
@@ -154,6 +155,23 @@ function keywordClause(col: string, fvs: FilterValue[], p: Params): string | nul
 }
 
 /**
+ * Mirrors createAccountNameMatcher: whole-name, case-insensitive match against
+ * picked account names (#308). Each pick is bound in its raw and
+ * whitespace-collapsed lowercase forms (accountNameMatchForms), so both engines
+ * compare the same strings. NULL is treated as "", like the client.
+ */
+function accountNameClause(col: string, fvs: FilterValue[], p: Params): string | null {
+  if (fvs.length === 0) return null
+  const include = fvs.filter((f) => f.mode !== "exclude").flatMap((f) => accountNameMatchForms(f.value))
+  const exclude = fvs.filter((f) => f.mode === "exclude").flatMap((f) => accountNameMatchForms(f.value))
+  const val = `lower(coalesce(${col}, ''))`
+  const parts: string[] = []
+  if (exclude.length > 0) parts.push(`not (${val} = any(${p.add(exclude)}::text[]))`)
+  if (include.length > 0) parts.push(`${val} = any(${p.add(include)}::text[])`)
+  return `(${parts.join(" and ")})`
+}
+
+/**
  * Mirrors rangeFilterMatch: a value of 0/NULL falls in the includeNull bucket.
  *
  * The column is compared RAW (no coalesce wrapper) and the bounds are bound as
@@ -215,7 +233,7 @@ function accountPredicate(f: Filters, p: Params): string {
     valueClause("account_center_employees_range", f.accountCenterEmployeesRangeValues, p, { coalesceEmpty: true }),
     rangeClause("account_hq_revenue", f.accountHqRevenueRange, f.accountHqRevenueIncludeNull, p),
     rangeClause("years_in_india", f.accountYearsInIndiaRange, f.yearsInIndiaIncludeNull, p),
-    keywordClause("account_global_legal_name", f.accountGlobalLegalNameKeywords, p),
+    accountNameClause("account_global_legal_name", f.accountGlobalLegalNameKeywords, p),
     valueClause("account_global_legal_name", f.accountNameValues, p),
     visibilityClause(f.accountVisibilityMode, !hasNameSearch),
   ])

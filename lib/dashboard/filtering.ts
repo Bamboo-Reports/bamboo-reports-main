@@ -10,7 +10,7 @@ import type {
   AvailableOptions,
 } from "@/lib/types"
 import { parseRevenue } from "@/lib/utils/helpers"
-import { createValueMatcher, createKeywordMatcher } from "@/lib/utils/filter-helpers"
+import { createValueMatcher, createKeywordMatcher, createAccountNameMatcher } from "@/lib/utils/filter-helpers"
 
 type FilteringAccess = {
   accountsEnabled?: boolean
@@ -162,7 +162,7 @@ export function getFilteredData(
   const matchAccountNasscom = createValueMatcher(filters.accountNasscomStatusValues)
   const matchAccountEmployeesRange = createValueMatcher(filters.accountHqEmployeeRangeValues)
   const matchAccountCenterEmployees = createValueMatcher(filters.accountCenterEmployeesRangeValues)
-  const matchAccountName = createKeywordMatcher(filters.accountGlobalLegalNameKeywords)
+  const matchAccountName = createAccountNameMatcher(filters.accountGlobalLegalNameKeywords)
   const matchAccountExactName = createValueMatcher(filters.accountNameValues)
   const matchVisibility = (value: Account["account_visibility"]) =>
     matchAccountVisibility(value, filters.accountVisibilityMode)

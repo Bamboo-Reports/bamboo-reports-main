@@ -159,9 +159,48 @@ async function assertParity(name: string, overrides: Partial<Filters>, access: F
   expect(sqlProspects, `${name} :: prospects`).toEqual(sorted(expected.filteredProspects.map((x) => x.ps_unique_key)))
 }
 
+async function accountNamesBothEngines(overrides: Partial<Filters>) {
+  const filters = createDefaultFilters({ accountVisibilityMode: "all", ...overrides })
+  const js = sorted(getFilteredData(accounts, centers, functions, [], prospects, tech, filters, {}).filteredAccounts.map((x) => x.account_global_legal_name))
+  const sql = await sqlIds(buildAccountsQuery(filters, {}, { orderBy: null, materialized: false }), "account_global_legal_name")
+  return { js, sql }
+}
+
 // ---------------------------------------------------------------------------
 // Scenarios
 // ---------------------------------------------------------------------------
+
+// The Account Name filter only ever holds names picked from the autocomplete,
+// so a pick must match that account alone, not every name containing it (#308).
+describe("account name picks match whole names (#308)", () => {
+  const cases: Array<[string, Partial<Filters>, string[]]> = [
+    ["include matches only the picked account", { accountGlobalLegalNameKeywords: inc("Acme Corp") }, ["Acme Corp"]],
+    ["a partial name matches nothing", { accountGlobalLegalNameKeywords: inc("Auto") }, []],
+    ["matching ignores case", { accountGlobalLegalNameKeywords: inc("global auto gmbh") }, ["Global Auto GmbH"]],
+    [
+      "line breaks and zero-width spaces in saved picks still match",
+      { accountGlobalLegalNameKeywords: inc("Global\nAuto GmbH", "\u200b\u200bBeta Auto AG") },
+      ["Beta Auto AG", "Global Auto GmbH"],
+    ],
+  ]
+
+  for (const [name, overrides, expected] of cases) {
+    it(name, async () => {
+      const { js, sql } = await accountNamesBothEngines(overrides)
+      expect(js).toEqual(expected)
+      expect(sql).toEqual(expected)
+    })
+  }
+
+  it("exclude drops only the picked account", async () => {
+    const baseline = await accountNamesBothEngines({})
+    const { js, sql } = await accountNamesBothEngines({ accountGlobalLegalNameKeywords: exc("Beta Auto AG") })
+    const expected = baseline.js.filter((n) => n !== "Beta Auto AG")
+    expect(baseline.js).toContain("Beta Auto AG")
+    expect(js).toEqual(expected)
+    expect(sql).toEqual(expected)
+  })
+})
 
 const inc = (...vs: string[]) => vs.map((value) => ({ value, mode: "include" as const }))
 const exc = (...vs: string[]) => vs.map((value) => ({ value, mode: "exclude" as const }))
@@ -179,8 +218,9 @@ describe("filtering-sql parity with getFilteredData", () => {
     ["revenue narrow, excl null", { accountHqRevenueRange: [100000, 600000], accountHqRevenueIncludeNull: false }],
     ["revenue narrow, incl null", { accountHqRevenueRange: [600000, 800000], accountHqRevenueIncludeNull: true }],
     ["years range", { accountYearsInIndiaRange: [3, 20], yearsInIndiaIncludeNull: false }],
-    ["name keyword (visibility bypass)", { accountGlobalLegalNameKeywords: inc("global") }],
-    ["name keyword exclude", { accountGlobalLegalNameKeywords: exc("auto"), accountVisibilityMode: "all" }],
+    ["name pick (visibility bypass)", { accountGlobalLegalNameKeywords: inc("Global Auto GmbH") }],
+    ["name pick exclude", { accountGlobalLegalNameKeywords: exc("Beta Auto AG"), accountVisibilityMode: "all" }],
+    ["name pick is not a contains match", { accountGlobalLegalNameKeywords: inc("Auto"), accountVisibilityMode: "all" }],
     ["exact name include (visibility bypass)", { accountNameValues: inc("Global Auto GmbH", "Acme Corp") }],
     ["exact name is not a contains match", { accountNameValues: inc("Acme"), accountVisibilityMode: "all" }],
     ["exact name exclude", { accountNameValues: exc("Acme Corp"), accountVisibilityMode: "all" }],
@@ -234,7 +274,7 @@ const POOLS = {
   nasscom: ["Yes", "No"],
   empRange: ["1000-5000", "5000-10000", "100-500", "500-1000"],
   centerEmpRange: ["500-1000", "100-500", ""],
-  nameKw: ["acme", "auto", "systems", "global", "zzz"],
+  nameKw: ["Acme Corp", "acme corp", "Beta\nAuto AG", "Auto", "zzz"],
   exactName: ["Acme Corp", "Global Auto GmbH", "Gamma Systems", "Acme", "Nope Inc"],
   centerType: ["Delivery", "RnD", "Support", "Sales"],
   centerFocus: ["IT", "Engineering", "Operations"],

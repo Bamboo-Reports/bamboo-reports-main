@@ -33,6 +33,12 @@ describe("parseFilters", () => {
     expect(f.accountNameValues[0]).toEqual({ value: "v0", mode: "include" })
   })
 
+  it("keeps every picked account name, since they match exactly (#308)", () => {
+    // Saved filters hold up to about 900 picked names.
+    const f = parseFilters({ accountGlobalLegalNameKeywords: values(1000) })
+    expect(f.accountGlobalLegalNameKeywords).toHaveLength(1000)
+  })
+
   it("allows a full uploaded account list", () => {
     // Every account in the warehouse (about 2.8K) fits under the cap.
     const f = parseFilters({ accountNameValues: values(3000) })
@@ -41,11 +47,9 @@ describe("parseFilters", () => {
 
   it("caps keyword filters harder, since each keyword becomes an ilike clause (#294)", () => {
     const f = parseFilters({
-      accountGlobalLegalNameKeywords: values(MAX_FILTER_KEYWORDS + 10, "kw"),
       techSoftwareInUseKeywords: values(MAX_FILTER_KEYWORDS + 10, "kw"),
       prospectTitleKeywords: values(MAX_FILTER_KEYWORDS + 10, "kw"),
     })
-    expect(f.accountGlobalLegalNameKeywords).toHaveLength(MAX_FILTER_KEYWORDS)
     expect(f.techSoftwareInUseKeywords).toHaveLength(MAX_FILTER_KEYWORDS)
     expect(f.prospectTitleKeywords).toHaveLength(MAX_FILTER_KEYWORDS)
   })

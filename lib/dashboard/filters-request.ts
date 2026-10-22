@@ -20,8 +20,10 @@ const VALUE_ARRAY_KEYS = [
   "prospectLevelValues", "prospectEngagedValues", "prospectCityValues", "prospectTitleKeywords",
 ] as const
 
-// Free-text keyword filters: each keyword becomes an ilike clause.
-const KEYWORD_KEYS = new Set<string>(["accountGlobalLegalNameKeywords", "techSoftwareInUseKeywords", "prospectTitleKeywords"])
+// Free-text keyword filters: each keyword becomes an ilike clause. Account Name
+// picks (accountGlobalLegalNameKeywords) match whole names, so they take the
+// value-list caps instead (#308).
+const KEYWORD_KEYS = new Set<string>(["techSoftwareInUseKeywords", "prospectTitleKeywords"])
 
 // Size caps for untrusted filter payloads, so one request cannot be made
 // arbitrarily expensive (#294). Well above anything the dashboard sends: a
