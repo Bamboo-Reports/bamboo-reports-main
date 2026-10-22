@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest"
 import { render, fireEvent, cleanup } from "@testing-library/react"
-import { SummaryCards, calculateAnimatedNumberValue } from "@/components/dashboard/summary-cards"
+import { SummaryCards } from "@/components/dashboard/summary-cards"
 import * as dashboardAccess from "@/lib/config/dashboard-access"
 import { toast } from "sonner"
 
@@ -42,12 +42,6 @@ describe("summary-cards", () => {
     cleanup()
   })
 
-  it("calculates animated number value correctly", () => {
-    expect(calculateAnimatedNumberValue({ startValue: 0, targetValue: 100, progress: 0.5 })).toBeGreaterThan(0)
-    expect(calculateAnimatedNumberValue({ startValue: 0, targetValue: 100, progress: 1 })).toBe(100)
-    expect(calculateAnimatedNumberValue({ startValue: 100, targetValue: 50, progress: 1 })).toBe(50)
-  })
-
   it("renders the summary cards and handles click events on enabled sections", () => {
     vi.mocked(dashboardAccess.isSectionEnabled).mockReturnValue(true)
     const onSelect = vi.fn()
@@ -77,6 +71,30 @@ describe("summary-cards", () => {
     // Test keyboard events
     if (accountsCard) fireEvent.keyDown(accountsCard, { key: "Enter" })
     expect(onSelect).toHaveBeenCalledTimes(2)
+  })
+
+  it("shows a new count immediately without animating", () => {
+    vi.mocked(dashboardAccess.isSectionEnabled).mockReturnValue(true)
+    const props = {
+      filteredAccountsCount: 10,
+      totalAccountsCount: 20,
+      filteredCentersCount: 5,
+      totalCentersCount: 10,
+      filteredUpcomingCentersCount: 1,
+      totalUpcomingCentersCount: 2,
+      filteredProspectsCount: 50,
+      totalProspectsCount: 100,
+      filteredHeadcount: 5000,
+      totalHeadcount: 8000,
+      activeView: "accounts" as const,
+      onSelect: vi.fn(),
+    }
+
+    const { getByText, rerender } = render(<SummaryCards {...props} />)
+    rerender(<SummaryCards {...props} filteredProspectsCount={37} />)
+
+    const value = getByText("37")
+    expect(value.className).not.toContain("animate-")
   })
 
   it("renders read-only cards and shows toast on click when sections are disabled", () => {
