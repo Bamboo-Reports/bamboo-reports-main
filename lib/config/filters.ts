@@ -94,7 +94,7 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
         type: "keyword",
         column: "account_global_legal_name",
         table: "accounts",
-        description: "Autocomplete search for account names",
+        description: "Account names picked from the autocomplete, matched as whole names",
       },
       {
         key: "accountListValues",

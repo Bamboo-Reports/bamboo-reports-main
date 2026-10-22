@@ -78,6 +78,38 @@ export function createValueMatcher(filterArray: FilterValue[]) {
   }
 }
 
+/**
+ * Lowercased forms an account-name pick can match (#308): the raw value, plus
+ * the value with whitespace runs and zero-width spaces collapsed, so picks
+ * saved with line breaks still match the warehouse name. Shared by the client
+ * matcher and the SQL clause (lib/dashboard/filtering-sql.ts) to keep them equal.
+ */
+export function accountNameMatchForms(value: string): string[] {
+  const lower = value.toLowerCase()
+  const collapsed = lower.replace(/[\s\u200B-\u200D\uFEFF]+/g, " ").trim()
+  return collapsed === lower ? [lower] : [lower, collapsed]
+}
+
+/**
+ * Account Name filter: whole-name, case-insensitive match against picked names
+ * (#308). A NULL name is treated as "", so it passes excludes and fails includes.
+ */
+export function createAccountNameMatcher(filterArray: FilterValue[]) {
+  if (filterArray.length === 0) {
+    return () => true
+  }
+
+  const include = new Set(filterArray.filter((f) => f.mode !== "exclude").flatMap((f) => accountNameMatchForms(f.value)))
+  const exclude = new Set(filterArray.filter((f) => f.mode === "exclude").flatMap((f) => accountNameMatchForms(f.value)))
+
+  return (value: string | null | undefined): boolean => {
+    const lowerValue = (value ?? "").toLowerCase()
+    if (exclude.has(lowerValue)) return false
+    if (include.size > 0) return include.has(lowerValue)
+    return true
+  }
+}
+
 export function createKeywordMatcher(filterArray: FilterValue[]) {
   if (filterArray.length === 0) {
     return () => true

@@ -96,9 +96,9 @@ const SCENARIOS: Array<{ label: string; overrides: Partial<Filters> }> = [
     },
   },
   {
-    label: "account name keyword tech (visibility bypass) + center type IT + level Director",
+    label: "account name picks (visibility bypass) + center type IT + level Director",
     overrides: {
-      accountGlobalLegalNameKeywords: inc("tech"),
+      accountGlobalLegalNameKeywords: inc("Microsoft Corp.", "Skava (Acquired by Infosys Ltd.)", "[24]7.ai, Inc."),
       centerTypeValues: inc("IT"),
       prospectLevelValues: inc("Director"),
     },
