@@ -106,13 +106,6 @@
     outline: none !important;
   }
 
-  input:focus,
-  textarea:focus,
-  select:focus {
-    outline: none !important;
-    box-shadow: none !important;
-  }
-
   /* Typography Hierarchy Enhancement */
   h1 {
     @apply text-3xl font-bold tracking-tight;
