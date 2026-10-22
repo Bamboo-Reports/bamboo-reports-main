@@ -474,14 +474,15 @@ export function AccountDetailsDialog({
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <span>{account.account_global_legal_name}</span>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-0.5">
                     {account.account_hq_website && (
                       <a
                         href={account.account_hq_website.startsWith("http") ? account.account_hq_website : `https://${account.account_hq_website}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-muted-foreground hover:text-primary transition-colors"
+                        className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring hover:text-primary"
                         title={account.account_hq_website}
+                        aria-label="Open company website"
                         onClick={() => trackOutboundLink("website")}
                       >
                         <RiGlobalLine className="h-4 w-4" />
@@ -492,8 +493,9 @@ export function AccountDetailsDialog({
                         href={account.account_hq_linkedin_link.startsWith("http") ? account.account_hq_linkedin_link : `https://${account.account_hq_linkedin_link}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-muted-foreground hover:text-[#0A66C2] transition-colors"
+                        className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring hover:text-[#0A66C2]"
                         title="LinkedIn"
+                        aria-label="Open LinkedIn page"
                         onClick={() => trackOutboundLink("linkedin")}
                       >
                         <RiLinkedinBoxLine className="h-4 w-4" />
