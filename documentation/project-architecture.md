@@ -63,7 +63,7 @@ This section is the single source for the repo layout; the README only shows the
 -   **`actions/system.ts`**: System diagnostics and health checks.
 -   **`page.tsx`**: Main dashboard entry point and UI orchestrator. Wires auth, data loading, filtering hooks, and layout composition.
 -   **`providers.tsx`**: Application-level providers (PostHog analytics).
--   **`(auth)/`**: Auth route group: `signin/`, `signup/`, `forgot-password/`, `reset-password/`.
+-   **`(auth)/`**: Auth route group: `signin/`, `forgot-password/`, `reset-password/`. There is no signup page: an admin creates accounts, and `/signup` redirects to `/signin` (`next.config.mjs`).
 -   **`actions.ts`**: Re-exports the notification Server Actions.
 -   **`layout.tsx`**, **`not-found.tsx`**, **`global-error.tsx`**: Root layout (renders `components/maintenance-page.tsx` when `NEXT_PUBLIC_MAINTENANCE_MODE` is set), 404 page and last-resort error boundary.
 -   **`api/financials/`**: Authed, rate-limited proxy for Yahoo Finance data (built on `lib/finance/financial-info.ts`).
@@ -76,7 +76,7 @@ Organized by feature domain:
 
 | Directory | Responsibility |
 |-----------|---------------|
-| `auth/` | `AuthShell`, the card frame shared by the sign-in, sign-up and password pages under `app/(auth)/` |
+| `auth/` | `AuthShell`, the card frame shared by the sign-in and password pages under `app/(auth)/` |
 | `brand/` | `BrandMark` (inline animated logo) and `BrandPage` (frame for every screen outside the dashboard shell) |
 | `cards/` | Card component variants |
 | `charts/` | Highcharts donut charts and the Technology treemap (the Recharts revenue area chart lives in `dialogs/`) |

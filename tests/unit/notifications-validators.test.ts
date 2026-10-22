@@ -5,7 +5,7 @@ import {
   formatSummaryTitle,
   formatTableLabel,
 } from "@/lib/notifications/formatters"
-import { signInSchema, signUpSchema } from "@/lib/validators/auth"
+import { signInSchema } from "@/lib/validators/auth"
 
 describe("notification formatters and auth validators", () => {
   beforeEach(() => {
@@ -38,14 +38,6 @@ describe("notification formatters and auth validators", () => {
       password: "secret1",
       rememberMe: true,
     })
-    expect(signUpSchema.parse({
-      firstName: " Ada ",
-      lastName: " Lovelace ",
-      email: " ada@example.com ",
-      phone: "1234567",
-      password: "secret1",
-    })).toMatchObject({ firstName: "Ada", lastName: "Lovelace", email: "ada@example.com" })
     expect(signInSchema.safeParse({ email: "bad", password: "123" }).success).toBe(false)
-    expect(signUpSchema.safeParse({ firstName: "", lastName: "", email: "bad", phone: "1", password: "123" }).success).toBe(false)
   })
 })

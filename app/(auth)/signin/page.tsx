@@ -23,7 +23,6 @@ function SignInForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [submitError, setSubmitError] = useState<string | null>(null)
-  const signupStatus = searchParams.get("signup")
   const resetStatus = searchParams.get("reset")
   const {
     control,
@@ -117,14 +116,7 @@ function SignInForm() {
     <AuthShell
       title="Welcome back"
       description="Sign in to access Bamboo Reports."
-      footer={
-        <>
-          New here?{" "}
-          <Link className="font-medium text-primary hover:underline" href="/signup">
-            Create an account
-          </Link>
-        </>
-      }
+      footer="Accounts are created by your administrator."
     >
       <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
         <div className="space-y-2">
@@ -183,19 +175,9 @@ function SignInForm() {
             <AlertDescription>{submitError}</AlertDescription>
           </Alert>
         ) : null}
-        {signupStatus === "success" ? (
-          <Alert className="border-emerald-500/30 bg-emerald-500/10 text-foreground">
-            <AlertDescription>Account created. Please sign in to continue.</AlertDescription>
-          </Alert>
-        ) : null}
         {resetStatus === "success" ? (
           <Alert className="border-emerald-500/30 bg-emerald-500/10 text-foreground">
             <AlertDescription>Password updated. Please sign in with your new password.</AlertDescription>
-          </Alert>
-        ) : null}
-        {signupStatus === "pending" ? (
-          <Alert className="border-amber-500/40 bg-amber-500/10 text-foreground">
-            <AlertDescription>Check your email to confirm your account, then sign in.</AlertDescription>
           </Alert>
         ) : null}
         <Button

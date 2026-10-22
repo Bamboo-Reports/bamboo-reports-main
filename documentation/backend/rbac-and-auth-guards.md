@@ -10,7 +10,7 @@ Two roles exist, defined in `lib/auth/roles.ts`:
 
 | Role | Capabilities |
 |------|--------------|
-| `viewer` | Read-only dashboard access. Default role for new sign-ups. |
+| `viewer` | Read-only dashboard access. Default role for new accounts. |
 | `admin` | Everything `viewer` has, plus data export (`canExportData()` returns `true`). |
 
 ```typescript
@@ -56,7 +56,6 @@ Zod schemas used by the auth forms (`app/(auth)/*/page.tsx`, framed by `componen
 | Schema | Fields | Notes |
 |--------|--------|-------|
 | `signInSchema` | `email`, `password`, `rememberMe` | Password minimum 6 characters. |
-| `signUpSchema` | `firstName`, `lastName`, `email`, `phone`, `password` | Phone required, 7-20 characters. |
 | `forgotPasswordSchema` | `email` | |
 | `updatePasswordSchema` | `password`, `confirmPassword` | Minimum 8 characters; `.refine()` enforces the two fields match. |
 
@@ -80,7 +79,7 @@ The rule for new admin-only features: enforce the check in the route handler or 
 | `lib/auth/roles.ts` | Role type, default role, normalization, `canExportData()` |
 | `lib/auth/server.ts` | Bearer token extraction and Supabase token verification for route handlers |
 | `hooks/use-auth-guard.ts` | Client-side session/role guard used by protected pages |
-| `lib/validators/auth.ts` | Zod schemas for sign-in, sign-up, forgot/update password forms |
+| `lib/validators/auth.ts` | Zod schemas for sign-in, forgot/update password forms |
 | `app/(auth)/*/page.tsx`, `components/auth/auth-shell.tsx` | The auth forms and their shared card frame (see [Standalone Screens](../frontend/standalone-screens.md)) |
 | `documentation/backend/supabase-auth-setup.md` | `profiles` table schema, RLS policies, auth triggers |
 | `tests/unit/auth-server.test.ts` | Tests for `lib/auth/server.ts` |

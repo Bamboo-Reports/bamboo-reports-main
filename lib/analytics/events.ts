@@ -1,8 +1,6 @@
 export const ANALYTICS_EVENTS = {
   AUTH_SIGN_IN_SUCCEEDED: "auth_sign_in_succeeded",
   AUTH_SIGN_IN_FAILED: "auth_sign_in_failed",
-  AUTH_SIGN_UP_SUCCEEDED: "auth_sign_up_succeeded",
-  AUTH_SIGN_UP_FAILED: "auth_sign_up_failed",
   AUTH_SIGNED_OUT: "auth_signed_out",
   SESSION_STARTED: "session_started",
   SESSION_ENDED: "session_ended",
