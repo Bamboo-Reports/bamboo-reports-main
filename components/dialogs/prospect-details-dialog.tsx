@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { RiCheckLine, RiEqualizerLine, RiExternalLinkLine, RiFileCopyLine, RiLinkedinBoxLine, RiMailLine } from "@remixicon/react"
-import { formatProspectLocation } from "@/lib/utils/helpers"
+import { compareProspectNames, formatProspectLocation } from "@/lib/utils/helpers"
 import type { Prospect } from "@/lib/types"
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard"
 import { Badge } from "@/components/ui/badge"
@@ -163,7 +163,7 @@ export function ProspectDetailsDialog({
                 ? other.ps_unique_key !== p.ps_unique_key
                 : other.prospect_first_name !== p.prospect_first_name ||
                   other.prospect_last_name !== p.prospect_last_name),
-          )
+          ).sort(compareProspectNames)
         : [],
     [p, allProspects],
   )

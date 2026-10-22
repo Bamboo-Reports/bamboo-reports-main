@@ -21,6 +21,7 @@ import { CompanyLogo } from "@/components/ui/company-logo"
 import { CenterDetailsDialog } from "./center-details-dialog"
 import { ProspectDetailsDialog } from "./prospect-details-dialog"
 import { CenterGridCard } from "@/components/cards/center-grid-card"
+import { compareProspectNames } from "@/lib/utils/helpers"
 import { ProspectGridCard } from "@/components/cards/prospect-grid-card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -254,11 +255,7 @@ export function AccountDetailsDialog({
     () => account && canViewProspects
       ? prospects
           .filter((prospect) => prospect.account_global_legal_name === account.account_global_legal_name)
-          .sort((a, b) => {
-            const nameA = `${a.prospect_first_name ?? ""} ${a.prospect_last_name ?? ""}`.trim().toLowerCase()
-            const nameB = `${b.prospect_first_name ?? ""} ${b.prospect_last_name ?? ""}`.trim().toLowerCase()
-            return nameA.localeCompare(nameB)
-          })
+          .sort(compareProspectNames)
       : [],
     [account, canViewProspects, prospects]
   )
@@ -459,7 +456,7 @@ export function AccountDetailsDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-y-auto glassmorphism-dialog">
+        <DialogContent className="max-w-[95vw] h-[90vh] overflow-y-auto glassmorphism-dialog">
           <DialogHeader>
             <DialogDescription className="sr-only">
               Account profile details, centers, prospects, services, technology, and financial information.
@@ -762,6 +759,7 @@ export function AccountDetailsDialog({
                           key={`${center.cn_unique_key}-${index}`}
                           center={center}
                           onClick={() => handleCenterClick(center)}
+                          showAccount={false}
                         />
                       ))}
                     </div>
