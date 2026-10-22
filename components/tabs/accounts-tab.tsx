@@ -23,7 +23,7 @@ import { CentersMap } from "@/components/maps/centers-map"
 import { CentersChoroplethMap } from "@/components/maps/centers-choropleth-map"
 import { MapErrorBoundary } from "@/components/maps/map-error-boundary"
 import { ViewSwitcher } from "@/components/ui/view-switcher"
-import { SortButton } from "@/components/ui/sort-button"
+import { SortButton, getAriaSort } from "@/components/ui/sort-button"
 import { PaginationControls } from "@/components/ui/pagination-controls"
 import { TableColumnMenu } from "@/components/tables/table-column-menu"
 import { useTableColumnPreferences } from "@/hooks/use-table-column-preferences"
@@ -445,7 +445,7 @@ export function AccountsTab({
           <CardContent className="p-0 flex flex-col flex-1 overflow-hidden">
             <div ref={scrollContainerRef} key={dataLayout} className="flex-1 overflow-auto view-content">
               {dataLayout === "table" ? (
-                <Table className="table-fixed">
+                <Table className="table-fixed" aria-label="Accounts">
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[44px]">
@@ -456,22 +456,22 @@ export function AccountsTab({
                         />
                       </TableHead>
                       {isColumnVisible("name") && (
-                      <TableHead className="w-[280px]">
+                      <TableHead className="w-[280px]" aria-sort={getAriaSort("name", sort.key, sort.direction)}>
                         <SortButton label="Account Name" sortKey="name" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                       </TableHead>
                       )}
                       {isColumnVisible("industry") && (
-                      <TableHead className="w-[220px]">
+                      <TableHead className="w-[220px]" aria-sort={getAriaSort("industry", sort.key, sort.direction)}>
                         <SortButton label="Sub Industry" sortKey="industry" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                       </TableHead>
                       )}
                       {isColumnVisible("revenue") && (
-                      <TableHead className="w-[140px]">
+                      <TableHead className="w-[140px]" aria-sort={getAriaSort("revenue", sort.key, sort.direction)}>
                         <SortButton label="Revenue Range" sortKey="revenue" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                       </TableHead>
                       )}
                       {isColumnVisible("employees") && (
-                      <TableHead className="w-[200px]">
+                      <TableHead className="w-[200px]" aria-sort={getAriaSort("employees", sort.key, sort.direction)}>
                         <SortButton label="GCC Aggregate Headcount (India)" sortKey="employees" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                       </TableHead>
                       )}

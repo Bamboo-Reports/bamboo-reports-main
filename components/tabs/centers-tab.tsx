@@ -25,7 +25,7 @@ import { CentersMap } from "@/components/maps/centers-map"
 import { CentersChoroplethMap } from "@/components/maps/centers-choropleth-map"
 import { MapErrorBoundary } from "@/components/maps/map-error-boundary"
 import { ViewSwitcher } from "@/components/ui/view-switcher"
-import { SortButton } from "@/components/ui/sort-button"
+import { SortButton, getAriaSort } from "@/components/ui/sort-button"
 import { PaginationControls } from "@/components/ui/pagination-controls"
 import { TableColumnMenu } from "@/components/tables/table-column-menu"
 import { useTableColumnPreferences } from "@/hooks/use-table-column-preferences"
@@ -475,7 +475,7 @@ export function CentersTab({
             <CardContent className="p-0 flex flex-col flex-1 overflow-hidden">
               <div ref={scrollContainerRef} key={dataLayout} className="flex-1 overflow-auto view-content">
                 {dataLayout === "table" ? (
-                  <Table className="table-fixed">
+                  <Table className="table-fixed" aria-label="Centres">
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-[44px]">
@@ -486,22 +486,22 @@ export function CentersTab({
                           />
                         </TableHead>
                         {isColumnVisible("name") && (
-                        <TableHead className="w-[260px]">
+                        <TableHead className="w-[260px]" aria-sort={getAriaSort("name", sort.key, sort.direction)}>
                           <SortButton label="Centre Name" sortKey="name" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
                         )}
                         {isColumnVisible("location") && (
-                        <TableHead className="w-[200px]">
+                        <TableHead className="w-[200px]" aria-sort={getAriaSort("location", sort.key, sort.direction)}>
                           <SortButton label="Location" sortKey="location" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
                         )}
                         {isColumnVisible("type") && (
-                        <TableHead className="w-[200px]">
+                        <TableHead className="w-[200px]" aria-sort={getAriaSort("type", sort.key, sort.direction)}>
                           <SortButton label="Centre Type" sortKey="type" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
                         )}
                         {isColumnVisible("employees") && (
-                        <TableHead className="w-[160px]">
+                        <TableHead className="w-[160px]" aria-sort={getAriaSort("employees", sort.key, sort.direction)}>
                           <SortButton label="Centre Headcount" sortKey="employees" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
                         )}

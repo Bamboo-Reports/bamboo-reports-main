@@ -38,16 +38,8 @@ export const AccountRow = memo(({ account, onOpen, visibleColumns, selectable, i
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <TableRow
-          className="cursor-pointer hover:bg-muted/50 transition-colors focus-visible:bg-muted/70"
+          className="cursor-pointer hover:bg-muted/50 transition-colors focus-within:bg-muted/70"
           onClick={handleOpen}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
-              event.preventDefault()
-              handleOpen()
-            }
-          }}
-          tabIndex={0}
-          aria-label={`View account details for ${accountName}`}
         >
           {selectable && (
           <TableCell
@@ -73,9 +65,17 @@ export const AccountRow = memo(({ account, onOpen, visibleColumns, selectable, i
                 theme="auto"
               />
               <div className="min-w-0">
-                <div className="min-w-0 truncate" title={accountName}>
+                <button
+                  type="button"
+                  className="block max-w-full truncate rounded-sm text-left hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  title={accountName}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    handleOpen()
+                  }}
+                >
                   {accountName}
-                </div>
+                </button>
                 {showChipRow && (
                   <div className="mt-1 flex flex-wrap items-center gap-1.5">
                     {isNasscomVerified && (
