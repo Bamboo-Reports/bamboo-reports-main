@@ -29,7 +29,7 @@ def _redis_command(url: str, token: str, command: List[Any]) -> Any:
 
 
 def purge_dashboard_cache():
-    """Deletes the app's cached dashboard responses (keys dash:*) in Upstash.
+    """Deletes the app's cached dashboard responses (keys dash:*, every environment) in Upstash.
 
     The web app caches filter-state responses in a shared Redis with a TTL.
     Purging right after an import makes the new data visible immediately

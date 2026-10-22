@@ -25,6 +25,9 @@ describe("Upstash Redis cache layer", () => {
     vi.stubGlobal("fetch", fetchMock)
     vi.stubEnv(URL_ENV, "https://redis.example.upstash.io")
     vi.stubEnv(TOKEN_ENV, "test-token")
+    // Local runs (no Vercel env) share the "local:dev" namespace (#316).
+    vi.stubEnv("VERCEL_ENV", "")
+    vi.stubEnv("VERCEL_GIT_COMMIT_SHA", "")
   })
 
   afterEach(() => {
@@ -52,7 +55,7 @@ describe("Upstash Redis cache layer", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
     const [url, init] = fetchMock.mock.calls[0]
     expect(url).toBe("https://redis.example.upstash.io")
-    expect(JSON.parse(init.body)).toEqual(["GET", "dash:k"])
+    expect(JSON.parse(init.body)).toEqual(["GET", "dash:local:dev:k"])
     expect(init.headers.Authorization).toBe("Bearer test-token")
   })
 
@@ -83,7 +86,7 @@ describe("Upstash Redis cache layer", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
     const setCommand = JSON.parse(fetchMock.mock.calls[1][1].body)
     expect(setCommand[0]).toBe("SET")
-    expect(setCommand[1]).toBe("dash:k")
+    expect(setCommand[1]).toBe("dash:local:dev:k")
     expect(JSON.parse(setCommand[2]).value).toEqual({ rows: [1, 2] })
     expect(setCommand.slice(3)).toEqual(["PX", 5000])
   })
@@ -151,5 +154,41 @@ describe("Upstash Redis cache layer", () => {
     expect(await b).toBe("from-redis")
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(fn).not.toHaveBeenCalled()
+  })
+
+  // Production, previews and local dev share one Upstash database, so keys are
+  // namespaced by environment and deployment; otherwise a preview or local run
+  // reads and writes production's cached responses (#316).
+  describe("key namespace (#316)", () => {
+    async function keyFor(env: string, sha: string): Promise<string> {
+      vi.stubEnv("VERCEL_ENV", env)
+      vi.stubEnv("VERCEL_GIT_COMMIT_SHA", sha)
+      clearCache()
+      fetchMock.mockReset()
+      fetchMock.mockResolvedValueOnce(redisResponse(null)).mockResolvedValueOnce(redisResponse("OK"))
+      await getOrCompute("k", 1000, async () => "v")
+      return JSON.parse(fetchMock.mock.calls[0][1].body)[1]
+    }
+
+    it("includes the environment and short commit", async () => {
+      expect(await keyFor("production", "abc1234def5678")).toBe("dash:production:abc1234:k")
+      expect(await keyFor("preview", "0123456789abcdef")).toBe("dash:preview:0123456:k")
+    })
+
+    it("never gives two environments or deployments the same key", async () => {
+      const keys = [
+        await keyFor("production", "aaaaaaa1"),
+        await keyFor("preview", "aaaaaaa1"),
+        await keyFor("production", "bbbbbbb2"),
+        await keyFor("", ""),
+      ]
+      expect(new Set(keys).size).toBe(keys.length)
+    })
+
+    it("keeps the dash: prefix the ETL purge matches (dash:*)", async () => {
+      for (const key of [await keyFor("production", "abc1234"), await keyFor("", "")]) {
+        expect(key.startsWith("dash:")).toBe(true)
+      }
+    })
   })
 })

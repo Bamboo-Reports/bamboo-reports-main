@@ -23,7 +23,7 @@ getOrCompute(key, ttlMs, fn, { bypassRead? })
   ├─ ttlMs <= 0            → fn() directly, no caching
   ├─ L1 hit (unexpired)    → return, refresh LRU recency
   ├─ in-flight same key    → await the shared promise (dedup)
-  ├─ L2 GET dash:<key>     → on hit: store in L1 (residency-capped), return
+  ├─ L2 GET dash:<env>:<commit>:<key> → on hit: store in L1 (residency-capped), return
   └─ fn()                  → store in L1, awaited SET to L2 (PX ttl), return
 ```
 
@@ -45,7 +45,7 @@ The residency cap means an L1 entry is re-validated against Redis at most every 
 ### L2 details (Upstash Redis REST)
 
 - Plain `fetch` against the Upstash REST endpoint, no client dependency.
-- Key prefix `dash:`, value is the JSON entry, `SET ... PX <ttl>`.
+- Key `dash:<env>:<commit>:<key>`, value is the JSON entry, `SET ... PX <ttl>`. `<env>` is `VERCEL_ENV` (`production`, `preview`) or `local`; `<commit>` is the first 7 characters of `VERCEL_GIT_COMMIT_SHA`, or `dev`. Production, previews and local dev share one Upstash database, so the namespace keeps a preview or local run from reading production's responses or writing ones production would serve, and each deploy starts with its own keys instead of serving responses computed by the previous code (#316). Keys from older deploys are left to expire by TTL or the next ETL purge.
 - 1500 ms request timeout.
 - Any failure (timeout, bad status, missing config) returns null and the code falls through to computing. Fail open: Redis being down never breaks a request. The first failure logs one `[cache] Redis unavailable` warning.
 - When the env vars are unset, behavior is exactly the pre-Redis in-process cache. The config is checked synchronously before the async path so that without Redis, `fn()` starts before `getOrCompute` returns.
@@ -64,7 +64,7 @@ The residency cap means an L1 entry is re-validated against Redis at most every 
 | `GET /api/accounts/autocomplete` | `autocomplete:<term>` | 24 h |
 | `POST /api/accounts/match` (`app/api/accounts/match/route.ts`) | `account-match:index-rows` (raw account and alias name rows; the lookup index is rebuilt from them per instance) | 24 h |
 
-Search, autocomplete and the account-match index use a fixed 24 h TTL but are disabled entirely when `DASHBOARD_CACHE_TTL_MS=0` (the global off switch). All keys share the `dash:` Redis prefix, so one purge clears everything.
+Search, autocomplete and the account-match index use a fixed 24 h TTL but are disabled entirely when `DASHBOARD_CACHE_TTL_MS=0` (the global off switch). All keys share the `dash:` Redis prefix (whatever the environment or commit), so one purge clears everything.
 
 ### Why the TTL is 8 days
 
