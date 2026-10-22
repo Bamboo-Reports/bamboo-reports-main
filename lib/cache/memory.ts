@@ -33,10 +33,22 @@ export function dashboardCacheTtlMs(): number {
 // Upstash Redis REST (optional shared L2), via the shared client in redis.ts.
 // ---------------------------------------------------------------------------
 
-const REDIS_KEY_PREFIX = "dash:"
+/**
+ * Production, previews and local dev share one Upstash database, so keys are
+ * namespaced by environment and deployment (#316): a preview or local run must
+ * not read production's responses, nor write results from other code or data
+ * that production would then serve. Including the commit also keeps a new
+ * deploy from serving responses computed by the previous code. The leading
+ * "dash:" is what the ETL's post-import purge matches (etl/importer/cache.py).
+ */
+function redisKey(key: string): string {
+  const env = process.env.VERCEL_ENV || "local"
+  const commit = (process.env.VERCEL_GIT_COMMIT_SHA || "").slice(0, 7) || "dev"
+  return `dash:${env}:${commit}:${key}`
+}
 
 async function redisGet(key: string): Promise<Entry | null> {
-  const raw = await redisCommand(["GET", REDIS_KEY_PREFIX + key])
+  const raw = await redisCommand(["GET", redisKey(key)])
   if (typeof raw !== "string") return null
   try {
     const parsed = JSON.parse(raw) as Entry
@@ -48,7 +60,7 @@ async function redisGet(key: string): Promise<Entry | null> {
 }
 
 async function redisSet(key: string, entry: Entry, ttlMs: number): Promise<void> {
-  await redisCommand(["SET", REDIS_KEY_PREFIX + key, JSON.stringify(entry), "PX", ttlMs])
+  await redisCommand(["SET", redisKey(key), JSON.stringify(entry), "PX", ttlMs])
 }
 
 // ---------------------------------------------------------------------------
