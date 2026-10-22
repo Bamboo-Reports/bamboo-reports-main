@@ -80,6 +80,10 @@ export function clearClientDashboardCache(): void {
 
 const DEBOUNCE_MS = 350
 
+// Automatic retries for the map colour-scale request after a failure (#291).
+// Once these are used up, a refresh or showing the map again retries it.
+const SCALE_RETRY_DELAYS_MS = [5_000, 15_000, 45_000]
+
 export type EntityPages = {
   accounts: EntityPage<Account> | null
   centers: EntityPage<Center> | null
@@ -134,6 +138,14 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
   // The canonical (wire) filters JSON driving all fetches; updates are
   // debounced unless the target state is already cached.
   const [effectiveKey, setEffectiveKey] = useState("")
+  // The filters (filtersKey) that effectiveKey was last brought up to date
+  // with. While they differ from the current filters, a change is waiting out
+  // the debounce and table pages hold off: the dashboard resets them to page 1
+  // on a filter change, which would otherwise show or fetch page 1 for the old
+  // filters (#289). Compared during render, so it holds from the first render
+  // of the change.
+  const [settledFiltersKey, setSettledFiltersKey] = useState<string | null>(null)
+  const [scaleAttempt, setScaleAttempt] = useState(0)
   // The key each piece of state was last applied for, so the UI can tell
   // "showing the previous state while a newer one loads" (pending flags).
   const [appliedKeys, setAppliedKeys] = useState<{
@@ -167,6 +179,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
   const reload = useCallback(() => {
     clearClientDashboardCache()
     bypassUntilRef.current = Date.now() + 5000
+    setScaleAttempt(0)
     setIsRefreshing(true)
     setRefreshKey((k) => k + 1)
   }, [])
@@ -191,12 +204,19 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
   useEffect(() => {
     if (!enabled) return
     const key = JSON.stringify(normalizeFiltersForServer(filtersRef.current, rangesRef.current))
-    if (key === effectiveKey) return
-    if (!effectiveKey || (summaryCache.has(key) && facetsCache.has(key))) {
-      setEffectiveKey(key)
+    if (key === effectiveKey) {
+      setSettledFiltersKey(filtersKey)
       return
     }
-    const timer = setTimeout(() => setEffectiveKey(key), DEBOUNCE_MS)
+    if (!effectiveKey || (summaryCache.has(key) && facetsCache.has(key))) {
+      setEffectiveKey(key)
+      setSettledFiltersKey(filtersKey)
+      return
+    }
+    const timer = setTimeout(() => {
+      setEffectiveKey(key)
+      setSettledFiltersKey(filtersKey)
+    }, DEBOUNCE_MS)
     return () => clearTimeout(timer)
   }, [enabled, filtersKey, effectiveKey])
 
@@ -387,26 +407,35 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
   }, [enabled, effectiveKey, refreshKey])
 
   // Unfiltered state aggregates for the choropleth color scale (once, and only
-  // once a map has been shown).
+  // once a map has been shown). A failure retries with backoff, then again on
+  // refresh or the next time the map is shown (#291).
   useEffect(() => {
     if (!enabled || !views.needMap || scaleStates !== null) return
-    let cancelled = false
+    const controller = new AbortController()
+    let retryTimer: ReturnType<typeof setTimeout> | undefined
     fetchCentersMap(
       createDefaultFilters({
         accountVisibilityMode: "all",
         accountHqRevenueRange: WIDE_RANGE,
         accountYearsInIndiaRange: WIDE_RANGE,
         centerIncYearRange: WIDE_RANGE,
-      })
+      }),
+      { signal: controller.signal }
     )
       .then((res) => {
-        if (!cancelled) setScaleStates(res.states)
+        if (!controller.signal.aborted) setScaleStates(res.states)
       })
-      .catch((err) => devError("scale aggregates fetch failed:", err))
+      .catch((err) => {
+        if (controller.signal.aborted || isAbortError(err)) return
+        devError("scale aggregates fetch failed:", err)
+        const delay = SCALE_RETRY_DELAYS_MS[scaleAttempt]
+        if (delay !== undefined) retryTimer = setTimeout(() => setScaleAttempt((n) => n + 1), delay)
+      })
     return () => {
-      cancelled = true
+      controller.abort()
+      clearTimeout(retryTimer)
     }
-  }, [enabled, views.needMap, scaleStates])
+  }, [enabled, views.needMap, scaleStates, scaleAttempt, refreshKey])
 
   // Per-entity paginated rows: only the active section fetches; the others
   // fetch on first activation (and then hit the cache). Each table has its own
@@ -457,15 +486,16 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
     [effectiveKey, pageSize, noCache, reportError]
   )
 
+  const filtersSettled = settledFiltersKey === filtersKey
   const useEntityEffect = (entity: "accounts" | "centers" | "prospects", page: number, sort: EntitySort | null) => {
     const sortKey = sort ? `${sort.column}:${sort.direction}` : ""
     const active = views.activeEntity === entity
     useEffect(() => {
-      if (!enabled || !active) return
+      if (!enabled || !active || !filtersSettled) return
       loadEntityPage(entity, page, sort)
       // sort is keyed by sortKey so an equal sort object does not refetch.
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [enabled, active, page, sortKey, refreshKey, loadEntityPage])
+    }, [enabled, active, filtersSettled, page, sortKey, refreshKey, loadEntityPage])
   }
   // Fixed call order: the three entities are static.
   useEntityEffect("accounts", pages.accounts, sorts.accounts)

@@ -49,13 +49,14 @@ type Props = {
   filters: Filters
   views?: DashboardViews
   accountsSort?: EntitySort | null
+  accountsPage?: number
 }
 
-function props({ filters, views, accountsSort = null }: Props) {
+function props({ filters, views, accountsSort = null, accountsPage = 1 }: Props) {
   return {
     enabled: true,
     filters,
-    pages: { accounts: 1, centers: 1, prospects: 1 },
+    pages: { accounts: accountsPage, centers: 1, prospects: 1 },
     sorts: { accounts: accountsSort, centers: null, prospects: null },
     pageSize: 51,
     views: views ?? { needCharts: false, needMap: false, activeEntity: "accounts" as const },
@@ -301,5 +302,112 @@ describe("useServerDashboardData: cancelling superseded requests", () => {
 
     expect(inFlight.every((c) => c.signal?.aborted)).toBe(true)
     expect(captured.events).not.toContain("data_load_failed")
+  })
+})
+
+describe("useServerDashboardData: filter change on a later page (#289)", () => {
+  it("does not fetch page 1 for the old filters while the new filters are debouncing", async () => {
+    const { result, rerender } = await renderLoaded()
+
+    rerender({ filters: base, accountsPage: 2 })
+    await settle()
+    await act(async () => {
+      latest("page:accounts").resolve(page("base-p2"))
+    })
+    const before = pendingCalls("page:accounts").length
+
+    // The dashboard resets to page 1 in the same update as the filter change.
+    rerender({ filters: withRegion, accountsPage: 1 })
+    await settle()
+    expect(pendingCalls("page:accounts")).toHaveLength(before)
+    expect(result.current.entityPages.accounts).toEqual(page("base-p2"))
+
+    // Once the debounce applies the new filters, page 1 is fetched once, for them.
+    await act(async () => {
+      vi.advanceTimersByTime(400)
+    })
+    expect(pendingCalls("page:accounts")).toHaveLength(before + 1)
+    await act(async () => {
+      latest("page:accounts").resolve(page("region-p1"))
+    })
+    expect(result.current.entityPages.accounts).toEqual(page("region-p1"))
+    expect(result.current.pending.accounts).toBe(false)
+  })
+
+  it("still fetches a page change right away when the filters are settled", async () => {
+    const { rerender } = await renderLoaded()
+    const before = pendingCalls("page:accounts").length
+
+    rerender({ filters: base, accountsPage: 2 })
+    await settle()
+
+    expect(pendingCalls("page:accounts")).toHaveLength(before + 1)
+  })
+})
+
+describe("useServerDashboardData: map colour scale retries (#291)", () => {
+  const mapViews = { needCharts: false, needMap: true, activeEntity: "accounts" as const }
+
+  it("retries the colour scale after a failure instead of giving up for the session", async () => {
+    const { result } = renderHook((p: Props) => useServerDashboardData(props(p)), {
+      initialProps: { filters: base, views: mapViews },
+    })
+    const [scale, filtered] = pendingCalls("map")
+    await act(async () => {
+      latest("summary").resolve(summary(100))
+      latest("facets").resolve(facets)
+      latest("page:accounts").resolve(page("base"))
+      filtered.resolve({ states: [], cities: [] })
+      scale.reject(new Error("Request failed (504)"))
+    })
+    expect(result.current.scaleStates).toBeNull()
+    const callsAfterFailure = pendingCalls("map").length
+
+    await act(async () => {
+      vi.advanceTimersByTime(5_000)
+    })
+    expect(pendingCalls("map").length).toBe(callsAfterFailure + 1)
+
+    await act(async () => {
+      latest("map").resolve({ states: [{ stateKey: "ka" }], cities: [] })
+    })
+    expect(result.current.scaleStates).toEqual([{ stateKey: "ka" }])
+  })
+
+  it("retries the colour scale on refresh after the automatic retries are used up", async () => {
+    const { result } = renderHook((p: Props) => useServerDashboardData(props(p)), {
+      initialProps: { filters: base, views: mapViews },
+    })
+    const [scale, filtered] = pendingCalls("map")
+    await act(async () => {
+      latest("summary").resolve(summary(100))
+      latest("facets").resolve(facets)
+      latest("page:accounts").resolve(page("base"))
+      filtered.resolve({ states: [], cities: [] })
+      scale.reject(new Error("Request failed (504)"))
+    })
+    // Fail every automatic retry.
+    for (let i = 0; i < 3; i++) {
+      await act(async () => {
+        vi.advanceTimersByTime(60_000)
+      })
+      await act(async () => {
+        latest("map").reject(new Error("Request failed (504)"))
+      })
+    }
+    const exhausted = pendingCalls("map").length
+    await act(async () => {
+      vi.advanceTimersByTime(120_000)
+    })
+    expect(pendingCalls("map").length).toBe(exhausted)
+
+    await act(async () => {
+      result.current.reload()
+    })
+    // Answer every map request the refresh sent; only a colour-scale request sets scaleStates.
+    await act(async () => {
+      for (const call of pendingCalls("map").slice(exhausted)) call.resolve({ states: [{ stateKey: "ka" }], cities: [] })
+    })
+    expect(result.current.scaleStates).toEqual([{ stateKey: "ka" }])
   })
 })

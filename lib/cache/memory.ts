@@ -116,7 +116,9 @@ export async function getOrCompute<T>(
     if (useRedis) await redisSet(key, entry, ttlMs)
     return value
   })().finally(() => {
-    inflight.delete(key)
+    // A forced refresh (bypassRead) may have replaced this entry while it ran;
+    // only remove the key if it still points at this computation (#292).
+    if (inflight.get(key) === promise) inflight.delete(key)
   })
 
   inflight.set(key, promise)
