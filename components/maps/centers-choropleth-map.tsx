@@ -426,10 +426,12 @@ export function CentersChoroplethMap({
       <MapGL
         ref={mapRef}
         style={{ width: "100%", height: "100%" }}
+        // Start on India. Flying there after load could be interrupted by the
+        // resize below and leave the map on the world view.
         initialViewState={{
-          latitude: 15,
-          longitude: 0,
-          zoom: 1.6,
+          latitude: 20.5937,
+          longitude: 78.9629,
+          zoom: 3.5,
         }}
         mapStyle={mapStyle}
         workerUrl={MAPLIBRE_WORKER_URL}
@@ -440,7 +442,6 @@ export function CentersChoroplethMap({
           hideBasemapBoundaries(e.target)
           setTimeout(() => {
             e.target.resize()
-            handleRecenter()
           }, 200)
         }}
         interactiveLayerIds={["admin1-fill"]}
@@ -571,23 +572,35 @@ export function CentersChoroplethMap({
         </Source>
 
         <div
-          className="absolute bottom-4 left-4 z-10 rounded-lg border bg-background/35 backdrop-blur-md p-3 shadow-sm min-w-[220px]"
+          className="absolute bottom-4 left-4 z-10 rounded-lg border bg-background/90 backdrop-blur-md p-3 shadow-sm min-w-[220px]"
           style={{
             fontFamily:
               "'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
           }}
         >
-          <div className="text-sm font-semibold text-muted-foreground dark:text-white mb-2 text-center">Total Centres</div>
-          <div className="flex items-center gap-2 text-[11px] text-muted-foreground dark:text-white">
-            <span className="tabular-nums">{countRange.min.toLocaleString()}</span>
-            <div
-              className="h-2 flex-1 rounded-full"
-              style={{
-                background: `linear-gradient(90deg, ${COLOR_SCALE.join(", ")})`,
-              }}
-            />
-            <span className="tabular-nums">{countRange.max.toLocaleString()}</span>
-          </div>
+          <div className="text-sm font-semibold text-foreground mb-2 text-center">Total Centres</div>
+          {countRange.min === countRange.max ? (
+            // One matching state (or none): a range would read "475 to 475".
+            <div className="flex items-center justify-center gap-2 text-[11px] text-foreground">
+              <span
+                className="h-2 w-6 rounded-full"
+                style={{ background: COLOR_SCALE[COLOR_SCALE.length - 1] }}
+                aria-hidden="true"
+              />
+              <span className="tabular-nums">{countRange.max.toLocaleString()}</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-[11px] text-foreground">
+              <span className="tabular-nums">{countRange.min.toLocaleString()}</span>
+              <div
+                className="h-2 flex-1 rounded-full"
+                style={{
+                  background: `linear-gradient(90deg, ${COLOR_SCALE.join(", ")})`,
+                }}
+              />
+              <span className="tabular-nums">{countRange.max.toLocaleString()}</span>
+            </div>
+          )}
         </div>
 
         {hoverInfo && (
