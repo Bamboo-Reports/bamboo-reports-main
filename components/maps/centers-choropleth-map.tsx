@@ -4,7 +4,7 @@ import React, { useMemo, useState, useEffect, useLayoutEffect } from "react"
 import { Map as MapGL, Source, Layer, NavigationControl, FullscreenControl } from "@vis.gl/react-maplibre"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
-import { BASEMAP_STYLE_URL, MAPLIBRE_WORKER_URL, hideBasemapBoundaries } from "@/lib/maps/basemap"
+import { MAPLIBRE_WORKER_URL, prepareBasemap, useBasemapStyleUrl } from "@/lib/maps/basemap"
 import { DebugLocationSearch } from "@/components/maps/debug-location-search"
 import { devError } from "@/lib/utils/dev-log"
 import type { Center } from "@/lib/types"
@@ -369,7 +369,7 @@ export function CentersChoroplethMap({
     ] as any
   }, [featureKeyExpression, hoveredFeatureKeys])
 
-  const mapStyle = BASEMAP_STYLE_URL
+  const mapStyle = useBasemapStyleUrl()
 
   const handleRecenter = () => {
     const mapInstance = mapRef.current?.getMap?.() ?? mapRef.current
@@ -433,11 +433,13 @@ export function CentersChoroplethMap({
         }}
         mapStyle={mapStyle}
         workerUrl={MAPLIBRE_WORKER_URL}
+        // Switching theme swaps the basemap style, which resets borders and colours.
+        onStyleData={(e) => prepareBasemap(e.target)}
         projection="mercator"
         onLoad={(e) => {
           // Hide the basemap's de-facto international borders; India boundaries
           // come from the SOI overlay below.
-          hideBasemapBoundaries(e.target)
+          prepareBasemap(e.target)
           setTimeout(() => {
             e.target.resize()
             handleRecenter()

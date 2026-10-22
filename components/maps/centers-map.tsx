@@ -4,7 +4,7 @@ import React, { useMemo, useState, useEffect, useCallback, useLayoutEffect } fro
 import { Map as MapGL, Source, Layer, NavigationControl, FullscreenControl } from "@vis.gl/react-maplibre"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
-import { BASEMAP_STYLE_URL, MAPLIBRE_WORKER_URL, hideBasemapBoundaries } from "@/lib/maps/basemap"
+import { MAPLIBRE_WORKER_URL, prepareBasemap, useBasemapStyleUrl } from "@/lib/maps/basemap"
 import { DebugLocationSearch } from "@/components/maps/debug-location-search"
 import { createLogger } from "@/lib/logger"
 import type { Center } from "@/lib/types"
@@ -365,7 +365,7 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
     [coreRadiusExpression]
   )
 
-  const mapStyle = BASEMAP_STYLE_URL
+  const mapStyle = useBasemapStyleUrl()
 
   // Handler to recenter the map to India
   const handleRecenter = () => {
@@ -463,12 +463,14 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
         initialViewState={initialViewState}
         mapStyle={mapStyle}
         workerUrl={MAPLIBRE_WORKER_URL}
+        // Switching theme swaps the basemap style, which resets borders and colours.
+        onStyleData={(e) => prepareBasemap(e.target)}
         projection="mercator"
         onLoad={() => {
           const map = mapRef.current?.getMap?.() ?? mapRef.current
           // Hide the basemap's de-facto international borders; India boundaries
           // come from the SOI overlay below.
-          if (map) hideBasemapBoundaries(map)
+          if (map) prepareBasemap(map)
           // Force a resize calculation after map loads to ensure it fills container
           setTimeout(() => {
             if (map?.resize) {
