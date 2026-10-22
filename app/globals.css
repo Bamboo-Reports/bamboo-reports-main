@@ -347,40 +347,25 @@
     transition: opacity 0.2s ease;
   }
 
-  /* Smooth tab transition */
-  @keyframes tabContentIn {
+  /* Plain fade for tab and view switches (chart / data / map) */
+  @keyframes contentFadeIn {
     from {
       opacity: 0;
-      transform: translateY(8px);
-      filter: blur(2px);
     }
     to {
       opacity: 1;
-      transform: translateY(0);
-      filter: blur(0);
     }
   }
 
-  .tab-content {
-    animation: tabContentIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  }
-
-  /* Smooth view switch transition (chart / data / map) */
-  @keyframes viewContentIn {
-    from {
-      opacity: 0;
-      transform: translateY(6px) scale(0.995);
-      filter: blur(1.5px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-      filter: blur(0);
-    }
-  }
-
+  .tab-content,
   .view-content {
-    animation: viewContentIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    animation: contentFadeIn 0.2s ease-out;
+  }
+
+  /* Static transform: keeps the panel as the containing block, so the fixed
+     SelectionActionBar stays centered over the panel, not the viewport. */
+  .tab-content {
+    transform: translate(0);
   }
 
   /* Accordion animations */
