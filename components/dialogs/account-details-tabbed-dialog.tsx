@@ -28,6 +28,8 @@ import { TechTreemap } from "@/components/charts/tech-treemap"
 import { requestAccountFinancialInfo } from "@/lib/finance/request-client"
 import { useAccountRelated } from "@/hooks/use-account-related"
 import { RelatedLoadError } from "./related-load-error"
+import { useRecordHistory } from "@/contexts/record-history-context"
+import { accountHistoryItem } from "@/lib/dashboard/record-history"
 import { isSectionEnabled } from "@/lib/config/dashboard-access"
 import { PaginationControls } from "@/components/ui/pagination-controls"
 import { captureEvent } from "@/lib/analytics/client"
@@ -206,6 +208,11 @@ export function AccountDetailsDialog({
 }: AccountDetailsDialogProps) {
   const canViewCenters = isSectionEnabled("centers")
   const canViewProspects = isSectionEnabled("prospects")
+
+  const recordOpened = useRecordHistory()
+  useEffect(() => {
+    if (open && account) recordOpened(accountHistoryItem(account))
+  }, [open, account, recordOpened])
 
   const relatedName = fetchRelated && open ? (account?.account_global_legal_name ?? "") : ""
   const { data: related, loading: relatedFetching, error: relatedError, retry: retryRelated } = useAccountRelated(relatedName)

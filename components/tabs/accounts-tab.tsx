@@ -64,7 +64,6 @@ interface AccountsTabProps {
   currentPage: number
   setCurrentPage: (page: number | ((prev: number) => number)) => void
   itemsPerPage: number
-  onRecordOpened?: (item: { type: "account"; id: string; title: string; subtitle: string }) => void
   onDownloadSelection?: (scope: { dataset: "accounts"; accountNames: string[] }) => void
   server?: TabServerProps | null
   mapData?: { cities: CityAggregate[]; states: StateAggregate[] } | null
@@ -89,7 +88,6 @@ export function AccountsTab({
   currentPage,
   setCurrentPage,
   itemsPerPage,
-  onRecordOpened,
   onDownloadSelection,
   server,
   mapData,
@@ -152,12 +150,6 @@ export function AccountsTab({
       openedFrom,
       account,
     }
-    onRecordOpened?.({
-      type: "account",
-      id: account.account_global_legal_name ?? "",
-      title: account.account_global_legal_name ?? "Unknown Account",
-      subtitle: [account.account_hq_city, account.account_hq_country].filter(Boolean).join(", "),
-    })
     captureEvent(ANALYTICS_EVENTS.RECORD_OPENED, {
       entity: "account",
       record_id: account.account_global_legal_name,
@@ -167,7 +159,7 @@ export function AccountsTab({
       opened_from: openedFrom,
       has_website: Boolean(account.account_hq_website),
     })
-  }, [isDialogOpen, onRecordOpened, accountsView, dataLayout])
+  }, [isDialogOpen, accountsView, dataLayout])
 
   const handleSort = (key: typeof sort.key) => {
     let nextDirection: "asc" | "desc" | null = "asc"

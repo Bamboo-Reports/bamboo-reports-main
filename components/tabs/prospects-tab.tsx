@@ -52,7 +52,6 @@ interface ProspectsTabProps {
   currentPage: number
   setCurrentPage: (page: number | ((prev: number) => number)) => void
   itemsPerPage: number
-  onRecordOpened?: (item: { type: "prospect" | "account"; id: string; title: string; subtitle: string }) => void
   onDownloadSelection?: (scope: { dataset: "prospects"; prospectIds: string[] }) => void
   server?: TabServerProps | null
   chartsLoading?: boolean
@@ -73,7 +72,6 @@ export function ProspectsTab({
   currentPage,
   setCurrentPage,
   itemsPerPage,
-  onRecordOpened,
   onDownloadSelection,
   server,
   chartsLoading = false,
@@ -134,12 +132,6 @@ export function ProspectsTab({
     setIsDialogOpen(true)
     const prospectName = getProspectDisplayName(prospect)
     const recordId = getProspectRecordId(prospect)
-    onRecordOpened?.({
-      type: "prospect",
-      id: recordId,
-      title: prospectName,
-      subtitle: prospect.prospect_title || prospect.prospect_department || prospect.account_global_legal_name || "",
-    })
     openedRecordRef.current = {
       recordId,
       openedAt: Date.now(),
@@ -155,18 +147,12 @@ export function ProspectsTab({
       opened_from: openedFrom,
       has_contact_field: Boolean(prospect.prospect_email),
     })
-  }, [isDialogOpen, onRecordOpened, prospectsView, dataLayout, getProspectDisplayName, getProspectRecordId])
+  }, [isDialogOpen, prospectsView, dataLayout, getProspectDisplayName, getProspectRecordId])
 
   const openAccount = (account: Account) => {
     setIsDialogOpen(false)
     setSelectedAccount(account)
     setIsAccountDialogOpen(true)
-    onRecordOpened?.({
-      type: "account",
-      id: account.account_global_legal_name,
-      title: account.account_global_legal_name,
-      subtitle: [account.account_hq_city, account.account_hq_country].filter(Boolean).join(", "),
-    })
     captureEvent(ANALYTICS_EVENTS.RECORD_OPENED, {
       entity: "account",
       record_id: account.account_global_legal_name,
