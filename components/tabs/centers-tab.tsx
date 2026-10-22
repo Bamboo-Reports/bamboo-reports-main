@@ -11,6 +11,7 @@ import { RiExpandUpDownLine, RiLayoutGridLine, RiMapLine, RiMapPinLine, RiPieCha
 import { CenterRow } from "@/components/tables"
 import { SelectionActionBar } from "@/components/tables/selection-action-bar"
 import { useTableRowSelection } from "@/hooks/use-table-row-selection"
+import { useRecordOpener } from "@/hooks/use-record-opener"
 import { CenterGridCard } from "@/components/cards/center-grid-card"
 import {
   PieChartCard,
@@ -31,7 +32,6 @@ import { useTableColumnPreferences } from "@/hooks/use-table-column-preferences"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { fetchAccountRelated, type CityAggregate, type StateAggregate } from "@/lib/dashboard/api-client"
-import { devError } from "@/lib/utils/dev-log"
 import type { TabServerProps } from "@/components/tabs/accounts-tab"
 import { GridSkeletonCards, MapUpdatingPill, TableSkeletonRows } from "@/components/ui/data-skeletons"
 import type { Account, Center, Function, Prospect, Service, Tech } from "@/lib/types"
@@ -179,6 +179,7 @@ export function CentersTab({
     })
   }
 
+  const openRecord = useRecordOpener()
   const handleAccountOpen = (accountName: string) => {
     const account = accounts.find((item) => item.account_global_legal_name === accountName)
     if (account) {
@@ -187,11 +188,13 @@ export function CentersTab({
     }
     // Server mode: the account is not in the current page rows; fetch it.
     if (server) {
-      fetchAccountRelated(accountName)
-        .then((res) => {
-          if (res.account) openAccount(res.account)
-        })
-        .catch((err) => devError("related account fetch failed:", err))
+      openRecord({
+        label: "account",
+        load: () => fetchAccountRelated(accountName).then((res) => res.account),
+        onLoaded: openAccount,
+        notFoundMessage: "This account could not be found.",
+        errorMessage: "This account is not available right now.",
+      })
     }
   }
 
