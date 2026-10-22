@@ -53,6 +53,19 @@ describe("resolveOrder", () => {
     )
   })
 
+  it("orders range buckets by their lower bound instead of as text", () => {
+    for (const [entity, column] of [
+      ["accounts", "account_hq_revenue_range"],
+      ["accounts", "account_center_employees_range"],
+      ["accounts", "account_hq_employee_range"],
+      ["centers", "center_employees_range"],
+    ] as const) {
+      const order = resolveOrder(entity, { column, direction: "desc" })
+      expect(order).not.toContain(`lower(${column}) collate "C"`)
+      expect(order.startsWith(`case when ${column} is null then 1 else 0 end asc`)).toBe(true)
+    }
+  })
+
   it("does not repeat a sort column that is already the tiebreak", () => {
     expect(resolveOrder("accounts", undefined)).toBe(textOrder("account_global_legal_name", "asc"))
     expect(resolveOrder("accounts", { column: "account_global_legal_name", direction: "asc" })).toBe(
