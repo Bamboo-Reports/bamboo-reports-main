@@ -213,14 +213,14 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
   const environmentBadgeLabel = environmentLabel === "DEV" ? "DEV" : null
 
   return (
-    <header className="sticky top-0 z-20 border-b border-border/80 bg-background/95 backdrop-blur-md">
+    <div className="sticky top-0 z-20 border-b border-border/80 bg-background/95 backdrop-blur-md">
       <div className="mx-auto w-full px-6 py-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-primary/20 bg-background">
               <Image
                 src="/logo.svg"
-                alt=""
+                alt="Bamboo Reports logo"
                 fill
                 sizes="40px"
                 className="object-contain p-1"
@@ -229,7 +229,7 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="truncate text-lg font-bold text-foreground">Bamboo Reports</h1>
+                <p className="truncate text-lg font-bold text-foreground">Bamboo Reports</p>
                 {environmentBadgeLabel ? (
                   <div className="inline-flex shrink-0 items-center gap-1 rounded-md border border-amber-500/25 bg-amber-500/8 px-2 py-0.5 dark:border-amber-400/20 dark:bg-amber-500/10">
                     <RiTerminalBoxLine className="h-3 w-3 shrink-0 text-amber-600 dark:text-amber-400" />
@@ -377,6 +377,6 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
           </div>
         </div>
       </div>
-    </header>
+    </div>
   )
 })

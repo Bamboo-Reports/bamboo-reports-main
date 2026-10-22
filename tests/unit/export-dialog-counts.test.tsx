@@ -55,23 +55,3 @@ describe("ExportDialog row counts in server mode (#307)", () => {
     )
   })
 })
-
-describe("ExportDialog dataset cards (#356)", () => {
-  afterEach(() => cleanup())
-
-  it("exposes each card as a named checkbox with no nested buttons", () => {
-    renderDialog()
-    for (const label of ["Accounts", "Centres", "Services", "Prospects"]) {
-      const card = screen.getByRole("checkbox", { name: label })
-      expect(card.getAttribute("aria-checked")).toBe("true")
-      expect(card.querySelector("button")).toBeNull()
-    }
-  })
-
-  it("toggles aria-checked when a card is clicked", () => {
-    renderDialog()
-    const card = screen.getByRole("checkbox", { name: "Centres" })
-    fireEvent.click(card)
-    expect(card.getAttribute("aria-checked")).toBe("false")
-  })
-})

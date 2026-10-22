@@ -37,7 +37,7 @@ export const ENTITY_TYPE_META: Record<
     iconClass: "text-[hsl(var(--chart-2))]",
     borderClass: "border-[hsl(var(--chart-2))]/25",
     badgeClass: "bg-[hsl(var(--chart-2)/0.12)] text-[hsl(var(--chart-2))] border-[hsl(var(--chart-2)/0.25)]",
-    label: "Centre",
+    label: "Center",
   },
   prospect: {
     icon: RiGroupLine,

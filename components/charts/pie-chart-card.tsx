@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { RiPieChartLine } from "@remixicon/react"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
-import { PIE_CHART_COLORS, orderChartSegments } from "@/lib/utils/chart-helpers"
+import { PIE_CHART_COLORS } from "@/lib/utils/chart-helpers"
 import { ChartWaveSkeleton } from "@/components/ui/chart-wave-skeleton"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -139,15 +139,7 @@ export const PieChartCard = memo(({
       })
     }
 
-    // Range buckets read in range order, Others last; colours follow the new order (#350).
-    const ordered = orderChartSegments(majorSegments.map((segment) => ({ ...segment, value: segment.y })))
-    return ordered.map(({ value: _value, ...segment }, index) => ({
-      ...segment,
-      color:
-        segment.name === "Others"
-          ? PIE_CHART_COLORS[PIE_CHART_COLORS.length - 1]
-          : PIE_CHART_COLORS[index % PIE_CHART_COLORS.length],
-    }))
+    return majorSegments
   }, [safeData, dataKey, total])
 
   const options = React.useMemo<Options>(() => {
@@ -156,24 +148,14 @@ export const PieChartCard = memo(({
         type: "pie",
         backgroundColor: "transparent",
       },
-      // The visible title is the card heading. A hidden chart title names the
-      // Highcharts region and SVG, which otherwise read "Chart" / "Interactive chart".
-      title: { text: title, floating: true, style: { display: "none" } },
+      title: { text: undefined },
       credits: { enabled: false },
       accessibility: {
         enabled: true,
         landmarkVerbosity: "one",
         description: `${title}. ${seriesData.length} segments. ${countLabel} total ${total.toLocaleString()}.`,
         point: {
-          // Highcharts strips "<..." as HTML, which emptied labels like "<50".
-          descriptionFormatter: (point) => {
-            const name = String(point.name ?? "")
-              .replace(/^\s*<\s*/, "under ")
-              .replace(/^\s*>\s*/, "over ")
-            const value = typeof point.y === "number" ? point.y : 0
-            const percent = total > 0 ? Math.round((value / total) * 100) : 0
-            return `${name}: ${value.toLocaleString()}, ${percent}%.`
-          },
+          valueDescriptionFormat: "{xDescription}. {point.y} {series.name}.",
         },
       },
       legend: {
@@ -260,7 +242,7 @@ export const PieChartCard = memo(({
     <Card className="border shadow-sm">
       <CardHeader className="pb-3">
         <CardTitle className="text-base font-semibold flex items-center gap-2">
-          <RiPieChartLine className="h-4 w-4 text-primary" />
+          <RiPieChartLine className="h-4 w-4 text-[hsl(var(--chart-1))]" />
           {title}
         </CardTitle>
       </CardHeader>

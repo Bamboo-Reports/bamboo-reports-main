@@ -16,11 +16,6 @@ import { formatCenterLocation } from "@/lib/utils/helpers"
 interface CenterGridCardProps {
   center: Center
   onClick: () => void
-  /**
-   * Inside an account dialog every card has the same account, so the subtitle
-   * shows the location instead and the details list shows the status.
-   */
-  showAccount?: boolean
 }
 
 const getStatusDotColor = (status: string | null | undefined) => {
@@ -30,16 +25,11 @@ const getStatusDotColor = (status: string | null | undefined) => {
   return "bg-gray-400"
 }
 
-const getStatusLabel = (status: string | null | undefined) =>
-  status === "Active Center" ? "Active" : status || "Unknown"
-
-export const CenterGridCard = memo(({ center, onClick, showAccount = true }: CenterGridCardProps) => {
+export const CenterGridCard = memo(({ center, onClick }: CenterGridCardProps) => {
   const centerName = center.center_name || "Centre"
   const accountName = center.account_global_legal_name || "Account"
   const location = formatCenterLocation(center.center_city, center.center_state)
   const statusColor = getStatusDotColor(center.center_status)
-  const statusLabel = getStatusLabel(center.center_status)
-  const subtitle = showAccount ? accountName : location
 
   return (
     <ContextMenu>
@@ -65,17 +55,13 @@ export const CenterGridCard = memo(({ center, onClick, showAccount = true }: Cen
                   title={center.center_status ? `${centerName}: ${center.center_status}` : centerName}
                 >
                   <span className="truncate">{centerName}</span>
-                  <span
-                    role="img"
-                    className={`inline-flex h-2.5 w-2.5 shrink-0 rounded-full ${statusColor}`}
-                    aria-label={`Status: ${statusLabel}`}
-                  />
+                  <span className={`inline-flex h-2.5 w-2.5 shrink-0 rounded-full ${statusColor}`} aria-label={center.center_status ?? "Unknown status"} />
                 </h3>
                 <p
                   className="text-sm text-muted-foreground mt-1 truncate"
-                  title={subtitle}
+                  title={accountName}
                 >
-                  {subtitle}
+                  {accountName}
                 </p>
               </div>
             </div>
@@ -89,25 +75,15 @@ export const CenterGridCard = memo(({ center, onClick, showAccount = true }: Cen
                   {center.center_type || "-"}
                 </span>
               </div>
-              {showAccount ? (
-                <div className="flex items-center justify-between gap-3 min-w-0">
-                  <span className="text-muted-foreground">Location</span>
-                  <span
-                    className="font-medium text-foreground text-right truncate max-w-[160px]"
-                    title={location}
-                  >
-                    {location}
-                  </span>
-                </div>
-              ) : (
-                <div className="flex items-center justify-between gap-3 min-w-0">
-                  <span className="text-muted-foreground">Status</span>
-                  <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
-                    <span className={`h-2 w-2 shrink-0 rounded-full ${statusColor}`} aria-hidden="true" />
-                    {statusLabel}
-                  </span>
-                </div>
-              )}
+              <div className="flex items-center justify-between gap-3 min-w-0">
+                <span className="text-muted-foreground">Location</span>
+                <span
+                  className="font-medium text-foreground text-right truncate max-w-[160px]"
+                  title={location}
+                >
+                  {location}
+                </span>
+              </div>
               <div className="flex items-center justify-between gap-3 min-w-0">
                 <span className="text-muted-foreground">Headcount Range</span>
                 <span

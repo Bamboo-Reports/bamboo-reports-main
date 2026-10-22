@@ -21,7 +21,6 @@ import { CompanyLogo } from "@/components/ui/company-logo"
 import { CenterDetailsDialog } from "./center-details-dialog"
 import { ProspectDetailsDialog } from "./prospect-details-dialog"
 import { CenterGridCard } from "@/components/cards/center-grid-card"
-import { compareProspectNames } from "@/lib/utils/helpers"
 import { ProspectGridCard } from "@/components/cards/prospect-grid-card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -255,7 +254,11 @@ export function AccountDetailsDialog({
     () => account && canViewProspects
       ? prospects
           .filter((prospect) => prospect.account_global_legal_name === account.account_global_legal_name)
-          .sort(compareProspectNames)
+          .sort((a, b) => {
+            const nameA = `${a.prospect_first_name ?? ""} ${a.prospect_last_name ?? ""}`.trim().toLowerCase()
+            const nameB = `${b.prospect_first_name ?? ""} ${b.prospect_last_name ?? ""}`.trim().toLowerCase()
+            return nameA.localeCompare(nameB)
+          })
       : [],
     [account, canViewProspects, prospects]
   )
@@ -456,12 +459,12 @@ export function AccountDetailsDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[95vw] h-[90vh] overflow-y-auto glassmorphism-dialog">
+        <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-y-auto glassmorphism-dialog">
           <DialogHeader>
             <DialogDescription className="sr-only">
               Account profile details, centers, prospects, services, technology, and financial information.
             </DialogDescription>
-            <div className="text-2xl font-bold flex items-center gap-3">
+            <DialogTitle className="text-2xl font-bold flex items-center gap-3">
               <CompanyLogo
                 domain={account.account_hq_website ?? undefined}
                 companyName={account.account_global_legal_name}
@@ -470,16 +473,15 @@ export function AccountDetailsDialog({
               />
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <DialogTitle className="text-2xl font-bold leading-tight">{account.account_global_legal_name}</DialogTitle>
-                  <div className="flex items-center gap-0.5">
+                  <span>{account.account_global_legal_name}</span>
+                  <div className="flex items-center gap-1.5">
                     {account.account_hq_website && (
                       <a
                         href={account.account_hq_website.startsWith("http") ? account.account_hq_website : `https://${account.account_hq_website}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring hover:text-primary"
+                        className="text-muted-foreground hover:text-primary transition-colors"
                         title={account.account_hq_website}
-                        aria-label="Open company website"
                         onClick={() => trackOutboundLink("website")}
                       >
                         <RiGlobalLine className="h-4 w-4" />
@@ -490,9 +492,8 @@ export function AccountDetailsDialog({
                         href={account.account_hq_linkedin_link.startsWith("http") ? account.account_hq_linkedin_link : `https://${account.account_hq_linkedin_link}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring hover:text-primary"
+                        className="text-muted-foreground hover:text-[#0A66C2] transition-colors"
                         title="LinkedIn"
-                        aria-label="Open LinkedIn page"
                         onClick={() => trackOutboundLink("linkedin")}
                       >
                         <RiLinkedinBoxLine className="h-4 w-4" />
@@ -504,7 +505,7 @@ export function AccountDetailsDialog({
                   {[account.account_hq_city, account.account_hq_state, account.account_hq_country].filter(Boolean).join(", ") || account.account_hq_region}
                 </p>
               </div>
-            </div>
+            </DialogTitle>
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-6">
@@ -759,7 +760,6 @@ export function AccountDetailsDialog({
                           key={`${center.cn_unique_key}-${index}`}
                           center={center}
                           onClick={() => handleCenterClick(center)}
-                          showAccount={false}
                         />
                       ))}
                     </div>
