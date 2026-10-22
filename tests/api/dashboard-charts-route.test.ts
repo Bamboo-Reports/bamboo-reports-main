@@ -34,6 +34,14 @@ describe("dashboard charts route", () => {
     expect(res.status).toBe(401)
   })
 
+  it("propagates the rate limit 429", async () => {
+    rateLimitMocks.enforceRateLimit.mockResolvedValueOnce({ ok: false, response: new Response("{}", { status: 429 }) })
+    const res = await post({ filters: {} })
+    expect(res.status).toBe(429)
+    // Checked before computing: an over-limit caller never reaches the warehouse.
+    expect(warehouseMocks.queryWarehouse).not.toHaveBeenCalled()
+  })
+
   it("applies top-10 slicing and city top-5 + Others", async () => {
     // City column: 7 distinct values with distinct counts -> top5 + Others.
     const city = Array.from({ length: 7 }, (_, i) => ({ name: `City${i}`, value: 70 - i * 10 }))

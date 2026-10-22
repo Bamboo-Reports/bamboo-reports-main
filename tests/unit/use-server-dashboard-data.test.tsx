@@ -4,23 +4,30 @@ import { act, cleanup, renderHook } from "@testing-library/react"
 import type { Filters } from "@/lib/types"
 
 // Every api-client fetch returns a promise the test settles by hand, so the
-// order in which responses land can be controlled exactly.
-type Call = { kind: string; resolve: (value: unknown) => void; reject: (err: Error) => void }
+// order in which responses land can be controlled exactly. Like fetch, a call
+// rejects with an AbortError once its signal is aborted.
+type Call = { kind: string; signal?: AbortSignal; resolve: (value: unknown) => void; reject: (err: Error) => void }
 const calls: Call[] = []
+const captured = vi.hoisted(() => ({ events: [] as string[] }))
 
-vi.mock("@/lib/analytics/client", () => ({ captureEvent: () => {} }))
+vi.mock("@/lib/analytics/client", () => ({ captureEvent: (event: string) => captured.events.push(event) }))
 vi.mock("@/lib/dashboard/api-client", () => {
-  const deferred = (kind: string) =>
+  type Opts = { signal?: AbortSignal } | undefined
+  const deferred = (kind: string, opts: Opts) =>
     new Promise((resolve, reject) => {
-      calls.push({ kind, resolve, reject })
+      const signal = opts?.signal
+      calls.push({ kind, signal, resolve, reject })
+      signal?.addEventListener("abort", () => reject(new DOMException("The operation was aborted.", "AbortError")))
     })
   return {
     clearAccountRelatedCache: () => {},
-    fetchDashboardSummary: () => deferred("summary"),
-    fetchDashboardFacets: () => deferred("facets"),
-    fetchDashboardCharts: () => deferred("charts"),
-    fetchCentersMap: () => deferred("map"),
-    fetchEntityPage: (entity: string) => deferred(`page:${entity}`),
+    isAbortError: (err: unknown) => (err as { name?: unknown } | null)?.name === "AbortError",
+    fetchDashboardSummary: (_f: unknown, opts: Opts) => deferred("summary", opts),
+    fetchDashboardFacets: (_f: unknown, opts: Opts) => deferred("facets", opts),
+    fetchDashboardCharts: (_f: unknown, opts: Opts) => deferred("charts", opts),
+    fetchCentersMap: (_f: unknown, opts: Opts) => deferred("map", opts),
+    fetchEntityPage: (entity: string, _f: unknown, _p: unknown, _s: unknown, _o: unknown, opts: Opts) =>
+      deferred(`page:${entity}`, opts),
   }
 })
 
@@ -84,6 +91,7 @@ async function renderLoaded(initial: Props = { filters: base }) {
 beforeEach(() => {
   vi.useFakeTimers()
   calls.length = 0
+  captured.events.length = 0
   clearClientDashboardCache()
 })
 
@@ -221,5 +229,77 @@ describe("useServerDashboardData: failures after the first load", () => {
 
     expect(result.current.pending.charts).toBe(false)
     expect(result.current.failure?.message).toBe("Too many requests")
+  })
+})
+
+describe("useServerDashboardData: cancelling superseded requests", () => {
+  it("aborts the previous filter state's requests, including prefetches, without reporting an error", async () => {
+    const { result, rerender } = await renderLoaded()
+
+    rerender({ filters: withRegion })
+    await act(async () => {
+      vi.advanceTimersByTime(400) // debounce, then the visible requests
+    })
+    await act(async () => {
+      vi.advanceTimersByTime(400) // background prefetch
+    })
+    const superseded = calls.filter((c) => c.signal && !c.signal.aborted)
+    expect(superseded.map((c) => c.kind).sort()).toEqual(
+      ["charts", "facets", "map", "page:accounts", "page:centers", "page:prospects", "summary"].sort()
+    )
+
+    rerender({ filters: { ...base, accountHqRegionValues: [{ value: "EMEA", mode: "include" as const }] } })
+    await act(async () => {
+      vi.advanceTimersByTime(400)
+    })
+
+    expect(superseded.every((c) => c.signal?.aborted)).toBe(true)
+    expect(latest("summary").signal?.aborted).toBe(false)
+    expect(result.current.error).toBeNull()
+    expect(result.current.failure).toBeNull()
+    expect(captured.events).not.toContain("data_load_failed")
+  })
+
+  it("aborts a table's previous page request when its sort changes, leaving the core requests alone", async () => {
+    const { result, rerender } = await renderLoaded()
+
+    rerender({ filters: base, accountsSort: { column: "name", direction: "asc" } })
+    await settle()
+    const asc = latest("page:accounts")
+
+    rerender({ filters: base, accountsSort: { column: "name", direction: "desc" } })
+    await settle()
+
+    expect(asc.signal?.aborted).toBe(true)
+    expect(latest("page:accounts").signal?.aborted).toBe(false)
+    expect(result.current.failure).toBeNull()
+  })
+
+  it("does not report an aborted chart request after the chart view was closed", async () => {
+    const chartViews = { needCharts: true, needMap: false, activeEntity: "accounts" as const }
+    const tableViews = { needCharts: false, needMap: false, activeEntity: "accounts" as const }
+    const { result, rerender } = await renderLoaded({ filters: base, views: chartViews })
+    const charts = latest("charts")
+
+    // Close the chart view while its request is in flight, then change the filters.
+    rerender({ filters: base, views: tableViews })
+    rerender({ filters: withRegion, views: tableViews })
+    await act(async () => {
+      vi.advanceTimersByTime(400)
+    })
+
+    expect(charts.signal?.aborted).toBe(true)
+    expect(result.current.failure).toBeNull()
+  })
+
+  it("aborts everything in flight on unmount", async () => {
+    const { unmount } = renderHook((p: Props) => useServerDashboardData(props(p)), { initialProps: { filters: base } })
+    const inFlight = calls.filter((c) => c.signal)
+    expect(inFlight.map((c) => c.kind).sort()).toEqual(["facets", "page:accounts", "summary"])
+
+    unmount()
+
+    expect(inFlight.every((c) => c.signal?.aborted)).toBe(true)
+    expect(captured.events).not.toContain("data_load_failed")
   })
 })

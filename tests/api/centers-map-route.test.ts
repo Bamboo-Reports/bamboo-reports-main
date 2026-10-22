@@ -44,6 +44,8 @@ describe("POST /api/centers/map", () => {
     rateLimitMocks.enforceRateLimit.mockResolvedValueOnce({ ok: false, response: new Response("{}", { status: 429 }) })
     const res = await post({ filters: {} })
     expect(res.status).toBe(429)
+    // Checked before computing: an over-limit caller never reaches the warehouse.
+    expect(warehouseMocks.queryWarehouse).not.toHaveBeenCalled()
   })
 
   it("returns mapped cities and states", async () => {

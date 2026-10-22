@@ -40,33 +40,66 @@ async function getAccessToken(): Promise<string> {
 export type FetchOpts = {
   /** Ask the server to skip its response cache (it still repopulates it). */
   noCache?: boolean
+  /** Cancels the request, e.g. once the dashboard has moved on to newer filters. */
+  signal?: AbortSignal
+}
+
+/**
+ * Client-side cap per request. A little above the routes' 60s maxDuration, so
+ * a server timeout (504) normally arrives first with its own message.
+ */
+export const REQUEST_TIMEOUT_MS = 65_000
+
+/** True for a request cancelled through `FetchOpts.signal` (not a failure to report). */
+export function isAbortError(err: unknown): boolean {
+  return (err as { name?: unknown } | null)?.name === "AbortError"
 }
 
 async function request<T>(path: string, init: RequestInit = {}, opts: FetchOpts = {}): Promise<T> {
   const token = await getAccessToken()
-  const res = await fetch(path, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      ...(init.body ? { "Content-Type": "application/json" } : {}),
-      ...(opts.noCache ? { "x-no-cache": "1" } : {}),
-      ...init.headers,
-    },
-    cache: "no-store",
-  })
-  if (!res.ok) {
-    let detail = ""
-    try {
-      detail = ((await res.json()) as { error?: string }).error ?? ""
-    } catch {
-      detail = ""
+  // One controller for both the caller's signal and the timeout.
+  const controller = new AbortController()
+  let timedOut = false
+  const timer = setTimeout(() => {
+    timedOut = true
+    controller.abort()
+  }, REQUEST_TIMEOUT_MS)
+  const forwardAbort = () => controller.abort(opts.signal?.reason)
+  if (opts.signal?.aborted) forwardAbort()
+  else opts.signal?.addEventListener("abort", forwardAbort, { once: true })
+
+  try {
+    const res = await fetch(path, {
+      ...init,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        ...(init.body ? { "Content-Type": "application/json" } : {}),
+        ...(opts.noCache ? { "x-no-cache": "1" } : {}),
+        ...init.headers,
+      },
+      cache: "no-store",
+      signal: controller.signal,
+    })
+    if (!res.ok) {
+      let detail = ""
+      try {
+        detail = ((await res.json()) as { error?: string }).error ?? ""
+      } catch {
+        detail = ""
+      }
+      if (res.status === 429) {
+        throw new ApiClientError(detail || "Too many requests. Please wait a moment and try again.", 429)
+      }
+      throw new ApiClientError(detail || `Request failed (${res.status})`, res.status)
     }
-    if (res.status === 429) {
-      throw new ApiClientError(detail || "Too many requests. Please wait a moment and try again.", 429)
-    }
-    throw new ApiClientError(detail || `Request failed (${res.status})`, res.status)
+    return (await res.json()) as T
+  } catch (err) {
+    if (timedOut) throw new ApiClientError("The request took too long. Please try again.", 408)
+    throw err
+  } finally {
+    clearTimeout(timer)
+    opts.signal?.removeEventListener("abort", forwardAbort)
   }
-  return (await res.json()) as T
 }
 
 const postFilters = <T>(path: string, filters: Filters, opts: FetchOpts = {}) =>

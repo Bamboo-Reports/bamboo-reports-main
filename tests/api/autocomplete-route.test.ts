@@ -43,6 +43,14 @@ describe("account autocomplete route", () => {
     expect(res.status).toBe(401)
   })
 
+  it("propagates the rate limit 429", async () => {
+    rateLimitMocks.enforceRateLimit.mockResolvedValueOnce({ ok: false, response: new Response("{}", { status: 429 }) })
+    const res = await get("gbx")
+    expect(res.status).toBe(429)
+    // Checked before computing: an over-limit caller never reaches the warehouse.
+    expect(warehouseMocks.queryWarehouse).not.toHaveBeenCalled()
+  })
+
   it("returns empty suggestions below the min query length", async () => {
     const res = await get("g")
     expect(res.status).toBe(200)
