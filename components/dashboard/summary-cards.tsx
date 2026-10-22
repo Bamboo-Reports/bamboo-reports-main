@@ -23,23 +23,7 @@ function formatCompactNumber(num: number): string {
   return num.toLocaleString()
 }
 
-export function calculateAnimatedNumberValue(params: {
-  startValue: number
-  targetValue: number
-  progress: number
-}): number {
-  const { startValue, targetValue, progress } = params
-  const t = Math.min(Math.max(progress, 0), 1)
-  const eased = 1 - Math.pow(1 - t, 4)
-  const baseValue = startValue + (targetValue - startValue) * eased
-  const overshoot = Math.sin(t * Math.PI) * (targetValue - startValue) * 0.018
-  const nextValue = baseValue + overshoot
-  const min = Math.min(startValue, targetValue)
-  const max = Math.max(startValue, targetValue)
-  return Math.max(0, Math.round(Math.min(max, Math.max(min, nextValue))))
-}
-
-const AnimatedNumber = React.memo(function AnimatedNumber({
+const SummaryNumber = React.memo(function SummaryNumber({
   value,
   compact = false,
   className,
@@ -48,60 +32,14 @@ const AnimatedNumber = React.memo(function AnimatedNumber({
   compact?: boolean
   className?: string
 }): React.JSX.Element {
-  const [displayValue, setDisplayValue] = useState(value)
-  const [reduceMotion, setReduceMotion] = useState(false)
-  const frameRef = useRef<number | null>(null)
-  const startValueRef = useRef(value)
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
-    const handleChange = () => setReduceMotion(mediaQuery.matches)
-    handleChange()
-    mediaQuery.addEventListener?.('change', handleChange)
-    return () => mediaQuery.removeEventListener?.('change', handleChange)
-  }, [])
-
-  useEffect(() => {
-    if (reduceMotion) {
-      setDisplayValue(value)
-      return
-    }
-
-    startValueRef.current = displayValue
-    const startTime = performance.now()
-    const duration = 1100
-
-    const step = () => {
-      const elapsed = performance.now() - startTime
-      const progress = Math.min(elapsed / duration, 1)
-      setDisplayValue(calculateAnimatedNumberValue({
-        startValue: startValueRef.current,
-        targetValue: value,
-        progress,
-      }))
-
-      if (progress < 1) {
-        frameRef.current = requestAnimationFrame(step)
-      }
-    }
-
-    frameRef.current = requestAnimationFrame(step)
-
-    return () => {
-      if (frameRef.current) cancelAnimationFrame(frameRef.current)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value])
-
   return (
     <span
       className={cn(
-        'inline-flex items-baseline gap-1 text-2xl lg:text-3xl font-semibold leading-tight animate-scale-in',
+        'inline-flex items-baseline gap-1 text-2xl lg:text-3xl font-semibold leading-tight',
         className
       )}
     >
-      {compact ? formatCompactNumber(displayValue) : displayValue.toLocaleString()}
+      {compact ? formatCompactNumber(value) : value.toLocaleString()}
     </span>
   )
 })
@@ -299,7 +237,7 @@ export const SummaryCards = React.memo(function SummaryCards({
                 </div>
               ) : (
                 <div className="min-w-0">
-                  <AnimatedNumber
+                  <SummaryNumber
                     value={card.value}
                     compact={compact}
                     className="text-sidebar-foreground"
