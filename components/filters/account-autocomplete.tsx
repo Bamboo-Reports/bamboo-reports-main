@@ -78,27 +78,27 @@ export function AccountAutocomplete({
 
   // Server mode: suggestions come from the autocomplete endpoint.
   const [serverSuggestions, setServerSuggestions] = useState<AccountSuggestion[]>([])
-  // True from keystroke until the lookup for it resolves, so the dropdown can
-  // say "Searching" instead of a premature "No accounts found".
-  const [isFetching, setIsFetching] = useState(false)
+  // The term whose lookup last finished. "Fetching" (true from keystroke until
+  // the lookup for it resolves, so the dropdown can say "Searching" instead of
+  // a premature "No accounts found") is derived from it rather than stored, so
+  // typing a character and deleting it within the debounce cannot stick (#288).
+  const [resolvedTerm, setResolvedTerm] = useState("")
   const serverRequestRef = useRef(0)
-  useEffect(() => {
-    if (!serverSuggest) return
-    setIsFetching(inputValue.trim().length >= 2)
-  }, [serverSuggest, inputValue])
+  const typedTerm = inputValue.toLowerCase().trim()
+  const isFetching = serverSuggest && typedTerm.length >= 2 && typedTerm !== resolvedTerm
   useEffect(() => {
     if (!serverSuggest) return
     const term = debouncedValue.toLowerCase().trim()
     const requestId = ++serverRequestRef.current
     if (term.length < 2) {
       setServerSuggestions([])
-      setIsFetching(false)
+      setResolvedTerm(term)
       return
     }
     fetchAccountAutocomplete(term)
       .then((res) => {
         if (serverRequestRef.current !== requestId) return
-        setIsFetching(false)
+        setResolvedTerm(term)
         setServerSuggestions(
           res.suggestions.map((s) => ({
             name: s.value,
@@ -113,7 +113,7 @@ export function AccountAutocomplete({
         if (serverRequestRef.current !== requestId) return
         devError("account autocomplete failed:", err)
         setServerSuggestions([])
-        setIsFetching(false)
+        setResolvedTerm(term)
       })
   }, [serverSuggest, debouncedValue])
 

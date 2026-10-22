@@ -14,10 +14,11 @@ import { CompanyLogo } from "@/components/ui/company-logo"
 import { DialogBreadcrumb } from "@/components/ui/dialog-breadcrumb"
 import { TechTreemap } from "@/components/charts/tech-treemap"
 import { formatCenterLocation } from "@/lib/utils/helpers"
-import { fetchCenterDetail } from "@/lib/dashboard/api-client"
+import { useCenterDetail } from "@/hooks/use-center-detail"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { Skeleton } from "@/components/ui/skeleton"
+import { RelatedLoadError } from "./related-load-error"
 
 interface CenterDetailsDialogProps {
   center: Center | null
@@ -87,29 +88,11 @@ export function CenterDetailsDialog({
   onAccountOpen,
   fetchDetail = false,
 }: CenterDetailsDialogProps) {
-  const [detail, setDetail] = React.useState<{ services: Service[]; tech: Tech[] } | null>(null)
   const detailKey = fetchDetail && open ? (center?.cn_unique_key ?? "") : ""
-  React.useEffect(() => {
-    if (!detailKey) {
-      setDetail(null)
-      return
-    }
-    let cancelled = false
-    fetchCenterDetail(detailKey)
-      .then((res) => {
-        if (!cancelled) setDetail({ services: res.services, tech: res.tech })
-      })
-      .catch(() => {
-        if (!cancelled) setDetail(null)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [detailKey])
+  const { data: detail, loading: detailLoading, error: detailError, retry: retryDetail } = useCenterDetail(detailKey)
 
   if (!center) return null
 
-  const detailLoading = fetchDetail && open && detail === null
   const services = fetchDetail ? (detail?.services ?? []) : servicesProp
   const tech = fetchDetail ? (detail?.tech ?? []) : techProp
 
@@ -353,6 +336,10 @@ export function CenterDetailsDialog({
               />
             </div>
           </section>
+
+          {detailError && (
+            <RelatedLoadError message="Services and tech stack for this centre could not load." onRetry={retryDetail} />
+          )}
 
           {/* Services Offered */}
           {detailLoading && (
