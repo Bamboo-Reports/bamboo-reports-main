@@ -53,7 +53,10 @@ export function useGlobalSearch({
   const [query, setQuery] = useState("")
   const [debouncedQuery, setDebouncedQuery] = useState("")
   const [isOpen, setIsOpen] = useState(false)
-  const [isSearching, setIsSearching] = useState(false)
+  // The (trimmed) query whose lookup last finished. Searching is derived from
+  // it rather than stored, so typing a character and deleting it within the
+  // debounce lands back on a resolved query instead of sticking (#288).
+  const [resolvedQuery, setResolvedQuery] = useState("")
   const [serverResults, setServerResults] = useState(EMPTY_RESULTS)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const serverRequestRef = useRef(0)
@@ -70,7 +73,7 @@ export function useGlobalSearch({
     const requestId = ++serverRequestRef.current
     if (term.length < 2) {
       setServerResults(EMPTY_RESULTS)
-      setIsSearching(false)
+      setResolvedQuery(term)
       return
     }
     fetchSearch(term)
@@ -96,25 +99,27 @@ export function useGlobalSearch({
           prospects: group(res.prospects),
           total: res.total,
         })
-        setIsSearching(false)
+        setResolvedQuery(term)
       })
       .catch((err) => {
         if (serverRequestRef.current !== requestId) return
         devError("server search failed:", err)
         setServerResults(EMPTY_RESULTS)
-        setIsSearching(false)
+        setResolvedQuery(term)
       })
   }, [serverMode, debouncedQuery])
 
   // Client mode resolves synchronously once the debounce fires.
   useEffect(() => {
-    if (!serverMode) setIsSearching(false)
+    if (!serverMode) setResolvedQuery(debouncedQuery.trim())
   }, [serverMode, debouncedQuery])
+
+  const trimmedQuery = query.trim()
+  const isSearching = trimmedQuery.length >= 2 && trimmedQuery !== resolvedQuery
 
   const handleSetQuery = useCallback(
     (value: string) => {
       setQuery(value)
-      setIsSearching(value.trim().length >= 2)
       if (debounceRef.current) {
         clearTimeout(debounceRef.current)
       }
@@ -164,7 +169,6 @@ export function useGlobalSearch({
     setIsOpen(false)
     setQuery("")
     setDebouncedQuery("")
-    setIsSearching(false)
   }, [])
 
   return {
