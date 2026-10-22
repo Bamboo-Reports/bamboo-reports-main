@@ -137,12 +137,6 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Hardware acceleration for transforms */
-  [class*="animate-"],
-  [class*="transition-"] {
-    will-change: transform, opacity;
-  }
-
   /* Smooth scrolling — disabled during product tour to avoid double-animation */
   html {
     font-size: 100%;
@@ -192,14 +186,45 @@
   }
 }
 
+/* Reduced motion removes movement but keeps short fades and colour changes,
+   so state changes (dialogs, tabs, accordions, selection) still read. */
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+
+  /* tailwindcss-animate enter/exit: no zoom or spin. Translate is left alone
+     because dialogs use it to stay centred (-50%) while they animate. */
   *,
   *::before,
   *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
+    --tw-enter-scale: 1 !important;
+    --tw-exit-scale: 1 !important;
+    --tw-enter-rotate: 0 !important;
+    --tw-exit-rotate: 0 !important;
+  }
+
+  /* Keyframes that slide or scale become a plain fade. */
+  .animate-fade-in,
+  .animate-stagger,
+  .animate-scale-in {
+    animation-name: contentFadeIn !important;
+  }
+
+  /* Decorative loops stop. Spinners (animate-spin) keep turning: they signal work. */
+  .animate-shimmer,
+  .animate-chart-wave,
+  .animate-pulse,
+  .animate-bounce,
+  .animate-ping {
+    animation: none !important;
+  }
+
+  /* Remaining transitions are colour and opacity, kept short. */
+  *,
+  *::before,
+  *::after {
+    transition-duration: 120ms !important;
   }
 }
 
