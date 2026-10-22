@@ -92,9 +92,6 @@ export function FiltersSidebar({
   const [openSection, setOpenSection] = useState<string>('accounts')
   const totalActiveFilters = getTotalActiveFilters()
   const scrollRef = useRef<HTMLDivElement>(null)
-  const expandButtonRef = useRef<HTMLButtonElement>(null)
-  const collapseButtonRef = useRef<HTMLButtonElement>(null)
-  const previousCollapsedRef = useRef(isCollapsed)
   const [canScrollDown, setCanScrollDown] = useState(false)
   const [optimisticVisibilityMode, setOptimisticVisibilityMode] = useState(pendingFilters.accountVisibilityMode)
   const visibilityModeIndex = ACCOUNT_VISIBILITY_OPTIONS.findIndex(
@@ -132,16 +129,6 @@ export function FiltersSidebar({
     }
   }, [checkScroll])
 
-  // The hidden panel is inert, so a toggle that hides itself drops focus to <body>.
-  // Hand it to the toggle in the panel that is now visible.
-  useEffect(() => {
-    if (previousCollapsedRef.current === isCollapsed) return
-    previousCollapsedRef.current = isCollapsed
-    const active = document.activeElement
-    if (active && active !== document.body && !active.closest('[inert]')) return
-    ;(isCollapsed ? expandButtonRef : collapseButtonRef).current?.focus()
-  }, [isCollapsed])
-
   const handleCollapsedIconClick = (section: string) => {
     setOpenSection(section)
     if (isCollapsed) {
@@ -165,13 +152,11 @@ export function FiltersSidebar({
           'absolute inset-y-0 left-0 z-10 w-16 px-2 py-4 transition-all duration-200 ease-out motion-reduce:transition-none',
           isCollapsed ? 'opacity-100 translate-x-0 pointer-events-auto' : 'opacity-0 -translate-x-1 pointer-events-none'
         )}
-        inert={!isCollapsed}
       >
         <div className="flex h-full flex-col items-center gap-2">
           <Button
             variant="ghost"
             size="icon"
-            ref={expandButtonRef}
             onClick={onToggleCollapse}
             className="h-10 w-10"
             title="Expand filters sidebar"
@@ -220,7 +205,6 @@ export function FiltersSidebar({
           'absolute inset-y-0 left-0 w-[320px] overflow-y-auto p-4 space-y-3 transition-all duration-200 ease-out motion-reduce:transition-none',
           isCollapsed ? 'opacity-0 translate-x-1 pointer-events-none' : 'opacity-100 translate-x-0 pointer-events-auto'
         )}
-        inert={isCollapsed}
       >
         <div className="flex flex-col gap-2 mb-3 pb-3 border-b border-sidebar-border">
           <div className="flex items-center justify-between gap-2">
@@ -233,7 +217,6 @@ export function FiltersSidebar({
             <Button
               variant="ghost"
               size="icon"
-              ref={collapseButtonRef}
               onClick={onToggleCollapse}
               className="h-9 w-9 shrink-0"
               title="Collapse filters sidebar"

@@ -14,8 +14,7 @@ type TreemapNode = {
   name: string
   value?: number
   color?: string
-  // Not "category": Highcharts overwrites point.category with an axis index.
-  categoryName?: string
+  category?: string
   count?: number
 }
 
@@ -77,15 +76,6 @@ export const TechTreemap = memo(({
     }
   }, [])
 
-  // Highcharts keeps the tooltip while the pointer rests and the dialog scrolls
-  // underneath it, so it lingered on the wrong tile. Hide it on any scroll.
-  const chartRef = React.useRef<{ chart?: { tooltip?: { hide: (delay?: number) => void } } } | null>(null)
-  React.useEffect(() => {
-    const hideTooltip = () => chartRef.current?.chart?.tooltip?.hide(0)
-    window.addEventListener("scroll", hideTooltip, { capture: true, passive: true })
-    return () => window.removeEventListener("scroll", hideTooltip, { capture: true })
-  }, [])
-
   const data = React.useMemo<TreemapNode[]>(() => {
     const categoryMap = new Map<string, Map<string, number>>()
 
@@ -118,7 +108,7 @@ export const TechTreemap = memo(({
           name: software,
           value: count,
           count,
-          categoryName: category,
+          category,
           color: hexToRgba(categoryColor, 0.85),
         })
       })
@@ -127,8 +117,10 @@ export const TechTreemap = memo(({
     return nodes
   }, [tech])
 
-  const toolCount = React.useMemo(() => data.filter((node) => node.parent).length, [data])
-
+  const totalLeafValue = React.useMemo(
+    () => data.reduce((sum, node) => sum + (typeof node.value === "number" ? node.value : 0), 0),
+    [data]
+  )
 
   if (data.length === 0) {
     return (
@@ -150,7 +142,6 @@ export const TechTreemap = memo(({
       <div className={cn("w-full h-full min-h-0", heightClass)}>
         {chartLib ? (
           <chartLib.HighchartsReact
-            ref={chartRef}
             highcharts={chartLib.Highcharts}
             options={{
             chart: {
@@ -162,10 +153,7 @@ export const TechTreemap = memo(({
                 fontFamily: "'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
               },
             },
-            // Hidden when the card shows its own heading, but still names the chart region.
-            title: showTitle
-              ? { text: title, align: "left" }
-              : { text: title, floating: true, style: { display: "none" } },
+            title: { text: showTitle ? title : undefined, align: "left" },
             credits: { enabled: false },
             navigation: {
               breadcrumbs: {
@@ -175,9 +163,7 @@ export const TechTreemap = memo(({
             accessibility: {
               enabled: true,
               landmarkVerbosity: "one",
-              // Replaces the generated "Chart with N data points", which counted category nodes.
-              typeDescription: "Treemap",
-              description: `${title}. ${toolCount} ${toolCount === 1 ? "tool" : "tools"} in ${data.length - toolCount} ${data.length - toolCount === 1 ? "category" : "categories"}.`,
+              description: `${title}. Treemap showing ${data.length} technology nodes grouped by category.`,
               point: {
                 valueDescriptionFormat: "{point.name}, {point.value}.",
               },
@@ -187,15 +173,21 @@ export const TechTreemap = memo(({
               backgroundColor: "transparent",
               borderWidth: 0,
               shadow: false,
-              // Every tool is weighted 1, so a share of the total means nothing (#350).
-              // Show the tool and its category instead.
               formatter: function () {
-                const point = this as unknown as Point & { name?: string; categoryName?: string }
-                const name = point.name || "Unknown"
+                const point = this as unknown as Point & { count?: number; value?: number; name?: string }
+                const softwareName = point.name || "Unknown"
+                const value = typeof point.value === "number"
+                  ? point.value
+                  : (typeof point.count === "number" ? point.count : 0)
+                const percent = totalLeafValue > 0 ? (value / totalLeafValue) * 100 : 0
+                const roundedPercent = Math.round(percent * 10) / 10
+                const percentText = Number.isInteger(roundedPercent)
+                  ? `${roundedPercent.toFixed(0)}%`
+                  : `${roundedPercent.toFixed(1)}%`
                 return `
                   <div class="rounded-lg border border-border bg-background px-3 py-2 shadow-lg">
-                    <p class="text-xs font-semibold text-foreground">${name}</p>
-                    ${point.categoryName ? `<p class="text-xs text-muted-foreground">${point.categoryName}</p>` : ""}
+                    <p class="text-xs font-semibold text-foreground">${softwareName}</p>
+                    ${value > 0 ? `<p class="text-sm font-semibold text-foreground">${percentText}</p>` : ""}
                   </div>
                 `
               },
@@ -286,8 +278,18 @@ export const TechTreemap = memo(({
                       enabled: true,
                       inside: false,
                       formatter: function () {
-                        const point = this as unknown as Point & { name?: string }
-                        return point.name || ""
+                        const point = this as unknown as Point & { value?: number; name?: string }
+                        const softwareName = point.name || ""
+                        const value = typeof point.value === "number" ? point.value : 0
+                        if (totalLeafValue <= 0) {
+                          return softwareName
+                        }
+                        const percent = (value / totalLeafValue) * 100
+                        const roundedPercent = Math.round(percent * 10) / 10
+                        const percentText = Number.isInteger(roundedPercent)
+                          ? `${roundedPercent.toFixed(0)}%`
+                          : `${roundedPercent.toFixed(1)}%`
+                        return `${softwareName}<br/>${percentText}`
                       },
                     },
                   },

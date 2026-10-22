@@ -8,17 +8,10 @@ import { cn } from "@/lib/utils"
 const THUMB_CLASS =
   "block h-5 w-5 rounded-full border-2 border-primary bg-background ring-offset-background transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 cursor-grab active:cursor-grabbing"
 
-interface SliderProps extends React.ComponentPropsWithoutRef<typeof SliderPrimitive.Root> {
-  /** Accessible name per thumb. Radix falls back to "Minimum" / "Maximum". */
-  thumbLabels?: string[]
-  /** Spoken value per thumb (aria-valuetext), e.g. "716,924M". */
-  formatValueText?: (value: number) => string
-}
-
 const Slider = React.forwardRef<
   React.ElementRef<typeof SliderPrimitive.Root>,
-  SliderProps
->(({ className, value, defaultValue, min = 0, max = 100, disabled, thumbLabels, formatValueText, ...props }, ref) => {
+  React.ComponentPropsWithoutRef<typeof SliderPrimitive.Root>
+>(({ className, value, defaultValue, min = 0, max = 100, disabled, ...props }, ref) => {
   // Render one thumb per value so a single-value slider doesn't get a stray
   // second thumb (which makes Radix loop on its ref callbacks).
   const source = Array.isArray(value) ? value : Array.isArray(defaultValue) ? defaultValue : [min]
@@ -44,12 +37,7 @@ const Slider = React.forwardRef<
         <SliderPrimitive.Range className="absolute h-full bg-primary transition-all duration-150" />
       </SliderPrimitive.Track>
       {Array.from({ length: thumbCount }).map((_, index) => (
-        <SliderPrimitive.Thumb
-          key={index}
-          className={THUMB_CLASS}
-          aria-label={thumbLabels?.[index]}
-          aria-valuetext={formatValueText && source[index] !== undefined ? formatValueText(source[index]) : undefined}
-        />
+        <SliderPrimitive.Thumb key={index} className={THUMB_CLASS} />
       ))}
     </SliderPrimitive.Root>
   )

@@ -258,7 +258,7 @@ export function GlobalSearch({
                 ))}
                 {results.centers.totalMatches > results.centers.items.length && (
                   <p className="px-3 py-1.5 text-xs text-muted-foreground/60">
-                    +{results.centers.totalMatches - results.centers.items.length} more centres
+                    +{results.centers.totalMatches - results.centers.items.length} more centers
                   </p>
                 )}
               </CommandGroup>

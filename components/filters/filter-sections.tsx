@@ -109,12 +109,11 @@ export function AccountFiltersSection({
             {isFilterEnabled("accountHqRevenueRange") && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label id="revenue-range-label" className="text-xs font-medium">HQ Company Revenue</Label>
+                <Label className="text-xs font-medium">HQ Company Revenue</Label>
                 {isFilterEnabled("accountHqRevenueIncludeNull") && (
                 <div className="flex items-center gap-2">
                 <Checkbox
                   id="include-null-revenue"
-                  aria-describedby="revenue-range-label"
                   checked={pendingFilters.accountHqRevenueIncludeNull}
                   onCheckedChange={(checked) =>
                     setPendingFilters((prev) => ({
@@ -126,7 +125,7 @@ export function AccountFiltersSection({
                 />
                 <Label
                   htmlFor="include-null-revenue"
-                  className="py-1 text-xs text-muted-foreground cursor-pointer select-none"
+                  className="text-xs text-muted-foreground cursor-pointer select-none"
                 >
                   Include all
                 </Label>
@@ -184,8 +183,6 @@ export function AccountFiltersSection({
                 min={revenueRange.min}
                 max={revenueRange.max}
                 step={Math.max(1, Math.floor((revenueRange.max - revenueRange.min) / 1000))}
-                thumbLabels={["HQ Company Revenue minimum", "HQ Company Revenue maximum"]}
-                formatValueText={formatRevenueInMillions}
                 className="w-full"
               />
             </div>
@@ -216,12 +213,11 @@ export function AccountFiltersSection({
           {isFilterEnabled("accountYearsInIndiaRange") && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label id="years-in-india-range-label" className="text-xs font-medium">Years In India</Label>
+              <Label className="text-xs font-medium">Years In India</Label>
               {isFilterEnabled("yearsInIndiaIncludeNull") && (
               <div className="flex items-center gap-2">
                 <Checkbox
                   id="include-null-years-in-india"
-                  aria-describedby="years-in-india-range-label"
                   checked={pendingFilters.yearsInIndiaIncludeNull}
                   onCheckedChange={(checked) =>
                     setPendingFilters((prev) => ({
@@ -233,7 +229,7 @@ export function AccountFiltersSection({
                 />
                 <Label
                   htmlFor="include-null-years-in-india"
-                  className="py-1 text-xs text-muted-foreground cursor-pointer select-none"
+                  className="text-xs text-muted-foreground cursor-pointer select-none"
                 >
                   Include all
                 </Label>
@@ -291,8 +287,6 @@ export function AccountFiltersSection({
                 min={yearsInIndiaRange.min}
                 max={yearsInIndiaRange.max}
                 step={1}
-                thumbLabels={["Years In India minimum", "Years In India maximum"]}
-                formatValueText={(years) => `${years} ${years === 1 ? "year" : "years"}`}
                 className="w-full"
               />
             </div>
@@ -593,12 +587,11 @@ export function CenterFiltersSection({
           {isFilterEnabled("centerIncYearRange") && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label id="center-inc-year-range-label" className="text-xs font-medium">Incorporation Timeline</Label>
+              <Label className="text-xs font-medium">Incorporation Timeline</Label>
               {isFilterEnabled("centerIncYearIncludeNull") && (
               <div className="flex items-center gap-2">
                 <Checkbox
                   id="include-null-center-inc-year"
-                  aria-describedby="center-inc-year-range-label"
                   checked={pendingFilters.centerIncYearIncludeNull}
                   onCheckedChange={(checked) =>
                     setPendingFilters((prev) => ({
@@ -610,7 +603,7 @@ export function CenterFiltersSection({
                 />
                 <Label
                   htmlFor="include-null-center-inc-year"
-                  className="py-1 text-xs text-muted-foreground cursor-pointer select-none"
+                  className="text-xs text-muted-foreground cursor-pointer select-none"
                 >
                   Include all
                 </Label>
@@ -668,7 +661,6 @@ export function CenterFiltersSection({
                 min={centerIncYearRange.min}
                 max={centerIncYearRange.max}
                 step={1}
-                thumbLabels={["Incorporation year from", "Incorporation year to"]}
                 className="w-full"
               />
             </div>

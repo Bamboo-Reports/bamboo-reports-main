@@ -181,8 +181,8 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
                         <p className="mt-0.5 text-xs text-muted-foreground">
                           {list.accounts.length} account{list.accounts.length === 1 ? "" : "s"}
                           {list.unmatched.length > 0 ? `, ${list.unmatched.length} unmatched` : ""}
-                          {list.updated_at ? `, updated ${formatDate(list.updated_at)}` : ""}
-                          {list.source_file ? `, from ${list.source_file}` : ""}
+                          {list.updated_at ? ` , updated ${formatDate(list.updated_at)}` : ""}
+                          {list.source_file ? ` , from ${list.source_file}` : ""}
                           {!own && list.owner_email ? ` , shared by ${list.owner_email}` : ""}
                         </p>
                       </div>

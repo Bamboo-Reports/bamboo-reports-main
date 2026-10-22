@@ -83,16 +83,3 @@ export const formatCenterLocation = (
   }
   return "India"
 }
-
-/**
- * Sorts prospects by first then last name, so the account Prospects tab and
- * the prospect dialog's More Contacts list agree.
- */
-export const compareProspectNames = (
-  a: { prospect_first_name?: string | null; prospect_last_name?: string | null },
-  b: { prospect_first_name?: string | null; prospect_last_name?: string | null }
-): number => {
-  const nameA = `${a.prospect_first_name ?? ""} ${a.prospect_last_name ?? ""}`.trim().toLowerCase()
-  const nameB = `${b.prospect_first_name ?? ""} ${b.prospect_last_name ?? ""}`.trim().toLowerCase()
-  return nameA.localeCompare(nameB)
-}

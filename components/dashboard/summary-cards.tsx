@@ -172,9 +172,7 @@ export const SummaryCards = React.memo(function SummaryCards({
   ]
 
   return (
-    // auto-fit tracks the space left by the filters sidebar: five across when the
-    // cards fit at 9.5rem, otherwise they wrap 3 + 2 instead of squashing (#357).
-    <div className="grid grid-cols-1 md:grid-cols-[repeat(auto-fit,minmax(9.5rem,1fr))] gap-4 mb-6" aria-label="Dashboard sections" data-tour="summary-cards">
+    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6" aria-label="Dashboard sections" data-tour="summary-cards">
       {cards.map((card) => {
         const Icon = card.icon
         const isActive = card.interactive && activeView === card.id
@@ -215,7 +213,7 @@ export const SummaryCards = React.memo(function SummaryCards({
             />
             <CardHeader className="relative px-4 pt-3 pb-1.5">
               <CardTitle className="text-sm font-medium text-sidebar-foreground flex items-center gap-2">
-                <Icon className={cn('h-4 w-4 shrink-0', card.iconClassName)} />
+                <Icon className={cn('h-4 w-4', card.iconClassName)} />
                 {card.title}
               </CardTitle>
             </CardHeader>

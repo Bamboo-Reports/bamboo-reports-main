@@ -221,7 +221,7 @@ export async function renderSummaryReportPdf(model: SummaryReportModel) {
   const EMPTY_CELL = "-"
   const FILTER_TABLES: Array<{ group: ReportFilterGroup; title: string; emptyText: string }> = [
     { group: "Account", title: "Account filters", emptyText: "No account filters applied." },
-    { group: "Centre", title: "Centre filters", emptyText: "No centre filters applied." },
+    { group: "Center", title: "Center filters", emptyText: "No center filters applied." },
     { group: "Prospect", title: "Prospect filters", emptyText: "No prospect filters applied." },
   ]
 

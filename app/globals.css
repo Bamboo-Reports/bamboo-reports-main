@@ -22,20 +22,20 @@
     --card-foreground: 214 45% 15%;
     --popover: 0 0% 100%;
     --popover-foreground: 214 45% 15%;
-    --primary: 204 100% 36%;
+    --primary: 204 100% 41%;
     --primary-foreground: 0 0% 100%;
     --secondary: 210 25% 94%;
     --secondary-foreground: 214 45% 22%;
     --muted: 210 25% 94%;
     --muted-foreground: 215 20% 39%;
-    --accent: 204 80% 95%;
+    --accent: 28 90% 94%;
     --accent-foreground: 214 45% 18%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
     --border: 212 24% 86%;
     --input: 212 24% 86%;
-    --ring: 204 100% 36%;
-    --chart-1: 204 100% 36%;
+    --ring: 204 100% 41%;
+    --chart-1: 204 100% 41%;
     --chart-2: 212 71% 31%;
     --chart-3: 28 88% 53%;
     --chart-4: 195 88% 45%;
@@ -44,12 +44,12 @@
     --radius: 0.5rem;
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 214 45% 15%;
-    --sidebar-primary: 204 100% 36%;
+    --sidebar-primary: 204 100% 41%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 210 30% 96%;
     --sidebar-accent-foreground: 214 45% 18%;
     --sidebar-border: 212 24% 86%;
-    --sidebar-ring: 204 100% 36%;
+    --sidebar-ring: 28 88% 53%;
   }
   .dark {
     --background: 0 0% 10%;
@@ -58,7 +58,7 @@
     --card-foreground: 0 0% 98%;
     --popover: 0 0% 12%;
     --popover-foreground: 0 0% 98%;
-    --primary: 27 88% 53%;
+    --primary: 204 92% 56%;
     --primary-foreground: 0 0% 10%;
     --secondary: 0 0% 16%;
     --secondary-foreground: 0 0% 98%;
@@ -70,7 +70,7 @@
     --destructive-foreground: 0 0% 98%;
     --border: 0 0% 24%;
     --input: 0 0% 24%;
-    --ring: 27 88% 53%;
+    --ring: 0 0% 83.1%;
     --chart-1: 204 92% 56%;
     --chart-2: 200 75% 59%;
     --chart-3: 28 88% 60%;
@@ -79,12 +79,12 @@
     --treemap-border-color: hsl(var(--background));
     --sidebar-background: 0 0% 10%;
     --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 27 88% 53%;
+    --sidebar-primary: 204 92% 56%;
     --sidebar-primary-foreground: 0 0% 10%;
     --sidebar-accent: 0 0% 16%;
     --sidebar-accent-foreground: 0 0% 95%;
     --sidebar-border: 0 0% 24%;
-    --sidebar-ring: 27 88% 53%;
+    --sidebar-ring: 28 88% 60%;
   }
 }
 
@@ -104,6 +104,13 @@
   textarea,
   select {
     outline: none !important;
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: none !important;
+    box-shadow: none !important;
   }
 
   /* Typography Hierarchy Enhancement */
@@ -135,6 +142,12 @@
   * {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Hardware acceleration for transforms */
+  [class*="animate-"],
+  [class*="transition-"] {
+    will-change: transform, opacity;
   }
 
   /* Smooth scrolling — disabled during product tour to avoid double-animation */
@@ -186,45 +199,14 @@
   }
 }
 
-/* Reduced motion removes movement but keeps short fades and colour changes,
-   so state changes (dialogs, tabs, accordions, selection) still read. */
 @media (prefers-reduced-motion: reduce) {
-  html {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
-  }
-
-  /* tailwindcss-animate enter/exit: no zoom or spin. Translate is left alone
-     because dialogs use it to stay centred (-50%) while they animate. */
-  *,
-  *::before,
-  *::after {
-    --tw-enter-scale: 1 !important;
-    --tw-exit-scale: 1 !important;
-    --tw-enter-rotate: 0 !important;
-    --tw-exit-rotate: 0 !important;
-  }
-
-  /* Keyframes that slide or scale become a plain fade. */
-  .animate-fade-in,
-  .animate-stagger,
-  .animate-scale-in {
-    animation-name: contentFadeIn !important;
-  }
-
-  /* Decorative loops stop. Spinners (animate-spin) keep turning: they signal work. */
-  .animate-shimmer,
-  .animate-chart-wave,
-  .animate-pulse,
-  .animate-bounce,
-  .animate-ping {
-    animation: none !important;
-  }
-
-  /* Remaining transitions are colour and opacity, kept short. */
-  *,
-  *::before,
-  *::after {
-    transition-duration: 120ms !important;
   }
 }
 
