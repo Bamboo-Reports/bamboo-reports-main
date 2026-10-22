@@ -99,7 +99,7 @@ export function AccountPicker({ value, onChange, suggestions = [], placeholder =
           role="combobox"
           aria-expanded={open}
           aria-label={ariaLabel ?? placeholder}
-          className={cn("h-8 w-full justify-between font-normal", !value && "text-muted-foreground", className)}
+          className={cn("w-full justify-between font-normal", !value && "text-muted-foreground", className)}
         >
           <span className="truncate">{value ?? placeholder}</span>
           <RiExpandUpDownLine className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />

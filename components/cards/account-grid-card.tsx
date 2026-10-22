@@ -106,10 +106,10 @@ export const AccountGridCard = memo(({ account, onClick }: AccountGridCardProps)
               </div>
               <Button
                 type="button"
-                variant="default"
+                variant="outline"
                 size="sm"
                 onClick={onClick}
-                className="w-full justify-between border border-border/70 bg-background text-foreground hover:bg-accent hover:text-accent-foreground"
+                className="w-full justify-between"
               >
                 View Details
                 <RiArrowRightUpLine className="h-4 w-4" />

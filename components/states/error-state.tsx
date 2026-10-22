@@ -37,11 +37,11 @@ export function ErrorState({ error, onRetry }: ErrorStateProps) {
           </div>
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <Button onClick={onRetry} className="h-10 sm:flex-1">
-              <RiRefreshLine className="mr-2 h-4 w-4" />
+            <Button onClick={onRetry} size="lg" className="sm:flex-1">
+              <RiRefreshLine />
               Retry
             </Button>
-            <Button asChild variant="outline" className="h-10 sm:flex-1">
+            <Button asChild variant="outline" size="lg" className="sm:flex-1">
               <Link href="/signin">Sign in again</Link>
             </Button>
           </div>

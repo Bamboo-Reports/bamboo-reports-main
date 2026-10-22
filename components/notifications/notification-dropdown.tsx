@@ -53,8 +53,8 @@ export function NotificationDropdown() {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          size="icon"
-          className="relative h-8 w-8"
+          size="icon-sm"
+          className="relative"
           title="Notifications"
           aria-label="Open notifications"
         >
@@ -83,8 +83,8 @@ export function NotificationDropdown() {
               <Button
                 type="button"
                 variant="ghost"
-                size="sm"
-                className="h-7 gap-1 px-2 text-[11px] text-muted-foreground hover:text-foreground"
+                size="xs"
+                className="text-muted-foreground"
                 onClick={handleMarkAllRead}
               >
                 <RiCheckDoubleLine className="h-3 w-3" />

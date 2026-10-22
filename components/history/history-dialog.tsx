@@ -72,9 +72,9 @@ export function HistoryDialog({
             </div>
             {recentItems.length > 0 && (
               <Button
-                variant="ghost"
+                variant="ghost-destructive"
                 size="sm"
-                className="mt-1 gap-1.5 text-muted-foreground hover:text-destructive"
+                className="mt-1"
                 onClick={() => {
                   const cleared = recentItems
                   captureEvent(ANALYTICS_EVENTS.HISTORY_CLEARED, { record_count: cleared.length })

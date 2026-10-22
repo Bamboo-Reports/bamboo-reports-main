@@ -256,21 +256,14 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
             )}
             <Button
               variant="ghost"
-              size="sm"
+              size="icon-sm"
               onClick={onRefresh}
               disabled={refreshing}
               aria-busy={refreshing}
-              className="h-8 px-3"
               title={refreshing ? 'Refreshing…' : 'Refresh'}
               aria-label={refreshing ? 'Refreshing data' : 'Refresh data'}
             >
-              <RiRefreshLine
-                className={
-                  refreshing
-                    ? 'h-4 w-4 animate-spin'
-                    : 'h-4 w-4'
-                }
-              />
+              <RiRefreshLine className={refreshing ? 'animate-spin' : undefined} />
             </Button>
             {NOTIFICATIONS_ENABLED ? <NotificationDropdown /> : null}
             <DropdownMenu
@@ -279,7 +272,7 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
               }}
             >
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8" title="Profile" aria-label="Open profile menu">
+                <Button variant="ghost" size="icon-sm" title="Profile" aria-label="Open profile menu">
                   <RiUserLine className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>

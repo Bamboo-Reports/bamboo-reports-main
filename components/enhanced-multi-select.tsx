@@ -135,8 +135,8 @@ const EnhancedSelectItem = React.memo(({
           <Button
             type="button"
             variant="ghost"
-            size="sm"
-            className="h-6 w-6 p-0 hover:bg-green-100/60 dark:hover:bg-green-900/15 transition-colors duration-150"
+            size="icon-xs"
+            className="hover:bg-green-500/15"
             onClick={(e) => {
               e.stopPropagation()
               onSelectInclude()
@@ -149,8 +149,8 @@ const EnhancedSelectItem = React.memo(({
           <Button
             type="button"
             variant="ghost"
-            size="sm"
-            className="h-6 w-6 p-0 hover:bg-red-100/60 dark:hover:bg-red-900/15 transition-colors duration-150"
+            size="icon-xs"
+            className="hover:bg-red-500/15"
             onClick={(e) => {
               e.stopPropagation()
               onSelectExclude()

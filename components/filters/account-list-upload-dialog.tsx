@@ -485,18 +485,11 @@ export function AccountListUploadDialog({ open, onOpenChange, existingList = nul
         <DialogFooter className="gap-2 sm:gap-2">
           {step === "input" ? (
             <>
-              <Button variant="ghost" onClick={() => onOpenChange(false)}>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleMatch} disabled={names.length === 0 || matching}>
-                {matching ? (
-                  <>
-                    <RiLoader4Line className="h-4 w-4 animate-spin" />
-                    Matching...
-                  </>
-                ) : (
-                  "Match accounts"
-                )}
+              <Button onClick={handleMatch} disabled={names.length === 0} loading={matching}>
+                {matching ? "Matching..." : "Match accounts"}
               </Button>
             </>
           ) : (

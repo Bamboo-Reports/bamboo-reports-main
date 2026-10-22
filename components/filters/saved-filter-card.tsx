@@ -14,6 +14,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion"
 import type { Filters } from "@/lib/types"
+import { Button } from "@/components/ui/button"
 import { calculateActiveFilters } from "@/lib/dashboard/filter-summary"
 import {
   DEFAULT_CENTER_INC_YEAR_RANGE,
@@ -180,50 +181,49 @@ export const SavedFilterCard = memo(({
           <div className="mx-4 border-t border-border/40" />
 
           {/* Action row: mirrors header dropdown action grid */}
-          <div className="flex items-stretch gap-1 p-1.5">
-            <button
-              type="button"
-              onClick={() => onLoad(filter)}
-              className="flex flex-1 flex-col items-center justify-center gap-1 cursor-pointer rounded-md border border-primary/25 bg-primary/5 px-2 py-2 text-[11px] font-medium text-primary transition-colors hover:border-primary/40 hover:bg-primary/10"
-            >
-              <RiFilterLine className="h-3.5 w-3.5" />
+          <div className="flex items-center gap-1.5 p-1.5">
+            <Button type="button" size="sm" className="flex-1" onClick={() => onLoad(filter)}>
+              <RiFilterLine />
               Load
-            </button>
+            </Button>
 
             {isOwner && onShare && (
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="icon-sm"
                 onClick={() => onShare(filter)}
-                className="flex flex-1 flex-col items-center justify-center gap-1 cursor-pointer rounded-md border border-border/60 bg-muted/20 px-2 py-2 text-[11px] font-medium text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 hover:text-foreground"
                 aria-label={`Share ${filter.name}`}
+                title="Share"
               >
-                <RiShareLine className="h-3.5 w-3.5" />
-                Share
-              </button>
+                <RiShareLine />
+              </Button>
             )}
 
             {isOwner && (
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="icon-sm"
                 onClick={() => onEdit(filter)}
-                className="flex flex-1 flex-col items-center justify-center gap-1 cursor-pointer rounded-md border border-border/60 bg-muted/20 px-2 py-2 text-[11px] font-medium text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 hover:text-foreground"
                 aria-label={`Rename ${filter.name}`}
+                title="Rename"
               >
-                <RiEditLine className="h-3.5 w-3.5" />
-                Rename
-              </button>
+                <RiEditLine />
+              </Button>
             )}
 
             {isOwner && (
-              <button
+              <Button
                 type="button"
+                variant="ghost-destructive"
+                size="icon-sm"
                 onClick={() => onDelete(filter)}
-                className="flex flex-1 flex-col items-center justify-center gap-1 cursor-pointer rounded-md border border-destructive/25 bg-destructive/5 px-2 py-2 text-[11px] font-medium text-destructive transition-colors hover:border-destructive/40 hover:bg-destructive/10"
                 aria-label={`Delete ${filter.name}`}
+                title="Delete"
               >
-                <RiDeleteBinLine className="h-3.5 w-3.5" />
-                Delete
-              </button>
+                <RiDeleteBinLine />
+              </Button>
             )}
           </div>
         </div>

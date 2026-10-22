@@ -252,8 +252,7 @@ export function ExportsDialog({ open, onOpenChange }: ExportsDialogProps) {
                             <DropdownMenuTrigger asChild>
                               <Button
                                 variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
+                                size="icon-sm"
                                 disabled={downloadingId === row.id}
                                 aria-label="Export actions"
                               >
@@ -402,15 +401,10 @@ function ExportDetailsDialog({
               </Button>
               <Button
                 onClick={() => onDownload(row)}
-                disabled={isDownloading(row.id)}
-                className="gap-1.5"
+                loading={isDownloading(row.id)}
               >
-                {isDownloading(row.id) ? (
-                  <RiLoader4Line className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <RiDownloadLine className="h-3.5 w-3.5" />
-                )}
-                RiDownloadLine
+                {isDownloading(row.id) ? null : <RiDownloadLine />}
+                Download
               </Button>
             </div>
           </div>

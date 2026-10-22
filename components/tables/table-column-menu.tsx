@@ -32,8 +32,7 @@ export function TableColumnMenu<ColumnKey extends string>({
         <Button
           type="button"
           variant="outline"
-          size="sm"
-          className="h-10 w-10 rounded-xl px-0"
+          size="icon-lg"
           aria-label="Customise table columns"
           title="Customise table columns"
         >

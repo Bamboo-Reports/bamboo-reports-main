@@ -13,6 +13,7 @@ import { formatProspectLocation } from "@/lib/utils/helpers"
 import type { Prospect } from "@/lib/types"
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { DialogBreadcrumb, type DialogBreadcrumbItem } from "@/components/ui/dialog-breadcrumb"
 import { ProspectGridCard } from "@/components/cards/prospect-grid-card"
 import { PaginationControls } from "@/components/ui/pagination-controls"
@@ -368,22 +369,24 @@ export function ProspectDetailsDialog({
                       </p>
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-foreground/90 break-all">{p.prospect_email}</span>
-                        <button
+                        <Button
                           type="button"
+                          variant="ghost"
+                          size="icon-xs"
                           onClick={() => {
                             captureEvent(ANALYTICS_EVENTS.CONTACT_EMAIL_COPIED, { entity: "prospect" })
                             copy(p.prospect_email!, "Email")
                             setCopied(true)
                             setTimeout(() => setCopied(false), 1500)
                           }}
-                          className="p-1 rounded text-muted-foreground hover:bg-background/60 hover:text-foreground transition-colors shrink-0"
+                          className="shrink-0 text-muted-foreground"
                           title={copied ? "Copied!" : "Copy email"}
                           aria-label="Copy email"
                         >
                           {copied
                             ? <RiCheckLine className="h-3.5 w-3.5 text-green-500 animate-scale-in" />
                             : <RiFileCopyLine className="h-3.5 w-3.5" />}
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   ) : null}

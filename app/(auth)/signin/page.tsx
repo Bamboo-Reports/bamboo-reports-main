@@ -3,7 +3,6 @@
 import { Suspense, useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { RiLoader4Line } from "@remixicon/react"
 import { Controller, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Button } from "@/components/ui/button"
@@ -180,19 +179,8 @@ function SignInForm() {
             <AlertDescription>Password updated. Please sign in with your new password.</AlertDescription>
           </Alert>
         ) : null}
-        <Button
-          className="h-10 w-full"
-          type="submit"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? (
-            <>
-              <RiLoader4Line className="mr-2 h-4 w-4 animate-spin" />
-              Signing in
-            </>
-          ) : (
-            "Sign in"
-          )}
+        <Button size="lg" className="w-full" type="submit" loading={isSubmitting}>
+          {isSubmitting ? "Signing in" : "Sign in"}
         </Button>
       </form>
     </AuthShell>
