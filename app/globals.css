@@ -212,19 +212,6 @@
 
 /* Smooth Microinteractions */
 @layer utilities {
-  /* Subtle scale on hover for interactive elements */
-  .hover-scale {
-    transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .hover-scale:hover {
-    transform: scale(1.02);
-  }
-
-  .hover-scale:active {
-    transform: scale(0.98);
-  }
-
   /* Smooth fade in animation */
   @keyframes fadeIn {
     from {
@@ -288,19 +275,6 @@
     animation: subtle-pulse 1.5s ease-in-out infinite;
   }
 
-  /* Button press effect */
-  .button-press {
-    transition: transform 0.14s cubic-bezier(0.4, 0, 0.2, 1),
-                background-color 0.14s ease,
-                border-color 0.14s ease,
-                color 0.14s ease,
-                box-shadow 0.14s ease;
-  }
-
-  .button-press:active {
-    transform: scale(0.99);
-  }
-
   /* Smooth transition for all interactive elements */
   .interactive {
     transition: color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
@@ -309,46 +283,6 @@
                 transform 0.15s cubic-bezier(0.4, 0, 0.2, 1),
                 opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1),
                 box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  /* Card hover elevation */
-  .card-hover {
-    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-                box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .card-hover:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px 1px rgba(0, 0, 0, 0.08),
-                0 2px 4px 0 rgba(0, 0, 0, 0.04);
-  }
-
-  .dark .card-hover:hover {
-    box-shadow: 0 4px 12px 1px rgba(0, 0, 0, 0.4),
-                0 2px 4px 0 rgba(0, 0, 0, 0.2);
-  }
-
-  /* Smooth badge transitions */
-  .badge-smooth {
-    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
-                background-color 0.18s ease,
-                border-color 0.18s ease,
-                color 0.18s ease;
-  }
-
-  .badge-smooth:hover {
-    transform: scale(1.01);
-  }
-
-  /* Input focus animation */
-  .input-focus {
-    transition: transform 0.15s ease,
-                border-color 0.15s ease,
-                box-shadow 0.15s ease;
-  }
-
-  .input-focus:focus {
-    transform: translateY(-1px);
   }
 
   /* Table row hover */
@@ -385,34 +319,6 @@
       opacity: 0;
       transform: scale(0.9);
     }
-  }
-
-  /* Ripple effect utility */
-  .ripple {
-    position: relative;
-    overflow: hidden;
-  }
-
-  .ripple::after {
-    content: '';
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    top: 0;
-    left: 0;
-    pointer-events: none;
-    background-image: radial-gradient(circle, hsl(var(--primary) / 0.1) 10%, transparent 10%);
-    background-repeat: no-repeat;
-    background-position: 50%;
-    transform: scale(10);
-    opacity: 0;
-    transition: transform 0.5s, opacity 1s;
-  }
-
-  .ripple:active::after {
-    transform: scale(0);
-    opacity: 1;
-    transition: 0s;
   }
 
   /* Smooth skeleton loading */
@@ -531,36 +437,14 @@
 
 /* Component-specific enhancements */
 @layer components {
-  /* Enhanced button styles */
-  .btn-enhanced {
-    @apply interactive button-press;
-    position: relative;
-    overflow: hidden;
-  }
-
-  /* Enhanced card styles */
-  .card-enhanced {
-    @apply card-hover;
-  }
-
   /* Enhanced table row */
   .row-enhanced {
     @apply table-row-hover;
   }
 
-  /* Enhanced input */
-  .input-enhanced {
-    @apply input-focus;
-  }
-
-  /* Enhanced badge */
-  .badge-enhanced {
-    @apply badge-smooth;
-  }
-
   /* Smooth filter removal */
   .filter-chip {
-    @apply chip-appear badge-enhanced;
+    @apply chip-appear;
   }
 
   .filter-chip.removing {
