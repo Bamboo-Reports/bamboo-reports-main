@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { RiPieChartLine } from "@remixicon/react"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
-import { PIE_CHART_COLORS } from "@/lib/utils/chart-helpers"
+import { PIE_CHART_COLORS, orderChartSegments } from "@/lib/utils/chart-helpers"
 import { ChartWaveSkeleton } from "@/components/ui/chart-wave-skeleton"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -139,7 +139,15 @@ export const PieChartCard = memo(({
       })
     }
 
-    return majorSegments
+    // Range buckets read in range order, Others last; colours follow the new order (#350).
+    const ordered = orderChartSegments(majorSegments.map((segment) => ({ ...segment, value: segment.y })))
+    return ordered.map(({ value: _value, ...segment }, index) => ({
+      ...segment,
+      color:
+        segment.name === "Others"
+          ? PIE_CHART_COLORS[PIE_CHART_COLORS.length - 1]
+          : PIE_CHART_COLORS[index % PIE_CHART_COLORS.length],
+    }))
   }, [safeData, dataKey, total])
 
   const options = React.useMemo<Options>(() => {
