@@ -105,16 +105,6 @@ const config: Config = {
   					transform: 'translateY(0)'
   				}
   			},
-  			'slide-in': {
-  				from: {
-  					transform: 'translateX(-6px)',
-  					opacity: '0'
-  				},
-  				to: {
-  					transform: 'translateX(0)',
-  					opacity: '1'
-  				}
-  			},
   			'scale-in': {
   				from: {
   					transform: 'scale(0.97)',
@@ -123,46 +113,6 @@ const config: Config = {
   				to: {
   					transform: 'scale(1)',
   					opacity: '1'
-  				}
-  			},
-  			'slide-up': {
-  				from: {
-  					transform: 'translateY(4px)',
-  					opacity: '0'
-  				},
-  				to: {
-  					transform: 'translateY(0)',
-  					opacity: '1'
-  				}
-  			},
-  			'slide-down': {
-  				from: {
-  					transform: 'translateY(-4px)',
-  					opacity: '0'
-  				},
-  				to: {
-  					transform: 'translateY(0)',
-  					opacity: '1'
-  				}
-  			},
-  			'badge-in': {
-  				from: {
-  					transform: 'scale(0.8) translateY(-2px)',
-  					opacity: '0'
-  				},
-  				to: {
-  					transform: 'scale(1) translateY(0)',
-  					opacity: '1'
-  				}
-  			},
-  			'badge-out': {
-  				from: {
-  					transform: 'scale(1)',
-  					opacity: '1'
-  				},
-  				to: {
-  					transform: 'scale(0.8)',
-  					opacity: '0'
   				}
   			},
   			'shimmer': {
@@ -180,38 +130,15 @@ const config: Config = {
   				'100%': {
   					transform: 'translateX(-50%)'
   				}
-  			},
-  			'pulse-subtle': {
-  				'0%, 100%': {
-  					opacity: '1'
-  				},
-  				'50%': {
-  					opacity: '0.8'
-  				}
-  			},
-  			'bounce-subtle': {
-  				'0%, 100%': {
-  					transform: 'translateY(0)'
-  				},
-  				'50%': {
-  					transform: 'translateY(-2px)'
-  				}
   			}
   		},
   		animation: {
   			'accordion-down': 'accordion-down 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
   			'accordion-up': 'accordion-up 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
   			'fade-in': 'fade-in 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
-  			'slide-in': 'slide-in 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
   			'scale-in': 'scale-in 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)',
-  			'slide-up': 'slide-up 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
-  			'slide-down': 'slide-down 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
-  			'badge-in': 'badge-in 0.12s cubic-bezier(0.34, 1.56, 0.64, 1)',
-  			'badge-out': 'badge-out 0.1s cubic-bezier(0.4, 0, 1, 1)',
   			'shimmer': 'shimmer 2s infinite',
-  			'chart-wave': 'chart-wave 6s linear infinite',
-  			'pulse-subtle': 'pulse-subtle 2s ease-in-out infinite',
-  			'bounce-subtle': 'bounce-subtle 0.6s ease-in-out infinite'
+  			'chart-wave': 'chart-wave 6s linear infinite'
   		}
   	}
   },
