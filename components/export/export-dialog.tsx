@@ -381,10 +381,10 @@ export function ExportDialog({
       captureEvent(ANALYTICS_EVENTS.EXPORT_CANCELLED, {
         selected_dataset_count: totalSelected,
         selected_datasets: selectedDatasets,
-        row_count_accounts: selection.accounts ? data.accounts.length : 0,
-        row_count_centers: selection.centers ? data.centers.length : 0,
-        row_count_services: selection.services ? data.services.length : 0,
-        row_count_prospects: selection.prospects ? data.prospects.length : 0,
+        row_count_accounts: selection.accounts ? countOf("accounts") : 0,
+        row_count_centers: selection.centers ? countOf("centers") : 0,
+        row_count_services: selection.services ? countOf("services") : 0,
+        row_count_prospects: selection.prospects ? countOf("prospects") : 0,
         stage: toTrackedStringArray([stage])[0] ?? null,
         has_error: Boolean(error),
       })
@@ -569,7 +569,7 @@ export function ExportDialog({
           <div className="grid gap-3 sm:grid-cols-2">
             {visibleDatasetMeta.map((item) => {
               const Icon = item.icon
-              const count = data[item.key].length
+              const count = countOf(item.key)
               const isChecked = selection[item.key]
               const isAccessible = isDatasetEnabled(item.key)
 
