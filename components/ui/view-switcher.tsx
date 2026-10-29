@@ -27,6 +27,24 @@ export function ViewSwitcher<V extends string>({
   className,
   "data-tour": dataTour,
 }: ViewSwitcherProps<V>) {
+  // Move the indicator on click, and only render the (often heavy) new view once
+  // the slide has painted. The slide only animates transform, so the compositor
+  // keeps it smooth while that render blocks the main thread.
+  const [activeValue, setActiveValue] = React.useState(value)
+  React.useEffect(() => {
+    setActiveValue(value)
+  }, [value])
+
+  const handleValueChange = React.useCallback(
+    (next: string) => {
+      setActiveValue(next as V)
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => React.startTransition(() => onValueChange(next as V)))
+      )
+    },
+    [onValueChange]
+  )
+
   const listRef = React.useRef<HTMLDivElement>(null)
   const triggerRefs = React.useRef(new Map<V, HTMLButtonElement>())
   const [indicator, setIndicator] = React.useState<IndicatorRect | null>(null)
@@ -34,14 +52,14 @@ export function ViewSwitcher<V extends string>({
   const [canAnimate, setCanAnimate] = React.useState(false)
 
   const measure = React.useCallback(() => {
-    const trigger = triggerRefs.current.get(value)
+    const trigger = triggerRefs.current.get(activeValue)
     if (!trigger) return
     setIndicator((prev) =>
       prev && prev.left === trigger.offsetLeft && prev.width === trigger.offsetWidth
         ? prev
         : { left: trigger.offsetLeft, width: trigger.offsetWidth }
     )
-  }, [value])
+  }, [activeValue])
 
   React.useLayoutEffect(() => {
     measure()
@@ -64,14 +82,14 @@ export function ViewSwitcher<V extends string>({
   }, [measure, options])
 
   return (
-    <Tabs value={value} onValueChange={(v) => onValueChange(v as V)} className={cn("w-fit", className)} data-tour={dataTour}>
-      <TabsList ref={listRef} className="relative">
+    <Tabs value={activeValue} onValueChange={handleValueChange} className={cn("w-fit", className)} data-tour={dataTour}>
+      <TabsList ref={listRef} className="relative grid auto-cols-fr grid-flow-col">
         {indicator ? (
           <span
             aria-hidden="true"
             className={cn(
               "pointer-events-none absolute inset-y-1 left-0 rounded-md bg-background shadow-[0_1px_2px_hsl(0_0%_0%/0.08),0_0_0_1px_hsl(0_0%_0%/0.06)] dark:shadow-[0_1px_2px_hsl(0_0%_0%/0.3),0_0_0_1px_hsl(0_0%_100%/0.1)]",
-              canAnimate && "transition-[transform,width] duration-200 ease-out motion-reduce:transition-none"
+              canAnimate && "transition-transform duration-200 ease-out will-change-transform motion-reduce:transition-none"
             )}
             style={{ width: indicator.width, transform: `translateX(${indicator.left}px)` }}
           />
