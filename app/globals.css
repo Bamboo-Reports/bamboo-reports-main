@@ -54,9 +54,9 @@
   .dark {
     --background: 0 0% 10%;
     --foreground: 0 0% 98%;
-    --card: 0 0% 12%;
+    --card: 0 0% 13%;
     --card-foreground: 0 0% 98%;
-    --popover: 0 0% 12%;
+    --popover: 0 0% 14.5%;
     --popover-foreground: 0 0% 98%;
     --primary: 204 92% 56%;
     --primary-foreground: 0 0% 10%;
@@ -77,7 +77,7 @@
     --chart-4: 210 75% 67%;
     --chart-5: 43 96% 56%;
     --treemap-border-color: hsl(var(--background));
-    --sidebar-background: 0 0% 10%;
+    --sidebar-background: 0 0% 13%;
     --sidebar-foreground: 0 0% 95%;
     --sidebar-primary: 204 92% 56%;
     --sidebar-primary-foreground: 0 0% 10%;
