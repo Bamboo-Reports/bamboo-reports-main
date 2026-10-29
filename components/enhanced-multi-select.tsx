@@ -414,7 +414,7 @@ export const EnhancedMultiSelect = React.memo(function EnhancedMultiSelect({
               aria-expanded={open}
               className={cn(
                 buttonVariants({ variant: "outline" }),
-                "h-auto min-h-10 flex-1 cursor-pointer justify-between bg-transparent py-2 hover:bg-accent/20 transition-colors duration-150"
+                "h-auto min-h-10 flex-1 cursor-pointer justify-between bg-transparent px-3 py-2 hover:bg-accent/20 transition-colors duration-150"
               )}
               onKeyDown={(event) => {
                 if (event.key === "Enter" || event.key === " ") {

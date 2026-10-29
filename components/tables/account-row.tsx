@@ -29,7 +29,6 @@ export const AccountRow = memo(({ account, onOpen, selectable, isSelected, onSel
     account.account_visibility === "exclude" && account.account_visibility_note
       ? account.account_visibility_note
       : null
-  const showChipRow = isNasscomVerified || visibilityNote !== null
   const accountName = account.account_global_legal_name || "account"
 
   return (
@@ -70,28 +69,26 @@ export const AccountRow = memo(({ account, onOpen, selectable, isSelected, onSel
                 theme="auto"
               />
               <div className="min-w-0">
-                <div className="min-w-0 truncate" title={accountName}>
-                  {accountName}
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="min-w-0 truncate" title={accountName}>
+                    {accountName}
+                  </span>
+                  {isNasscomVerified && (
+                    <span
+                      className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold bg-[#C03430]/10 text-[#A52A26] dark:bg-[#FF8A85]/15 dark:text-[#FFA19D]"
+                      title="NASSCOM listed"
+                    >
+                      <RiCheckboxCircleLine className="h-3 w-3" aria-hidden="true" />
+                      NASSCOM
+                    </span>
+                  )}
                 </div>
-                {showChipRow && (
-                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                    {isNasscomVerified && (
-                      <div
-                        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold bg-[#C03430]/15 text-[#C03430]"
-                        title="NASSCOM listed"
-                      >
-                        <RiCheckboxCircleLine className="h-3 w-3" aria-hidden="true" />
-                        NASSCOM
-                      </div>
-                    )}
-                    {visibilityNote && (
-                      <div
-                        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 max-w-[220px]"
-                        title={visibilityNote}
-                      >
-                        <span className="truncate">{visibilityNote}</span>
-                      </div>
-                    )}
+                {visibilityNote && (
+                  <div
+                    className="mt-1 inline-flex max-w-[220px] items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300"
+                    title={visibilityNote}
+                  >
+                    <span className="truncate">{visibilityNote}</span>
                   </div>
                 )}
               </div>

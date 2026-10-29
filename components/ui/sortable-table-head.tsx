@@ -49,7 +49,7 @@ export function SortableTableHead<T extends string = string>({
           )
         ) : (
           <RiExpandUpDownLine
-            className="h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover/sort:opacity-100 group-focus-visible/sort:opacity-100"
+            className="h-3.5 w-3.5 shrink-0 opacity-40 transition-opacity group-hover/sort:opacity-100 group-focus-visible/sort:opacity-100"
             aria-hidden="true"
           />
         )}

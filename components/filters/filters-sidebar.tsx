@@ -137,13 +137,39 @@ export function FiltersSidebar({
   }
 
   return (
+    <>
+    {/* Below md the rail would take a third of the screen, so the sidebar
+        opens as a sheet over the content and collapses to a floating button. */}
+    {isCollapsed ? (
+      <Button
+        onClick={onToggleCollapse}
+        aria-label="Open filters"
+        aria-expanded={false}
+        aria-controls="filters-sidebar"
+        className="fixed bottom-4 left-4 z-40 h-10 rounded-full px-4 shadow-[0_1px_2px_hsl(214_45%_15%/0.1),0_8px_24px_-6px_hsl(214_45%_15%/0.35)] md:hidden"
+      >
+        <RiFilterLine />
+        Filters
+        {totalActiveFilters > 0 ? (
+          <span className="ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-foreground/20 px-1.5 text-[11px] font-semibold">
+            {totalActiveFilters}
+          </span>
+        ) : null}
+      </Button>
+    ) : (
+      <div
+        className="fixed inset-0 z-40 bg-foreground/30 backdrop-blur-[2px] md:hidden"
+        onClick={onToggleCollapse}
+        aria-hidden="true"
+      />
+    )}
     <aside
       id="filters-sidebar"
       data-tour="filters-sidebar"
       className={cn(
         'bg-sidebar/90 backdrop-blur-sm overflow-hidden shrink-0 relative ml-6 mt-[var(--dashboard-content-top-gap)] mb-[var(--dashboard-content-bottom-gap)] rounded-xl border border-sidebar-border shadow-[0_1px_2px_hsl(214_45%_15%/0.06),0_4px_12px_-4px_hsl(214_45%_15%/0.08)] dark:shadow-[inset_0_1px_0_hsl(0_0%_100%/0.05),0_1px_2px_hsl(0_0%_0%/0.4)]',
         'transition-[width] duration-300 ease-[cubic-bezier(0.22_1_0.36_1)] motion-reduce:transition-none',
-        isCollapsed ? 'w-16' : 'w-[320px]'
+        isCollapsed ? 'w-16 max-md:hidden' : 'w-[320px] max-md:fixed max-md:inset-y-3 max-md:left-3 max-md:z-50 max-md:m-0 max-md:w-[min(320px,calc(100vw-1.5rem))] max-md:bg-sidebar max-md:shadow-2xl'
       )}
       aria-label="Filters sidebar"
     >
@@ -395,5 +421,6 @@ export function FiltersSidebar({
         </div>
       </div>
     </aside>
+    </>
   )
 }

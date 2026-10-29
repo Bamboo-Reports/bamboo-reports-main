@@ -27,7 +27,7 @@ import { PaginationControls } from "@/components/ui/pagination-controls"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { canAccessAccountsMapView } from "@/lib/config/dashboard-access"
-import { getPaginatedData } from "@/lib/utils/helpers"
+import { compareRangeLabels, getPaginatedData } from "@/lib/utils/helpers"
 import type { CityAggregate, StateAggregate } from "@/lib/dashboard/api-client"
 import type { Account, Center, Prospect, Service, Function, Tech } from "@/lib/types"
 
@@ -236,6 +236,11 @@ export function AccountsTab({
       }
     }
 
+    if (sort.key === "employees" || sort.key === "revenue") {
+      const direction = sort.direction
+      return [...accounts].sort((a, b) => compareRangeLabels(getValue(a), getValue(b), direction))
+    }
+
     const sorted = [...accounts].sort((a, b) => compare(getValue(a), getValue(b)))
     return sort.direction === "asc" ? sorted : sorted.reverse()
   }, [accounts, sort, server])
@@ -358,7 +363,7 @@ export function AccountsTab({
 
       {/* Map Section */}
       {accountsView === "map" && (
-        <Card data-tour="map-view" className="w-full flex flex-col h-[var(--dashboard-panel-height)] border shadow-sm view-content">
+        <Card data-tour="map-view" className="w-full flex flex-col h-[var(--dashboard-panel-height)] view-content">
           <CardHeader className="shrink-0 px-6 py-3">
             <div className="flex items-center gap-3">
               <CardTitle className="text-base">Accounts Map</CardTitle>
@@ -396,7 +401,7 @@ export function AccountsTab({
 
       {/* Data View */}
       {accountsView === "data" && (
-        <Card className="w-full flex flex-col h-[var(--dashboard-panel-height)] border shadow-sm view-content">
+        <Card className="w-full flex flex-col h-[var(--dashboard-panel-height)] view-content">
           <CardHeader className="shrink-0 px-6 py-3">
             <div className="flex flex-wrap items-center gap-3">
               <CardTitle className="text-base">Accounts Data</CardTitle>

@@ -19,7 +19,7 @@ import {
 import { EmptyState } from "@/components/states/empty-state"
 import { CenterDetailsDialog } from "@/components/dialogs/center-details-dialog"
 import { AccountDetailsDialog } from "@/components/dialogs/account-details-tabbed-dialog"
-import { getPaginatedData, formatCenterLocation } from "@/lib/utils/helpers"
+import { compareRangeLabels, getPaginatedData, formatCenterLocation } from "@/lib/utils/helpers"
 import { CentersMap } from "@/components/maps/centers-map"
 import { CentersChoroplethMap } from "@/components/maps/centers-choropleth-map"
 import { MapErrorBoundary } from "@/components/maps/map-error-boundary"
@@ -261,6 +261,11 @@ export function CentersTab({
       }
     }
 
+    if (sort.key === "employees") {
+      const direction = sort.direction
+      return [...centers].sort((a, b) => compareRangeLabels(getValue(a), getValue(b), direction))
+    }
+
     const sorted = [...centers].sort((a, b) => compare(getValue(a), getValue(b)))
     return sort.direction === "asc" ? sorted : sorted.reverse()
   }, [centers, sort, server])
@@ -382,7 +387,7 @@ export function CentersTab({
 
       {/* Map Section */}
        {centersView === "map" && (
-         <Card data-tour="map-view" className="w-full flex flex-col h-[var(--dashboard-panel-height)] border shadow-sm view-content">
+         <Card data-tour="map-view" className="w-full flex flex-col h-[var(--dashboard-panel-height)] view-content">
            <CardHeader className="shrink-0 px-6 py-3">
              <div className="flex items-center gap-3">
                <CardTitle className="text-base">Centres Map</CardTitle>
@@ -426,7 +431,7 @@ export function CentersTab({
 
        {/* Data Table */}
        {centersView === "data" && (
-         <Card className="w-full flex flex-col h-[var(--dashboard-panel-height)] border shadow-sm view-content">
+         <Card className="w-full flex flex-col h-[var(--dashboard-panel-height)] view-content">
            <CardHeader className="shrink-0 px-6 py-3">
              <div className="flex flex-wrap items-center gap-3">
                <CardTitle className="text-base">Centres Data</CardTitle>

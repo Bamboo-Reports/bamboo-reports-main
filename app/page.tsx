@@ -342,7 +342,8 @@ function DashboardContent(): React.JSX.Element | null {
 
   useEffect(() => {
     const storedSidebarState = window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY)
-    if (storedSidebarState === "true") {
+    // Phones start collapsed: the sidebar opens there as a sheet over the content.
+    if (storedSidebarState === "true" || window.matchMedia("(max-width: 767px)").matches) {
       setIsSidebarCollapsed(true)
     }
   }, [])
@@ -1409,7 +1410,7 @@ function DashboardContent(): React.JSX.Element | null {
 
           <div className="flex-1 overflow-hidden flex flex-col">
             <div className="flex-1 overflow-y-auto scrollbar-gutter-stable">
-              <div className="px-6 pt-[var(--dashboard-content-top-gap)] pb-[var(--dashboard-content-bottom-gap)]">
+              <div className="px-4 md:px-6 pt-[var(--dashboard-content-top-gap)] pb-[var(--dashboard-content-bottom-gap)]">
                 <SummaryCards
                   {...summaryCounts}
                   activeView={activeSection}

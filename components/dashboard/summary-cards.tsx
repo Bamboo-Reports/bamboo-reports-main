@@ -172,7 +172,7 @@ export const SummaryCards = React.memo(function SummaryCards({
   ]
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6" aria-label="Dashboard sections" data-tour="summary-cards">
+    <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4 mb-6" aria-label="Dashboard sections" data-tour="summary-cards">
       {cards.map((card) => {
         const Icon = card.icon
         const isActive = card.interactive && activeView === card.id
@@ -197,14 +197,14 @@ export const SummaryCards = React.memo(function SummaryCards({
               }
             } : undefined}
             className={cn(
-              'relative overflow-hidden border bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-300 ease-out animate-stagger',
+              'relative overflow-hidden border bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-[box-shadow,border-color] duration-200 ease-out animate-stagger',
+              card.id === 'headcount' && 'col-span-2 md:col-span-1',
               card.interactive && 'cursor-pointer select-none',
               !card.interactive && card.message && 'cursor-help',
               isActive
-                ? 'ring-2 ring-sidebar-ring border-sidebar-ring/70 shadow-[0_18px_55px_-35px_rgba(0,0,0,0.6)]'
+                ? 'border-primary/60 shadow-[0_0_0_1px_hsl(var(--primary)/0.6),0_1px_2px_hsl(214_45%_15%/0.06),0_8px_20px_-8px_hsl(var(--primary)/0.35)] dark:border-primary/60 dark:shadow-[0_0_0_1px_hsl(var(--primary)/0.6),0_8px_24px_-8px_hsl(var(--primary)/0.3)]'
                 : 'border-border shadow-[0_1px_2px_hsl(214_45%_15%/0.06),0_4px_12px_-4px_hsl(214_45%_15%/0.08)] dark:border-border/80 dark:shadow-[inset_0_1px_0_hsl(0_0%_100%/0.05),0_1px_2px_hsl(0_0%_0%/0.4)]',
-              !isActive && card.interactive && 'hover:shadow-[0_16px_48px_-32px_rgba(0,0,0,0.5)]',
-              !card.interactive && 'opacity-80'
+              !isActive && card.interactive && 'hover:border-foreground/20 hover:shadow-[0_1px_2px_hsl(214_45%_15%/0.08),0_10px_24px_-10px_hsl(214_45%_15%/0.18)] dark:hover:border-foreground/25'
             )}
           >
             <div

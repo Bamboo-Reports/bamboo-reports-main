@@ -213,7 +213,7 @@ export const PieChartCard = memo(({
           },
           showInLegend: false,
           borderWidth: 1,
-          borderColor: "hsl(var(--background))",
+          borderColor: "hsl(var(--card))",
           point: {
             events: {
               click: function () {
@@ -239,7 +239,7 @@ export const PieChartCard = memo(({
   }, [seriesData, total, countLabel, showBigPercentage, title, labelDisplay])
 
   return (
-    <Card className="border shadow-sm">
+    <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base font-semibold flex items-center gap-2">
           <RiPieChartLine className="h-4 w-4 text-[hsl(var(--chart-1))]" />

@@ -200,6 +200,11 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
     router.replace('/signin')
   }
 
+  const [shortcutLabel, setShortcutLabel] = useState('Ctrl K')
+  useEffect(() => {
+    if (/Mac|iPhone|iPad/.test(navigator.platform)) setShortcutLabel('⌘K')
+  }, [])
+
   const displayName = profile ? `${profile.first_name} ${profile.last_name}`.trim() : 'User'
   const displayEmail = profile?.email ?? sessionEmail ?? 'No email'
   const normalizedRole = normalizeUserRole(profile?.role)
@@ -222,7 +227,7 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
 
   return (
     <div className="sticky top-0 z-20 border-b border-border/80 bg-background/95 backdrop-blur-md">
-      <div className="mx-auto w-full px-6 py-4">
+      <div className="mx-auto w-full px-4 py-4 md:px-6">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-primary/20 bg-background">
@@ -251,16 +256,30 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
           </div>
           <div className="flex items-center gap-2" data-tour="header-actions">
             {onOpenSearch && (
-              <button
-                type="button"
-                onClick={onOpenSearch}
-                title="Search (⌘K)"
-                aria-label="Open search"
-                className="hidden sm:inline-flex items-center gap-2 rounded-lg border border-border/60 bg-muted/30 px-3 py-1.5 text-sm text-muted-foreground/70 transition-colors hover:bg-muted/60 hover:text-muted-foreground hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 w-56"
-              >
-                <RiSearchLine className="h-3.5 w-3.5 shrink-0" />
-                <span className="flex-1 text-left text-xs">Search…</span>
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={onOpenSearch}
+                  aria-label="Open search"
+                  aria-keyshortcuts="Meta+K Control+K"
+                  className="hidden sm:inline-flex h-8 w-60 items-center gap-2 rounded-lg border border-border/70 bg-muted/40 pl-3 pr-1.5 text-muted-foreground transition-colors hover:border-border hover:bg-muted/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <RiSearchLine className="h-3.5 w-3.5 shrink-0" />
+                  <span className="flex-1 text-left text-xs">Search…</span>
+                  <kbd className="inline-flex h-5 items-center rounded-[4px] border border-border/70 bg-background px-1.5 font-sans text-[11px] font-medium text-muted-foreground">
+                    {shortcutLabel}
+                  </kbd>
+                </button>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={onOpenSearch}
+                  aria-label="Open search"
+                  className="sm:hidden"
+                >
+                  <RiSearchLine />
+                </Button>
+              </>
             )}
             <Button
               variant="ghost"

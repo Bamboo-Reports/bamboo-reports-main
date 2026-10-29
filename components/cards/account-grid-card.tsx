@@ -64,7 +64,7 @@ export const AccountGridCard = memo(({ account, onClick }: AccountGridCardProps)
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
                     {isNasscomVerified && (
                       <div
-                        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold bg-[#C03430]/15 text-[#C03430]"
+                        className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold bg-[#C03430]/10 text-[#A52A26] dark:bg-[#FF8A85]/15 dark:text-[#FFA19D]"
                         title="NASSCOM listed"
                       >
                         <RiCheckboxCircleLine className="h-3 w-3" aria-hidden="true" />

@@ -83,3 +83,37 @@ export const formatCenterLocation = (
   }
   return "India"
 }
+
+const RANGE_UNIT_SCALE: Record<string, number> = { K: 1e3, Mn: 1e6, Bn: 1e9 }
+
+/**
+ * Sort key for a bucket label ("<10Mn", "10Mn - 50Mn", ">50Bn", "5K - 10K"):
+ * "<X" sorts first, otherwise the first number scaled by its unit. Mirrors
+ * rangeOrder in lib/dashboard/entity-query.ts so client and server sorts agree.
+ * Returns null for a missing or unparseable label.
+ */
+export const rangeLowerBound = (label: string | null | undefined): number | null => {
+  if (!label) return null
+  if (label.trimStart().startsWith("<")) return -1
+  const match = label.match(/([0-9]+(?:\.[0-9]+)?)\s*([A-Za-z]*)/)
+  if (!match) return null
+  return Number(match[1]) * (RANGE_UNIT_SCALE[match[2]] ?? 1)
+}
+
+/**
+ * Compares two bucket labels by lower bound. Missing values go last in either
+ * direction, as they do in the server sort.
+ */
+export const compareRangeLabels = (
+  a: string | null | undefined,
+  b: string | null | undefined,
+  direction: "asc" | "desc" = "asc"
+): number => {
+  const left = rangeLowerBound(a)
+  const right = rangeLowerBound(b)
+  if (left === null || right === null) {
+    if (left === right) return 0
+    return left === null ? 1 : -1
+  }
+  return direction === "asc" ? left - right : right - left
+}

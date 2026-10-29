@@ -27,24 +27,28 @@ export function ViewSwitcher<V extends string>({
 }: ViewSwitcherProps<V>) {
   // Move the indicator on click, and only render the (often heavy) new view once
   // the slide has painted. Options share one width so the slide only animates
-  // transform, which the compositor keeps smooth while that render blocks.
-  const [activeValue, setActiveValue] = React.useState(value)
-  React.useEffect(() => {
-    setActiveValue(value)
-  }, [value])
+  // transform, which the compositor keeps smooth while that render blocks. The
+  // pending value clears in the same transition as the change, so a parent that
+  // declines it (an access gate, say) puts the indicator back on `value`.
+  const [pendingValue, setPendingValue] = React.useState<V | null>(null)
 
   const handleValueChange = React.useCallback(
     (next: string) => {
-      setActiveValue(next as V)
+      setPendingValue(next as V)
       requestAnimationFrame(() =>
-        requestAnimationFrame(() => React.startTransition(() => onValueChange(next as V)))
+        requestAnimationFrame(() =>
+          React.startTransition(() => {
+            onValueChange(next as V)
+            setPendingValue(null)
+          })
+        )
       )
     },
     [onValueChange]
   )
 
   return (
-    <Tabs value={activeValue} onValueChange={handleValueChange} className={cn("w-fit", className)} data-tour={dataTour}>
+    <Tabs value={pendingValue ?? value} onValueChange={handleValueChange} className={cn("w-fit", className)} data-tour={dataTour}>
       <TabsList className="grid auto-cols-fr grid-flow-col">
         {options.map(({ value: optionValue, label, icon }) => (
           <TabsTrigger key={optionValue} value={optionValue} className="gap-2">
