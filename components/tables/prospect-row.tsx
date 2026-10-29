@@ -12,7 +12,6 @@ import {
 import type { Prospect } from "@/lib/types"
 import { ensureAbsoluteUrl } from "@/lib/utils"
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard"
-import type { ProspectTableColumnKey } from "@/lib/dashboard/table-column-preferences"
 import { formatProspectLocation } from "@/lib/utils/helpers"
 
 interface ProspectRowProps {
@@ -20,13 +19,12 @@ interface ProspectRowProps {
   // Entity-param callbacks keep one stable handler shared across rows so a
   // selection toggle doesn't re-render every memo'd row.
   onOpen: (prospect: Prospect) => void
-  visibleColumns: Set<ProspectTableColumnKey>
   selectable?: boolean
   isSelected?: boolean
   onSelectChange?: (prospect: Prospect, checked: boolean) => void
 }
 
-export const ProspectRow = memo(({ prospect, onOpen, visibleColumns, selectable, isSelected, onSelectChange }: ProspectRowProps) => {
+export const ProspectRow = memo(({ prospect, onOpen, selectable, isSelected, onSelectChange }: ProspectRowProps) => {
   const handleOpen = () => onOpen(prospect)
   const copy = useCopyToClipboard()
   const fullName =
@@ -70,7 +68,6 @@ export const ProspectRow = memo(({ prospect, onOpen, visibleColumns, selectable,
             />
           </TableCell>
           )}
-          {visibleColumns.has("avatar") && (
           <TableCell>
             <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
               <span className="text-sm font-bold text-primary">
@@ -78,8 +75,6 @@ export const ProspectRow = memo(({ prospect, onOpen, visibleColumns, selectable,
               </span>
             </div>
           </TableCell>
-          )}
-          {visibleColumns.has("name") && (
           <TableCell className="font-medium max-w-[220px]">
             <div className="min-w-0">
               <div className="truncate" title={fullName || "N/A"}>
@@ -90,8 +85,6 @@ export const ProspectRow = memo(({ prospect, onOpen, visibleColumns, selectable,
               </div>
             </div>
           </TableCell>
-          )}
-          {visibleColumns.has("location") && (
           <TableCell className="max-w-[200px]">
             <div
               className="truncate"
@@ -100,21 +93,16 @@ export const ProspectRow = memo(({ prospect, onOpen, visibleColumns, selectable,
               {location || "N/A"}
             </div>
           </TableCell>
-          )}
-          {visibleColumns.has("title") && (
           <TableCell className="max-w-[180px]">
             <div className="truncate" title={prospect.prospect_title || "N/A"}>
               {prospect.prospect_title || "N/A"}
             </div>
           </TableCell>
-          )}
-          {visibleColumns.has("department") && (
           <TableCell className="max-w-[180px]">
             <div className="truncate" title={prospect.prospect_department || "N/A"}>
               {prospect.prospect_department || "N/A"}
             </div>
           </TableCell>
-          )}
         </TableRow>
       </ContextMenuTrigger>
       <ContextMenuContent className="w-48">

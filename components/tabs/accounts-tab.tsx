@@ -1,14 +1,13 @@
 "use client"
 
 import React, { useEffect, useRef, useState } from "react"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TabsContent } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Checkbox } from "@/components/ui/checkbox"
 import { GridSkeletonCards, MapUpdatingPill, TableSkeletonRows } from "@/components/ui/data-skeletons"
 import { cn } from "@/lib/utils"
-import { RiExpandUpDownLine, RiLayoutGridLine, RiMapLine, RiMapPinLine, RiPieChartLine, RiSortAlphabetAsc, RiSortAlphabetDesc, RiStackLine, RiTableLine } from "@remixicon/react"
+import { RiLayoutGridLine, RiMapLine, RiMapPinLine, RiPieChartLine, RiStackLine, RiTableLine } from "@remixicon/react"
 import { AccountRow } from "@/components/tables"
 import { SelectionActionBar } from "@/components/tables/selection-action-bar"
 import { useTableRowSelection } from "@/hooks/use-table-row-selection"
@@ -25,8 +24,6 @@ import { MapErrorBoundary } from "@/components/maps/map-error-boundary"
 import { ViewSwitcher } from "@/components/ui/view-switcher"
 import { SortButton } from "@/components/ui/sort-button"
 import { PaginationControls } from "@/components/ui/pagination-controls"
-import { TableColumnMenu } from "@/components/tables/table-column-menu"
-import { useTableColumnPreferences } from "@/hooks/use-table-column-preferences"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { canAccessAccountsMapView } from "@/lib/config/dashboard-access"
@@ -106,13 +103,6 @@ export function AccountsTab({
   })
   const [dataLayout, setDataLayout] = useState<"table" | "grid">("table")
   const [mapMode, setMapMode] = useState<"city" | "state">("state")
-  const {
-    columns,
-    visibleColumnSet,
-    isColumnVisible,
-    setColumnVisible,
-    resetColumns,
-  } = useTableColumnPreferences("accounts")
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -411,14 +401,6 @@ export function AccountsTab({
             <div className="flex flex-wrap items-center gap-3">
               <CardTitle className="text-base">Accounts Data</CardTitle>
               <div className="ml-auto flex items-center gap-2">
-                {dataLayout === "table" && (
-                  <TableColumnMenu
-                    columns={columns}
-                    visibleColumnSet={visibleColumnSet}
-                    onToggleColumn={setColumnVisible}
-                    onReset={resetColumns}
-                  />
-                )}
                 <ViewSwitcher
                   value={dataLayout}
                   onValueChange={(value) => setDataLayout(value as "table" | "grid")}
@@ -455,38 +437,29 @@ export function AccountsTab({
                           aria-label="Select all accounts on this page"
                         />
                       </TableHead>
-                      {isColumnVisible("name") && (
                       <TableHead className="w-[280px]">
                         <SortButton label="Account Name" sortKey="name" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                       </TableHead>
-                      )}
-                      {isColumnVisible("industry") && (
                       <TableHead className="w-[220px]">
                         <SortButton label="Sub Industry" sortKey="industry" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                       </TableHead>
-                      )}
-                      {isColumnVisible("revenue") && (
                       <TableHead className="w-[140px]">
                         <SortButton label="Revenue Range" sortKey="revenue" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                       </TableHead>
-                      )}
-                      {isColumnVisible("employees") && (
                       <TableHead className="w-[200px]">
                         <SortButton label="GCC Aggregate Headcount (India)" sortKey="employees" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                       </TableHead>
-                      )}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {server?.loading ? (
-                      <TableSkeletonRows columns={1 + (["name", "industry", "revenue", "employees"] as const).filter(isColumnVisible).length} />
+                      <TableSkeletonRows columns={5} />
                     ) : pageAccounts.map(
                       (account) => (
                         <AccountRow
                           key={account.account_global_legal_name}
                           account={account}
                           onOpen={handleRowOpen}
-                          visibleColumns={visibleColumnSet}
                           selectable
                           isSelected={selectedNames.has(account.account_global_legal_name ?? "")}
                           onSelectChange={getAccountKey(account) ? handleRowSelectChange : undefined}
@@ -497,25 +470,6 @@ export function AccountsTab({
                 </Table>
               ) : (
                   <div className="flex flex-col">
-                    <div className="flex items-center gap-2 px-6 py-3 border-b bg-muted/20">
-                      <span className="text-xs font-medium text-muted-foreground">Sort</span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon-sm"
-                        onClick={() => handleSort("name")}
-                        aria-label="Sort by account name"
-                        aria-pressed={sort.key === "name" && sort.direction !== null}
-                      >
-                        {sort.key !== "name" || sort.direction === null ? (
-                          <RiExpandUpDownLine className="h-3.5 w-3.5 text-muted-foreground" />
-                        ) : sort.direction === "asc" ? (
-                          <RiSortAlphabetAsc className="h-3.5 w-3.5 text-primary" />
-                        ) : (
-                          <RiSortAlphabetDesc className="h-3.5 w-3.5 text-primary" />
-                        )}
-                      </Button>
-                    </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
                       {server?.loading ? <GridSkeletonCards /> : pageAccounts.map(
                         (account) => (

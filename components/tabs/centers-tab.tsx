@@ -1,13 +1,12 @@
 "use client"
 
 import React, { useEffect, useRef, useState } from "react"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TabsContent } from "@/components/ui/tabs"
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
-import { RiExpandUpDownLine, RiLayoutGridLine, RiMapLine, RiMapPinLine, RiPieChartLine, RiSortAlphabetAsc, RiSortAlphabetDesc, RiStackLine, RiTableLine } from "@remixicon/react"
+import { RiLayoutGridLine, RiMapLine, RiMapPinLine, RiPieChartLine, RiStackLine, RiTableLine } from "@remixicon/react"
 import { CenterRow } from "@/components/tables"
 import { SelectionActionBar } from "@/components/tables/selection-action-bar"
 import { useTableRowSelection } from "@/hooks/use-table-row-selection"
@@ -27,8 +26,6 @@ import { MapErrorBoundary } from "@/components/maps/map-error-boundary"
 import { ViewSwitcher } from "@/components/ui/view-switcher"
 import { SortButton } from "@/components/ui/sort-button"
 import { PaginationControls } from "@/components/ui/pagination-controls"
-import { TableColumnMenu } from "@/components/tables/table-column-menu"
-import { useTableColumnPreferences } from "@/hooks/use-table-column-preferences"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { fetchAccountRelated, type CityAggregate, type StateAggregate } from "@/lib/dashboard/api-client"
@@ -101,13 +98,6 @@ export function CentersTab({
   })
   const [dataLayout, setDataLayout] = useState<"table" | "grid">("table")
   const [mapMode, setMapMode] = useState<"city" | "state">("state")
-  const {
-    columns,
-    visibleColumnSet,
-    isColumnVisible,
-    setColumnVisible,
-    resetColumns,
-  } = useTableColumnPreferences("centers")
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -441,14 +431,6 @@ export function CentersTab({
              <div className="flex flex-wrap items-center gap-3">
                <CardTitle className="text-base">Centres Data</CardTitle>
                <div className="ml-auto flex items-center gap-2">
-                 {dataLayout === "table" && (
-                   <TableColumnMenu
-                     columns={columns}
-                     visibleColumnSet={visibleColumnSet}
-                     onToggleColumn={setColumnVisible}
-                     onReset={resetColumns}
-                   />
-                 )}
                  <ViewSwitcher
                    value={dataLayout}
                    onValueChange={(value) => setDataLayout(value as "table" | "grid")}
@@ -485,38 +467,29 @@ export function CentersTab({
                             aria-label="Select all centres on this page"
                           />
                         </TableHead>
-                        {isColumnVisible("name") && (
                         <TableHead className="w-[260px]">
                           <SortButton label="Centre Name" sortKey="name" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
-                        )}
-                        {isColumnVisible("location") && (
                         <TableHead className="w-[200px]">
                           <SortButton label="Location" sortKey="location" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
-                        )}
-                        {isColumnVisible("type") && (
                         <TableHead className="w-[200px]">
                           <SortButton label="Centre Type" sortKey="type" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
-                        )}
-                        {isColumnVisible("employees") && (
                         <TableHead className="w-[160px]">
                           <SortButton label="Centre Headcount" sortKey="employees" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
-                        )}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {server?.loading ? (
-                        <TableSkeletonRows columns={1 + (["name", "location", "type", "employees"] as const).filter(isColumnVisible).length} />
+                        <TableSkeletonRows columns={5} />
                       ) : pageCenters.map(
                         (center) => (
                           <CenterRow
                             key={center.cn_unique_key}
                             center={center}
                             onOpen={handleRowOpen}
-                            visibleColumns={visibleColumnSet}
                             selectable
                             isSelected={selectedKeys.has(center.cn_unique_key ?? "")}
                             onSelectChange={getCenterKey(center) ? handleRowSelectChange : undefined}
@@ -527,25 +500,6 @@ export function CentersTab({
                   </Table>
                 ) : (
                   <div className="flex flex-col">
-                    <div className="flex items-center gap-2 px-6 py-3 border-b bg-muted/20">
-                      <span className="text-xs font-medium text-muted-foreground">Sort</span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon-sm"
-                        onClick={() => handleSort("name")}
-                        aria-label="Sort by centre name"
-                        aria-pressed={sort.key === "name" && sort.direction !== null}
-                      >
-                        {sort.key !== "name" || sort.direction === null ? (
-                          <RiExpandUpDownLine className="h-3.5 w-3.5 text-muted-foreground" />
-                        ) : sort.direction === "asc" ? (
-                          <RiSortAlphabetAsc className="h-3.5 w-3.5 text-primary" />
-                        ) : (
-                          <RiSortAlphabetDesc className="h-3.5 w-3.5 text-primary" />
-                        )}
-                      </Button>
-                    </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
                       {server?.loading ? <GridSkeletonCards statRows={3} /> : pageCenters.map(
                         (center) => (

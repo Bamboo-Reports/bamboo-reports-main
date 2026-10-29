@@ -137,7 +137,7 @@ This section has no "Show More" gating.
 
 Each tab can show a paginated data table. Page size comes from `itemsPerPage` in `app/page.tsx` (currently 51) and is sent to the query routes, which clamp it to `MAX_PAGE_SIZE = 100` (`lib/dashboard/entity-query.ts`).
 
-Column labels and which columns are user-hideable come from `TABLE_COLUMNS` in `lib/dashboard/table-column-preferences.ts` (`required: true` columns cannot be hidden; preferences are stored under the `br-table-columns:<dataset>` key). The tab components render the Centres labels with the British spelling.
+Every column is always shown; tables have no column customisation. Column headers are set in the tab components, which render the Centres labels with the British spelling.
 
 ### 2.1 Accounts Table
 
@@ -146,7 +146,7 @@ Column labels and which columns are user-hideable come from `TABLE_COLUMNS` in `
 | Column Header | Column Key | Database Column | Table | Display Type | Notes |
 |---------------|-----------|-----------------|-------|-------------|-------|
 | *(Logo)* | | `account_hq_website` | `accounts` | Company logo | Brandfetch lookup by domain; falls back to a monogram |
-| Account Name | `name` (required) | `account_global_legal_name` | `accounts` | Clickable text | Opens the Account Details dialog |
+| Account Name | `name` | `account_global_legal_name` | `accounts` | Clickable text | Opens the Account Details dialog |
 | *(NASSCOM chip)* | | `account_nasscom_status` | `accounts` | Chip | "NASSCOM" chip when the value is `yes` (case-insensitive) |
 | *(Visibility note chip)* | | `account_visibility`, `account_visibility_note` | `accounts` | Chip | Shows the note when `account_visibility = 'exclude'` and a note exists |
 | Sub Industry | `industry` | `account_hq_industry` | `accounts` | Text | |
@@ -160,7 +160,7 @@ Column labels and which columns are user-hideable come from `TABLE_COLUMNS` in `
 | Column Header | Column Key | Database Column | Table | Display Type | Notes |
 |---------------|-----------|-----------------|-------|-------------|-------|
 | *(Logo)* | | `center_account_website` | `centers` | Company logo | Brandfetch lookup by parent account domain |
-| Centre Name | `name` (required) | `center_name` | `centers` | Clickable text | Opens the Centre Details dialog; second line shows `account_global_legal_name` |
+| Centre Name | `name` | `center_name` | `centers` | Clickable text | Opens the Centre Details dialog; second line shows `account_global_legal_name` |
 | Location | `location` | `center_city` + `center_state` | `centers` | Computed text | `formatCenterLocation` ("City, State") |
 | Centre Type | `type` | `center_type` | `centers` | Text | |
 | Centre Headcount | `employees` | `center_employees_range` | `centers` | Text | Bucketed range string |
@@ -173,8 +173,8 @@ The row context menu also uses `center_website` and `center_linkedin`. `cn_uniqu
 
 | Column Header | Column Key | Database Column | Table | Display Type | Notes |
 |---------------|-----------|-----------------|-------|-------------|-------|
-| *(Avatar)* | `avatar` (required) | `prospect_full_name` or `prospect_first_name` + `prospect_last_name` | `prospects` | Initials badge | |
-| Name | `name` (required) | `prospect_full_name` or `prospect_first_name` + `prospect_last_name` | `prospects` | Clickable text | Opens the Prospect Details dialog; second line shows `account_global_legal_name` |
+| *(Avatar)* | `avatar` | `prospect_full_name` or `prospect_first_name` + `prospect_last_name` | `prospects` | Initials badge | |
+| Name | `name` | `prospect_full_name` or `prospect_first_name` + `prospect_last_name` | `prospects` | Clickable text | Opens the Prospect Details dialog; second line shows `account_global_legal_name` |
 | Location | `location` | `prospect_city` + `prospect_state` + `prospect_country` | `prospects` | Computed text | `formatProspectLocation`: "City, State", falls back to country; `TBA` values are skipped |
 | Job Title | `title` | `prospect_title` | `prospects` | Text | |
 | Department | `department` | `prospect_department` | `prospects` | Text | |

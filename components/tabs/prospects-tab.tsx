@@ -1,12 +1,11 @@
 "use client"
 
 import React, { useEffect, useRef, useState } from "react"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TabsContent } from "@/components/ui/tabs"
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Checkbox } from "@/components/ui/checkbox"
-import { RiExpandUpDownLine, RiLayoutGridLine, RiPieChartLine, RiSortAlphabetAsc, RiSortAlphabetDesc, RiTableLine } from "@remixicon/react"
+import { RiLayoutGridLine, RiPieChartLine, RiTableLine } from "@remixicon/react"
 import { ProspectRow } from "@/components/tables/prospect-row"
 import { SelectionActionBar } from "@/components/tables/selection-action-bar"
 import { useTableRowSelection } from "@/hooks/use-table-row-selection"
@@ -24,8 +23,6 @@ import { getPaginatedData, formatProspectLocation } from "@/lib/utils/helpers"
 import { ViewSwitcher } from "@/components/ui/view-switcher"
 import { SortButton } from "@/components/ui/sort-button"
 import { PaginationControls } from "@/components/ui/pagination-controls"
-import { TableColumnMenu } from "@/components/tables/table-column-menu"
-import { useTableColumnPreferences } from "@/hooks/use-table-column-preferences"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { fetchAccountRelated } from "@/lib/dashboard/api-client"
@@ -88,13 +85,6 @@ export function ProspectsTab({
     direction: null,
   })
   const [dataLayout, setDataLayout] = useState<"table" | "grid">("table")
-  const {
-    columns,
-    visibleColumnSet,
-    isColumnVisible,
-    setColumnVisible,
-    resetColumns,
-  } = useTableColumnPreferences("prospects")
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -363,14 +353,6 @@ export function ProspectsTab({
              <div className="flex flex-wrap items-center gap-3">
                <CardTitle className="text-base">Prospects Data</CardTitle>
                <div className="ml-auto flex items-center gap-2">
-                 {dataLayout === "table" && (
-                   <TableColumnMenu
-                     columns={columns}
-                     visibleColumnSet={visibleColumnSet}
-                     onToggleColumn={setColumnVisible}
-                     onReset={resetColumns}
-                   />
-                 )}
                  <ViewSwitcher
                    value={dataLayout}
                    onValueChange={(value) => setDataLayout(value as "table" | "grid")}
@@ -407,40 +389,29 @@ export function ProspectsTab({
                             aria-label="Select all prospects on this page"
                           />
                         </TableHead>
-                        {isColumnVisible("avatar") && (
                         <TableHead className="w-16"></TableHead>
-                        )}
-                        {isColumnVisible("name") && (
                         <TableHead className="w-[220px]">
                           <SortButton label="Name" sortKey="name" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
-                        )}
-                        {isColumnVisible("location") && (
                         <TableHead className="w-[200px]">
                           <SortButton label="Location" sortKey="location" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
-                        )}
-                        {isColumnVisible("title") && (
                         <TableHead className="w-[180px]">
                           <SortButton label="Job Title" sortKey="title" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
-                        )}
-                        {isColumnVisible("department") && (
                         <TableHead className="w-[180px]">
                           <SortButton label="Department" sortKey="department" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
                         </TableHead>
-                        )}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {server?.loading ? (
-                        <TableSkeletonRows lead="avatar" columns={1 + (["avatar", "name", "location", "title", "department"] as const).filter(isColumnVisible).length} />
+                        <TableSkeletonRows lead="avatar" columns={6} />
                       ) : pageProspects.map((prospect) => (
                         <ProspectRow
                           key={getProspectRecordId(prospect)}
                           prospect={prospect}
                           onOpen={handleRowOpen}
-                          visibleColumns={visibleColumnSet}
                           selectable
                           isSelected={selectedKeys.has(getProspectRecordId(prospect))}
                           onSelectChange={handleRowSelectChange}
@@ -450,25 +421,6 @@ export function ProspectsTab({
                   </Table>
                 ) : (
                   <div className="flex flex-col">
-                    <div className="flex items-center gap-2 px-6 py-3 border-b bg-muted/20">
-                      <span className="text-xs font-medium text-muted-foreground">Sort</span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon-sm"
-                        onClick={() => handleSort("name")}
-                        aria-label="Sort by prospect name"
-                        aria-pressed={sort.key === "name" && sort.direction !== null}
-                      >
-                        {sort.key !== "name" || sort.direction === null ? (
-                          <RiExpandUpDownLine className="h-3.5 w-3.5 text-muted-foreground" />
-                        ) : sort.direction === "asc" ? (
-                          <RiSortAlphabetAsc className="h-3.5 w-3.5 text-primary" />
-                        ) : (
-                          <RiSortAlphabetDesc className="h-3.5 w-3.5 text-primary" />
-                        )}
-                      </Button>
-                    </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
                       {server?.loading ? <GridSkeletonCards statRows={3} avatar /> : pageProspects.map((prospect) => (
                         <ProspectGridCard

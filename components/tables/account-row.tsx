@@ -12,19 +12,17 @@ import {
 import type { Account } from "@/lib/types"
 import { ensureAbsoluteUrl } from "@/lib/utils"
 import { CompanyLogo } from "@/components/ui/company-logo"
-import type { AccountTableColumnKey } from "@/lib/dashboard/table-column-preferences"
 interface AccountRowProps {
   account: Account
   // Entity-param callbacks let the parent pass a single stable handler to every
   // row, so toggling one row does not re-render the rest (the row is memo'd).
   onOpen: (account: Account) => void
-  visibleColumns: Set<AccountTableColumnKey>
   selectable?: boolean
   isSelected?: boolean
   onSelectChange?: (account: Account, checked: boolean) => void
 }
 
-export const AccountRow = memo(({ account, onOpen, visibleColumns, selectable, isSelected, onSelectChange }: AccountRowProps) => {
+export const AccountRow = memo(({ account, onOpen, selectable, isSelected, onSelectChange }: AccountRowProps) => {
   const handleOpen = () => onOpen(account)
   const isNasscomVerified = account.account_nasscom_status?.toLowerCase() === "yes"
   const visibilityNote =
@@ -63,7 +61,6 @@ export const AccountRow = memo(({ account, onOpen, visibleColumns, selectable, i
             />
           </TableCell>
           )}
-          {visibleColumns.has("name") && (
           <TableCell className="font-medium max-w-[280px]">
             <div className="flex items-center gap-3">
               <CompanyLogo
@@ -100,28 +97,21 @@ export const AccountRow = memo(({ account, onOpen, visibleColumns, selectable, i
               </div>
             </div>
           </TableCell>
-          )}
-          {visibleColumns.has("industry") && (
           <TableCell className="max-w-[220px]">
             <div className="truncate" title={account.account_hq_industry || "N/A"}>
               {account.account_hq_industry || "N/A"}
             </div>
           </TableCell>
-          )}
-          {visibleColumns.has("revenue") && (
           <TableCell className="max-w-[140px]">
             <div className="truncate" title={account.account_hq_revenue_range || "N/A"}>
               {account.account_hq_revenue_range || "N/A"}
             </div>
           </TableCell>
-          )}
-          {visibleColumns.has("employees") && (
           <TableCell className="max-w-[200px]">
             <div className="truncate" title={account.account_center_employees_range || "N/A"}>
               {account.account_center_employees_range || "N/A"}
             </div>
           </TableCell>
-          )}
         </TableRow>
       </ContextMenuTrigger>
       <ContextMenuContent className="w-48">
