@@ -181,6 +181,14 @@
     background: hsl(var(--muted-foreground) / 0.4);
   }
 
+  /* Dialogs that scroll themselves: keep the bar clear of the 16px corners and
+     let it float on the surface instead of drawing a full-height strip. */
+  [role="dialog"]::-webkit-scrollbar-track,
+  [role="alertdialog"]::-webkit-scrollbar-track {
+    margin-block: 16px;
+    background: transparent;
+  }
+
   /* Glassmorphism Dialog Styles */
   .glassmorphism-dialog {
     background: rgba(255, 255, 255, 0.95);
