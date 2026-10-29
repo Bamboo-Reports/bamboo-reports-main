@@ -97,7 +97,7 @@
     font-family: var(--font-sans), system-ui, -apple-system,
       BlinkMacSystemFont, 'Segoe UI', sans-serif;
     line-height: 1.55;
-    /* Inter's variable axis allows a regular weight between 400 and 500:
+    /* DM Sans's variable axis allows a regular weight between 400 and 500:
        firmer on screen without reading as medium. Slightly tight tracking and
        contextual alternates (dashes and punctuation set against digits) tune
        it for dense UI. */
