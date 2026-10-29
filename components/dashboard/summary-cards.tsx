@@ -35,7 +35,7 @@ const SummaryNumber = React.memo(function SummaryNumber({
   return (
     <span
       className={cn(
-        'inline-flex items-baseline gap-1 text-2xl lg:text-3xl font-semibold leading-tight',
+        'text-2xl lg:text-[1.625rem] font-semibold leading-tight tracking-tight',
         className
       )}
     >
@@ -61,8 +61,10 @@ interface SummaryCardsProps {
   updating?: boolean
 }
 
-function getCardStatusLabel(procured: boolean): string {
-  return procured ? "Currently visible" : "Not Procured"
+// Millions always read compact so "value of total" fits on one line at the
+// narrowest five-column width.
+function formatCount(num: number, compact: boolean): string {
+  return compact || num >= 1_000_000 ? formatCompactNumber(num) : num.toLocaleString()
 }
 
 export const SummaryCards = React.memo(function SummaryCards({
@@ -211,45 +213,39 @@ export const SummaryCards = React.memo(function SummaryCards({
               className="pointer-events-none absolute inset-px rounded-[11px] border border-white/40 opacity-60 dark:hidden"
               aria-hidden="true"
             />
-            <CardHeader className="relative px-4 pt-3 pb-1.5">
-              <CardTitle className="text-sm font-medium text-sidebar-foreground flex items-center gap-2">
-                <Icon className={cn('h-4 w-4', card.iconClassName)} />
-                {card.title}
+            <CardHeader className="relative flex-row items-center justify-between gap-2 space-y-0 px-3.5 pt-2.5 pb-0">
+              <CardTitle className="flex min-w-0 items-center gap-1.5 text-[0.8125rem] font-medium text-sidebar-foreground">
+                <Icon className={cn('h-4 w-4 shrink-0', card.iconClassName)} />
+                <span className="truncate">{card.title}</span>
               </CardTitle>
+              {!card.procured && (
+                <span className="shrink-0 whitespace-nowrap text-[11px] font-medium text-muted-foreground">
+                  Not procured
+                </span>
+              )}
             </CardHeader>
-            <CardContent className="relative flex flex-wrap items-end justify-between gap-2 px-4 pt-0 pb-3.5">
+            <CardContent className="relative px-3.5 pt-1.5 pb-3">
               {updating ? (
-                // Invisible copies of the loaded typography establish the
-                // exact same line boxes (rendered line heights differ from the
-                // theoretical font-size * leading), with skeletons overlaid,
+                // An invisible copy of the loaded typography establishes the
+                // exact same line box (rendered line heights differ from the
+                // theoretical font-size * leading), with a skeleton overlaid,
                 // so swapping states never shifts the content below.
-                <div className="min-w-0" aria-label="Loading count">
-                  <div className="relative">
-                    <span className="invisible inline-flex items-baseline gap-1 text-2xl lg:text-3xl font-semibold leading-tight">
-                      0
-                    </span>
-                    <Skeleton className="absolute inset-y-0.5 left-0 w-20" />
-                  </div>
-                  <div className="invisible relative mt-0.5 text-xs">
-                    <Skeleton className="visible absolute inset-y-0.5 left-0 w-24" />
-                    &nbsp;
-                  </div>
+                <div className="relative" aria-label="Loading count">
+                  <span className="invisible text-2xl lg:text-[1.625rem] font-semibold leading-tight">0</span>
+                  <Skeleton className="absolute inset-y-1 left-0 w-28" />
                 </div>
               ) : (
-                <div className="min-w-0">
+                <div className="flex min-w-0 items-baseline gap-1.5">
                   <SummaryNumber
                     value={card.value}
-                    compact={compact}
-                    className="text-sidebar-foreground"
+                    compact={compact || card.value >= 1_000_000}
+                    className={card.procured ? 'text-sidebar-foreground' : 'text-muted-foreground'}
                   />
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {getCardStatusLabel(card.procured)}
-                  </p>
+                  <span className="min-w-0 truncate text-xs text-muted-foreground">
+                    of {formatCount(card.total, compact)}
+                  </span>
                 </div>
               )}
-              <span className="inline-flex items-center rounded-full border border-border/60 bg-secondary/70 px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground backdrop-blur-sm whitespace-nowrap">
-                {compact ? formatCompactNumber(card.total) : card.total.toLocaleString()} total
-              </span>
             </CardContent>
           </Card>
         )

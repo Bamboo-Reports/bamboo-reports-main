@@ -111,7 +111,7 @@ Use this rule:
 - Avoid hardcoding separate `h-[calc(100vh-...)]` values per tab because they drift out of alignment.
 
 Current implementation:
-- `app/page.tsx`: `--dashboard-panel-height: calc(100dvh-18.75rem)`
+- `app/page.tsx`: `--dashboard-panel-height: calc(100dvh-16.95rem)`
 - `components/tabs/accounts-tab.tsx`: Map/Data cards use `h-[var(--dashboard-panel-height)]`
 - `components/tabs/centers-tab.tsx`: Map/Data cards use `h-[var(--dashboard-panel-height)]`
 - `components/tabs/prospects-tab.tsx`: Data card uses `h-[var(--dashboard-panel-height)]`
