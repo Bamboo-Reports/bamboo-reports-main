@@ -141,7 +141,7 @@ export function FiltersSidebar({
       id="filters-sidebar"
       data-tour="filters-sidebar"
       className={cn(
-        'bg-sidebar/90 backdrop-blur-sm overflow-hidden shrink-0 relative ml-6 mt-[var(--dashboard-content-top-gap)] mb-[var(--dashboard-content-bottom-gap)] rounded-2xl border border-sidebar-border shadow-[0_24px_60px_-45px_rgba(0,0,0,0.55)]',
+        'bg-sidebar/90 backdrop-blur-sm overflow-hidden shrink-0 relative ml-6 mt-[var(--dashboard-content-top-gap)] mb-[var(--dashboard-content-bottom-gap)] rounded-xl border border-sidebar-border shadow-[0_24px_60px_-45px_rgba(0,0,0,0.55)]',
         'transition-[width] duration-300 ease-[cubic-bezier(0.22_1_0.36_1)] motion-reduce:transition-none',
         isCollapsed ? 'w-16' : 'w-[320px]'
       )}
@@ -239,11 +239,11 @@ export function FiltersSidebar({
         </div>
 
         {isFilterEnabled("accountVisibilityMode") && (
-          <div className="rounded-xl bg-secondary/30 p-2">
-            <div className="relative grid grid-cols-3 rounded-xl border border-border/70 bg-muted/30 p-1 shadow-[inset_0_1px_2px_hsl(0_0%_0%/0.05)]" role="group" aria-label="Account Visibility">
+          <div className="rounded-lg bg-secondary/30 p-2">
+            <div className="relative grid grid-cols-3 rounded-lg border border-border/70 bg-muted/30 p-1 shadow-[inset_0_1px_2px_hsl(0_0%_0%/0.05)]" role="group" aria-label="Account Visibility">
               <span
                 aria-hidden="true"
-                className="absolute inset-y-1 left-1 w-[calc((100%-0.5rem)/3)] rounded-md bg-primary shadow-[inset_0_1px_0_hsl(0_0%_100%/0.18),0_1px_0_hsl(0_0%_0%/0.22)] transition-transform duration-200 ease-out"
+                className="absolute inset-y-1 left-1 w-[calc((100%-0.5rem)/3)] rounded-sm bg-primary shadow-[inset_0_1px_0_hsl(0_0%_100%/0.18),0_1px_0_hsl(0_0%_0%/0.22)] transition-transform duration-200 ease-out"
                 style={{ transform: `translateX(${Math.max(visibilityModeIndex, 0) * 100}%)` }}
               />
               {ACCOUNT_VISIBILITY_OPTIONS.map((option) => {
@@ -261,7 +261,7 @@ export function FiltersSidebar({
                       })
                     }}
                     className={cn(
-                      "relative z-10 inline-flex h-8 items-center justify-center rounded-md px-2 text-[11px] font-semibold leading-none transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      "relative z-10 inline-flex h-8 items-center justify-center rounded-sm px-2 text-[11px] font-semibold leading-none transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       isSelected
                         ? "text-primary-foreground"
                         : "text-muted-foreground"
@@ -277,7 +277,7 @@ export function FiltersSidebar({
 
         <Accordion type="single" collapsible value={openSection} onValueChange={setOpenSection} className="w-full space-y-2">
           {isSectionVisible("accounts") && (
-          <AccordionItem value="accounts" className={cn("overflow-hidden rounded-xl border border-border/70 bg-secondary/30 px-3 data-[state=open]:bg-background data-[state=open]:shadow-sm", !isSectionEnabled("accounts") && "opacity-80")}>
+          <AccordionItem value="accounts" className={cn("overflow-hidden rounded-lg border border-border/70 bg-secondary/30 px-3 data-[state=open]:bg-background data-[state=open]:shadow-sm", !isSectionEnabled("accounts") && "opacity-80")}>
             <AccordionTrigger className="py-3 text-sm font-semibold hover:no-underline">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-5 w-5 shrink-0 items-center justify-center">
@@ -318,7 +318,7 @@ export function FiltersSidebar({
           )}
 
           {isSectionVisible("centers") && (
-          <AccordionItem value="centers" className={cn("overflow-hidden rounded-xl border border-border/70 bg-secondary/30 px-3 data-[state=open]:bg-background data-[state=open]:shadow-sm", !isSectionEnabled("centers") && "opacity-80")}>
+          <AccordionItem value="centers" className={cn("overflow-hidden rounded-lg border border-border/70 bg-secondary/30 px-3 data-[state=open]:bg-background data-[state=open]:shadow-sm", !isSectionEnabled("centers") && "opacity-80")}>
             <AccordionTrigger className="py-3 text-sm font-semibold hover:no-underline">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-5 w-5 shrink-0 items-center justify-center">
@@ -351,7 +351,7 @@ export function FiltersSidebar({
           )}
 
           {isSectionVisible("prospects") && (
-          <AccordionItem value="prospects" className={cn("overflow-hidden rounded-xl border border-border/70 bg-secondary/30 px-3 data-[state=open]:bg-background data-[state=open]:shadow-sm", !isSectionEnabled("prospects") && "opacity-80")}>
+          <AccordionItem value="prospects" className={cn("overflow-hidden rounded-lg border border-border/70 bg-secondary/30 px-3 data-[state=open]:bg-background data-[state=open]:shadow-sm", !isSectionEnabled("prospects") && "opacity-80")}>
             <AccordionTrigger className="py-3 text-sm font-semibold hover:no-underline">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-5 w-5 shrink-0 items-center justify-center">

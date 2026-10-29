@@ -295,7 +295,7 @@ export function ProspectDetailsDialog({
                           captureEvent(ANALYTICS_EVENTS.RELATED_RECORD_OPENED, { parent_entity: "prospect", entity: "account" })
                           onAccountOpen(p.account_global_legal_name)
                         }}
-                        className="ml-1.5 inline-flex h-5 w-5 translate-y-0.5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        className="ml-1.5 inline-flex h-5 w-5 translate-y-0.5 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         aria-label={`Open account details for ${p.account_global_legal_name}`}
                         title={`Open account details for ${p.account_global_legal_name}`}
                       >

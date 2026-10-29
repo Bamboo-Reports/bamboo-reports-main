@@ -51,7 +51,7 @@ export function LoadingState() {
 
       <div className="flex flex-1 overflow-hidden" aria-hidden="true">
         {/* Collapsed filter rail: mirrors components/filters/filters-sidebar.tsx. */}
-        <aside className="ml-6 mt-6 mb-3 flex w-16 shrink-0 flex-col items-center gap-3 rounded-2xl border border-sidebar-border bg-sidebar/90 px-2 py-4 backdrop-blur-sm">
+        <aside className="ml-6 mt-6 mb-3 flex w-16 shrink-0 flex-col items-center gap-3 rounded-xl border border-sidebar-border bg-sidebar/90 px-2 py-4 backdrop-blur-sm">
           <Skeleton className="h-10 w-10 rounded-xl" />
           <div className="mt-2 flex h-10 w-10 items-center justify-center rounded-xl border border-sidebar-border bg-background/70">
             <Skeleton className="h-4 w-4 rounded" />

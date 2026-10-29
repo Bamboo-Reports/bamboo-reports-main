@@ -208,7 +208,7 @@ export const SummaryCards = React.memo(function SummaryCards({
             )}
           >
             <div
-              className="pointer-events-none absolute inset-px rounded-[calc(var(--radius)-2px)] border border-white/40 dark:border-white/10 opacity-60"
+              className="pointer-events-none absolute inset-px rounded-[11px] border border-white/40 dark:border-white/10 opacity-60"
               aria-hidden="true"
             />
             <CardHeader className="relative px-4 pt-3 pb-1.5">

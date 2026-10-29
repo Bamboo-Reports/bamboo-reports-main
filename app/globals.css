@@ -16,7 +16,7 @@
 @layer base {
   :root {
     /* Bamboo Reports Brand Palette - Light Mode */
-    --background: 210 40% 98%;
+    --background: 213 30% 95.5%;
     --foreground: 214 45% 15%;
     --card: 0 0% 100%;
     --card-foreground: 214 45% 15%;
@@ -24,16 +24,16 @@
     --popover-foreground: 214 45% 15%;
     --primary: 204 100% 41%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 25% 94%;
+    --secondary: 213 27% 93%;
     --secondary-foreground: 214 45% 22%;
-    --muted: 210 25% 94%;
+    --muted: 213 27% 93%;
     --muted-foreground: 215 20% 39%;
     --accent: 28 90% 94%;
     --accent-foreground: 214 45% 18%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 212 24% 86%;
-    --input: 212 24% 86%;
+    --border: 213 22% 84%;
+    --input: 213 22% 82%;
     --ring: 204 100% 41%;
     --chart-1: 204 100% 41%;
     --chart-2: 212 71% 31%;
@@ -48,7 +48,7 @@
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 210 30% 96%;
     --sidebar-accent-foreground: 214 45% 18%;
-    --sidebar-border: 212 24% 86%;
+    --sidebar-border: 213 22% 84%;
     --sidebar-ring: 28 88% 53%;
   }
   .dark {
