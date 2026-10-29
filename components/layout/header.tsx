@@ -55,15 +55,22 @@ function ProfileThemeSwitcher() {
   }, [])
 
   const activeTheme = mounted ? (theme as ThemeMode | undefined) ?? 'light' : 'light'
+  const activeIndex = Math.max(THEME_OPTIONS.findIndex((option) => option.value === activeTheme), 0)
 
   return (
     <div className="px-4 py-3">
       <div className="mb-2 text-xs font-medium text-muted-foreground">Appearance</div>
       <div
-        className="grid grid-cols-3 gap-1 rounded-xl border border-border/70 bg-muted/35 p-1 shadow-[inset_0_1px_2px_hsl(0_0%_0%/0.05)]"
+        className="relative grid grid-cols-3 gap-1 rounded-xl border border-border/70 bg-muted/35 p-1 shadow-[inset_0_1px_2px_hsl(0_0%_0%/0.05)]"
         role="group"
         aria-label="Theme preference"
       >
+        {/* Sliding indicator, matching the tab lists. Each step is one column plus the 0.25rem gap. */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-1 left-1 w-[calc((100%-1rem)/3)] rounded-md bg-background shadow-[0_1px_2px_hsl(0_0%_0%/0.08),0_0_0_1px_hsl(0_0%_0%/0.06)] transition-transform duration-200 ease-out will-change-transform motion-reduce:transition-none dark:shadow-[0_1px_2px_hsl(0_0%_0%/0.3),0_0_0_1px_hsl(0_0%_100%/0.1)]"
+          style={{ transform: `translateX(calc(${activeIndex} * (100% + 0.25rem)))` }}
+        />
         {THEME_OPTIONS.map((option) => {
           const Icon = option.icon
           const isActive = activeTheme === option.value
@@ -85,9 +92,9 @@ function ProfileThemeSwitcher() {
                 setTheme(option.value)
               }}
               className={cn(
-                "inline-flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs interactive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "relative z-10 inline-flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs interactive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 isActive
-                  ? "bg-background font-semibold text-foreground shadow-[0_1px_2px_hsl(0_0%_0%/0.08),0_0_0_1px_hsl(0_0%_0%/0.06)] dark:shadow-[0_1px_2px_hsl(0_0%_0%/0.3),0_0_0_1px_hsl(0_0%_100%/0.1)]"
+                  ? "font-semibold text-foreground"
                   : "font-medium text-muted-foreground hover:bg-background/50 hover:text-foreground disabled:pointer-events-none disabled:opacity-60"
               )}
             >
