@@ -202,7 +202,7 @@ export const SummaryCards = React.memo(function SummaryCards({
               card.interactive && 'cursor-pointer select-none',
               !card.interactive && card.message && 'cursor-help',
               isActive
-                ? 'border-primary/60 shadow-[0_0_0_1px_hsl(var(--primary)/0.6),0_1px_2px_hsl(214_45%_15%/0.06),0_8px_20px_-8px_hsl(var(--primary)/0.35)] dark:border-primary/60 dark:shadow-[0_0_0_1px_hsl(var(--primary)/0.6),0_8px_24px_-8px_hsl(var(--primary)/0.3)]'
+                ? 'border-primary/60 shadow-[0_0_0_1px_hsl(var(--primary)/0.6),0_1px_2px_hsl(214_45%_15%/0.06),0_4px_12px_-4px_hsl(214_45%_15%/0.08)] dark:border-primary/60 dark:shadow-[0_0_0_1px_hsl(var(--primary)/0.6),0_1px_2px_hsl(0_0%_0%/0.4)]'
                 : 'border-border shadow-[0_1px_2px_hsl(214_45%_15%/0.06),0_4px_12px_-4px_hsl(214_45%_15%/0.08)] dark:border-border/80 dark:shadow-[inset_0_1px_0_hsl(0_0%_100%/0.05),0_1px_2px_hsl(0_0%_0%/0.4)]',
               !isActive && card.interactive && 'hover:border-foreground/20 hover:shadow-[0_1px_2px_hsl(214_45%_15%/0.08),0_10px_24px_-10px_hsl(214_45%_15%/0.18)] dark:hover:border-foreground/25'
             )}
