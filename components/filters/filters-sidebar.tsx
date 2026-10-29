@@ -141,7 +141,7 @@ export function FiltersSidebar({
       id="filters-sidebar"
       data-tour="filters-sidebar"
       className={cn(
-        'bg-sidebar/90 backdrop-blur-sm overflow-hidden shrink-0 relative ml-6 mt-[var(--dashboard-content-top-gap)] mb-[var(--dashboard-content-bottom-gap)] rounded-xl border border-sidebar-border shadow-[0_24px_60px_-45px_rgba(0,0,0,0.55)]',
+        'bg-sidebar/90 backdrop-blur-sm overflow-hidden shrink-0 relative ml-6 mt-[var(--dashboard-content-top-gap)] mb-[var(--dashboard-content-bottom-gap)] rounded-xl border border-sidebar-border shadow-[0_1px_2px_hsl(214_45%_15%/0.06),0_4px_12px_-4px_hsl(214_45%_15%/0.08)]',
         'transition-[width] duration-300 ease-[cubic-bezier(0.22_1_0.36_1)] motion-reduce:transition-none',
         isCollapsed ? 'w-16' : 'w-[320px]'
       )}

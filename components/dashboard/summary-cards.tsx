@@ -202,7 +202,7 @@ export const SummaryCards = React.memo(function SummaryCards({
               !card.interactive && card.message && 'cursor-help',
               isActive
                 ? 'ring-2 ring-sidebar-ring border-sidebar-ring/70 shadow-[0_18px_55px_-35px_rgba(0,0,0,0.6)]'
-                : 'border-border/70 shadow-[0_14px_42px_-30px_rgba(0,0,0,0.45)]',
+                : 'border-border shadow-[0_1px_2px_hsl(214_45%_15%/0.06),0_4px_12px_-4px_hsl(214_45%_15%/0.08)] dark:border-border/70',
               !isActive && card.interactive && 'hover:shadow-[0_16px_48px_-32px_rgba(0,0,0,0.5)]',
               !card.interactive && 'opacity-80'
             )}
