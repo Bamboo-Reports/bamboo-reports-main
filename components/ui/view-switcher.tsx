@@ -18,6 +18,8 @@ interface ViewSwitcherProps<V extends string> {
   "data-tour"?: string
 }
 
+type IndicatorRect = { left: number; width: number }
+
 export function ViewSwitcher<V extends string>({
   value,
   onValueChange,
@@ -25,14 +27,69 @@ export function ViewSwitcher<V extends string>({
   className,
   "data-tour": dataTour,
 }: ViewSwitcherProps<V>) {
+  const listRef = React.useRef<HTMLDivElement>(null)
+  const triggerRefs = React.useRef(new Map<V, HTMLButtonElement>())
+  const [indicator, setIndicator] = React.useState<IndicatorRect | null>(null)
+  // The first placement should land, not slide in from the left edge.
+  const [canAnimate, setCanAnimate] = React.useState(false)
+
+  const measure = React.useCallback(() => {
+    const trigger = triggerRefs.current.get(value)
+    if (!trigger) return
+    setIndicator((prev) =>
+      prev && prev.left === trigger.offsetLeft && prev.width === trigger.offsetWidth
+        ? prev
+        : { left: trigger.offsetLeft, width: trigger.offsetWidth }
+    )
+  }, [value])
+
+  React.useLayoutEffect(() => {
+    measure()
+  }, [measure])
+
+  React.useEffect(() => {
+    if (!indicator || canAnimate) return
+    const frame = requestAnimationFrame(() => setCanAnimate(true))
+    return () => cancelAnimationFrame(frame)
+  }, [indicator, canAnimate])
+
+  // Labels can change width after fonts load or on resize.
+  React.useEffect(() => {
+    const list = listRef.current
+    if (!list || typeof ResizeObserver === "undefined") return
+    const observer = new ResizeObserver(measure)
+    observer.observe(list)
+    triggerRefs.current.forEach((trigger) => observer.observe(trigger))
+    return () => observer.disconnect()
+  }, [measure, options])
+
   return (
     <Tabs value={value} onValueChange={(v) => onValueChange(v as V)} className={cn("w-fit", className)} data-tour={dataTour}>
-      <TabsList>
+      <TabsList ref={listRef} className="relative">
+        {indicator ? (
+          <span
+            aria-hidden="true"
+            className={cn(
+              "pointer-events-none absolute inset-y-1 left-0 rounded-md bg-background shadow-[0_1px_2px_hsl(0_0%_0%/0.08),0_0_0_1px_hsl(0_0%_0%/0.06)] dark:shadow-[0_1px_2px_hsl(0_0%_0%/0.3),0_0_0_1px_hsl(0_0%_100%/0.1)]",
+              canAnimate && "transition-[transform,width] duration-200 ease-out motion-reduce:transition-none"
+            )}
+            style={{ width: indicator.width, transform: `translateX(${indicator.left}px)` }}
+          />
+        ) : null}
         {options.map(({ value: optionValue, label, icon }) => (
           <TabsTrigger
             key={optionValue}
+            ref={(node) => {
+              if (node) triggerRefs.current.set(optionValue, node)
+              else triggerRefs.current.delete(optionValue)
+            }}
             value={optionValue}
-            className="gap-2"
+            className={cn(
+              "relative z-10 gap-2",
+              // The sliding indicator draws the active surface once it has been measured.
+              indicator &&
+                "data-[state=active]:bg-transparent data-[state=active]:shadow-none dark:data-[state=active]:shadow-none"
+            )}
           >
             {icon}
             {label}
