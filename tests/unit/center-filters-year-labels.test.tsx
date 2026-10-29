@@ -38,7 +38,8 @@ describe("Incorporation Timeline labels", () => {
     )
     expect(screen.queryByText("1,913")).toBeNull()
     expect(screen.queryByText("2,030")).toBeNull()
-    expect(screen.getByText("1913")).toBeTruthy()
-    expect(screen.getByText("2030")).toBeTruthy()
+    // The bounds now read from the Min and Max inputs under the slider.
+    expect(screen.getByDisplayValue("1913")).toBeTruthy()
+    expect(screen.getByDisplayValue("2030")).toBeTruthy()
   })
 })

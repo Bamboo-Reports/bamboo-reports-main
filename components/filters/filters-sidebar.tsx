@@ -53,7 +53,6 @@ interface FiltersSidebarProps {
 
   getTotalActiveFilters: () => number
   handleLoadSavedFilters: (savedFilters: Filters) => void
-  formatRevenueInMillions: (value: number) => string
 }
 
 export function FiltersSidebar({
@@ -86,7 +85,6 @@ export function FiltersSidebar({
   handleCenterIncYearRangeChange,
   getTotalActiveFilters,
   handleLoadSavedFilters,
-  formatRevenueInMillions,
 }: FiltersSidebarProps): React.JSX.Element {
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
   const [openSection, setOpenSection] = useState<string>('accounts')
@@ -332,7 +330,6 @@ export function FiltersSidebar({
                 handleMinYearsInIndiaChange={handleMinYearsInIndiaChange}
                 handleMaxYearsInIndiaChange={handleMaxYearsInIndiaChange}
                 handleYearsInIndiaRangeChange={handleYearsInIndiaRangeChange}
-                formatRevenueInMillions={formatRevenueInMillions}
               />
               ) : (
                 <p className="rounded-lg border border-dashed border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">

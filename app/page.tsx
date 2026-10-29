@@ -55,7 +55,6 @@ import {
   isSectionEnabled,
 } from "@/lib/config/dashboard-access"
 import { useProductTour } from "@/hooks/use-product-tour"
-import { formatRevenueInMillions } from "@/lib/utils/helpers"
 import type { SearchResult } from "@/lib/search"
 import { TAB_SORT_COLUMNS } from "@/lib/dashboard/entity-columns"
 import type { RecentItem } from "@/hooks/use-recent-items"
@@ -1405,7 +1404,6 @@ function DashboardContent(): React.JSX.Element | null {
             handleCenterIncYearRangeChange={handleCenterIncYearRangeChange}
             getTotalActiveFilters={getTotalActiveFilters}
             handleLoadSavedFilters={handleLoadSavedFilters}
-            formatRevenueInMillions={formatRevenueInMillions}
           />
 
           <div className="flex-1 overflow-hidden flex flex-col">

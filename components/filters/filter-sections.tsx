@@ -35,7 +35,6 @@ interface AccountFilterSectionProps extends FilterSectionBaseProps {
   handleMinYearsInIndiaChange: (value: string) => void
   handleMaxYearsInIndiaChange: (value: string) => void
   handleYearsInIndiaRangeChange: (value: [number, number]) => void
-  formatRevenueInMillions: (value: number) => string
 }
 
 interface CenterFilterSectionProps extends FilterSectionBaseProps {
@@ -65,7 +64,6 @@ export function AccountFiltersSection({
   handleMinYearsInIndiaChange,
   handleMaxYearsInIndiaChange,
   handleYearsInIndiaRangeChange,
-  formatRevenueInMillions,
 }: AccountFilterSectionProps) {
   const [showMoreAccountFilters, setShowMoreAccountFilters] = React.useState(false)
   const hiddenAccountFilterKeys = getPremiumFilterKeys("accounts")
@@ -132,6 +130,16 @@ export function AccountFiltersSection({
               </div>
                 )}
             </div>
+            <div className="px-2">
+              <Slider
+                value={pendingFilters.accountHqRevenueRange}
+                onValueChange={(value) => handleRevenueRangeChange(value as [number, number])}
+                min={revenueRange.min}
+                max={revenueRange.max}
+                step={Math.max(1, Math.floor((revenueRange.max - revenueRange.min) / 1000))}
+                className="w-full"
+              />
+            </div>
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
                 <Label htmlFor="min-revenue" className="text-xs">Min</Label>
@@ -175,20 +183,6 @@ export function AccountFiltersSection({
                   className="text-xs h-8"
                 />
               </div>
-            </div>
-            <div className="px-2">
-              <Slider
-                value={pendingFilters.accountHqRevenueRange}
-                onValueChange={(value) => handleRevenueRangeChange(value as [number, number])}
-                min={revenueRange.min}
-                max={revenueRange.max}
-                step={Math.max(1, Math.floor((revenueRange.max - revenueRange.min) / 1000))}
-                className="w-full"
-              />
-            </div>
-            <div className="flex justify-between text-xs text-muted-foreground px-2">
-              <span>{formatRevenueInMillions(revenueRange.min)}</span>
-              <span>{formatRevenueInMillions(revenueRange.max)}</span>
             </div>
           </div>
             )}
@@ -236,6 +230,16 @@ export function AccountFiltersSection({
               </div>
               )}
             </div>
+            <div className="px-2">
+              <Slider
+                value={pendingFilters.accountYearsInIndiaRange}
+                onValueChange={(value) => handleYearsInIndiaRangeChange(value as [number, number])}
+                min={yearsInIndiaRange.min}
+                max={yearsInIndiaRange.max}
+                step={1}
+                className="w-full"
+              />
+            </div>
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
                 <Label htmlFor="min-years-in-india" className="text-xs">Min</Label>
@@ -279,20 +283,6 @@ export function AccountFiltersSection({
                   className="text-xs h-8"
                 />
               </div>
-            </div>
-            <div className="px-2">
-              <Slider
-                value={pendingFilters.accountYearsInIndiaRange}
-                onValueChange={(value) => handleYearsInIndiaRangeChange(value as [number, number])}
-                min={yearsInIndiaRange.min}
-                max={yearsInIndiaRange.max}
-                step={1}
-                className="w-full"
-              />
-            </div>
-            <div className="flex justify-between text-xs text-muted-foreground px-2">
-              <span>{yearsInIndiaRange.min.toLocaleString()}</span>
-              <span>{yearsInIndiaRange.max.toLocaleString()}</span>
             </div>
           </div>
           )}
@@ -610,6 +600,16 @@ export function CenterFiltersSection({
               </div>
               )}
             </div>
+            <div className="px-2">
+              <Slider
+                value={pendingFilters.centerIncYearRange}
+                onValueChange={(value) => handleCenterIncYearRangeChange(value as [number, number])}
+                min={centerIncYearRange.min}
+                max={centerIncYearRange.max}
+                step={1}
+                className="w-full"
+              />
+            </div>
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
                 <Label htmlFor="min-center-inc-year" className="text-xs">Min</Label>
@@ -653,20 +653,6 @@ export function CenterFiltersSection({
                   className="text-xs h-8"
                 />
               </div>
-            </div>
-            <div className="px-2">
-              <Slider
-                value={pendingFilters.centerIncYearRange}
-                onValueChange={(value) => handleCenterIncYearRangeChange(value as [number, number])}
-                min={centerIncYearRange.min}
-                max={centerIncYearRange.max}
-                step={1}
-                className="w-full"
-              />
-            </div>
-            <div className="flex justify-between text-xs text-muted-foreground px-2">
-              <span>{centerIncYearRange.min}</span>
-              <span>{centerIncYearRange.max}</span>
             </div>
           </div>
           )}
