@@ -16,9 +16,9 @@ import { isFilterEnabled, isSectionVisible } from '@/lib/config/filters'
 import type { AccountVisibilityMode, Alias, AvailableOptions, Filters } from '@/lib/types'
 
 const ACCOUNT_VISIBILITY_OPTIONS: Array<{ value: AccountVisibilityMode; label: string }> = [
-  { value: "all", label: "ALL" },
+  { value: "all", label: "All" },
   { value: "gcc", label: "GCCs" },
-  { value: "nonGcc", label: "NON-GCCs" },
+  { value: "nonGcc", label: "Non-GCCs" },
 ]
 
 interface FiltersSidebarProps {
@@ -264,10 +264,10 @@ export function FiltersSidebar({
 
         {isFilterEnabled("accountVisibilityMode") && (
           <div className="rounded-lg bg-secondary/30 p-2">
-            <div className="relative grid grid-cols-3 rounded-lg border border-border/70 bg-muted/30 p-1 shadow-[inset_0_1px_2px_hsl(0_0%_0%/0.05)]" role="group" aria-label="Account Visibility">
+            <div className="relative grid h-10 grid-cols-3 rounded-xl border border-border/70 bg-muted/30 p-1 shadow-[inset_0_1px_2px_hsl(0_0%_0%/0.05)]" role="group" aria-label="Account Visibility">
               <span
                 aria-hidden="true"
-                className="absolute inset-y-1 left-1 w-[calc((100%-0.5rem)/3)] rounded-sm bg-primary shadow-[inset_0_1px_0_hsl(0_0%_100%/0.18),0_1px_0_hsl(0_0%_0%/0.22)] transition-transform duration-200 ease-out"
+                className="absolute inset-y-1 left-1 w-[calc((100%-0.5rem)/3)] rounded-md bg-primary shadow-[inset_0_1px_0_hsl(0_0%_100%/0.18),0_1px_0_hsl(0_0%_0%/0.22)] transition-transform duration-200 ease-out"
                 style={{ transform: `translateX(${Math.max(visibilityModeIndex, 0) * 100}%)` }}
               />
               {ACCOUNT_VISIBILITY_OPTIONS.map((option) => {
@@ -285,7 +285,7 @@ export function FiltersSidebar({
                       })
                     }}
                     className={cn(
-                      "relative z-10 inline-flex h-8 items-center justify-center rounded-sm px-2 text-[11px] font-semibold leading-none transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      "relative z-10 inline-flex h-full items-center justify-center whitespace-nowrap rounded-md px-2 text-sm font-medium leading-none transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       isSelected
                         ? "text-primary-foreground"
                         : "text-muted-foreground"
