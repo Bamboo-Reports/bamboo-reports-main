@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useMemo, memo } from "react"
 import { Button, buttonVariants } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -30,7 +31,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { RiArrowDownSLine, RiCloseLine, RiDeleteBinLine, RiFileTextLine, RiFolderOpenLine, RiGroupLine, RiListCheck3, RiSaveLine, RiSettings4Line, RiShareLine, RiShieldFlashLine } from "@remixicon/react"
+import { RiArrowDownSLine, RiCloseLine, RiDeleteBinLine, RiFileExcel2Line, RiFilePdf2Line, RiFolderOpenLine, RiGroupLine, RiListCheck3, RiSaveLine, RiSettings4Line, RiShareLine, RiShieldFlashLine } from "@remixicon/react"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { buildTrackedFiltersSnapshot, normalizeTrackedText, toTrackedStringArray } from "@/lib/analytics/tracking"
@@ -83,6 +84,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
   const { lists: accountLists } = useAccountLists()
   const [manageDialogOpen, setManageDialogOpen] = useState(false)
   const [savedFiltersDropdownOpen, setSavedFiltersDropdownOpen] = useState(false)
+  const [exportOptionsOpen, setExportOptionsOpen] = useState(false)
   const [filterName, setFilterName] = useState("")
 
   const [editingFilter, setEditingFilter] = useState<SavedFilter | null>(null)
@@ -178,6 +180,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
     }
 
     setExportAccessError(null)
+    setExportOptionsOpen(false)
     onExport()
   }, [onExport, canExport, exportBlockedMessage])
 
@@ -433,48 +436,84 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
 
       <AccountListsDialog open={accountListsOpen} onOpenChange={setAccountListsOpen} onApply={handleApplyAccountList} />
 
-      {(onReset || onExport) && (
-        <div className="grid grid-cols-2 gap-2 w-full">
-          {onReset && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onReset}
-              className="w-full"
-            >
-              Reset
-            </Button>
-          )}
-          {onExport && (
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleExportAction}
-              className="w-full"
-              aria-label={canExport ? "Export data" : "Export data (admin only)"}
-              title={canExport ? "Export data" : "Only admins can export data"}
-              data-tour="export-button"
-            >
-              Export
-            </Button>
-          )}
-        </div>
-      )}
+      {(onReset || onExport || onGenerateReport) && (
+        <div>
+          <div className="grid grid-cols-2 gap-2 w-full">
+            {onReset && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onReset}
+                className="w-full"
+              >
+                Reset
+              </Button>
+            )}
+            {(onExport || onGenerateReport) && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => setExportOptionsOpen((open) => !open)}
+                className="w-full"
+                aria-expanded={exportOptionsOpen}
+                aria-controls="export-options"
+                data-tour="export-button"
+              >
+                Export
+                <RiArrowDownSLine
+                  className={cn(
+                    "h-4 w-4 opacity-90 transition-transform duration-200 ease-out motion-reduce:transition-none",
+                    exportOptionsOpen && "rotate-180"
+                  )}
+                />
+              </Button>
+            )}
+          </div>
 
-      {onGenerateReport && (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onGenerateReport}
-          disabled={isGeneratingReport}
-          className="w-full"
-          aria-label="Download summary report as PDF"
-          title="Download a PDF with the current counts and applied filters"
-          data-tour="summary-report-button"
-        >
-          <RiFileTextLine className="h-3.5 w-3.5" />
-          {isGeneratingReport ? "Preparing PDF..." : "Summary PDF"}
-        </Button>
+          {/* The formats open in place under Export rather than in a popover,
+              so nothing covers the filters below. */}
+          <div
+            id="export-options"
+            inert={!exportOptionsOpen}
+            className={cn(
+              "grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none",
+              exportOptionsOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+            )}
+          >
+            <div className="overflow-hidden">
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                {onExport && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportAction}
+                    className="w-full"
+                    aria-label={canExport ? "Export data to Excel" : "Export data to Excel (admin only)"}
+                    title={canExport ? "Export the filtered data as an Excel workbook" : "Only admins can export data"}
+                  >
+                    <RiFileExcel2Line className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                    Excel data
+                  </Button>
+                )}
+                {onGenerateReport && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onGenerateReport}
+                    disabled={isGeneratingReport}
+                    className={cn("w-full", !onExport && "col-span-2")}
+                    aria-label="Download summary report as PDF"
+                    title="Download a PDF with the current counts and applied filters"
+                    data-tour="summary-report-button"
+                  >
+                    <RiFilePdf2Line className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
+                    {isGeneratingReport ? "Preparing PDF..." : "Summary PDF"}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {exportAccessError ? (
