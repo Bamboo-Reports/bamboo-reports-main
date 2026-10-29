@@ -92,7 +92,7 @@ Technologies responsible for how the application looks and feels.
 | **Version** | 3.4.17 |
 | **Why we use it** | Enables rapid UI development with consistent spacing, colors, and responsive design. Eliminates CSS naming conflicts and dead code through tree-shaking |
 | **Key features used** | Custom theme with HSL color variables, dark mode (class-based), custom animations (accordion, fade-in, slide-in, shimmer, pulse), responsive breakpoints |
-| **Fonts** | DM Sans (with system fallbacks) |
+| **Fonts** | Instrument Sans (with system fallbacks) |
 | **Plugins** | `tailwindcss-animate` for animation utilities |
 | **Package** | `tailwindcss`, `tailwind-merge`, `tailwindcss-animate`, `autoprefixer`, `postcss` |
 
@@ -122,13 +122,13 @@ Technologies responsible for how the application looks and feels.
 | **Why we use it** | Provides dark/light mode switching with system preference detection and zero flash on page load |
 | **Package** | `next-themes` |
 
-### DM Sans
+### Instrument Sans
 
 | | |
 |---|---|
-| **What it is** | Low-contrast geometric sans-serif designed by Colophon Foundry, served from Google Fonts |
-| **Why we use it** | Clean, modern typography with good legibility at small sizes; variable font provides fine-grained weight and optical-size control in a single file |
-| **Loaded via** | `<link>` to `fonts.googleapis.com` in `app/layout.tsx`; applied as the first entry in the Tailwind `sans` stack and the `body` font-family in `app/globals.css` |
+| **What it is** | Variable grotesque sans-serif from the Instrument studio, served from Google Fonts |
+| **Why we use it** | Crisp at the small sizes tables and labels use, with true tabular figures; slightly narrow, so long counts fit the summary cards. One family carries headings, labels and data |
+| **Loaded via** | `next/font/google` in `app/layout.tsx`, exposed as `--font-sans`; that variable is the first entry in the Tailwind `sans` stack and the `body` font-family in `app/globals.css`, and the chart and map components read it too |
 
 ### Class Variance Authority (CVA)
 

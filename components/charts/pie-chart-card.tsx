@@ -205,7 +205,7 @@ export const PieChartCard = memo(({
               color: "hsl(var(--foreground))",
               fontSize: "11px",
               fontWeight: "600",
-              fontFamily: "'DM Sans', ui-sans-serif, system-ui, sans-serif",
+              fontFamily: "var(--font-sans), system-ui, sans-serif",
               textOutline: "none",
             },
             formatter: function () {
