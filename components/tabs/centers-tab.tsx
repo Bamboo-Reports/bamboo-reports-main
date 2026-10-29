@@ -24,7 +24,7 @@ import { CentersMap } from "@/components/maps/centers-map"
 import { CentersChoroplethMap } from "@/components/maps/centers-choropleth-map"
 import { MapErrorBoundary } from "@/components/maps/map-error-boundary"
 import { ViewSwitcher } from "@/components/ui/view-switcher"
-import { SortButton } from "@/components/ui/sort-button"
+import { SortableTableHead } from "@/components/ui/sortable-table-head"
 import { PaginationControls } from "@/components/ui/pagination-controls"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
@@ -467,18 +467,10 @@ export function CentersTab({
                             aria-label="Select all centres on this page"
                           />
                         </TableHead>
-                        <TableHead className="w-[260px]">
-                          <SortButton label="Centre Name" sortKey="name" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
-                        </TableHead>
-                        <TableHead className="w-[200px]">
-                          <SortButton label="Location" sortKey="location" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
-                        </TableHead>
-                        <TableHead className="w-[200px]">
-                          <SortButton label="Centre Type" sortKey="type" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
-                        </TableHead>
-                        <TableHead className="w-[160px]">
-                          <SortButton label="Centre Headcount" sortKey="employees" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
-                        </TableHead>
+                        <SortableTableHead className="w-[260px]" label="Centre Name" sortKey="name" currentKey={sort.key} direction={sort.direction} onSort={handleSort} />
+                        <SortableTableHead className="w-[200px]" label="Location" sortKey="location" currentKey={sort.key} direction={sort.direction} onSort={handleSort} />
+                        <SortableTableHead className="w-[200px]" label="Centre Type" sortKey="type" currentKey={sort.key} direction={sort.direction} onSort={handleSort} />
+                        <SortableTableHead className="w-[160px]" label="Centre Headcount" sortKey="employees" currentKey={sort.key} direction={sort.direction} onSort={handleSort} />
                       </TableRow>
                     </TableHeader>
                     <TableBody>

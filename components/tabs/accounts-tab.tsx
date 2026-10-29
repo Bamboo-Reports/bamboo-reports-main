@@ -22,7 +22,7 @@ import { CentersMap } from "@/components/maps/centers-map"
 import { CentersChoroplethMap } from "@/components/maps/centers-choropleth-map"
 import { MapErrorBoundary } from "@/components/maps/map-error-boundary"
 import { ViewSwitcher } from "@/components/ui/view-switcher"
-import { SortButton } from "@/components/ui/sort-button"
+import { SortableTableHead } from "@/components/ui/sortable-table-head"
 import { PaginationControls } from "@/components/ui/pagination-controls"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
@@ -437,18 +437,10 @@ export function AccountsTab({
                           aria-label="Select all accounts on this page"
                         />
                       </TableHead>
-                      <TableHead className="w-[280px]">
-                        <SortButton label="Account Name" sortKey="name" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
-                      </TableHead>
-                      <TableHead className="w-[220px]">
-                        <SortButton label="Sub Industry" sortKey="industry" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
-                      </TableHead>
-                      <TableHead className="w-[140px]">
-                        <SortButton label="Revenue Range" sortKey="revenue" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
-                      </TableHead>
-                      <TableHead className="w-[200px]">
-                        <SortButton label="GCC Aggregate Headcount (India)" sortKey="employees" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
-                      </TableHead>
+                      <SortableTableHead className="w-[280px]" label="Account Name" sortKey="name" currentKey={sort.key} direction={sort.direction} onSort={handleSort} />
+                      <SortableTableHead className="w-[220px]" label="Sub Industry" sortKey="industry" currentKey={sort.key} direction={sort.direction} onSort={handleSort} />
+                      <SortableTableHead className="w-[140px]" label="Revenue Range" sortKey="revenue" currentKey={sort.key} direction={sort.direction} onSort={handleSort} />
+                      <SortableTableHead className="w-[260px]" label="GCC Aggregate Headcount (India)" sortKey="employees" currentKey={sort.key} direction={sort.direction} onSort={handleSort} />
                     </TableRow>
                   </TableHeader>
                   <TableBody>

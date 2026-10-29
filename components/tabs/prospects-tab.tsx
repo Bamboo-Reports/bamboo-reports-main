@@ -21,7 +21,7 @@ import { ProspectDetailsDialog } from "@/components/dialogs/prospect-details-dia
 import { AccountDetailsDialog } from "@/components/dialogs/account-details-tabbed-dialog"
 import { getPaginatedData, formatProspectLocation } from "@/lib/utils/helpers"
 import { ViewSwitcher } from "@/components/ui/view-switcher"
-import { SortButton } from "@/components/ui/sort-button"
+import { SortableTableHead } from "@/components/ui/sortable-table-head"
 import { PaginationControls } from "@/components/ui/pagination-controls"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
@@ -390,18 +390,10 @@ export function ProspectsTab({
                           />
                         </TableHead>
                         <TableHead className="w-16"></TableHead>
-                        <TableHead className="w-[220px]">
-                          <SortButton label="Name" sortKey="name" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
-                        </TableHead>
-                        <TableHead className="w-[200px]">
-                          <SortButton label="Location" sortKey="location" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
-                        </TableHead>
-                        <TableHead className="w-[180px]">
-                          <SortButton label="Job Title" sortKey="title" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
-                        </TableHead>
-                        <TableHead className="w-[180px]">
-                          <SortButton label="Department" sortKey="department" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
-                        </TableHead>
+                        <SortableTableHead className="w-[220px]" label="Name" sortKey="name" currentKey={sort.key} direction={sort.direction} onSort={handleSort} />
+                        <SortableTableHead className="w-[200px]" label="Location" sortKey="location" currentKey={sort.key} direction={sort.direction} onSort={handleSort} />
+                        <SortableTableHead className="w-[180px]" label="Job Title" sortKey="title" currentKey={sort.key} direction={sort.direction} onSort={handleSort} />
+                        <SortableTableHead className="w-[180px]" label="Department" sortKey="department" currentKey={sort.key} direction={sort.direction} onSort={handleSort} />
                       </TableRow>
                     </TableHeader>
                     <TableBody>
