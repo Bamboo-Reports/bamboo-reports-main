@@ -18,7 +18,7 @@ import type { AccountVisibilityMode, Alias, AvailableOptions, Filters } from '@/
 const ACCOUNT_VISIBILITY_OPTIONS: Array<{ value: AccountVisibilityMode; label: string }> = [
   { value: "all", label: "All" },
   { value: "gcc", label: "GCCs" },
-  { value: "nonGcc", label: "Non-GCCs" },
+  { value: "nonGcc", label: "NON-GCCs" },
 ]
 
 interface FiltersSidebarProps {
@@ -226,7 +226,7 @@ export function FiltersSidebar({
           isCollapsed ? 'opacity-0 translate-x-1 pointer-events-none' : 'opacity-100 translate-x-0 pointer-events-auto'
         )}
       >
-        <div className="flex flex-col gap-2 mb-3 pb-3 border-b border-sidebar-border">
+        <div className="flex flex-col gap-2 mb-3">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10">
@@ -263,39 +263,37 @@ export function FiltersSidebar({
         </div>
 
         {isFilterEnabled("accountVisibilityMode") && (
-          <div className="rounded-lg bg-secondary/30 p-2">
-            <div className="relative grid h-10 grid-cols-3 rounded-xl border border-border/70 bg-muted/30 p-1 shadow-[inset_0_1px_2px_hsl(0_0%_0%/0.05)]" role="group" aria-label="Account Visibility">
-              <span
-                aria-hidden="true"
-                className="absolute inset-y-1 left-1 w-[calc((100%-0.5rem)/3)] rounded-md bg-primary shadow-[inset_0_1px_0_hsl(0_0%_100%/0.18),0_1px_0_hsl(0_0%_0%/0.22)] transition-transform duration-200 ease-out"
-                style={{ transform: `translateX(${Math.max(visibilityModeIndex, 0) * 100}%)` }}
-              />
-              {ACCOUNT_VISIBILITY_OPTIONS.map((option) => {
-                const isSelected = optimisticVisibilityMode === option.value
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    aria-pressed={isSelected}
-                    onClick={() => {
-                      setOptimisticVisibilityMode(option.value)
-                      setActiveFilter("accountVisibilityMode")
-                      React.startTransition(() => {
-                        setPendingFilters((prev) => ({ ...prev, accountVisibilityMode: option.value }))
-                      })
-                    }}
-                    className={cn(
-                      "relative z-10 inline-flex h-full items-center justify-center whitespace-nowrap rounded-md px-2 text-sm font-medium leading-none transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                      isSelected
-                        ? "text-primary-foreground"
-                        : "text-muted-foreground"
-                    )}
-                  >
-                    {option.label}
-                  </button>
-                )
-              })}
-            </div>
+          <div className="relative grid h-9 grid-cols-3 border-b border-border" role="group" aria-label="Account Visibility">
+            <span
+              aria-hidden="true"
+              className="absolute -bottom-px left-0 h-0.5 w-1/3 rounded-t-sm bg-primary transition-transform duration-200 ease-out motion-reduce:transition-none"
+              style={{ transform: `translateX(${Math.max(visibilityModeIndex, 0) * 100}%)` }}
+            />
+            {ACCOUNT_VISIBILITY_OPTIONS.map((option) => {
+              const isSelected = optimisticVisibilityMode === option.value
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  aria-pressed={isSelected}
+                  onClick={() => {
+                    setOptimisticVisibilityMode(option.value)
+                    setActiveFilter("accountVisibilityMode")
+                    React.startTransition(() => {
+                      setPendingFilters((prev) => ({ ...prev, accountVisibilityMode: option.value }))
+                    })
+                  }}
+                  className={cn(
+                    "relative z-10 inline-flex h-full items-center justify-center whitespace-nowrap rounded-md px-2 text-sm font-medium leading-none transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                    isSelected
+                      ? "text-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {option.label}
+                </button>
+              )
+            })}
           </div>
         )}
 

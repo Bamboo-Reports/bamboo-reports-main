@@ -26,7 +26,7 @@ import { FilterBadge, renderFilterValues } from "@/components/filters/filter-bad
 const ACCOUNT_VISIBILITY_LABELS = {
   all: "All",
   gcc: "GCCs",
-  nonGcc: "Non-GCCs",
+  nonGcc: "NON-GCCs",
 } as const
 
 export interface SavedFilter {
