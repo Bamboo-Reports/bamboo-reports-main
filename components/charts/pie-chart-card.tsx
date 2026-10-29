@@ -153,7 +153,12 @@ export const PieChartCard = memo(({
       accessibility: {
         enabled: true,
         landmarkVerbosity: "one",
-        description: `${title}. ${seriesData.length} segments. ${countLabel} total ${total.toLocaleString()}.`,
+        // The default section opens with an untitled "Chart" heading that
+        // breaks the page outline; the card title already names the chart.
+        screenReaderSection: {
+          beforeChartFormat: "<div>{typeDescription}</div><div>{chartLongdesc}</div>",
+        },
+        description: `${title}. ${seriesData.length} segments. ${countLabel}: ${total.toLocaleString()}.`,
         point: {
           valueDescriptionFormat: "{xDescription}. {point.y} {series.name}.",
         },

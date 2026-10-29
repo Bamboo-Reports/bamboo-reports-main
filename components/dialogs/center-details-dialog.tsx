@@ -220,7 +220,8 @@ export function CenterDetailsDialog({
                 </div>
                 <span
                   className={`h-3 w-3 shrink-0 rounded-full ${getStatusColor(center.center_status ?? "")} ${getStatusGlow(center.center_status ?? "")}`}
-                  aria-label={center.center_status ?? undefined}
+                  role="img"
+                  aria-label={center.center_status ? `Status: ${center.center_status}` : "Status unknown"}
                   title={center.center_status ?? undefined}
                 />
               </div>

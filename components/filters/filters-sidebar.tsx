@@ -234,7 +234,7 @@ export function FiltersSidebar({
               <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10">
                 <RiFilterLine className="h-4 w-4 text-primary" />
               </div>
-              <span className="text-sm font-semibold text-foreground">FILTERS</span>
+              <h2 className="text-sm font-semibold tracking-normal text-foreground">FILTERS</h2>
             </div>
             <Button
               variant="ghost"

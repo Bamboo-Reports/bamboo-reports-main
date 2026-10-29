@@ -242,7 +242,7 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <p className="truncate text-lg font-bold text-foreground">Bamboo Reports</p>
+                <h1 className="truncate text-lg font-bold tracking-normal text-foreground">Bamboo Reports</h1>
                 {environmentBadgeLabel ? (
                   <div className="inline-flex shrink-0 items-center gap-1 rounded-md border border-amber-500/25 bg-amber-500/8 px-2 py-0.5 dark:border-amber-400/20 dark:bg-amber-500/10">
                     <RiTerminalBoxLine className="h-3 w-3 shrink-0 text-amber-600 dark:text-amber-400" />

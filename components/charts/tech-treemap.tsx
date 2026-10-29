@@ -163,6 +163,11 @@ export const TechTreemap = memo(({
             accessibility: {
               enabled: true,
               landmarkVerbosity: "one",
+              // The default section opens with an untitled "Chart" heading that
+              // breaks the page outline; the card title already names the chart.
+              screenReaderSection: {
+                beforeChartFormat: "<div>{typeDescription}</div><div>{chartLongdesc}</div>",
+              },
               description: `${title}. Treemap showing ${data.length} technology nodes grouped by category.`,
               point: {
                 valueDescriptionFormat: "{point.name}, {point.value}.",

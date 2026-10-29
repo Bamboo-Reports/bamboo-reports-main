@@ -51,7 +51,9 @@ export function ViewSwitcher<V extends string>({
     <Tabs value={pendingValue ?? value} onValueChange={handleValueChange} className={cn("w-fit", className)} data-tour={dataTour}>
       <TabsList className="grid auto-cols-fr grid-flow-col">
         {options.map(({ value: optionValue, label, icon }) => (
-          <TabsTrigger key={optionValue} value={optionValue} className="gap-2">
+          // No TabsContent pairs with these triggers (the parent renders the
+          // view), so drop Radix's aria-controls rather than point at nothing.
+          <TabsTrigger key={optionValue} value={optionValue} aria-controls={undefined} className="gap-2">
             {icon}
             {label}
           </TabsTrigger>

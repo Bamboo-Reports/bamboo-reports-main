@@ -25,6 +25,11 @@ const getStatusDotColor = (status: string | null | undefined) => {
   return "bg-gray-400"
 }
 
+const getStatusLabel = (status: string | null | undefined) => {
+  if (status === "Active Center") return "Active"
+  return status || "Unknown"
+}
+
 export const CenterGridCard = memo(({ center, onClick }: CenterGridCardProps) => {
   const centerName = center.center_name || "Centre"
   const accountName = center.account_global_legal_name || "Account"
@@ -51,11 +56,10 @@ export const CenterGridCard = memo(({ center, onClick }: CenterGridCardProps) =>
               />
               <div className="min-w-0">
                 <h3
-                  className="min-w-0 truncate text-base font-semibold leading-snug text-foreground flex items-center gap-2"
-                  title={center.center_status ? `${centerName}: ${center.center_status}` : centerName}
+                  className="min-w-0 truncate text-base font-semibold leading-snug text-foreground"
+                  title={centerName}
                 >
-                  <span className="truncate">{centerName}</span>
-                  <span className={`inline-flex h-2.5 w-2.5 shrink-0 rounded-full ${statusColor}`} aria-label={center.center_status ?? "Unknown status"} />
+                  {centerName}
                 </h3>
                 <p
                   className="text-sm text-muted-foreground mt-1 truncate"
@@ -66,6 +70,13 @@ export const CenterGridCard = memo(({ center, onClick }: CenterGridCardProps) =>
               </div>
             </div>
             <div className="space-y-2 text-sm">
+              <div className="flex items-center justify-between gap-3 min-w-0">
+                <span className="text-muted-foreground">Status</span>
+                <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
+                  <span className={`h-2 w-2 shrink-0 rounded-full ${statusColor}`} aria-hidden="true" />
+                  {getStatusLabel(center.center_status)}
+                </span>
+              </div>
               <div className="flex items-center justify-between gap-3 min-w-0">
                 <span className="text-muted-foreground">Centre Type</span>
                 <span
