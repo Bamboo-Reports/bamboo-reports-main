@@ -11,9 +11,8 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { devError } from "@/lib/utils/dev-log"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
-import { RiBriefcaseLine, RiBuildingLine, RiCheckboxCircleLine, RiDownloadLine, RiGroupLine, RiSparklingLine } from "@remixicon/react"
+import { RiBriefcaseLine, RiBuildingLine, RiCheckboxCircleLine, RiCheckLine, RiDownloadLine, RiGroupLine, RiSparklingLine } from "@remixicon/react"
 import type { ExportDatasetKey } from "@/lib/utils/export-helpers"
 import {
   requestServerExport,
@@ -574,6 +573,10 @@ export function ExportDialog({
                 <button
                   key={item.key}
                   type="button"
+                  role="checkbox"
+                  aria-checked={isChecked}
+                  aria-labelledby={`export-dataset-${item.key}-label`}
+                  aria-describedby={`export-dataset-${item.key}-description`}
                   onClick={() => handleToggle(item.key)}
                   className={cn(
                     "group relative flex items-start gap-3 rounded-xl border bg-background px-4 py-3 text-left shadow-sm transition-all duration-150",
@@ -582,12 +585,21 @@ export function ExportDialog({
                   )}
                   disabled={isExporting || !isAccessible}
                 >
-                  <Checkbox checked={isChecked} disabled={isExporting || !isAccessible} className="mt-1" />
+                  {/* Visual-only tick: the card is the checkbox, so a nested Checkbox button would be invalid HTML (#356). */}
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      "mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border bg-background shadow-[0_1px_0_hsl(0_0%_0%/0.04)] transition-colors duration-150",
+                      isChecked ? "border-primary bg-primary text-primary-foreground" : "border-foreground/30 group-hover:border-primary/70"
+                    )}
+                  >
+                    {isChecked && <RiCheckLine className="h-3.5 w-3.5" />}
+                  </span>
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Icon className={cn("h-4 w-4", item.accent)} />
-                        <span className="text-sm font-semibold">{item.label}</span>
+                        <span id={`export-dataset-${item.key}-label`} className="text-sm font-semibold">{item.label}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         {!isAccessible && (
@@ -600,7 +612,7 @@ export function ExportDialog({
                         </Badge>
                       </div>
                     </div>
-                    <p className="text-xs text-muted-foreground">
+                    <p id={`export-dataset-${item.key}-description`} className="text-xs text-muted-foreground">
                       {isAccessible ? item.description : getDatasetUnavailableMessage(item.key)}
                     </p>
                   </div>
