@@ -11,6 +11,10 @@ const config: Config = {
   ],
   theme: {
   		extend: {
+  		fontWeight: {
+  			// Matches the body weight, so `font-normal` resets to 450, not 400.
+  			normal: '450'
+  		},
   		fontFamily: {
   			sans: [
   				'var(--font-sans)',

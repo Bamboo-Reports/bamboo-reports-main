@@ -92,7 +92,7 @@ Technologies responsible for how the application looks and feels.
 | **Version** | 3.4.17 |
 | **Why we use it** | Enables rapid UI development with consistent spacing, colors, and responsive design. Eliminates CSS naming conflicts and dead code through tree-shaking |
 | **Key features used** | Custom theme with HSL color variables, dark mode (class-based), custom animations (accordion, fade-in, slide-in, shimmer, pulse), responsive breakpoints |
-| **Fonts** | Instrument Sans (with system fallbacks) |
+| **Fonts** | Inter (with system fallbacks) |
 | **Plugins** | `tailwindcss-animate` for animation utilities |
 | **Package** | `tailwindcss`, `tailwind-merge`, `tailwindcss-animate`, `autoprefixer`, `postcss` |
 
@@ -122,12 +122,12 @@ Technologies responsible for how the application looks and feels.
 | **Why we use it** | Provides dark/light mode switching with system preference detection and zero flash on page load |
 | **Package** | `next-themes` |
 
-### Instrument Sans
+### Inter
 
 | | |
 |---|---|
-| **What it is** | Variable grotesque sans-serif from the Instrument studio, served from Google Fonts |
-| **Why we use it** | Crisp at the small sizes tables and labels use, with true tabular figures; slightly narrow, so long counts fit the summary cards. One family carries headings, labels and data |
+| **What it is** | Variable sans-serif by Rasmus Andersson, designed for screen UI, served from Google Fonts |
+| **Why we use it** | Highly legible at the small sizes tables and labels use, with true tabular figures. One family carries headings, labels and data |
 | **Loaded via** | `next/font/google` in `app/layout.tsx`, exposed as `--font-sans`; that variable is the first entry in the Tailwind `sans` stack and the `body` font-family in `app/globals.css`, and the chart and map components read it too |
 
 ### Class Variance Authority (CVA)
