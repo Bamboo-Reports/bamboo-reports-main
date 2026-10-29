@@ -240,10 +240,10 @@ export function FiltersSidebar({
 
         {isFilterEnabled("accountVisibilityMode") && (
           <div className="rounded-xl bg-secondary/30 p-2">
-            <div className="relative grid grid-cols-3 rounded-lg border border-border/70 bg-muted/30 p-1" aria-label="Account Visibility">
+            <div className="relative grid grid-cols-3 rounded-[10px] border border-border/70 bg-muted/30 p-1 shadow-[inset_0_1px_2px_hsl(0_0%_0%/0.05)]" role="group" aria-label="Account Visibility">
               <span
                 aria-hidden="true"
-                className="absolute inset-y-1 left-1 w-[calc((100%-0.5rem)/3)] rounded-md bg-primary shadow-sm transition-transform duration-200 ease-out"
+                className="absolute inset-y-1 left-1 w-[calc((100%-0.5rem)/3)] rounded-md bg-primary shadow-[inset_0_1px_0_hsl(0_0%_100%/0.18),0_1px_0_hsl(0_0%_0%/0.22)] transition-transform duration-200 ease-out"
                 style={{ transform: `translateX(${Math.max(visibilityModeIndex, 0) * 100}%)` }}
               />
               {ACCOUNT_VISIBILITY_OPTIONS.map((option) => {
@@ -261,7 +261,7 @@ export function FiltersSidebar({
                       })
                     }}
                     className={cn(
-                      "relative z-10 inline-flex h-8 items-center justify-center rounded-md px-2 text-[11px] font-semibold leading-none transition-colors duration-200 ease-out",
+                      "relative z-10 inline-flex h-8 items-center justify-center rounded-md px-2 text-[11px] font-semibold leading-none transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       isSelected
                         ? "text-primary-foreground"
                         : "text-muted-foreground"

@@ -24,7 +24,7 @@ export function SortButton<T extends string = string>({
       type="button"
       onClick={() => onClick(sortKey)}
       className={cn(
-        "inline-flex items-center gap-1 rounded-md font-medium transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "inline-flex items-center gap-1 rounded-md font-medium transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
         isActive ? "text-primary" : "text-foreground"
       )}
       aria-pressed={isActive}

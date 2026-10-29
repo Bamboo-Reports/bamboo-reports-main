@@ -12,7 +12,7 @@ const Checkbox = React.forwardRef<
   <CheckboxPrimitive.Root
     ref={ref}
     className={cn(
-      "peer h-4 w-4 shrink-0 rounded-sm border border-primary ring-offset-background transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground data-[state=indeterminate]:bg-primary data-[state=indeterminate]:text-primary-foreground hover:border-primary/80 interactive",
+      "peer h-4 w-4 shrink-0 rounded-[4px] border border-foreground/30 bg-background shadow-[0_1px_0_hsl(0_0%_0%/0.04)] ring-offset-background interactive hover:border-primary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground data-[state=indeterminate]:border-primary data-[state=indeterminate]:bg-primary data-[state=indeterminate]:text-primary-foreground",
       className
     )}
     {...props}
@@ -23,7 +23,7 @@ const Checkbox = React.forwardRef<
       {props.checked === "indeterminate" ? (
         <RiSubtractLine className="h-3 w-3" />
       ) : (
-        <RiCheckLine className="h-4 w-4" />
+        <RiCheckLine className="h-3.5 w-3.5" />
       )}
     </CheckboxPrimitive.Indicator>
   </CheckboxPrimitive.Root>
