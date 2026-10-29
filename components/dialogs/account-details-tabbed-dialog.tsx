@@ -22,7 +22,6 @@ import { CenterDetailsDialog } from "./center-details-dialog"
 import { ProspectDetailsDialog } from "./prospect-details-dialog"
 import { CenterGridCard } from "@/components/cards/center-grid-card"
 import { ProspectGridCard } from "@/components/cards/prospect-grid-card"
-import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TechTreemap } from "@/components/charts/tech-treemap"
 import { requestAccountFinancialInfo } from "@/lib/finance/request-client"
@@ -525,21 +524,21 @@ export function AccountDetailsDialog({
                 </div>
               )}
               {accountCenters.length > 0 && (
-              <TabsTrigger value="centers" className="flex items-center gap-2">
+              <TabsTrigger value="centers" className="group/trigger flex items-center gap-2">
                 <RiBriefcaseLine className="h-4 w-4" />
                 Centres
-                <Badge variant="secondary" className="ml-1">
+                <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-foreground/[0.08] px-1.5 text-[11px] font-semibold tabular-nums leading-none text-foreground/70 interactive group-data-[state=active]/trigger:bg-primary/10 group-data-[state=active]/trigger:text-primary dark:bg-white/10 dark:group-data-[state=active]/trigger:bg-primary/15">
                   {accountCenters.length}
-                </Badge>
+                </span>
               </TabsTrigger>
               )}
               {accountProspects.length > 0 && (
-              <TabsTrigger value="prospects" className="flex items-center gap-2">
+              <TabsTrigger value="prospects" className="group/trigger flex items-center gap-2">
                 <RiGroupLine className="h-4 w-4" />
                 Prospects
-                <Badge variant="secondary" className="ml-1">
+                <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-foreground/[0.08] px-1.5 text-[11px] font-semibold tabular-nums leading-none text-foreground/70 interactive group-data-[state=active]/trigger:bg-primary/10 group-data-[state=active]/trigger:text-primary dark:bg-white/10 dark:group-data-[state=active]/trigger:bg-primary/15">
                   {accountProspects.length.toLocaleString("en-US")}
-                </Badge>
+                </span>
               </TabsTrigger>
               )}
             </TabsList>
