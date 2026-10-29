@@ -85,7 +85,7 @@ function ProfileThemeSwitcher() {
                 setTheme(option.value)
               }}
               className={cn(
-                "inline-flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs interactive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "inline-flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs interactive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 isActive
                   ? "bg-background font-semibold text-foreground shadow-[0_1px_2px_hsl(0_0%_0%/0.08),0_0_0_1px_hsl(0_0%_0%/0.06)] dark:shadow-[0_1px_2px_hsl(0_0%_0%/0.3),0_0_0_1px_hsl(0_0%_100%/0.1)]"
                   : "font-medium text-muted-foreground hover:bg-background/50 hover:text-foreground disabled:pointer-events-none disabled:opacity-60"
