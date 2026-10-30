@@ -61,7 +61,14 @@ export function useDataTable<TData extends RowData>({
   const entity = ENTITY_BY_DATASET[dataset]
   const manual = Boolean(server)
 
-  const [sorting, setSorting] = useState<SortingState>([])
+  // Server mode reads the sort back from the dashboard, which owns it; only
+  // client mode keeps its own copy.
+  const [clientSorting, setClientSorting] = useState<SortingState>([])
+  const serverSort = server?.sort
+  const sorting = useMemo<SortingState>(() => {
+    if (!manual) return clientSorting
+    return serverSort ? [{ id: serverSort.key, desc: serverSort.direction === "desc" }] : []
+  }, [manual, serverSort, clientSorting])
   // Server mode only holds the current page, so selections must not be pruned
   // against it; they reset when the filters change instead.
   const { selected, setSelected, clear } = useTableRowSelection({
@@ -86,7 +93,7 @@ export function useDataTable<TData extends RowData>({
     const previousKey = sorting[0]?.id
     const key = sort?.id ?? previousKey
     const direction = sort ? (sort.desc ? "desc" : "asc") : null
-    setSorting(next)
+    if (!manual) setClientSorting(next)
     if (!key) return
     captureEvent(ANALYTICS_EVENTS.SORT_CHANGED, {
       entity,

@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
+import { useState } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { act, cleanup, renderHook } from "@testing-library/react"
 import { createColumnHelper } from "@tanstack/react-table"
 import type { DataTableFeatures } from "@/components/tables/data-table-features"
 import { createSelectColumn } from "@/components/tables/data-table"
 import { useDataTable } from "@/components/tables/use-data-table"
+import type { TabSort } from "@/components/tabs/accounts-tab"
 
 const captured = vi.hoisted(() => ({ events: [] as Array<{ event: string; props: Record<string, unknown> }> }))
 vi.mock("@/lib/analytics/client", () => ({
@@ -24,23 +26,32 @@ const columns = columnHelper.columns([
 ])
 const getRowKey = (row: Row) => row.id
 
-function setup() {
+// Holds the sort the way the dashboard does, so the table reads it back.
+function setup(initialSort: TabSort | null = null) {
   const server = { total: 120, onSortChange: vi.fn() }
   const setCurrentPage = vi.fn()
   const setItemsPerPage = vi.fn()
-  const hook = renderHook(() =>
-    useDataTable({
+  const hook = renderHook(() => {
+    const [sort, setSort] = useState(initialSort)
+    return useDataTable({
       dataset: "accounts",
       data: rows,
       columns,
       getRowKey,
-      server,
+      server: {
+        total: server.total,
+        sort,
+        onSortChange: (key, direction) => {
+          server.onSortChange(key, direction)
+          setSort(direction ? { key, direction } : null)
+        },
+      },
       currentPage: 2,
       setCurrentPage,
       itemsPerPage: 25,
       setItemsPerPage,
     })
-  )
+  })
   return { hook, server, setCurrentPage, setItemsPerPage }
 }
 
@@ -71,6 +82,12 @@ describe("useDataTable", () => {
     act(() => hook.result.current.table.getColumn("name")!.clearSorting())
     expect(server.onSortChange).toHaveBeenLastCalledWith("name", null)
     expect(captured.events.at(-1)?.props.sort_direction).toBe("none")
+  })
+
+  it("shows the sort the dashboard holds", () => {
+    const { hook } = setup({ key: "name", direction: "desc" })
+    expect(hook.result.current.table.state.sorting).toEqual([{ id: "name", desc: true }])
+    expect(hook.result.current.table.getColumn("name")!.getIsSorted()).toBe("desc")
   })
 
   it("routes page and page-size changes to the right setter", () => {

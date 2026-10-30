@@ -399,6 +399,7 @@ export function CentersTab({
                   key="table"
                   table={table}
                   loading={server?.loading}
+                  refreshing={server?.refreshing}
                   onRowOpen={handleRowOpen}
                   getRowLabel={(center) => `View centre details for ${center.center_name || "center"}`}
                   renderRowMenu={(center) => <CenterRowMenu center={center} onOpen={handleRowOpen} />}
@@ -407,7 +408,13 @@ export function CentersTab({
               ) : (
                 <div key="grid" ref={scrollContainerRef} className="view-content min-h-0 flex-1 overflow-auto rounded-md border">
                   <DataGridSortBar column={table.getColumn("name")} label="centre name" />
-                  <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <div
+                    className={cn(
+                      "grid grid-cols-1 gap-4 p-4 transition-opacity sm:grid-cols-2 lg:grid-cols-3",
+                      server?.refreshing && "pointer-events-none opacity-50"
+                    )}
+                    aria-busy={server?.loading || server?.refreshing}
+                  >
                     {server?.loading ? <GridSkeletonCards statRows={3} /> : pageCenters.map((center) => (
                       <CenterGridCard
                         key={center.cn_unique_key}
