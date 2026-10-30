@@ -54,9 +54,9 @@ export function calculateActiveFilters(filters: Filters) {
     filters.accountHqEmployeeRangeValues.length +
     filters.accountCenterEmployeesRangeValues.length +
     (revenueFilterActive ? 1 : 0) +
-    (filters.accountHqRevenueIncludeNull ? 1 : 0) +
+    (filters.accountHqRevenueIncludeNull === false ? 1 : 0) +
     (yearsInIndiaFilterActive ? 1 : 0) +
-    (filters.yearsInIndiaIncludeNull ? 1 : 0) +
+    (filters.yearsInIndiaIncludeNull === false ? 1 : 0) +
     filters.accountGlobalLegalNameKeywords.length +
     (filters.accountListValues.length > 0 ? filters.accountListValues.length : filters.accountNameValues.length) +
     filters.centerTypeValues.length +
@@ -67,7 +67,7 @@ export function calculateActiveFilters(filters: Filters) {
     filters.centerEmployeesRangeValues.length +
     filters.centerStatusValues.length +
     (centerIncYearFilterActive ? 1 : 0) +
-    (filters.centerIncYearIncludeNull ? 1 : 0) +
+    (filters.centerIncYearIncludeNull === false ? 1 : 0) +
     filters.functionNameValues.length +
     filters.techSoftwareInUseKeywords.length +
     filters.prospectDepartmentValues.length +

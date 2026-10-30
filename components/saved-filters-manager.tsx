@@ -415,7 +415,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
             <DialogHeader>
               <DialogTitle>Save Filter Configuration</DialogTitle>
               <DialogDescription>
-                Save your current layout of {totalActiveFilters} active filters to easily access them later.
+                {totalActiveFilters === 1 ? "Save this filter so you can apply it again later." : `Save these ${totalActiveFilters} filters so you can apply them again later.`}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-2">
@@ -435,7 +435,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
                 Cancel
               </Button>
               <Button onClick={handleSaveFilter} disabled={!filterName.trim() || loading}>
-                {loading ? "Saving..." : "Save List"}
+                {loading ? "Saving..." : "Save Filter"}
               </Button>
             </DialogFooter>
           </DialogContent>

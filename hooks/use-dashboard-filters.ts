@@ -374,10 +374,11 @@ export function useDashboardFilters({
         sourceFilters.centerIncYearRange[1] !== centerIncYearRange.max
       )) count += 1
 
-      // Boolean toggles: count as 1 if toggled on
-      if (e("accountHqRevenueIncludeNull") && sourceFilters.accountHqRevenueIncludeNull) count += 1
-      if (e("yearsInIndiaIncludeNull") && sourceFilters.yearsInIndiaIncludeNull) count += 1
-      if (e("centerIncYearIncludeNull") && sourceFilters.centerIncYearIncludeNull) count += 1
+      // "Include all" toggles are on by default; they only narrow the results
+      // (and count as a filter) when switched off.
+      if (e("accountHqRevenueIncludeNull") && !sourceFilters.accountHqRevenueIncludeNull) count += 1
+      if (e("yearsInIndiaIncludeNull") && !sourceFilters.yearsInIndiaIncludeNull) count += 1
+      if (e("centerIncYearIncludeNull") && !sourceFilters.centerIncYearIncludeNull) count += 1
 
       return count
     },
