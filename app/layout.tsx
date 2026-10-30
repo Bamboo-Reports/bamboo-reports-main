@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Geist } from 'next/font/google'
+import { Inter } from 'next/font/google'
 import './globals.css'
 import { ThemeProvider } from '@/components/theme-provider'
 import { AppProviders } from '@/app/providers'
@@ -10,11 +10,11 @@ import { Toaster } from 'sonner'
 
 const isMaintenanceMode = process.env.NEXT_PUBLIC_MAINTENANCE_MODE === 'true'
 
-const geist = Geist({
+const inter = Inter({
   subsets: ['latin'],
   display: 'swap',
   style: ['normal', 'italic'],
-  variable: '--font-geist-sans',
+  variable: '--font-sans',
 })
 
 export const metadata: Metadata = {
@@ -34,7 +34,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={geist.variable} suppressHydrationWarning>
+    <html lang="en" className={inter.variable} suppressHydrationWarning>
       <body>
         <AppProviders>
           <ThemeProvider
