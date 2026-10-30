@@ -10,6 +10,7 @@ import { createLogger } from "@/lib/logger"
 import type { Center } from "@/lib/types"
 import type { CityAggregate } from "@/lib/dashboard/api-client"
 import "maplibre-gl/dist/maplibre-gl.css"
+import { countsTowardHeadcount } from "@/lib/dashboard/headcount"
 
 interface CentersMapProps {
   centers: Center[]
@@ -130,7 +131,8 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
         const city = center.center_city
         const country = center.center_country
         const account = center.account_global_legal_name
-        const employees = center.center_employees ?? 0
+        // Same rule as the Headcount card: some centre types are left out.
+        const employees = countsTowardHeadcount(center.center_type) ? (center.center_employees ?? 0) : 0
         const lat = center.lat
         const lng = center.lng
 

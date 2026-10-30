@@ -1,5 +1,5 @@
 import type { Filters, FilterValue, AccountVisibilityMode } from "@/lib/types"
-import { accountNameMatchForms } from "@/lib/utils/filter-helpers"
+import { accountNameMatchForms, hasAccountNameSearch } from "@/lib/utils/filter-helpers"
 
 /**
  * Server-side SQL translation of the client filter engine in
@@ -21,7 +21,7 @@ import { accountNameMatchForms } from "@/lib/utils/filter-helpers"
  *  - range matchers (rangeFilterMatch): a real 0 is treated like NULL and
  *    gated by the includeNull flag.
  *  - account visibility: gcc => 'include', nonGcc => 'exclude', all => no
- *    filter; skipped entirely when an explicit account-name search is active.
+ *    filter; skipped entirely when an account name or keyword is included.
  *  - the bidirectional cascade: account filters narrow centers/prospects;
  *    prospect filters narrow back to accounts/centers; the services-offered
  *    (functions) and software (tech) filters narrow centers; and, when centers
@@ -218,7 +218,7 @@ function memberIn(col: string, cte: string): string {
 // ---------------------------------------------------------------------------
 
 function accountPredicate(f: Filters, p: Params): string {
-  const hasNameSearch = f.accountGlobalLegalNameKeywords.length > 0 || f.accountNameValues.length > 0
+  const hasNameSearch = hasAccountNameSearch(f.accountGlobalLegalNameKeywords, f.accountNameValues)
   return andAll([
     valueClause("account_hq_region", f.accountHqRegionValues, p),
     valueClause("account_hq_country", f.accountHqCountryValues, p),
@@ -290,7 +290,7 @@ function computeFlags(f: Filters, access: FilterAccess) {
   const ce = access.centersEnabled ?? true
   const pe = access.prospectsEnabled ?? true
 
-  const hasNameSearch = f.accountGlobalLegalNameKeywords.length > 0 || f.accountNameValues.length > 0
+  const hasNameSearch = hasAccountNameSearch(f.accountGlobalLegalNameKeywords, f.accountNameValues)
 
   const haf =
     f.accountHqRegionValues.length > 0 ||

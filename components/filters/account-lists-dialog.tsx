@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useMemo, useState } from "react"
-import { RiArrowDownSLine, RiArrowUpSLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiGroupLine, RiListCheck3, RiPencilLine, RiPlayLine, RiRefreshLine, RiShareLine, RiUploadLine } from "@remixicon/react"
+import { RiAddLine, RiArrowDownSLine, RiArrowUpSLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiGroupLine, RiListCheck3, RiPencilLine, RiRefreshLine, RiShareLine, RiSubtractLine, RiUploadLine } from "@remixicon/react"
 import { toast } from "sonner"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -26,8 +26,8 @@ import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 interface AccountListsDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  /** Applies the list to the dashboard (adds it to the current filters). */
-  onApply: (list: AccountList) => void
+  /** Applies the list to the dashboard (adds it to the current filters), keeping or removing its accounts. */
+  onApply: (list: AccountList, mode: "include" | "exclude") => void
 }
 
 function formatDate(value: string): string {
@@ -134,13 +134,14 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
   }, [listToDelete, deleteList])
 
   const handleApply = useCallback(
-    (list: AccountList) => {
+    (list: AccountList, mode: "include" | "exclude" = "include") => {
       captureEvent(ANALYTICS_EVENTS.ACCOUNT_LIST_APPLIED, {
         account_list_id: list.id,
         is_owner: list.user_id === userId,
         accounts_count: list.accounts.length,
+        mode,
       })
-      onApply(list)
+      onApply(list, mode)
       onOpenChange(false)
     },
     [onApply, onOpenChange, userId]
@@ -179,17 +180,35 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
                           </p>
                         )}
                         <p className="mt-0.5 text-xs text-muted-foreground">
-                          {list.accounts.length} account{list.accounts.length === 1 ? "" : "s"}
-                          {list.unmatched.length > 0 ? `, ${list.unmatched.length} unmatched` : ""}
-                          {list.updated_at ? ` , updated ${formatDate(list.updated_at)}` : ""}
-                          {list.source_file ? ` , from ${list.source_file}` : ""}
-                          {!own && list.owner_email ? ` , shared by ${list.owner_email}` : ""}
+                          {[
+                            `${list.accounts.length} account${list.accounts.length === 1 ? "" : "s"}`,
+                            list.unmatched.length > 0 && `${list.unmatched.length} unmatched`,
+                            list.updated_at && `updated ${formatDate(list.updated_at)}`,
+                            list.source_file && `from ${list.source_file}`,
+                            !own && list.owner_email && `shared by ${list.owner_email}`,
+                          ]
+                            .filter(Boolean)
+                            .join(", ")}
                         </p>
                       </div>
                       <div className="flex shrink-0 items-center gap-0.5">
-                        <Button size="sm" variant="outline" onClick={() => handleApply(list)} title="Apply this list to the dashboard">
-                          <RiPlayLine className="h-3.5 w-3.5" />
-                          Apply
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleApply(list, "include")}
+                          title="Show only these accounts on the dashboard"
+                        >
+                          <RiAddLine className="h-3.5 w-3.5" />
+                          Include
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleApply(list, "exclude")}
+                          title="Hide these accounts from the dashboard"
+                        >
+                          <RiSubtractLine className="h-3.5 w-3.5" />
+                          Exclude
                         </Button>
                         {own && (
                           <>

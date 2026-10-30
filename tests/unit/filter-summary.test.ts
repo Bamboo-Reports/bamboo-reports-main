@@ -34,21 +34,21 @@ describe("withFilterDefaults", () => {
 })
 
 describe("calculateActiveFilters", () => {
-  // The three include-null toggles default to true, so a freshly created
-  // filter set already counts as 3 active filters.
-  const cleanFilters = () =>
-    createDefaultFilters({
+  // The three include-null ("Include all") toggles default to on and only
+  // narrow the results, so they only count once switched off.
+  const cleanFilters = () => createDefaultFilters()
+
+  it("returns 0 for a freshly created filter set", () => {
+    expect(calculateActiveFilters(cleanFilters())).toBe(0)
+  })
+
+  it("counts each include-null toggle that is switched off", () => {
+    const filters = createDefaultFilters({
       accountHqRevenueIncludeNull: false,
       yearsInIndiaIncludeNull: false,
       centerIncYearIncludeNull: false,
     })
-
-  it("returns 0 once the default include-null toggles are cleared", () => {
-    expect(calculateActiveFilters(cleanFilters())).toBe(0)
-  })
-
-  it("counts the default include-null toggles", () => {
-    expect(calculateActiveFilters(createDefaultFilters())).toBe(3)
+    expect(calculateActiveFilters(filters)).toBe(3)
   })
 
   it("counts each selected multi-value filter entry", () => {
@@ -75,8 +75,8 @@ describe("calculateActiveFilters", () => {
     expect(calculateActiveFilters(filters)).toBe(0)
   })
 
-  it("counts a single include-null toggle", () => {
-    const filters = { ...cleanFilters(), accountHqRevenueIncludeNull: true }
+  it("counts a single include-null toggle that is switched off", () => {
+    const filters = { ...cleanFilters(), accountHqRevenueIncludeNull: false }
     expect(calculateActiveFilters(filters)).toBe(1)
   })
 })

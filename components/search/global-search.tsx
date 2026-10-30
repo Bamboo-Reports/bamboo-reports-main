@@ -13,6 +13,7 @@ import {
   CommandShortcut,
 } from "@/components/ui/command"
 import { getEnabledSections } from "@/lib/config/dashboard-access"
+import { cn } from "@/lib/utils"
 import type { GroupedResults, SearchResult, SearchResultType } from "@/lib/search"
 import type { RecentItem } from "@/hooks/use-recent-items"
 import type { Account } from "@/lib/types"
@@ -110,6 +111,17 @@ export function GlobalSearch({
 }: GlobalSearchProps) {
   const enabledSections = getEnabledSections()
   const enabledSectionSet = useMemo(() => new Set(enabledSections), [enabledSections])
+  const quickActions = useMemo(
+    () =>
+      [
+        { value: "action::go-accounts", label: "Go to Accounts", icon: RiBuildingLine, primary: true, section: "accounts" },
+        { value: "action::go-centers", label: "Go to Centres", icon: RiBriefcaseLine, primary: true, section: "centers" },
+        { value: "action::go-prospects", label: "Go to Prospects", icon: RiGroupLine, primary: true, section: "prospects" },
+        { value: "action::refresh", label: "Refresh data", icon: RiRefreshLine, primary: false, section: null },
+        { value: "action::toggle-theme", label: "Toggle theme", icon: RiContrastLine, primary: false, section: null },
+      ].filter((action) => !action.section || enabledSectionSet.has(action.section as (typeof enabledSections)[number])),
+    [enabledSectionSet]
+  )
   const visibleRecentItems = useMemo(
     () =>
       recentItems.filter((item) => {
@@ -177,6 +189,23 @@ export function GlobalSearch({
   const hasResults = results.total > 0
   const hasRecentItems = visibleRecentItems.length > 0
   const hasRecentSearches = recentSearches.length > 0
+  // Actions stay reachable by name: "theme" or "go to prospects" finds them too.
+  const queryWords = query.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  const matchingActions = hasQuery
+    ? quickActions.filter((action) => queryWords.every((word) => action.label.toLowerCase().includes(word)))
+    : quickActions
+
+  const quickActionsGroup = matchingActions.length > 0 && (
+    <CommandGroup heading="Quick Actions">
+      {matchingActions.map((action) => (
+        <CommandItem key={action.value} value={action.value} onSelect={handleSelect} className="py-2 px-3">
+          <action.icon className={cn("h-4 w-4 shrink-0", action.primary ? "text-primary/70" : "text-muted-foreground/60")} />
+          <span className="text-sm">{action.label}</span>
+          {action.primary && <CommandShortcut>Tab</CommandShortcut>}
+        </CommandItem>
+      ))}
+    </CommandGroup>
+  )
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange} className="max-w-2xl" shouldFilter={false}>
@@ -287,6 +316,8 @@ export function GlobalSearch({
         )}
 
         {/* Empty state: Recent items + Quick actions */}
+        {hasQuery && quickActionsGroup}
+
         {!hasQuery && (
           <>
             {hasRecentItems && (
@@ -338,57 +369,7 @@ export function GlobalSearch({
 
             {(hasRecentItems || hasRecentSearches) && <CommandSeparator />}
 
-            <CommandGroup heading="Quick Actions">
-              {enabledSectionSet.has("accounts") && (
-                <CommandItem
-                  value="action::go-accounts"
-                  onSelect={handleSelect}
-                  className="py-2 px-3"
-                >
-                  <RiBuildingLine className="h-4 w-4 shrink-0 text-primary/70" />
-                  <span className="text-sm">Go to Accounts</span>
-                  <CommandShortcut>Tab</CommandShortcut>
-                </CommandItem>
-              )}
-              {enabledSectionSet.has("centers") && (
-                <CommandItem
-                  value="action::go-centers"
-                  onSelect={handleSelect}
-                  className="py-2 px-3"
-                >
-                  <RiBriefcaseLine className="h-4 w-4 shrink-0 text-primary/70" />
-                  <span className="text-sm">Go to Centres</span>
-                  <CommandShortcut>Tab</CommandShortcut>
-                </CommandItem>
-              )}
-              {enabledSectionSet.has("prospects") && (
-                <CommandItem
-                  value="action::go-prospects"
-                  onSelect={handleSelect}
-                  className="py-2 px-3"
-                >
-                  <RiGroupLine className="h-4 w-4 shrink-0 text-primary/70" />
-                  <span className="text-sm">Go to Prospects</span>
-                  <CommandShortcut>Tab</CommandShortcut>
-                </CommandItem>
-              )}
-              <CommandItem
-                value="action::refresh"
-                onSelect={handleSelect}
-                className="py-2 px-3"
-              >
-                <RiRefreshLine className="h-4 w-4 shrink-0 text-muted-foreground/60" />
-                <span className="text-sm">Refresh data</span>
-              </CommandItem>
-              <CommandItem
-                value="action::toggle-theme"
-                onSelect={handleSelect}
-                className="py-2 px-3"
-              >
-                <RiContrastLine className="h-4 w-4 shrink-0 text-muted-foreground/60" />
-                <span className="text-sm">Toggle theme</span>
-              </CommandItem>
-            </CommandGroup>
+            {quickActionsGroup}
           </>
         )}
       </CommandList>

@@ -74,6 +74,13 @@ const isNumberRange = (value: unknown): value is [number, number] =>
 const serializeFilterValues = (values: FilterValue[]) =>
   values.map(({ value, mode }) => `${mode}:${value}`).sort()
 
+/** Pull a [min, max] range inside the data's bounds (a reversed range falls back to the full range). */
+export function clampRange(range: [number, number], bounds: { min: number; max: number }): [number, number] {
+  const low = Math.min(Math.max(range[0], bounds.min), bounds.max)
+  const high = Math.max(Math.min(range[1], bounds.max), bounds.min)
+  return low <= high ? [low, high] : [bounds.min, bounds.max]
+}
+
 export function useDashboardFilters({
   accounts,
   centers,
@@ -367,10 +374,11 @@ export function useDashboardFilters({
         sourceFilters.centerIncYearRange[1] !== centerIncYearRange.max
       )) count += 1
 
-      // Boolean toggles: count as 1 if toggled on
-      if (e("accountHqRevenueIncludeNull") && sourceFilters.accountHqRevenueIncludeNull) count += 1
-      if (e("yearsInIndiaIncludeNull") && sourceFilters.yearsInIndiaIncludeNull) count += 1
-      if (e("centerIncYearIncludeNull") && sourceFilters.centerIncYearIncludeNull) count += 1
+      // "Include all" toggles are on by default; they only narrow the results
+      // (and count as a filter) when switched off.
+      if (e("accountHqRevenueIncludeNull") && !sourceFilters.accountHqRevenueIncludeNull) count += 1
+      if (e("yearsInIndiaIncludeNull") && !sourceFilters.yearsInIndiaIncludeNull) count += 1
+      if (e("centerIncYearIncludeNull") && !sourceFilters.centerIncYearIncludeNull) count += 1
 
       return count
     },
@@ -409,11 +417,19 @@ export function useDashboardFilters({
   const handleLoadSavedFilters = useCallback((savedFilters: Filters) => {
     // Re-derive exact names from the current account lists so edits to a list
     // reach saved filters that reference it.
-    const sanitizedSavedFilters = expandAccountLists(sanitizeFilters(savedFilters), accountLists)
+    const expanded = expandAccountLists(sanitizeFilters(savedFilters), accountLists)
+    // A filter saved against older data can carry range bounds outside today's
+    // data (and its slider); pull them back inside so the inputs and slider agree.
+    const sanitizedSavedFilters: Filters = {
+      ...expanded,
+      accountHqRevenueRange: clampRange(expanded.accountHqRevenueRange, baseRanges.revenueRange),
+      accountYearsInIndiaRange: clampRange(expanded.accountYearsInIndiaRange, baseRanges.yearsInIndiaRange),
+      centerIncYearRange: clampRange(expanded.centerIncYearRange, baseRanges.centerIncYearRange),
+    }
     isRevenueRangeAutoRef.current = false
     setPendingFilters(sanitizedSavedFilters)
     setFilters(sanitizedSavedFilters)
-  }, [accountLists])
+  }, [accountLists, baseRanges])
 
   const handleMinRevenueChange = useCallback(
     (value: string) => {

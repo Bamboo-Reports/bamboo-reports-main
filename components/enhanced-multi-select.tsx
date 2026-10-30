@@ -425,16 +425,24 @@ export const EnhancedMultiSelect = React.memo(function EnhancedMultiSelect({
             >
               <div className="flex min-w-0 flex-wrap items-center gap-1">
                 {selected.length === 0 && <span className="text-muted-foreground">{placeholder}</span>}
-                {selected.length > 0 && (
-                  <div className="flex items-center gap-2 mr-2">
+                {/* Each value already shows as an include/exclude badge; the
+                    summary only helps once there are several of them. */}
+                {selected.length > 2 && (
+                  <div
+                    className="flex items-center gap-2 mr-2"
+                    title={[
+                      includeCount > 0 && `${includeCount} included`,
+                      excludeCount > 0 && `${excludeCount} excluded`,
+                    ].filter(Boolean).join(", ")}
+                  >
                     {includeCount > 0 && (
                       <span className="text-xs text-green-600 dark:text-green-400 font-medium">
-                        +{includeCount}
+                        {includeCount} incl
                       </span>
                     )}
                     {excludeCount > 0 && (
                       <span className="text-xs text-red-600 dark:text-red-400 font-medium">
-                        -{excludeCount}
+                        {excludeCount} excl
                       </span>
                     )}
                   </div>

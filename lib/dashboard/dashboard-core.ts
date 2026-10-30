@@ -2,6 +2,7 @@ import "server-only"
 
 import { buildCentersQuery, buildEntityAggregateQuery, buildFacetCountsQuery, type AggregateEntity, type FilterAccess, type SqlQuery } from "@/lib/dashboard/filtering-sql"
 import { queryWarehouse } from "@/lib/db/warehouse"
+import { HEADCOUNT_SUM_SQL } from "@/lib/dashboard/headcount"
 import { dashboardCacheTtlMs, getOrCompute } from "@/lib/cache/memory"
 import type { ChartsResponse, FacetsResponse, SummaryResponse } from "@/lib/dashboard/api-client"
 import type { AvailableOptions, ChartData, FilterOption, FilterValue, Filters } from "@/lib/types"
@@ -117,8 +118,7 @@ export function computeFacets(filters: Filters, access: FilterAccess, opts: { by
 const CENTER_METRICS =
   "count(*)::int as centers, " +
   "sum(case when center_status = 'Upcoming' then 1 else 0 end)::int as upcoming, " +
-  "coalesce(sum(case when (center_type is null or lower(center_type) not in " +
-  "('manufacturing', 'sales & marketing', 'bpo', 'distribution')) then center_employees else 0 end), 0)::int as headcount"
+  `${HEADCOUNT_SUM_SQL} as headcount`
 
 const num = (rows: Record<string, unknown>[], key: string) => Number(rows[0]?.[key] ?? 0)
 
@@ -192,17 +192,24 @@ const CHARTS: { entity: AggregateEntity; column: string }[] = [
 const sortBuckets = (rows: ChartData[]) =>
   rows.sort((a, b) => b.value - a.value || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
 
-// Top 10 (calculateChartData / calculateCenterChartData / calculateFunctionChartData).
-const top10 = (rows: ChartData[]): ChartData[] => rows.slice(0, 10)
-
-// Top 5 + "Others" (calculateCityChartData).
-function cityBucket(rows: ChartData[]): ChartData[] {
-  if (rows.length <= 5) return rows
-  const top5 = rows.slice(0, 5)
-  const others = rows.slice(5).reduce((sum, r) => sum + r.value, 0)
-  if (others > 0) top5.push({ name: "Others", value: others })
-  return top5
+/**
+ * The largest `limit` buckets plus one "Others" bucket holding the remainder,
+ * so the buckets still add up to the full count. Charts work out percentages
+ * from that sum; dropping the tail instead would overstate every slice. A
+ * value literally named "Others" is folded into the remainder.
+ */
+function topWithOthers(rows: ChartData[], limit: number): ChartData[] {
+  const named = rows.filter((r) => r.name !== "Others")
+  const existingOthers = rows.find((r) => r.name === "Others")?.value ?? 0
+  if (named.length <= limit && existingOthers === 0) return rows
+  const top = named.slice(0, limit)
+  const others = existingOthers + named.slice(limit).reduce((sum, r) => sum + r.value, 0)
+  if (others > 0) top.push({ name: "Others", value: others })
+  return top
 }
+
+const top10 = (rows: ChartData[]): ChartData[] => topWithOthers(rows, 10)
+const cityBucket = (rows: ChartData[]): ChartData[] => topWithOthers(rows, 5)
 
 /**
  * All 11 chart bucket lists from ONE union-all statement over a single

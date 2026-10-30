@@ -42,11 +42,8 @@ describe("analytics tracking helpers", () => {
   })
 
   it("does not mark range filters active without baseline ranges", () => {
-    const filters = makeFilters({
-      accountHqRevenueIncludeNull: false,
-      yearsInIndiaIncludeNull: false,
-      centerIncYearIncludeNull: false,
-    })
+    // The "Include all" toggles default to on, which is not an active filter.
+    const filters = makeFilters()
     const snapshot = buildTrackedFiltersSnapshot(filters)
 
     expect(snapshot.active_filter_keys).not.toEqual(

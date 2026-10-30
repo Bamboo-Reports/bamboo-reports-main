@@ -18,17 +18,26 @@ import {
 } from "@/components/ui/context-menu"
 import type { ChartData } from "@/lib/types"
 import type { Options, Point } from "highcharts"
+import { compareRangeLabels } from "@/lib/utils/range-order"
 
 export interface PieChartLabelDisplay {
   showCategoryLabels: boolean
   showPercentages: boolean
 }
 
+// Longer names are shortened in the slice label (the tooltip shows them in
+// full) so the percentage is never cut off.
+const MAX_LABEL_CATEGORY_LENGTH = 20
+
 export function formatPieChartDataLabel(
-  category: string,
+  categoryName: string,
   percent: number,
   display: PieChartLabelDisplay
 ) {
+  const category =
+    categoryName.length > MAX_LABEL_CATEGORY_LENGTH
+      ? `${categoryName.slice(0, MAX_LABEL_CATEGORY_LENGTH - 1).trimEnd()}…`
+      : categoryName
   if (display.showCategoryLabels && display.showPercentages) {
     return `${category}: ${percent}%`
   }
@@ -51,6 +60,11 @@ interface PieChartCardProps {
   onLabelDisplayChange: (display: PieChartLabelDisplay) => void
   /** A newer filter state is loading; shown data (if any) is the previous state's. */
   loading?: boolean
+  /**
+   * "range" for bucket labels like "<50" or "1K - 5K": slices go in range
+   * order, shaded light to dark, instead of largest first.
+   */
+  order?: "size" | "range"
 }
 
 export const PieChartCard = memo(({
@@ -62,6 +76,7 @@ export const PieChartCard = memo(({
   labelDisplay,
   onLabelDisplayChange,
   loading = false,
+  order = "size",
 }: PieChartCardProps) => {
   const OTHERS_THRESHOLD_PERCENT = 5
   // Safety check: ensure data is an array
@@ -124,12 +139,25 @@ export const PieChartCard = memo(({
 
     mappedData.forEach((segment) => {
       const percent = (segment.y / total) * 100
-      if (percent < OTHERS_THRESHOLD_PERCENT) {
+      // The API already sends the long tail as "Others"; merge small slices into it.
+      if (percent < OTHERS_THRESHOLD_PERCENT || segment.name === "Others") {
         othersTotal += segment.y
       } else {
         majorSegments.push(segment)
       }
     })
+
+    if (order === "range") {
+      // Still the largest buckets, shown in range order on a light-to-dark
+      // scale; the lightest shade stays reserved for "Others".
+      majorSegments.sort((a, b) => compareRangeLabels(a.name, b.name))
+      const darkest = 0
+      const lightest = PIE_CHART_COLORS.length - 2
+      majorSegments.forEach((segment, index) => {
+        const step = majorSegments.length > 1 ? index / (majorSegments.length - 1) : 1
+        segment.color = PIE_CHART_COLORS[Math.round(lightest - step * (lightest - darkest))]
+      })
+    }
 
     if (othersTotal > 0) {
       majorSegments.push({
@@ -140,7 +168,7 @@ export const PieChartCard = memo(({
     }
 
     return majorSegments
-  }, [safeData, dataKey, total])
+  }, [safeData, dataKey, total, order])
 
   const options = React.useMemo<Options>(() => {
     return {
@@ -193,7 +221,9 @@ export const PieChartCard = memo(({
           dataLabels: {
             enabled: labelDisplay.showCategoryLabels || labelDisplay.showPercentages,
             distance: 12,
-            allowOverlap: false,
+            // Highcharts already spreads pie labels apart; its extra overlap
+            // check is conservative and hid labels that did not touch.
+            allowOverlap: true,
             connectorWidth: 1,
             connectorColor: "hsl(var(--border))",
             style: {
@@ -202,6 +232,9 @@ export const PieChartCard = memo(({
               fontWeight: "600",
               fontFamily: "'DM Sans', ui-sans-serif, system-ui, sans-serif",
               textOutline: "none",
+              // One line per label: a wrapped label is twice as tall and
+              // crowds its neighbours (names are shortened in the formatter).
+              whiteSpace: "nowrap",
             },
             formatter: function () {
               const point = this as unknown as Point
@@ -235,6 +268,33 @@ export const PieChartCard = memo(({
           data: seriesData,
         },
       ],
+      responsive: {
+        rules: [
+          {
+            // On narrow charts a name plus percentage gets trimmed to "IT: …",
+            // losing the number; show only the percentage (the tooltip has the name).
+            condition: { maxWidth: 420 },
+            chartOptions: {
+              plotOptions: {
+                pie: {
+                  dataLabels: {
+                    formatter: function () {
+                      const point = this as unknown as Point
+                      const value = typeof point.y === "number" ? point.y : 0
+                      if (value <= 0 || total <= 0) return ""
+                      const percent = Math.round((value / total) * 100)
+                      return formatPieChartDataLabel(point.name, percent, {
+                        showCategoryLabels: labelDisplay.showCategoryLabels && !labelDisplay.showPercentages,
+                        showPercentages: labelDisplay.showPercentages,
+                      })
+                    },
+                  },
+                },
+              },
+            },
+          },
+        ],
+      },
     }
   }, [seriesData, total, countLabel, showBigPercentage, title, labelDisplay])
 
