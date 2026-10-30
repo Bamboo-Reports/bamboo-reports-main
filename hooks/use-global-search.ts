@@ -1,10 +1,12 @@
 "use client"
 
 import { useMemo, useState, useCallback, useRef, useEffect } from "react"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { devError } from "@/lib/utils/dev-log"
-import { fetchSearch } from "@/lib/dashboard/api-client"
+import type { SearchResponse } from "@/lib/dashboard/api-client"
+import { searchQuery } from "@/lib/dashboard/queries"
 import type { Account, Alias, Center, Prospect } from "@/lib/types"
 import { buildSearchIndex, searchIndex, type GroupedResults, type SearchResult } from "@/lib/search"
 
@@ -43,6 +45,26 @@ interface UseGlobalSearchReturn {
 
 const DEBOUNCE_MS = 300
 
+type ServerGroup = SearchResponse["accounts"]
+
+function toGroupedResults(res: SearchResponse) {
+  const group = (g: ServerGroup): GroupedResults => ({
+    items: g.items.map(
+      (item) =>
+        ({
+          type: item.type,
+          id: item.id,
+          title: item.title,
+          subtitle: item.subtitle,
+          meta: "",
+          data: item.data,
+        }) as SearchResult
+    ),
+    totalMatches: g.totalMatches,
+  })
+  return { accounts: group(res.accounts), centers: group(res.centers), prospects: group(res.prospects), total: res.total }
+}
+
 export function useGlobalSearch({
   accounts,
   centers,
@@ -53,69 +75,34 @@ export function useGlobalSearch({
   const [query, setQuery] = useState("")
   const [debouncedQuery, setDebouncedQuery] = useState("")
   const [isOpen, setIsOpen] = useState(false)
-  // The (trimmed) query whose lookup last finished. Searching is derived from
-  // it rather than stored, so typing a character and deleting it within the
-  // debounce lands back on a resolved query instead of sticking (#288).
-  const [resolvedQuery, setResolvedQuery] = useState("")
-  const [serverResults, setServerResults] = useState(EMPTY_RESULTS)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const serverRequestRef = useRef(0)
 
   const index = useMemo(
     () => (serverMode ? buildSearchIndex([], [], [], []) : buildSearchIndex(accounts, centers, prospects, aliases ?? [])),
     [serverMode, accounts, centers, prospects, aliases]
   )
 
-  // Server mode: fetch grouped results for the debounced query.
+  // Server mode: grouped results for the debounced query. Previous results
+  // stay on screen while the next query loads (keepPreviousData); a failed
+  // lookup shows no results.
+  const term = debouncedQuery.trim()
+  const serverEnabled = serverMode && term.length >= 2
+  const serverQuery = useQuery({ ...searchQuery(term), enabled: serverEnabled, placeholderData: keepPreviousData })
+  const serverError = serverQuery.error
   useEffect(() => {
-    if (!serverMode) return
-    const term = debouncedQuery.trim()
-    const requestId = ++serverRequestRef.current
-    if (term.length < 2) {
-      setServerResults(EMPTY_RESULTS)
-      setResolvedQuery(term)
-      return
-    }
-    fetchSearch(term)
-      .then((res) => {
-        if (serverRequestRef.current !== requestId) return
-        const group = (g: { items: Array<{ type: string; id: string; title: string; subtitle: string; data?: unknown }>; totalMatches: number }): GroupedResults => ({
-          items: g.items.map(
-            (item) =>
-              ({
-                type: item.type,
-                id: item.id,
-                title: item.title,
-                subtitle: item.subtitle,
-                meta: "",
-                data: item.data,
-              }) as SearchResult
-          ),
-          totalMatches: g.totalMatches,
-        })
-        setServerResults({
-          accounts: group(res.accounts),
-          centers: group(res.centers),
-          prospects: group(res.prospects),
-          total: res.total,
-        })
-        setResolvedQuery(term)
-      })
-      .catch((err) => {
-        if (serverRequestRef.current !== requestId) return
-        devError("server search failed:", err)
-        setServerResults(EMPTY_RESULTS)
-        setResolvedQuery(term)
-      })
-  }, [serverMode, debouncedQuery])
+    if (serverError) devError("server search failed:", serverError)
+  }, [serverError])
+  // Placeholder data ignores `enabled`, so gate on it: short terms show nothing.
+  const serverData = serverEnabled ? serverQuery.data : undefined
+  const serverResults = useMemo(() => (serverData ? toGroupedResults(serverData) : EMPTY_RESULTS), [serverData])
 
-  // Client mode resolves synchronously once the debounce fires.
-  useEffect(() => {
-    if (!serverMode) setResolvedQuery(debouncedQuery.trim())
-  }, [serverMode, debouncedQuery])
-
+  // Searching runs from the keystroke until the lookup for the typed query
+  // resolves. It is derived from the debounced term and the query state, never
+  // stored, so typing a character and deleting it within the debounce lands
+  // back on a resolved query instead of sticking (#288).
+  const settled = !serverEnabled || (!serverQuery.isPending && !serverQuery.isPlaceholderData)
   const trimmedQuery = query.trim()
-  const isSearching = trimmedQuery.length >= 2 && trimmedQuery !== resolvedQuery
+  const isSearching = trimmedQuery.length >= 2 && (trimmedQuery !== term || !settled)
 
   const handleSetQuery = useCallback(
     (value: string) => {

@@ -1,8 +1,10 @@
 import { queryOptions } from "@tanstack/react-query"
 import {
+  fetchAccountAutocomplete,
   fetchAccountRelated,
   fetchCenterDetail,
   fetchProspectEngagements,
+  fetchSearch,
 } from "@/lib/dashboard/api-client"
 
 /**
@@ -29,4 +31,20 @@ export const prospectEngagementsQuery = (psUniqueKey: string) =>
   queryOptions({
     queryKey: ["prospect-engagements", psUniqueKey],
     queryFn: () => fetchProspectEngagements(psUniqueKey),
+  })
+
+// Search lookups. Callers debounce the input and pass only the settled term,
+// so the key changes once per pause in typing; revisited terms are instant.
+
+export const searchQuery = (term: string) =>
+  queryOptions({
+    queryKey: ["search", term],
+    queryFn: () => fetchSearch(term),
+  })
+
+/** Shared by the account filter autocomplete and the account picker. */
+export const accountAutocompleteQuery = (term: string) =>
+  queryOptions({
+    queryKey: ["account-autocomplete", term],
+    queryFn: () => fetchAccountAutocomplete(term),
   })

@@ -1,11 +1,12 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { RiCheckLine, RiExpandUpDownLine, RiLoader4Line, RiSearchLine } from "@remixicon/react"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
-import { fetchAccountAutocomplete } from "@/lib/dashboard/api-client"
+import { accountAutocompleteQuery } from "@/lib/dashboard/queries"
 import { devError } from "@/lib/utils/dev-log"
 
 export type AccountPickerOption = {
@@ -32,15 +33,13 @@ interface AccountPickerProps {
 export function AccountPicker({ value, onChange, suggestions = [], placeholder = "Select account", className, ariaLabel }: AccountPickerProps) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
-  const [results, setResults] = useState<AccountPickerOption[]>([])
-  const [searching, setSearching] = useState(false)
-  const requestRef = useRef(0)
+  const [debouncedQuery, setDebouncedQuery] = useState("")
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!open) {
       setQuery("")
-      setResults([])
+      setDebouncedQuery("")
       return
     }
     const timer = setTimeout(() => inputRef.current?.focus(), 0)
@@ -48,38 +47,35 @@ export function AccountPicker({ value, onChange, suggestions = [], placeholder =
   }, [open])
 
   useEffect(() => {
-    const term = query.trim().toLowerCase()
-    const requestId = ++requestRef.current
-    if (term.length < 2) {
-      setResults([])
-      setSearching(false)
-      return
-    }
-    setSearching(true)
-    const timer = setTimeout(() => {
-      fetchAccountAutocomplete(term)
-        .then((res) => {
-          if (requestRef.current !== requestId) return
-          setResults(
-            res.suggestions.map((s) => ({
-              name: s.value,
-              matchedAlias: (s.matchedAlias as AccountPickerOption["matchedAlias"]) ?? null,
-              visibility: s.visibility
-                ? { visibility: (s.visibility.visibility as "include" | "exclude" | null) ?? null, note: s.visibility.note }
-                : null,
-            }))
-          )
-          setSearching(false)
-        })
-        .catch((err) => {
-          if (requestRef.current !== requestId) return
-          devError("account picker search failed:", err)
-          setResults([])
-          setSearching(false)
-        })
-    }, 250)
+    const timer = setTimeout(() => setDebouncedQuery(query), 250)
     return () => clearTimeout(timer)
   }, [query])
+
+  // Results for the debounced term, shared with the account filter
+  // autocomplete's cache. Previous results stay up while the next term loads.
+  const term = debouncedQuery.trim().toLowerCase()
+  const enabled = term.length >= 2
+  const lookup = useQuery({ ...accountAutocompleteQuery(term), enabled, placeholderData: keepPreviousData })
+  const lookupError = lookup.error
+  useEffect(() => {
+    if (lookupError) devError("account picker search failed:", lookupError)
+  }, [lookupError])
+  // Placeholder data ignores `enabled`, so gate on it: short terms show nothing.
+  const data = enabled ? lookup.data : undefined
+  const results = useMemo<AccountPickerOption[]>(
+    () =>
+      (data?.suggestions ?? []).map((s) => ({
+        name: s.value,
+        matchedAlias: (s.matchedAlias as AccountPickerOption["matchedAlias"]) ?? null,
+        visibility: s.visibility
+          ? { visibility: (s.visibility.visibility as "include" | "exclude" | null) ?? null, note: s.visibility.note }
+          : null,
+      })),
+    [data]
+  )
+  const typed = query.trim().toLowerCase()
+  const settled = !enabled || (!lookup.isPending && !lookup.isPlaceholderData)
+  const searching = typed.length >= 2 && (typed !== term || !settled)
 
   const showSuggestions = query.trim().length < 2
   const options = showSuggestions ? suggestions : results
