@@ -64,22 +64,17 @@ export function LoadingState() {
 
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden px-6 pt-6">
           {/* Summary cards: matches the row in summary-cards.tsx. */}
-          <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-5">
+          <div className="mb-6 grid grid-cols-1 gap-3 md:grid-cols-5">
             {SUMMARY_GHOSTS.map((widths, index) => (
-              <Card key={index} className="border-border/70 bg-card/80 shadow-none">
-                <CardHeader className="px-4 pb-1.5 pt-3">
-                  <div className="flex items-center gap-2">
-                    <Skeleton className="h-4 w-4 rounded" />
-                    <Skeleton className={`h-3.5 ${widths.label}`} />
-                  </div>
-                </CardHeader>
-                <CardContent className="px-4 pb-4 pt-1">
-                  <Skeleton className={`h-7 ${widths.value}`} />
-                  <div className="mt-2.5 flex items-center justify-between gap-2">
-                    <Skeleton className="h-3 w-20" />
-                    <Skeleton className="h-5 w-14 rounded-full" />
-                  </div>
-                </CardContent>
+              <Card key={index} className="border-border/70 bg-card/80 px-3.5 pb-[11px] pt-2.5 shadow-none">
+                <div className="flex h-[19.5px] items-center gap-1.5">
+                  <Skeleton className="h-4 w-4 rounded" />
+                  <Skeleton className={`h-3 ${widths.label}`} />
+                </div>
+                <div className="mt-1 flex h-[30px] items-center gap-1.5">
+                  <Skeleton className={`h-6 ${widths.value}`} />
+                  <Skeleton className="h-3 w-12" />
+                </div>
               </Card>
             ))}
           </div>

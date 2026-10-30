@@ -230,7 +230,7 @@ export const PieChartCard = memo(({
               color: "hsl(var(--foreground))",
               fontSize: "11px",
               fontWeight: "600",
-              fontFamily: "'DM Sans', ui-sans-serif, system-ui, sans-serif",
+              fontFamily: "'Geist', ui-sans-serif, system-ui, sans-serif",
               textOutline: "none",
               // One line per label: a wrapped label is twice as tall and
               // crowds its neighbours (names are shortened in the formatter).
