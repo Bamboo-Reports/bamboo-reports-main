@@ -8,7 +8,6 @@ import {
   RiBuildingLine,
   RiCloseLine,
   RiDownload2Line,
-  RiExpandUpDownLine,
   RiFileList3Line,
   RiFilePdf2Line,
   RiGroupLine,
@@ -244,7 +243,6 @@ export function FiltersSidebar({
         <span className="truncate text-[12.5px] font-semibold text-foreground">{user.displayName}</span>
         <span className="truncate text-[11.5px] text-muted-foreground">{user.roleLabel}</span>
       </span>
-      <RiExpandUpDownLine className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
     </button>
   )
 
