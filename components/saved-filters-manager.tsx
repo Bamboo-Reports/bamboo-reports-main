@@ -30,7 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { RiArrowDownSLine, RiCloseLine, RiDeleteBinLine, RiFileTextLine, RiFolderOpenLine, RiGroupLine, RiListCheck3, RiSaveLine, RiSettings4Line, RiShareLine, RiShieldFlashLine } from "@remixicon/react"
+import { RiArrowDownSLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiFileTextLine, RiFolderOpenLine, RiGroupLine, RiListCheck3, RiSaveLine, RiSettings4Line, RiShareLine, RiShieldFlashLine } from "@remixicon/react"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { buildTrackedFiltersSnapshot, normalizeTrackedText, toTrackedStringArray } from "@/lib/analytics/tracking"
@@ -80,6 +80,20 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
 
   const [saveDialogOpen, setSaveDialogOpen] = useState(false)
   const [accountListsOpen, setAccountListsOpen] = useState(false)
+  // The last loaded saved filter. `snapshot` is the filters it produced, taken
+  // on the first render after loading; the name shows only while nothing has
+  // been changed since.
+  const [appliedFilter, setAppliedFilter] = useState<{
+    id: string
+    name: string
+    baseline: Filters
+    snapshot: string | null
+  } | null>(null)
+  if (appliedFilter && appliedFilter.snapshot === null && currentFilters !== appliedFilter.baseline) {
+    setAppliedFilter({ ...appliedFilter, snapshot: JSON.stringify(currentFilters) })
+  }
+  const activeSavedFilter =
+    appliedFilter?.snapshot != null && JSON.stringify(currentFilters) === appliedFilter.snapshot ? appliedFilter : null
   const { lists: accountLists } = useAccountLists()
   const [manageDialogOpen, setManageDialogOpen] = useState(false)
   const [savedFiltersDropdownOpen, setSavedFiltersDropdownOpen] = useState(false)
@@ -130,6 +144,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
   )
 
   const handleLoadFilter = useCallback((savedFilter: SavedFilter) => {
+    setAppliedFilter({ id: savedFilter.id, name: savedFilter.name, baseline: currentFilters, snapshot: null })
     onLoadFilters(savedFilter.filters)
     captureEvent(ANALYTICS_EVENTS.SAVED_FILTER_LOADED, {
       saved_filter_id: savedFilter.id,
@@ -137,7 +152,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
       loaded_active_filters_count: calculateActiveFilters(savedFilter.filters),
       loaded_filters_snapshot: buildTrackedFiltersSnapshot(savedFilter.filters),
     })
-  }, [onLoadFilters])
+  }, [onLoadFilters, currentFilters])
 
   const handleDeleteFilter = useCallback((filter: SavedFilter) => {
     setFilterToDelete(filter)
@@ -282,7 +297,9 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
             >
               <div className="flex items-center gap-2 truncate">
                 <RiFolderOpenLine className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <span className="truncate">Saved Filters</span>
+                <span className="truncate" title={activeSavedFilter ? `Applied: ${activeSavedFilter.name}` : undefined}>
+                  {activeSavedFilter?.name ?? "Saved Filters"}
+                </span>
               </div>
               <RiArrowDownSLine className="h-3.5 w-3.5 opacity-50 ml-2 shrink-0" />
             </Button>
@@ -306,7 +323,12 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
                     onClick={() => handleLoadFilter(filter)}
                     title={filter.name}
                   >
-                    <span className="font-medium text-sm">{filter.name}</span>
+                    <span className="flex items-center gap-1.5 font-medium text-sm">
+                      {filter.name}
+                      {activeSavedFilter?.id === filter.id && (
+                        <RiCheckLine className="h-3.5 w-3.5 shrink-0 text-primary" aria-label="Applied" />
+                      )}
+                    </span>
                   </button>
                   <Button
                     type="button"
@@ -342,7 +364,12 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
                       onClick={() => handleLoadFilter(filter)}
                       title={filter.name}
                     >
-                      <span className="font-medium text-sm">{filter.name}</span>
+                      <span className="flex items-center gap-1.5 font-medium text-sm">
+                        {filter.name}
+                        {activeSavedFilter?.id === filter.id && (
+                          <RiCheckLine className="h-3.5 w-3.5 shrink-0 text-primary" aria-label="Applied" />
+                        )}
+                      </span>
                     </button>
                   </DropdownMenuItem>
                 ))}
