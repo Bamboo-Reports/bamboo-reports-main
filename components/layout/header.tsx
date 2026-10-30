@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { RiCompass3Line, RiComputerLine, RiFileZipLine, RiLogoutBoxRLine, RiMoonLine, RiRefreshLine, RiSearchLine, RiSunLine, RiTerminalBoxLine, RiTimeLine, RiUserLine } from "@remixicon/react"
+import { RiCollapseHorizontalLine, RiCompass3Line, RiComputerLine, RiExpandHorizontalLine, RiFileZipLine, RiLogoutBoxRLine, RiMagicLine, RiMoonLine, RiRefreshLine, RiSearchLine, RiSunLine, RiTerminalBoxLine, RiTimeLine, RiUserLine } from "@remixicon/react"
 import { useTheme } from 'next-themes'
 import { Button } from '@/components/ui/button'
 import {
@@ -21,6 +21,7 @@ import { normalizeUserRole } from '@/lib/auth/roles'
 import { NOTIFICATIONS_ENABLED } from '@/lib/config/notifications'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { markManualSignOut } from '@/hooks/use-auth-guard'
+import { useNumberFormatPreference, type NumberFormatPreference } from '@/hooks/use-number-format-preference'
 import type { Profile } from '@/lib/types'
 
 interface HeaderProps {
@@ -45,6 +46,10 @@ const THEME_OPTIONS: Array<{
   { value: 'system', label: 'System', icon: RiComputerLine },
 ]
 
+const SEGMENT_GROUP_CLASS = "grid grid-cols-3 gap-1 rounded-xl border border-border/70 bg-muted/35 p-1"
+const SEGMENT_ACTIVE_CLASS = "inline-flex items-center justify-center gap-1.5 rounded-lg bg-background px-2 py-1.5 text-xs font-semibold text-foreground shadow-sm ring-1 ring-border/60 transition-colors"
+const SEGMENT_IDLE_CLASS = "inline-flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-background/50 hover:text-foreground disabled:pointer-events-none disabled:opacity-60"
+
 function ProfileThemeSwitcher() {
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
@@ -59,7 +64,7 @@ function ProfileThemeSwitcher() {
     <div className="px-4 py-3">
       <div className="mb-2 text-xs font-medium text-muted-foreground">Appearance</div>
       <div
-        className="grid grid-cols-3 gap-1 rounded-xl border border-border/70 bg-muted/35 p-1"
+        className={SEGMENT_GROUP_CLASS}
         role="tablist"
         aria-label="Theme preference"
       >
@@ -84,11 +89,7 @@ function ProfileThemeSwitcher() {
                 }
                 setTheme(option.value)
               }}
-              className={
-                isActive
-                  ? "inline-flex items-center justify-center gap-1.5 rounded-lg bg-background px-2 py-1.5 text-xs font-semibold text-foreground shadow-sm ring-1 ring-border/60 transition-colors"
-                  : "inline-flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-background/50 hover:text-foreground disabled:pointer-events-none disabled:opacity-60"
-              }
+              className={isActive ? SEGMENT_ACTIVE_CLASS : SEGMENT_IDLE_CLASS}
             >
               <Icon className="h-3.5 w-3.5" />
               {option.label}
@@ -96,6 +97,59 @@ function ProfileThemeSwitcher() {
           )
         })}
       </div>
+    </div>
+  )
+}
+
+const NUMBER_FORMAT_OPTIONS: Array<{
+  value: NumberFormatPreference
+  label: string
+  hint: string
+  icon: React.ComponentType<{ className?: string }>
+}> = [
+  { value: 'auto', label: 'Auto', hint: 'Shortens only when a card is too narrow', icon: RiMagicLine },
+  { value: 'full', label: 'Full', hint: 'Always exact, for example 486,120', icon: RiExpandHorizontalLine },
+  { value: 'short', label: 'Short', hint: 'Always shortened, for example 486K', icon: RiCollapseHorizontalLine },
+]
+
+function ProfileNumberFormatSwitcher() {
+  const [preference, setPreference] = useNumberFormatPreference()
+  const active = NUMBER_FORMAT_OPTIONS.find((option) => option.value === preference) ?? NUMBER_FORMAT_OPTIONS[0]
+
+  return (
+    <div className="px-4 pb-3">
+      <div className="mb-2 text-xs font-medium text-muted-foreground">Summary numbers</div>
+      <div className={SEGMENT_GROUP_CLASS} role="tablist" aria-label="Summary number format">
+        {NUMBER_FORMAT_OPTIONS.map((option) => {
+          const Icon = option.icon
+          const isActive = preference === option.value
+
+          return (
+            <button
+              key={option.value}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              title={option.hint}
+              onClick={() => {
+                if (option.value !== preference) {
+                  captureEvent(ANALYTICS_EVENTS.NUMBER_FORMAT_CHANGED, {
+                    number_format: option.value,
+                    previous_number_format: preference,
+                    source: 'profile_menu',
+                  })
+                }
+                setPreference(option.value)
+              }}
+              className={isActive ? SEGMENT_ACTIVE_CLASS : SEGMENT_IDLE_CLASS}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {option.label}
+            </button>
+          )
+        })}
+      </div>
+      <p className="mt-1.5 text-[11px] text-muted-foreground">{active.hint}</p>
     </div>
   )
 }
@@ -316,6 +370,7 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
                 <DropdownMenuSeparator />
 
                 <ProfileThemeSwitcher />
+                <ProfileNumberFormatSwitcher />
 
                 <DropdownMenuSeparator />
 

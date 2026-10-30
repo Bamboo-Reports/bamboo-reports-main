@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Summary cards: height mockups</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css" rel="stylesheet" />
+<style>
+  /* Tokens copied from app/globals.css */
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 214 45% 15%;
+    --card: 0 0% 100%;
+    --primary: 204 100% 41%;
+    --secondary: 210 25% 94%;
+    --muted: 210 25% 94%;
+    --muted-foreground: 215 20% 39%;
+    --border: 212 24% 86%;
+    --ring: 204 100% 41%;
+    --sidebar-foreground: 214 45% 15%;
+    --sidebar-ring: 28 88% 53%;
+    --radius: 0.5rem;
+    --inner-hl: rgba(255,255,255,.4);
+    --shadow: 0 14px 42px -30px rgba(0,0,0,.45);
+    --shadow-active: 0 18px 55px -35px rgba(0,0,0,.6);
+  }
+  .dark {
+    --background: 0 0% 10%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 12%;
+    --primary: 204 92% 56%;
+    --secondary: 0 0% 16%;
+    --muted: 0 0% 16%;
+    --muted-foreground: 0 0% 65%;
+    --border: 0 0% 24%;
+    --ring: 0 0% 83.1%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-ring: 28 88% 60%;
+    --inner-hl: rgba(255,255,255,.1);
+  }
+
+  * { box-sizing: border-box; }
+  html { color-scheme: light; }
+  html.dark { color-scheme: dark; }
+  body {
+    margin: 0;
+    font-family: "DM Sans", system-ui, sans-serif;
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: hsl(var(--primary) / .2); }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* ---------- page chrome ---------- */
+  .page { max-width: 1320px; margin: 0 auto; padding: 32px 24px 80px; }
+  .intro { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 32px; margin-bottom: 28px; }
+  .intro h1 { margin: 0 0 6px; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .intro p { margin: 0; max-width: 62ch; font-size: 14px; line-height: 1.5; color: hsl(var(--muted-foreground)); }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; }
+  .toggle {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 32px; padding: 0 12px; border-radius: 999px;
+    border: 1px solid hsl(var(--border)); background: hsl(var(--card));
+    font-size: 13px; font-weight: 500; cursor: pointer;
+    transition: background .15s, border-color .15s;
+  }
+  .toggle[aria-pressed="true"] { background: hsl(var(--primary) / .1); border-color: hsl(var(--primary) / .5); color: hsl(var(--primary)); }
+
+  .variant { padding: 24px 0 28px; border-top: 1px solid hsl(var(--border)); }
+  .variant-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin-bottom: 4px; }
+  .variant-head h2 { margin: 0; font-size: 16px; font-weight: 600; }
+  .height-tag {
+    font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px;
+    background: hsl(var(--secondary)); color: hsl(var(--muted-foreground));
+  }
+  .height-tag b { color: hsl(var(--foreground)); font-weight: 600; }
+  .variant > p { margin: 0 0 16px; max-width: 80ch; font-size: 13.5px; line-height: 1.5; color: hsl(var(--muted-foreground)); }
+  /* Mimics the dashboard content column: px-6 inside the scroll area */
+  .stage { padding: 20px 24px; border-radius: 12px; background: hsl(var(--background)); border: 1px dashed hsl(var(--border)); }
+  .stage-below { margin-top: 16px; height: 36px; border-radius: 8px; background: hsl(var(--muted)); display: flex; align-items: center; padding: 0 12px; font-size: 12px; color: hsl(var(--muted-foreground)); }
+
+  /* ---------- shared card bits ---------- */
+  .icon { font-size: 16px; line-height: 1; color: hsl(var(--primary)); }
+  .muted { color: hsl(var(--muted-foreground)); }
+  .skel { display: inline-block; border-radius: 6px; background: hsl(var(--muted)); animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .5; } }
+  @media (prefers-reduced-motion: reduce) { .skel { animation: none; } }
+  .np-pill {
+    display: inline-flex; align-items: center; height: 18px; padding: 0 7px; border-radius: 999px;
+    font-size: 10.5px; font-weight: 600; letter-spacing: .01em;
+    background: hsl(var(--muted)); color: hsl(var(--muted-foreground));
+  }
+
+  /* ---------- V0 current ---------- */
+  .v0 { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 16px; }
+  .v0 .card {
+    position: relative; overflow: hidden; text-align: left; padding: 0;
+    border-radius: 0.75rem; border: 1px solid hsl(var(--border) / .7); background: hsl(var(--card));
+    box-shadow: var(--shadow); transition: box-shadow .3s ease-out;
+  }
+  .v0 .card::before { content: ""; position: absolute; inset: 1px; border-radius: calc(var(--radius) - 2px); border: 1px solid var(--inner-hl); opacity: .6; pointer-events: none; }
+  .v0 .card.interactive { cursor: pointer; }
+  .v0 .card.readonly { opacity: .8; cursor: help; }
+  .v0 .card.active { box-shadow: 0 0 0 2px hsl(var(--sidebar-ring)), var(--shadow-active); border-color: hsl(var(--sidebar-ring) / .7); }
+  .v0 .hd { display: flex; align-items: center; gap: 8px; padding: 12px 16px 6px; font-size: 14px; font-weight: 500; color: hsl(var(--sidebar-foreground)); }
+  .v0 .bd { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px; padding: 0 16px 14px; }
+  .v0 .n { display: block; font-size: 30px; font-weight: 600; line-height: 1.25; color: hsl(var(--sidebar-foreground)); }
+  .v0 .st { margin-top: 2px; font-size: 12px; color: hsl(var(--muted-foreground)); }
+  .v0 .tot { display: inline-flex; align-items: center; border-radius: 999px; border: 1px solid hsl(var(--border) / .6); background: hsl(var(--secondary) / .7); padding: 2px 10px; font-size: 11px; font-weight: 500; color: hsl(var(--muted-foreground)); white-space: nowrap; }
+
+  /* ---------- V1 tightened ---------- */
+  .v1 { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 12px; }
+  .v1 .card {
+    text-align: left; padding: 10px 14px 11px; border-radius: 0.75rem;
+    border: 1px solid hsl(var(--border) / .7); background: hsl(var(--card)); box-shadow: var(--shadow);
+    transition: box-shadow .2s ease-out, border-color .2s;
+  }
+  .v1 .card.interactive { cursor: pointer; }
+  .v1 .card.interactive:hover:not(.active) { border-color: hsl(var(--border)); box-shadow: 0 16px 48px -32px rgba(0,0,0,.5); }
+  .v1 .card.readonly { cursor: help; }
+  .v1 .card.active { box-shadow: 0 0 0 2px hsl(var(--sidebar-ring)), var(--shadow-active); border-color: transparent; }
+  .v1 .hd { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 500; }
+  .v1 .hd .np-pill { margin-left: auto; }
+  .v1 .bd { display: flex; align-items: baseline; gap: 6px; margin-top: 4px; min-width: 0; }
+  .v1 .n { font-size: 24px; font-weight: 600; line-height: 1.15; letter-spacing: -0.01em; }
+  .v1 .of { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .v1 .card.np .n, .v1 .card.np .hd span:not(.np-pill) { color: hsl(var(--muted-foreground)); }
+
+  /* ---------- V2 single row ---------- */
+  .v2 { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 12px; }
+  .v2 .card {
+    display: flex; align-items: center; gap: 10px; text-align: left; padding: 9px 12px; min-width: 0;
+    border-radius: 10px; border: 1px solid hsl(var(--border) / .7); background: hsl(var(--card)); box-shadow: var(--shadow);
+    transition: box-shadow .2s ease-out, border-color .2s;
+  }
+  .v2 .card.interactive { cursor: pointer; }
+  .v2 .card.interactive:hover:not(.active) { border-color: hsl(var(--border)); }
+  .v2 .card.readonly { cursor: help; }
+  .v2 .card.active { box-shadow: 0 0 0 2px hsl(var(--sidebar-ring)), var(--shadow-active); border-color: transparent; }
+  .v2 .ic { flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: hsl(var(--primary) / .1); }
+  .v2 .card.np .ic { background: hsl(var(--muted)); }
+  .v2 .card.np .icon { color: hsl(var(--muted-foreground)); }
+  .v2 .lbl { min-width: 0; flex: 1; }
+  .v2 .t { font-size: 12.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .v2 .sub { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .v2 .n { flex: none; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+  .v2 .card.np .n { color: hsl(var(--muted-foreground)); }
+
+  /* ---------- V3 ledger strip ---------- */
+  .v3 {
+    display: grid; grid-template-columns: repeat(5, minmax(0,1fr));
+    border-radius: 0.75rem; border: 1px solid hsl(var(--border) / .8); background: hsl(var(--card));
+    box-shadow: var(--shadow); overflow: hidden;
+  }
+  .v3 .cell {
+    position: relative; text-align: left; padding: 10px 16px 11px; border: 0; background: transparent; min-width: 0;
+    transition: background .15s;
+  }
+  .v3 .cell + .cell { border-left: 1px solid hsl(var(--border) / .8); }
+  .v3 .cell.interactive { cursor: pointer; }
+  .v3 .cell.interactive:hover:not(.active) { background: hsl(var(--muted) / .6); }
+  .v3 .cell.readonly { cursor: help; }
+  .v3 .cell.active { background: hsl(var(--sidebar-ring) / .07); }
+  .v3 .cell.active::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: hsl(var(--sidebar-ring)); }
+  .v3 .hd { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: hsl(var(--muted-foreground)); }
+  .v3 .cell.active .hd { color: hsl(var(--foreground)); }
+  .v3 .hd .np-pill { margin-left: auto; }
+  .v3 .bd { display: flex; align-items: baseline; gap: 6px; margin-top: 3px; }
+  .v3 .n { font-size: 22px; font-weight: 600; line-height: 1.15; letter-spacing: -0.01em; }
+  .v3 .of { font-size: 11.5px; white-space: nowrap; }
+  .v3 .cell.np .n { color: hsl(var(--muted-foreground)); }
+
+  /* ---------- V4 views + overview ---------- */
+  .v4 { display: flex; align-items: stretch; gap: 20px; }
+  .v4 .views {
+    flex: 3; display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 4px; padding: 4px;
+    border-radius: 12px; background: hsl(var(--muted)); border: 1px solid hsl(var(--border) / .6);
+  }
+  .v4 .seg {
+    text-align: left; padding: 7px 12px 8px; border: 0; border-radius: 9px; background: transparent; cursor: pointer; min-width: 0;
+    transition: background .15s, box-shadow .15s;
+  }
+  .v4 .seg:hover:not(.active):not(.np) { background: hsl(var(--card) / .55); }
+  .v4 .seg.active { background: hsl(var(--card)); box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 12px -6px rgba(0,0,0,.18), inset 0 -2px 0 hsl(var(--sidebar-ring)); }
+  .v4 .seg.np { cursor: help; }
+  .v4 .overview { flex: 2; display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); align-items: center; border-left: 1px solid hsl(var(--border)); padding-left: 20px; gap: 16px; }
+  .v4 .stat { text-align: left; border: 0; background: transparent; padding: 0; cursor: help; min-width: 0; }
+  .v4 .hd { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: hsl(var(--muted-foreground)); white-space: nowrap; }
+  .v4 .seg.active .hd { color: hsl(var(--foreground)); }
+  .v4 .bd { display: flex; align-items: baseline; gap: 6px; margin-top: 2px; }
+  .v4 .n { font-size: 20px; font-weight: 600; line-height: 1.15; letter-spacing: -0.01em; }
+  .v4 .of { font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .v4 .np .n { color: hsl(var(--muted-foreground)); }
+  .v4 .hd .np-pill { margin-left: auto; }
+
+  /* ---------- V5 share rail ---------- */
+  .v5 { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 12px; }
+  .v5 .card {
+    position: relative; overflow: hidden; text-align: left; padding: 10px 14px 13px; min-width: 0;
+    border-radius: 0.75rem; border: 1px solid hsl(var(--border) / .7); background: hsl(var(--card)); box-shadow: var(--shadow);
+    transition: box-shadow .2s ease-out, border-color .2s;
+  }
+  .v5 .card.interactive { cursor: pointer; }
+  .v5 .card.interactive:hover:not(.active) { border-color: hsl(var(--border)); }
+  .v5 .card.readonly { cursor: help; }
+  .v5 .card.active { box-shadow: 0 0 0 2px hsl(var(--sidebar-ring)), var(--shadow-active); border-color: transparent; }
+  .v5 .row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .v5 .hd { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 500; min-width: 0; white-space: nowrap; }
+  .v5 .pct { font-size: 11px; font-weight: 600; }
+  .v5 .bd { display: flex; align-items: baseline; gap: 6px; margin-top: 3px; }
+  .v5 .n { font-size: 22px; font-weight: 600; line-height: 1.15; letter-spacing: -0.01em; }
+  .v5 .of { font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .v5 .rail { position: absolute; left: 14px; right: 14px; bottom: 7px; height: 3px; border-radius: 3px; background: hsl(var(--muted)); overflow: hidden; }
+  .v5 .rail i { display: block; height: 100%; border-radius: inherit; background: hsl(var(--primary) / .75); transition: width .5s cubic-bezier(.16,1,.3,1); }
+  .v5 .card.active .rail i { background: hsl(var(--sidebar-ring)); }
+  .v5 .card.np .n { color: hsl(var(--muted-foreground)); }
+
+  @media (max-width: 900px) {
+    .v0, .v1, .v2, .v5, .v3 { grid-template-columns: 1fr 1fr; }
+    .v3 .cell + .cell { border-left: 0; }
+    .v4 { flex-direction: column; }
+    .v4 .overview { border-left: 0; padding-left: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="intro">
+    <div>
+      <h1>Summary cards: shorter options</h1>
+      <p>Each option shows its measured row height live, compared with the current cards. Click a card to switch the active view (only Accounts, Centres and Prospects are clickable, same as the app).</p>
+    </div>
+    <div class="controls" role="group" aria-label="Preview state">
+      <button class="toggle" data-toggle="dark" aria-pressed="false"><i class="ri-moon-line"></i>Dark</button>
+      <button class="toggle" data-toggle="loading" aria-pressed="false"><i class="ri-loader-4-line"></i>Updating</button>
+      <button class="toggle" data-toggle="compact" aria-pressed="false"><i class="ri-layout-left-line"></i>Sidebar open (compact)</button>
+      <button class="toggle" data-toggle="np" aria-pressed="false"><i class="ri-lock-line"></i>Prospects not procured</button>
+    </div>
+  </header>
+
+  <section class="variant">
+    <div class="variant-head"><h2>Current</h2><span class="height-tag" data-h="v0"></span></div>
+    <p>Baseline from <code>components/dashboard/summary-cards.tsx</code>. Three stacked rows: title, 30px number, and a "Currently visible" line that repeats on every card, plus a total pill.</p>
+    <div class="stage"><div class="v0" data-variant="v0"></div><div class="stage-below">Tabs and charts start here</div></div>
+  </section>
+
+  <section class="variant">
+    <div class="variant-head"><h2>A. Tightened</h2><span class="height-tag" data-h="v1"></span></div>
+    <p>Same cards, two rows instead of three. The total moves inline as "of 3,512" next to the number, the repeated "Currently visible" line goes away, and "Not procured" becomes a small pill only when it applies. Lowest-risk change.</p>
+    <div class="stage"><div class="v1" data-variant="v1"></div><div class="stage-below">Tabs and charts start here</div></div>
+  </section>
+
+  <section class="variant">
+    <div class="variant-head"><h2>B. Single row</h2><span class="height-tag" data-h="v2"></span></div>
+    <p>Each card is one line: icon tile, label with the total beneath, number right-aligned. Roughly half the current height. Numbers get smaller, so this suits a dashboard where the charts below are the main event.</p>
+    <div class="stage"><div class="v2" data-variant="v2"></div><div class="stage-below">Tabs and charts start here</div></div>
+  </section>
+
+  <section class="variant">
+    <div class="variant-head"><h2>C. Ledger strip</h2><span class="height-tag" data-h="v3"></span></div>
+    <p>One container split into five cells by hairlines instead of five floating cards. Active view is a tinted cell with an orange underline, which reads like a tab and matches what the cards actually do. Saves the 16px gaps and four sets of borders and shadows.</p>
+    <div class="stage"><div class="v3" data-variant="v3"></div><div class="stage-below">Tabs and charts start here</div></div>
+  </section>
+
+  <section class="variant">
+    <div class="variant-head"><h2>D. Views and overview, split</h2><span class="height-tag" data-h="v4"></span></div>
+    <p>Separates the three clickable views from the two read-only stats. Accounts, Centres and Prospects sit in a segmented control; Upcoming Centres and Headcount are plain numbers to the right. Fixes the current ambiguity where every card looks clickable but two only show a toast.</p>
+    <div class="stage"><div class="v4" data-variant="v4"></div><div class="stage-below">Tabs and charts start here</div></div>
+  </section>
+
+  <section class="variant">
+    <div class="variant-head"><h2>E. Share rail</h2><span class="height-tag" data-h="v5"></span></div>
+    <p>Like A, with a thin rail showing filtered as a share of total and the percentage in the corner. Uses the two numbers you already have to answer "how much of the universe am I looking at" at a glance.</p>
+    <div class="stage"><div class="v5" data-variant="v5"></div><div class="stage-below">Tabs and charts start here</div></div>
+  </section>
+</div>
+
+<script>
+  const state = { dark: false, loading: false, compact: false, np: false, active: 'accounts' }
+
+  const base = [
+    { id: 'accounts', title: 'Accounts', icon: 'ri-building-line', value: 1248, total: 3512, view: true },
+    { id: 'centers', title: 'Centres', icon: 'ri-briefcase-line', value: 2906, total: 8140, view: true },
+    { id: 'upcoming', title: 'Upcoming Centres', icon: 'ri-time-line', value: 184, total: 402, view: false },
+    { id: 'prospects', title: 'Prospects', icon: 'ri-group-line', value: 18452, total: 64210, view: true },
+    { id: 'headcount', title: 'Headcount', icon: 'ri-user-follow-line', value: 486120, total: 1402900, view: false },
+  ]
+
+  const cards = () => base.map(c => {
+    const np = state.np && c.id === 'prospects'
+    return { ...c, np, interactive: c.view && !np, active: c.view && !np && state.active === c.id }
+  })
+
+  const trunc = v => { const t = Math.floor(v * 10) / 10; return t % 1 === 0 ? t.toFixed(0) : t.toFixed(1) }
+  const fmt = n => !state.compact ? n.toLocaleString('en-US')
+    : n >= 1e6 ? trunc(n / 1e6) + 'M' : n >= 1e3 ? trunc(n / 1e3) + 'K' : n.toLocaleString('en-US')
+  const pct = c => Math.round((c.value / c.total) * 100)
+  const skel = (w, h) => `<span class="skel" style="width:${w}px;height:${h}px"></span>`
+  const ic = c => `<i class="icon ${c.icon}" aria-hidden="true"></i>`
+  const np = c => c.np ? '<span class="np-pill">Not procured</span>' : ''
+
+  function attrs(c, cls) {
+    const k = [cls, c.interactive ? 'interactive' : 'readonly', c.active ? 'active' : '', c.np ? 'np' : ''].join(' ')
+    const pressed = c.interactive ? ` aria-pressed="${c.active}"` : ' aria-disabled="true"'
+    return `class="${k}" data-id="${c.id}"${pressed}`
+  }
+
+  const render = {
+    v0: cs => cs.map(c => `
+      <button ${attrs(c, 'card')}>
+        <div class="hd">${ic(c)}${c.title}</div>
+        <div class="bd">
+          <div>
+            ${state.loading ? `<span class="n">${skel(80, 30)}</span><div class="st">${skel(96, 12)}</div>`
+              : `<span class="n num">${fmt(c.value)}</span><div class="st">${c.np ? 'Not Procured' : 'Currently visible'}</div>`}
+          </div>
+          <span class="tot num">${fmt(c.total)} total</span>
+        </div>
+      </button>`).join(''),
+
+    v1: cs => cs.map(c => `
+      <button ${attrs(c, 'card')}>
+        <div class="hd">${ic(c)}<span>${c.title}</span>${np(c)}</div>
+        <div class="bd">
+          ${state.loading ? `<span class="n">${skel(72, 22)}</span>` : `<span class="n num">${fmt(c.value)}</span>`}
+          <span class="of muted num">of ${fmt(c.total)}</span>
+        </div>
+      </button>`).join(''),
+
+    v2: cs => cs.map(c => `
+      <button ${attrs(c, 'card')}>
+        <span class="ic">${ic(c)}</span>
+        <span class="lbl">
+          <div class="t">${c.title}</div>
+          <div class="sub muted num">${c.np ? 'Not procured' : 'of ' + fmt(c.total)}</div>
+        </span>
+        ${state.loading ? skel(56, 20) : `<span class="n num">${fmt(c.value)}</span>`}
+      </button>`).join(''),
+
+    v3: cs => cs.map(c => `
+      <button ${attrs(c, 'cell')}>
+        <div class="hd">${ic(c)}<span>${c.title}</span>${np(c)}</div>
+        <div class="bd">
+          ${state.loading ? `<span class="n">${skel(72, 22)}</span>` : `<span class="n num">${fmt(c.value)}</span>`}
+          <span class="of muted num">of ${fmt(c.total)}</span>
+        </div>
+      </button>`).join(''),
+
+    v4: cs => {
+      const cell = (c, cls) => `
+        <button ${attrs(c, cls)}>
+          <div class="hd">${ic(c)}<span>${c.title}</span>${np(c)}</div>
+          <div class="bd">
+            ${state.loading ? `<span class="n">${skel(64, 20)}</span>` : `<span class="n num">${fmt(c.value)}</span>`}
+            <span class="of muted num">of ${fmt(c.total)}</span>
+          </div>
+        </button>`
+      return `
+        <div class="views" role="group" aria-label="Views">${cs.filter(c => c.view).map(c => cell(c, 'seg')).join('')}</div>
+        <div class="overview" aria-label="Overview">${cs.filter(c => !c.view).map(c => cell(c, 'stat')).join('')}</div>`
+    },
+
+    v5: cs => cs.map(c => `
+      <button ${attrs(c, 'card')}>
+        <div class="row">
+          <div class="hd">${ic(c)}<span>${c.title}</span></div>
+          ${c.np ? np(c) : `<span class="pct muted num">${state.loading ? '' : pct(c) + '%'}</span>`}
+        </div>
+        <div class="bd">
+          ${state.loading ? `<span class="n">${skel(72, 22)}</span>` : `<span class="n num">${fmt(c.value)}</span>`}
+          <span class="of muted num">of ${fmt(c.total)}</span>
+        </div>
+        <span class="rail" aria-hidden="true"><i style="width:${state.loading || c.np ? 0 : pct(c)}%"></i></span>
+      </button>`).join(''),
+  }
+
+  function draw() {
+    document.documentElement.classList.toggle('dark', state.dark)
+    const cs = cards()
+    document.querySelectorAll('[data-variant]').forEach(el => { el.innerHTML = render[el.dataset.variant](cs) })
+    requestAnimationFrame(() => {
+      document.querySelectorAll('[data-h]').forEach(tag => {
+        const el = document.querySelector(`[data-variant="${tag.dataset.h}"]`)
+        const h = Math.round(el.getBoundingClientRect().height)
+        const cur = Math.round(document.querySelector('[data-variant="v0"]').getBoundingClientRect().height)
+        const diff = tag.dataset.h === 'v0' ? '' : ` · ${Math.round((1 - h / cur) * 100)}% shorter`
+        tag.innerHTML = `<b class="num">${h}px</b>${diff}`
+      })
+    })
+  }
+
+  document.addEventListener('click', e => {
+    const t = e.target.closest('[data-toggle]')
+    if (t) {
+      const k = t.dataset.toggle
+      state[k] = !state[k]
+      t.setAttribute('aria-pressed', state[k])
+      if (k === 'np' && state.np && state.active === 'prospects') state.active = 'accounts'
+      return draw()
+    }
+    const card = e.target.closest('[data-id]')
+    if (card && card.classList.contains('interactive')) { state.active = card.dataset.id; draw() }
+  })
+  addEventListener('resize', draw)
+  document.fonts.ready.then(draw)
+  draw()
+</script>
+</body>
+</html>

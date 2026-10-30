@@ -102,6 +102,7 @@ export const ANALYTICS_EVENTS = {
   SELECTION_EXPORT_CLICKED: "selection_export_clicked",
   SELECTION_EXPORT_ALL_CLICKED: "selection_export_all_clicked",
   THEME_CHANGED: "theme_changed",
+  NUMBER_FORMAT_CHANGED: "number_format_changed",
   NOTIFICATIONS_OPENED: "notifications_opened",
   NOTIFICATIONS_MARKED_READ: "notifications_marked_read",
   HISTORY_OPENED: "history_opened",

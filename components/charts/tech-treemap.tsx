@@ -150,7 +150,7 @@ export const TechTreemap = memo(({
               spacing: [0, 0, 0, 0],
               margin: [0, 0, 0, 0],
               style: {
-                fontFamily: "'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                fontFamily: "'Geist', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
               },
             },
             title: { text: showTitle ? title : undefined, align: "left" },
