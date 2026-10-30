@@ -35,7 +35,7 @@ describe("ExportDialog row counts in server mode (#307)", () => {
       ["Services", "473"],
       ["Prospects", "3,484"],
     ]) {
-      const card = screen.getAllByText(label).map((el) => el.closest("button")).find(Boolean)
+      const card = screen.getAllByText(label).map((el) => el.closest("label")).find(Boolean)
       expect(card?.textContent).toContain(`${count} rows`)
     }
     expect(screen.queryByText("0 rows")).toBeNull()

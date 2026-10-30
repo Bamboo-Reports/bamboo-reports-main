@@ -11,7 +11,7 @@ A reference mapping every user-facing label in the application to its source dat
 |------|-------------|
 | Filter keys, labels, columns, tables, enabled flags | `lib/config/filters.ts` (`FILTER_SECTIONS`) |
 | Filter sidebar labels as rendered | `components/filters/filter-sections.tsx`, `components/filters/filters-sidebar.tsx` |
-| Data table columns | `lib/dashboard/table-column-preferences.ts` (`TABLE_COLUMNS`) |
+| Data table columns | `components/tables/*-columns.tsx` |
 | Detail dialogs | `components/dialogs/*.tsx` |
 | Charts | `lib/dashboard/charts.ts`, `components/tabs/*-tab.tsx` |
 | Summary cards and headcount rule | `components/dashboard/summary-cards.tsx`, `lib/dashboard/dashboard-core.ts` |
@@ -135,13 +135,13 @@ This section has no "Show More" gating.
 
 ## 2. Data Tables
 
-Each tab can show a paginated data table. Page size comes from `itemsPerPage` in `app/page.tsx` (currently 51) and is sent to the query routes, which clamp it to `MAX_PAGE_SIZE = 100` (`lib/dashboard/entity-query.ts`).
+Each tab can show a paginated data table built on TanStack Table (`components/tables/data-table.tsx`, wired to the dashboard by `components/tables/use-data-table.ts`). Every column is always shown. Page size comes from `itemsPerPage` in `app/page.tsx` (default 50; the footer offers 10, 25, 50 and 100, saved per browser under `br-dashboard-page-size`) and is sent to the query routes, which clamp it to `MAX_PAGE_SIZE = 100` (`lib/dashboard/entity-query.ts`).
 
-Column labels and which columns are user-hideable come from `TABLE_COLUMNS` in `lib/dashboard/table-column-preferences.ts` (`required: true` columns cannot be hidden; preferences are stored under the `br-table-columns:<dataset>` key). The tab components render the Centres labels with the British spelling.
+Column labels and cells are defined per tab in the column files listed below. The Centres labels use the British spelling.
 
 ### 2.1 Accounts Table
 
-**Source files:** `components/tabs/accounts-tab.tsx`, `components/tables/account-row.tsx`
+**Source files:** `components/tabs/accounts-tab.tsx`, `components/tables/account-columns.tsx`
 
 | Column Header | Column Key | Database Column | Table | Display Type | Notes |
 |---------------|-----------|-----------------|-------|-------------|-------|
@@ -155,7 +155,7 @@ Column labels and which columns are user-hideable come from `TABLE_COLUMNS` in `
 
 ### 2.2 Centres Table
 
-**Source files:** `components/tabs/centers-tab.tsx`, `components/tables/center-row.tsx`
+**Source files:** `components/tabs/centers-tab.tsx`, `components/tables/center-columns.tsx`
 
 | Column Header | Column Key | Database Column | Table | Display Type | Notes |
 |---------------|-----------|-----------------|-------|-------------|-------|
@@ -169,7 +169,7 @@ The row context menu also uses `center_website` and `center_linkedin`. `cn_uniqu
 
 ### 2.3 Prospects Table
 
-**Source files:** `components/tabs/prospects-tab.tsx`, `components/tables/prospect-row.tsx`
+**Source files:** `components/tabs/prospects-tab.tsx`, `components/tables/prospect-columns.tsx`
 
 | Column Header | Column Key | Database Column | Table | Display Type | Notes |
 |---------------|-----------|-----------------|-------|-------------|-------|

@@ -116,7 +116,6 @@ Key components:
 | `use-row-selection.ts` | Generic multi-row selection state |
 | `use-saved-filters.ts` | Saved filter CRUD with Supabase |
 | `use-server-dashboard-data.ts` | Server-mode data orchestration: fetches summary/facets/charts and paginated entity slices (see [Server-Mode Dashboard](backend/server-dashboard-mode.md)) |
-| `use-table-column-preferences.ts` | Per-user table column visibility preferences |
 | `use-table-row-selection.ts` | Wires `use-row-selection.ts` into a specific data table |
 | `use-tour-persistence.ts` | Tour completion tracking (localStorage + Supabase) |
 
@@ -210,7 +209,7 @@ const rows = await queryWarehouse(buildEntityAggregateQuery("accounts", filters,
 Two columns on `accounts` control whether an account is included by default in dashboard counts and tables.
 
 -   `account_visibility`: `'include'` (default) or `'exclude'`. Excluded accounts are records we keep but do not want to surface by default (for example, companies with only sales, manufacturing, or distribution presence in India, not full GCC operations).
--   `account_visibility_note`: short, human-readable reason for the exclusion. Surfaced as a chip alongside the NASSCOM chip on the accounts table row (`components/tables/account-row.tsx`) and grid card (`components/cards/account-grid-card.tsx`).
+-   `account_visibility_note`: short, human-readable reason for the exclusion. Surfaced as a chip alongside the NASSCOM chip on the accounts table (`components/tables/account-columns.tsx`) and grid card (`components/cards/account-grid-card.tsx`).
 
 **Visibility filter behavior:** the Account Attributes sidebar includes `Account Visibility` with `ALL`, `GCCs`, and `NON-GCCs`. `GCCs` is the default and includes accounts where `account_visibility = 'include'`; `NON-GCCs` includes `account_visibility = 'exclude'`; `ALL` includes both. The selected visibility mode is part of the filter state every server read endpoint applies, so tables, charts, exports, and summary card numerators stay aligned. The summary card denominators always show the full universe (e.g., 2657 accounts) so the user can see "2349 visible / 2657 total". Explicit account-name search bypasses the visibility mode so a searched account can be found directly. This is implemented in `lib/dashboard/filtering-sql.ts` (`visibilityClause`, mirrored by `lib/dashboard/filtering.ts` for the parity tests) and `POST /api/dashboard/summary`, which returns both the filtered counts (numerators) and the full-universe totals (denominators).
 

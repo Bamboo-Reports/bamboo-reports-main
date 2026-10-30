@@ -569,20 +569,28 @@ export function ExportDialog({
               const count = countOf(item.key)
               const isChecked = selection[item.key]
               const isAccessible = isDatasetEnabled(item.key)
+              const isDisabled = isExporting || !isAccessible
+              const checkboxId = `export-dataset-${item.key}`
 
+              // A label rather than a button: the checkbox is itself a button,
+              // and buttons cannot nest. Clicking anywhere on the card toggles it.
               return (
-                <button
+                <label
                   key={item.key}
-                  type="button"
-                  onClick={() => handleToggle(item.key)}
+                  htmlFor={checkboxId}
                   className={cn(
                     "group relative flex items-start gap-3 rounded-xl border bg-background px-4 py-3 text-left shadow-sm transition-all duration-150",
                     isChecked ? "border-primary/40 bg-primary/5" : "hover:border-muted-foreground/40",
-                    (isExporting || !isAccessible) && "cursor-not-allowed opacity-70"
+                    isDisabled ? "cursor-not-allowed opacity-70" : "cursor-pointer"
                   )}
-                  disabled={isExporting || !isAccessible}
                 >
-                  <Checkbox checked={isChecked} disabled={isExporting || !isAccessible} className="mt-1" />
+                  <Checkbox
+                    id={checkboxId}
+                    checked={isChecked}
+                    onCheckedChange={() => handleToggle(item.key)}
+                    disabled={isDisabled}
+                    className="mt-1"
+                  />
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -604,7 +612,7 @@ export function ExportDialog({
                       {isAccessible ? item.description : getDatasetUnavailableMessage(item.key)}
                     </p>
                   </div>
-                </button>
+                </label>
               )
             })}
           </div>

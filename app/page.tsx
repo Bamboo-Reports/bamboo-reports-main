@@ -58,10 +58,12 @@ import { useProductTour } from "@/hooks/use-product-tour"
 import { formatRevenueInMillions } from "@/lib/utils/helpers"
 import type { SearchResult } from "@/lib/search"
 import { TAB_SORT_COLUMNS } from "@/lib/dashboard/entity-columns"
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "@/components/tables/data-table"
 import type { RecentItem } from "@/hooks/use-recent-items"
 import type { Account, Alias, Center, Function as FunctionRow, Prospect, Service, Tech } from "@/lib/types"
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "br-dashboard-sidebar-collapsed"
+const PAGE_SIZE_STORAGE_KEY = "br-dashboard-page-size"
 const LOAD_ERROR_TOAST_ID = "dashboard-load-error"
 
 // The dashboard is server-backed (#249): every dataset is paged and aggregated
@@ -133,7 +135,15 @@ function DashboardContent(): React.JSX.Element | null {
   const [accountsPage, setAccountsPage] = useState(1)
   const [centersPage, setCentersPage] = useState(1)
   const [prospectsPage, setProspectsPage] = useState(1)
-  const itemsPerPage = 51
+  const [itemsPerPage, setItemsPerPageState] = useState<number>(DEFAULT_PAGE_SIZE)
+  // One page size for all three tables; a new size starts every tab from page 1.
+  const setItemsPerPage = useCallback((size: number) => {
+    setItemsPerPageState(size)
+    setAccountsPage(1)
+    setCentersPage(1)
+    setProspectsPage(1)
+    window.localStorage.setItem(PAGE_SIZE_STORAGE_KEY, String(size))
+  }, [])
   const [accountsView, setAccountsView] = useState<"chart" | "data" | "map">(accountsMapEnabled ? "map" : "chart")
   const [centersView, setCentersView] = useState<"chart" | "data" | "map">("map")
   const [prospectsView, setProspectsView] = useState<"chart" | "data">("chart")
@@ -188,14 +198,18 @@ function DashboardContent(): React.JSX.Element | null {
       },
     []
   )
+  // Filters may be replaced with an equal object by the filter hook; reset pagination only on value changes.
+  const filtersPaginationResetKey = useMemo(() => JSON.stringify(filters), [filters])
+
   const accountsServerProps = useMemo(
     () =>
       ({
         total: serverData.entityPages.accounts?.total ?? 0,
         loading: serverData.entityPages.accounts === null || serverData.pending.accounts,
         onSortChange: makeSortHandler("accounts", setAccountsSort),
+        selectionResetKey: filtersPaginationResetKey,
       }),
-    [serverData.entityPages.accounts, serverData.pending.accounts, makeSortHandler]
+    [serverData.entityPages.accounts, serverData.pending.accounts, makeSortHandler, filtersPaginationResetKey]
   )
   const centersServerProps = useMemo(
     () =>
@@ -203,8 +217,9 @@ function DashboardContent(): React.JSX.Element | null {
         total: serverData.entityPages.centers?.total ?? 0,
         loading: serverData.entityPages.centers === null || serverData.pending.centers,
         onSortChange: makeSortHandler("centers", setCentersSort),
+        selectionResetKey: filtersPaginationResetKey,
       }),
-    [serverData.entityPages.centers, serverData.pending.centers, makeSortHandler]
+    [serverData.entityPages.centers, serverData.pending.centers, makeSortHandler, filtersPaginationResetKey]
   )
   const prospectsServerProps = useMemo(
     () =>
@@ -212,8 +227,9 @@ function DashboardContent(): React.JSX.Element | null {
         total: serverData.entityPages.prospects?.total ?? 0,
         loading: serverData.entityPages.prospects === null || serverData.pending.prospects,
         onSortChange: makeSortHandler("prospects", setProspectsSort),
+        selectionResetKey: filtersPaginationResetKey,
       }),
-    [serverData.entityPages.prospects, serverData.pending.prospects, makeSortHandler]
+    [serverData.entityPages.prospects, serverData.pending.prospects, makeSortHandler, filtersPaginationResetKey]
   )
   const serverMapData = useMemo(
     () =>
@@ -331,8 +347,6 @@ function DashboardContent(): React.JSX.Element | null {
     return prospectsPage
   }, [activeSection, accountsPage, centersPage, prospectsPage])
 
-  // Filters may be replaced with an equal object by the filter hook; reset pagination only on value changes.
-  const filtersPaginationResetKey = useMemo(() => JSON.stringify(filters), [filters])
 
   useEffect(() => {
     setAccountsPage(1)
@@ -344,6 +358,10 @@ function DashboardContent(): React.JSX.Element | null {
     const storedSidebarState = window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY)
     if (storedSidebarState === "true") {
       setIsSidebarCollapsed(true)
+    }
+    const storedPageSize = Number(window.localStorage.getItem(PAGE_SIZE_STORAGE_KEY))
+    if ((PAGE_SIZE_OPTIONS as readonly number[]).includes(storedPageSize)) {
+      setItemsPerPageState(storedPageSize)
     }
   }, [])
 
@@ -1438,6 +1456,7 @@ function DashboardContent(): React.JSX.Element | null {
                       currentPage={accountsPage}
                       setCurrentPage={setAccountsPage}
                       itemsPerPage={itemsPerPage}
+                      setItemsPerPage={setItemsPerPage}
                       onDownloadSelection={canExport ? handleDownloadSelection : undefined}
                     />
                   )}
@@ -1463,6 +1482,7 @@ function DashboardContent(): React.JSX.Element | null {
                       currentPage={centersPage}
                       setCurrentPage={setCentersPage}
                       itemsPerPage={itemsPerPage}
+                      setItemsPerPage={setItemsPerPage}
                       onDownloadSelection={canExport ? handleDownloadSelection : undefined}
                     />
                   )}
@@ -1485,6 +1505,7 @@ function DashboardContent(): React.JSX.Element | null {
                       currentPage={prospectsPage}
                       setCurrentPage={setProspectsPage}
                       itemsPerPage={itemsPerPage}
+                      setItemsPerPage={setItemsPerPage}
                       onDownloadSelection={canExport ? handleDownloadSelection : undefined}
                     />
                   )}

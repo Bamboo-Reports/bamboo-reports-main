@@ -1,16 +1,14 @@
 "use client"
 
 import React, { useEffect, useRef, useState } from "react"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TabsContent } from "@/components/ui/tabs"
-import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
-import { RiExpandUpDownLine, RiLayoutGridLine, RiMapLine, RiMapPinLine, RiPieChartLine, RiSortAlphabetAsc, RiSortAlphabetDesc, RiStackLine, RiTableLine } from "@remixicon/react"
-import { CenterRow } from "@/components/tables"
+import { RiLayoutGridLine, RiMapLine, RiMapPinLine, RiPieChartLine, RiStackLine, RiTableLine } from "@remixicon/react"
+import { CenterRowMenu, centerColumns, getCenterKey } from "@/components/tables/center-columns"
+import { DataGridSortBar, DataTable, DataTablePagination } from "@/components/tables/data-table"
 import { SelectionActionBar } from "@/components/tables/selection-action-bar"
-import { useTableRowSelection } from "@/hooks/use-table-row-selection"
+import { useDataTable } from "@/components/tables/use-data-table"
 import { useRecordOpener } from "@/hooks/use-record-opener"
 import { CenterGridCard } from "@/components/cards/center-grid-card"
 import {
@@ -20,20 +18,15 @@ import {
 import { EmptyState } from "@/components/states/empty-state"
 import { CenterDetailsDialog } from "@/components/dialogs/center-details-dialog"
 import { AccountDetailsDialog } from "@/components/dialogs/account-details-tabbed-dialog"
-import { getPaginatedData, formatCenterLocation } from "@/lib/utils/helpers"
 import { CentersMap } from "@/components/maps/centers-map"
 import { CentersChoroplethMap } from "@/components/maps/centers-choropleth-map"
 import { MapErrorBoundary } from "@/components/maps/map-error-boundary"
 import { ViewSwitcher } from "@/components/ui/view-switcher"
-import { SortButton } from "@/components/ui/sort-button"
-import { PaginationControls } from "@/components/ui/pagination-controls"
-import { TableColumnMenu } from "@/components/tables/table-column-menu"
-import { useTableColumnPreferences } from "@/hooks/use-table-column-preferences"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { fetchAccountRelated, type CityAggregate, type StateAggregate } from "@/lib/dashboard/api-client"
 import type { TabServerProps } from "@/components/tabs/accounts-tab"
-import { GridSkeletonCards, MapUpdatingPill, TableSkeletonRows } from "@/components/ui/data-skeletons"
+import { GridSkeletonCards, MapUpdatingPill } from "@/components/ui/data-skeletons"
 import type { Account, Center, Function, Prospect, Service, Tech } from "@/lib/types"
 
 interface CentersTabProps {
@@ -57,6 +50,7 @@ interface CentersTabProps {
   currentPage: number
   setCurrentPage: (page: number | ((prev: number) => number)) => void
   itemsPerPage: number
+  setItemsPerPage: (size: number) => void
   onDownloadSelection?: (scope: { dataset: "centers"; centerKeys: string[] }) => void
   server?: TabServerProps | null
   mapData?: { cities: CityAggregate[]; states: StateAggregate[]; scaleStates?: StateAggregate[] | null } | null
@@ -64,8 +58,6 @@ interface CentersTabProps {
   mapLoading?: boolean
 }
 
-// Module-level so the reference is stable across renders (passed to memo'd rows).
-const getCenterKey = (center: Center) => center.cn_unique_key ?? ""
 
 export function CentersTab({
   accounts,
@@ -82,6 +74,7 @@ export function CentersTab({
   currentPage,
   setCurrentPage,
   itemsPerPage,
+  setItemsPerPage,
   onDownloadSelection,
   server,
   mapData,
@@ -92,22 +85,25 @@ export function CentersTab({
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null)
   const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false)
-  const [sort, setSort] = useState<{
-    key: "name" | "location" | "type" | "employees"
-    direction: "asc" | "desc" | null
-  }>({
-    key: "name",
-    direction: null,
-  })
   const [dataLayout, setDataLayout] = useState<"table" | "grid">("table")
   const [mapMode, setMapMode] = useState<"city" | "state">("state")
   const {
-    columns,
-    visibleColumnSet,
-    isColumnVisible,
-    setColumnVisible,
-    resetColumns,
-  } = useTableColumnPreferences("centers")
+    table,
+    totalRows,
+    selectedKeys,
+    clearSelection,
+  } = useDataTable({
+    dataset: "centers",
+    data: centers,
+    columns: centerColumns,
+    getRowKey: getCenterKey,
+    server,
+    currentPage,
+    setCurrentPage,
+    itemsPerPage,
+    setItemsPerPage,
+  })
+  const pageCenters = table.getRowModel().rows.map((row) => row.original)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -184,28 +180,6 @@ export function CentersTab({
     }
   }
 
-  const handleSort = (key: typeof sort.key) => {
-    let nextDirection: "asc" | "desc" | null = "asc"
-    setSort((prev) => {
-      if (prev.key !== key || prev.direction === null) {
-        nextDirection = "asc"
-        return { key, direction: "asc" }
-      }
-      if (prev.direction === "asc") {
-        nextDirection = "desc"
-        return { key, direction: "desc" }
-      }
-      nextDirection = null
-      return { key, direction: null }
-    })
-    captureEvent(ANALYTICS_EVENTS.SORT_CHANGED, {
-      entity: "center",
-      sort_key: key,
-      sort_direction: nextDirection ?? "none",
-    })
-    server?.onSortChange(key, nextDirection)
-    setCurrentPage(1)
-  }
 
   React.useEffect(() => {
     if (previousDataLayoutRef.current === dataLayout) {
@@ -249,52 +223,6 @@ export function CentersTab({
   }, [isDialogOpen])
 
 
-  const sortedCenters = React.useMemo(() => {
-    // Server mode: rows arrive already sorted and paginated.
-    if (server || !sort.direction) return centers
-
-    const compare = (a: string | undefined | null, b: string | undefined | null) =>
-      (a || "").localeCompare(b || "", undefined, { sensitivity: "base" })
-
-    const getValue = (center: Center) => {
-      switch (sort.key) {
-        case "name":
-          return center.center_name
-        case "location":
-          return formatCenterLocation(center.center_city, center.center_state)
-        case "type":
-          return center.center_type
-        case "employees":
-          return center.center_employees_range
-        default:
-          return ""
-      }
-    }
-
-    const sorted = [...centers].sort((a, b) => compare(getValue(a), getValue(b)))
-    return sort.direction === "asc" ? sorted : sorted.reverse()
-  }, [centers, sort, server])
-
-  const pageCenters = React.useMemo(
-    () => (server ? sortedCenters : getPaginatedData(sortedCenters, currentPage, itemsPerPage)),
-    [server, sortedCenters, currentPage, itemsPerPage]
-  )
-  const {
-    selected: selectedKeys,
-    toggleMany,
-    clear: clearSelection,
-    pageKeys,
-    allPageSelected,
-    somePageSelected,
-    handleRowSelectChange,
-  } = useTableRowSelection({
-    entity: "center",
-    items: server ? pageCenters : centers,
-    pageItems: pageCenters,
-    getKey: getCenterKey,
-  })
-
-  // Tab-specific open handler kept stable so memo'd rows don't re-render.
   const handleRowOpen = React.useCallback(
     (center: Center) => handleCenterClick(center, "table_row"),
     [handleCenterClick]
@@ -441,14 +369,6 @@ export function CentersTab({
              <div className="flex flex-wrap items-center gap-3">
                <CardTitle className="text-base">Centres Data</CardTitle>
                <div className="ml-auto flex items-center gap-2">
-                 {dataLayout === "table" && (
-                   <TableColumnMenu
-                     columns={columns}
-                     visibleColumnSet={visibleColumnSet}
-                     onToggleColumn={setColumnVisible}
-                     onReset={resetColumns}
-                   />
-                 )}
                  <ViewSwitcher
                    value={dataLayout}
                    onValueChange={(value) => setDataLayout(value as "table" | "grid")}
@@ -472,103 +392,32 @@ export function CentersTab({
                </div>
              </div>
            </CardHeader>
-            <CardContent className="p-0 flex flex-col flex-1 overflow-hidden">
-              <div ref={scrollContainerRef} key={dataLayout} className="flex-1 overflow-auto view-content">
-                {dataLayout === "table" ? (
-                  <Table className="table-fixed">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[44px]">
-                          <Checkbox
-                            checked={allPageSelected ? true : somePageSelected ? "indeterminate" : false}
-                            onCheckedChange={(checked) => toggleMany(pageKeys, checked === true)}
-                            aria-label="Select all centres on this page"
-                          />
-                        </TableHead>
-                        {isColumnVisible("name") && (
-                        <TableHead className="w-[260px]">
-                          <SortButton label="Centre Name" sortKey="name" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
-                        </TableHead>
-                        )}
-                        {isColumnVisible("location") && (
-                        <TableHead className="w-[200px]">
-                          <SortButton label="Location" sortKey="location" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
-                        </TableHead>
-                        )}
-                        {isColumnVisible("type") && (
-                        <TableHead className="w-[200px]">
-                          <SortButton label="Centre Type" sortKey="type" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
-                        </TableHead>
-                        )}
-                        {isColumnVisible("employees") && (
-                        <TableHead className="w-[160px]">
-                          <SortButton label="Centre Headcount" sortKey="employees" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
-                        </TableHead>
-                        )}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {server?.loading ? (
-                        <TableSkeletonRows columns={1 + (["name", "location", "type", "employees"] as const).filter(isColumnVisible).length} />
-                      ) : pageCenters.map(
-                        (center) => (
-                          <CenterRow
-                            key={center.cn_unique_key}
-                            center={center}
-                            onOpen={handleRowOpen}
-                            visibleColumns={visibleColumnSet}
-                            selectable
-                            isSelected={selectedKeys.has(center.cn_unique_key ?? "")}
-                            onSelectChange={getCenterKey(center) ? handleRowSelectChange : undefined}
-                          />
-                        )
-                      )}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <div className="flex flex-col">
-                    <div className="flex items-center gap-2 px-6 py-3 border-b bg-muted/20">
-                      <span className="text-xs font-medium text-muted-foreground">Sort</span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon-sm"
-                        onClick={() => handleSort("name")}
-                        aria-label="Sort by centre name"
-                        aria-pressed={sort.key === "name" && sort.direction !== null}
-                      >
-                        {sort.key !== "name" || sort.direction === null ? (
-                          <RiExpandUpDownLine className="h-3.5 w-3.5 text-muted-foreground" />
-                        ) : sort.direction === "asc" ? (
-                          <RiSortAlphabetAsc className="h-3.5 w-3.5 text-primary" />
-                        ) : (
-                          <RiSortAlphabetDesc className="h-3.5 w-3.5 text-primary" />
-                        )}
-                      </Button>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
-                      {server?.loading ? <GridSkeletonCards statRows={3} /> : pageCenters.map(
-                        (center) => (
-                          <CenterGridCard
-                            key={center.cn_unique_key}
-                            center={center}
-                            onClick={() => handleCenterClick(center, "grid_card")}
-                          />
-                        )
-                      )}
-                    </div>
+            <CardContent className="flex min-h-0 flex-1 flex-col px-6 pb-0">
+              {dataLayout === "table" ? (
+                <DataTable
+                  key="table"
+                  table={table}
+                  loading={server?.loading}
+                  onRowOpen={handleRowOpen}
+                  getRowLabel={(center) => `View centre details for ${center.center_name || "center"}`}
+                  renderRowMenu={(center) => <CenterRowMenu center={center} onOpen={handleRowOpen} />}
+                  scrollRef={scrollContainerRef}
+                />
+              ) : (
+                <div key="grid" ref={scrollContainerRef} className="view-content min-h-0 flex-1 overflow-auto rounded-md border">
+                  <DataGridSortBar column={table.getColumn("name")} label="centre name" />
+                  <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {server?.loading ? <GridSkeletonCards statRows={3} /> : pageCenters.map((center) => (
+                      <CenterGridCard
+                        key={center.cn_unique_key}
+                        center={center}
+                        onClick={() => handleCenterClick(center, "grid_card")}
+                      />
+                    ))}
                   </div>
-                )}
-              </div>
-                  {(server ? server.total : centers.length) > 0 && (
-                    <PaginationControls
-                      currentPage={currentPage}
-                      totalItems={server ? server.total : centers.length}
-                      itemsPerPage={itemsPerPage}
-                      onPageChange={setCurrentPage}
-                      dataLength={server ? server.total : centers.length}
-                    />
-                  )}
+                </div>
+              )}
+              <DataTablePagination table={table} totalRows={totalRows} />
             </CardContent>
          </Card>
        )}

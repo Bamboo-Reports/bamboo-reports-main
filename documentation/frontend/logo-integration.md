@@ -107,8 +107,8 @@ interface CompanyLogoProps {
 
 1. **Account Dialog:** `components/dialogs/account-details-tabbed-dialog.tsx`
 2. **Center Dialog:** `components/dialogs/center-details-dialog.tsx`
-3. **Account Table:** `components/tables/account-row.tsx`
-4. **Center Table:** `components/tables/center-row.tsx`
+3. **Account Table:** `components/tables/account-columns.tsx`
+4. **Center Table:** `components/tables/center-columns.tsx`
 5. **Grid Cards:** `components/cards/account-grid-card.tsx`, `components/cards/center-grid-card.tsx`
 
 ### 3.2 Performance & Fallback Logic
