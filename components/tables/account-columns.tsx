@@ -27,6 +27,7 @@ function AccountNameCell({ account }: { account: Account }) {
         domain={account.account_hq_website ?? undefined}
         companyName={accountName}
         size="sm"
+        zoom
         theme="auto"
       />
       <div className="min-w-0">

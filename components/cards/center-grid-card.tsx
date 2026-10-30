@@ -48,6 +48,7 @@ export const CenterGridCard = memo(({ center, onClick }: CenterGridCardProps) =>
                 companyName={accountName}
                 size="md"
                 theme="auto"
+                zoom
               />
               <div className="min-w-0">
                 <h3

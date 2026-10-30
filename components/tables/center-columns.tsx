@@ -21,6 +21,7 @@ function CenterNameCell({ center }: { center: Center }) {
         domain={center.center_account_website ?? undefined}
         companyName={center.account_global_legal_name}
         size="sm"
+        zoom
         theme="auto"
       />
       <div className="min-w-0">
