@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 import { act, cleanup, renderHook } from "@testing-library/react"
+import { notifyManager } from "@tanstack/react-query"
 import type { Filters } from "@/lib/types"
 
 // Every api-client fetch returns a promise the test settles by hand, so the
@@ -34,6 +35,7 @@ vi.mock("@/lib/dashboard/api-client", () => {
 import { clearClientDashboardCache, useServerDashboardData, type DashboardViews } from "@/hooks/use-server-dashboard-data"
 import type { EntitySort } from "@/lib/dashboard/api-client"
 import { createDefaultFilters } from "@/lib/dashboard/defaults"
+import { createQueryWrapper } from "../fixtures/query-client"
 
 const summary = (accounts: number) => ({
   filtered: { accounts, centers: 0, upcomingCenters: 0, prospects: 0, headcount: 0, services: 0 },
@@ -79,7 +81,7 @@ async function settle() {
 
 /** Render with the base filters and let the first summary + facets + page land. */
 async function renderLoaded(initial: Props = { filters: base }) {
-  const hook = renderHook((p: Props) => useServerDashboardData(props(p)), { initialProps: initial })
+  const hook = renderHook((p: Props) => useServerDashboardData(props(p)), { wrapper: createQueryWrapper(), initialProps: initial })
   await act(async () => {
     latest("summary").resolve(summary(100))
     latest("facets").resolve(facets)
@@ -88,6 +90,17 @@ async function renderLoaded(initial: Props = { filters: base }) {
   expect(hook.result.current.pending.summary).toBe(false)
   return hook
 }
+
+// TanStack Query batches its updates on a timer, which fake timers would hold
+// back; deliver them as microtasks so each act() sees them (the scheduler the
+// TanStack docs give for this).
+beforeAll(() => {
+  notifyManager.setScheduler(queueMicrotask)
+})
+
+afterAll(() => {
+  notifyManager.setScheduler((cb) => setTimeout(cb, 0))
+})
 
 beforeEach(() => {
   vi.useFakeTimers()
@@ -153,7 +166,8 @@ describe("useServerDashboardData: returning to a cached state while a request is
   it("ignores a late map response after returning to a cached state", async () => {
     const mapViews = { needCharts: false, needMap: true, activeEntity: "accounts" as const }
     const hook = renderHook((p: Props) => useServerDashboardData(props(p)), {
-      initialProps: { filters: base, views: mapViews },
+      wrapper: createQueryWrapper(),
+    initialProps: { filters: base, views: mapViews },
     })
     // First map call is the unfiltered colour-scale request; the filtered one follows.
     await act(async () => {
@@ -203,6 +217,23 @@ describe("useServerDashboardData: failures after the first load", () => {
     expect(result.current.failure).toEqual({ message: "Request failed (504)", seq: seqBefore + 1 })
   })
 
+  it("keeps the previous data on screen when a newer state fails", async () => {
+    const { result, rerender } = await renderLoaded()
+
+    rerender({ filters: withRegion })
+    await act(async () => {
+      vi.advanceTimersByTime(400)
+    })
+    await act(async () => {
+      latest("summary").reject(new Error("Request failed (504)"))
+      latest("facets").resolve(facets)
+      latest("page:accounts").reject(new Error("Request failed (504)"))
+    })
+
+    expect(result.current.summary?.filtered.accounts).toBe(100)
+    expect(result.current.entityPages.accounts).toEqual(page("base"))
+  })
+
   it("stops pending and reports the error when a table page fails", async () => {
     const { result, rerender } = await renderLoaded()
 
@@ -219,6 +250,7 @@ describe("useServerDashboardData: failures after the first load", () => {
   it("stops pending and reports the error when charts fail", async () => {
     const chartViews = { needCharts: true, needMap: false, activeEntity: "accounts" as const }
     const { result } = renderHook((p: Props) => useServerDashboardData(props(p)), {
+      wrapper: createQueryWrapper(),
       initialProps: { filters: base, views: chartViews },
     })
     await act(async () => {
@@ -236,6 +268,7 @@ describe("useServerDashboardData: failures after the first load", () => {
 describe("useServerDashboardData: cancelling superseded requests", () => {
   it("aborts the previous filter state's requests, including prefetches, without reporting an error", async () => {
     const { result, rerender } = await renderLoaded()
+    const before = calls.length
 
     rerender({ filters: withRegion })
     await act(async () => {
@@ -244,7 +277,8 @@ describe("useServerDashboardData: cancelling superseded requests", () => {
     await act(async () => {
       vi.advanceTimersByTime(400) // background prefetch
     })
-    const superseded = calls.filter((c) => c.signal && !c.signal.aborted)
+    // Everything still in flight for the APAC state.
+    const superseded = calls.slice(before).filter((c) => c.signal && !c.signal.aborted)
     expect(superseded.map((c) => c.kind).sort()).toEqual(
       ["charts", "facets", "map", "page:accounts", "page:centers", "page:prospects", "summary"].sort()
     )
@@ -294,7 +328,7 @@ describe("useServerDashboardData: cancelling superseded requests", () => {
   })
 
   it("aborts everything in flight on unmount", async () => {
-    const { unmount } = renderHook((p: Props) => useServerDashboardData(props(p)), { initialProps: { filters: base } })
+    const { unmount } = renderHook((p: Props) => useServerDashboardData(props(p)), { wrapper: createQueryWrapper(), initialProps: { filters: base } })
     const inFlight = calls.filter((c) => c.signal)
     expect(inFlight.map((c) => c.kind).sort()).toEqual(["facets", "page:accounts", "summary"])
 
@@ -350,7 +384,8 @@ describe("useServerDashboardData: map colour scale retries (#291)", () => {
 
   it("retries the colour scale after a failure instead of giving up for the session", async () => {
     const { result } = renderHook((p: Props) => useServerDashboardData(props(p)), {
-      initialProps: { filters: base, views: mapViews },
+      wrapper: createQueryWrapper(),
+    initialProps: { filters: base, views: mapViews },
     })
     const [scale, filtered] = pendingCalls("map")
     await act(async () => {
@@ -376,7 +411,8 @@ describe("useServerDashboardData: map colour scale retries (#291)", () => {
 
   it("retries the colour scale on refresh after the automatic retries are used up", async () => {
     const { result } = renderHook((p: Props) => useServerDashboardData(props(p)), {
-      initialProps: { filters: base, views: mapViews },
+      wrapper: createQueryWrapper(),
+    initialProps: { filters: base, views: mapViews },
     })
     const [scale, filtered] = pendingCalls("map")
     await act(async () => {

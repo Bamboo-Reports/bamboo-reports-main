@@ -1,6 +1,14 @@
 "use client"
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import {
+  isCancelledError,
+  queryOptions,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+  type QueryKey,
+} from "@tanstack/react-query"
 import { devError } from "@/lib/utils/dev-log"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
@@ -14,14 +22,9 @@ import {
   fetchDashboardSummary,
   fetchEntityPage,
   isAbortError,
-  type CentersMapResponse,
-  type ChartsResponse,
   type EntityPage,
   type EntitySort,
   type FacetRanges,
-  type FacetsResponse,
-  type StateAggregate,
-  type SummaryResponse,
 } from "@/lib/dashboard/api-client"
 import type { Account, Center, Filters, Prospect } from "@/lib/types"
 
@@ -44,47 +47,135 @@ export function normalizeFiltersForServer(filters: Filters, ranges: FacetRanges 
 }
 
 // ============================================
-// Client-side response cache (#249 perf)
+// Queries (#249 perf)
 // ============================================
-// Filter states are revisited constantly (apply -> look -> remove), and every
-// response depends only on the canonical wire filters, so previously seen
-// states restore instantly with zero network calls. Session lifetime,
-// LRU-bounded; reload() clears it for a forced refresh.
+// Every response depends only on the canonical wire filters (the "state
+// key"), so each is cached per state key in the TanStack Query cache.
+// Filter states are revisited constantly (apply -> look -> remove), and a
+// revisited state restores instantly with zero network calls.
 
-const MAX_CLIENT_CACHE_ENTRIES = 40
+type Entity = "accounts" | "centers" | "prospects"
 
-function lruSet<V>(cache: Map<string, V>, key: string, value: V): void {
-  if (cache.has(key)) cache.delete(key)
-  cache.set(key, value)
-  while (cache.size > MAX_CLIENT_CACHE_ENTRIES) {
-    const oldest = cache.keys().next().value
-    if (oldest === undefined) break
-    cache.delete(oldest)
-  }
-}
-
-const summaryCache = new Map<string, SummaryResponse>()
-const facetsCache = new Map<string, FacetsResponse>()
-const chartsCache = new Map<string, ChartsResponse>()
-const mapCache = new Map<string, CentersMapResponse>()
-const pageCache = new Map<string, EntityPage<Record<string, unknown>>>()
-
-export function clearClientDashboardCache(): void {
-  // Record lookups (account, centre, engagements): open dialogs refetch now,
-  // the rest on their next open.
-  void getQueryClient().invalidateQueries()
-  summaryCache.clear()
-  facetsCache.clear()
-  chartsCache.clear()
-  mapCache.clear()
-  pageCache.clear()
-}
+const DASHBOARD_KEY = ["dashboard"] as const
 
 const DEBOUNCE_MS = 350
+const PREFETCH_DELAY_MS = 400
 
 // Automatic retries for the map colour-scale request after a failure (#291).
 // Once these are used up, a refresh or showing the map again retries it.
 const SCALE_RETRY_DELAYS_MS = [5_000, 15_000, 45_000]
+
+// reload() briefly bypasses the server-side response cache so "refresh"
+// actually recomputes from the warehouse. One window for the app (there is
+// one dashboard); read at fetch time.
+let bypassUntil = 0
+const noCache = () => Date.now() < bypassUntil
+
+const wireOf = (stateKey: string) => JSON.parse(stateKey) as Filters
+const sortKeyOf = (sort: EntitySort | null) => (sort ? `${sort.column}:${sort.direction}` : "")
+
+const summaryQuery = (stateKey: string) =>
+  queryOptions({
+    queryKey: [...DASHBOARD_KEY, "summary", stateKey],
+    queryFn: ({ signal }) => fetchDashboardSummary(wireOf(stateKey), { noCache: noCache(), signal }),
+  })
+
+const facetsQuery = (stateKey: string) =>
+  queryOptions({
+    queryKey: [...DASHBOARD_KEY, "facets", stateKey],
+    queryFn: ({ signal }) => fetchDashboardFacets(wireOf(stateKey), { noCache: noCache(), signal }),
+  })
+
+const chartsQuery = (stateKey: string) =>
+  queryOptions({
+    queryKey: [...DASHBOARD_KEY, "charts", stateKey],
+    queryFn: ({ signal }) => fetchDashboardCharts(wireOf(stateKey), { noCache: noCache(), signal }),
+  })
+
+const mapQuery = (stateKey: string) =>
+  queryOptions({
+    queryKey: [...DASHBOARD_KEY, "map", stateKey],
+    queryFn: ({ signal }) => fetchCentersMap(wireOf(stateKey), { noCache: noCache(), signal }),
+  })
+
+type PageParams = { stateKey: string; page: number; sort: EntitySort | null }
+
+const pageQuery = (entity: Entity, { stateKey, page, sort }: PageParams, pageSize: number) =>
+  queryOptions({
+    queryKey: [...DASHBOARD_KEY, "page", entity, stateKey, pageSize, page, sortKeyOf(sort)],
+    queryFn: ({ signal }) =>
+      fetchEntityPage<Record<string, unknown>>(entity, wireOf(stateKey), page, pageSize, sort, { noCache: noCache(), signal }),
+  })
+
+/** Unfiltered state aggregates for the choropleth colour scale. */
+const scaleQuery = () =>
+  queryOptions({
+    queryKey: [...DASHBOARD_KEY, "scale"],
+    queryFn: ({ signal }) =>
+      fetchCentersMap(
+        createDefaultFilters({
+          accountVisibilityMode: "all",
+          accountHqRevenueRange: WIDE_RANGE,
+          accountYearsInIndiaRange: WIDE_RANGE,
+          centerIncYearRange: WIDE_RANGE,
+        }),
+        { signal }
+      ),
+    retry: SCALE_RETRY_DELAYS_MS.length,
+    retryDelay: (failureCount) => SCALE_RETRY_DELAYS_MS[failureCount] ?? SCALE_RETRY_DELAYS_MS[SCALE_RETRY_DELAYS_MS.length - 1],
+  })
+
+/** The state key a dashboard query belongs to; null for the unfiltered scale query. */
+function stateKeyOf(queryKey: QueryKey): string | null {
+  if (queryKey[0] !== DASHBOARD_KEY[0]) return null
+  if (queryKey[1] === "page") return queryKey[3] as string
+  if (queryKey[1] === "scale") return null
+  return queryKey[2] as string
+}
+
+const isLoadedScale = (queryKey: QueryKey, data: unknown) => queryKey[0] === DASHBOARD_KEY[0] && queryKey[1] === "scale" && data !== undefined
+
+/**
+ * Marks every cached response stale: visible ones refetch now (keeping their
+ * data on screen), the rest on next use. A loaded colour scale is kept, as it
+ * is unfiltered; a failed one retries. Record lookups refetch on next open.
+ */
+export function clearClientDashboardCache(client: QueryClient = getQueryClient()): Promise<void> {
+  return client.invalidateQueries({ predicate: (q) => !isLoadedScale(q.queryKey, q.state.data) })
+}
+
+/**
+ * The value, or the last one seen: a failure, a new key or a refresh keeps
+ * the previous result on screen instead of blanking it.
+ */
+function useLastValue<T>(value: T | undefined): T | null {
+  const [last, setLast] = useState<T | null>(null)
+  useEffect(() => {
+    if (value !== undefined) setLast(value)
+  }, [value])
+  return value ?? last
+}
+
+/**
+ * Reports a query's failure once, while its piece is visible. Cancelled
+ * requests (#293) revert instead of failing, so they never report.
+ */
+function useReportFailure(
+  query: { error: Error | null; errorUpdatedAt: number },
+  id: string,
+  active: boolean,
+  onFailure: (message: string, id: string) => void
+) {
+  const { error, errorUpdatedAt } = query
+  const reportedRef = useRef("")
+  useEffect(() => {
+    if (!active || !error || isAbortError(error) || isCancelledError(error)) return
+    const token = `${id}@${errorUpdatedAt}`
+    if (reportedRef.current === token) return
+    reportedRef.current = token
+    onFailure(error.message, id)
+  }, [active, error, errorUpdatedAt, id, onFailure])
+}
 
 export type EntityPages = {
   accounts: EntityPage<Account> | null
@@ -98,7 +189,7 @@ export type DashboardViews = {
   /** A map view is currently visible (map aggregates fetch lazily). */
   needMap: boolean
   /** The active section; only its rows page is fetched. */
-  activeEntity: "accounts" | "centers" | "prospects"
+  activeEntity: Entity
 }
 
 interface UseServerDashboardDataParams {
@@ -112,32 +203,26 @@ interface UseServerDashboardDataParams {
 
 /**
  * Server-backed dashboard data (#249): everything the dashboard renders,
- * sourced from the aggregated/paginated endpoints. Filter changes are
- * debounced and each response is cached per canonical filter state, so
- * revisited states (e.g. removing a filter) restore instantly. The visible
- * view fetches first; charts, map aggregates, and the inactive tabs' pages
- * prefetch in the background shortly after, so view switches hit the cache.
+ * sourced from the aggregated/paginated endpoints through TanStack Query.
+ * Filter changes are debounced and each response is cached per canonical
+ * filter state, so revisited states (e.g. removing a filter) restore
+ * instantly. The visible view fetches first; charts, map aggregates, and the
+ * inactive tabs' pages prefetch in the background shortly after, so view
+ * switches hit the cache.
  */
 export function useServerDashboardData({ enabled, filters, pages, sorts, pageSize, views }: UseServerDashboardDataParams) {
-  const [summary, setSummary] = useState<SummaryResponse | null>(null)
-  const [facets, setFacets] = useState<FacetsResponse | null>(null)
-  const [charts, setCharts] = useState<ChartsResponse | null>(null)
-  const [map, setMap] = useState<CentersMapResponse | null>(null)
-  const [scaleStates, setScaleStates] = useState<StateAggregate[] | null>(null)
-  const [entityPages, setEntityPages] = useState<EntityPages>({ accounts: null, centers: null, prospects: null })
+  const queryClient = useQueryClient()
   const [error, setError] = useState<string | null>(null)
   // The latest failure of any piece. Unlike `error`, a later success does not
   // clear it, and `seq` changes on every failure so the UI can notify again
   // even when the message repeats (e.g. two 504s in a row).
   const [failure, setFailure] = useState<{ message: string; seq: number } | null>(null)
-  const [isFetching, setIsFetching] = useState(false)
-  // Distinct from isFetching: stays true for the whole reload() round trip so the
-  // header can show the refresh actually running. A refresh keeps the filters
-  // (and so effectiveKey) unchanged, which means the per-section `pending`
-  // skeletons never trigger and there would otherwise be no visible cue.
+  // Stays true for the whole reload() round trip so the header can show the
+  // refresh running: a refresh keeps the filters, and the data on screen, so
+  // the per-section pending cues never trigger.
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
-  // The canonical (wire) filters JSON driving all fetches; updates are
+  // The canonical (wire) filters JSON driving all queries; updates are
   // debounced unless the target state is already cached.
   const [effectiveKey, setEffectiveKey] = useState("")
   // The filters (filtersKey) that effectiveKey was last brought up to date
@@ -147,24 +232,6 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
   // filters (#289). Compared during render, so it holds from the first render
   // of the change.
   const [settledFiltersKey, setSettledFiltersKey] = useState<string | null>(null)
-  const [scaleAttempt, setScaleAttempt] = useState(0)
-  // The key each piece of state was last applied for, so the UI can tell
-  // "showing the previous state while a newer one loads" (pending flags).
-  const [appliedKeys, setAppliedKeys] = useState<{
-    summary: string
-    facets: string
-    charts: string
-    map: string
-    pages: { accounts: string; centers: string; prospects: string }
-  }>({ summary: "", facets: "", charts: "", map: "", pages: { accounts: "", centers: "", prospects: "" } })
-
-  // Base ranges are read through a ref inside effects so a facets update does
-  // not itself retrigger the fetch effects (the normalized filters only change
-  // if the user actually narrowed a range).
-  const rangesRef = useRef<FacetRanges | null>(null)
-  useEffect(() => {
-    rangesRef.current = facets?.ranges ?? null
-  }, [facets])
 
   // Latest-value refs are assigned in a layout effect (never during render) so
   // they are current before any passive effect below reads them.
@@ -174,32 +241,33 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
   }, [filters])
   const filtersKey = useMemo(() => JSON.stringify(sanitizeFilters(filters)), [filters])
 
-  // reload() clears the caches and briefly bypasses the server-side response
-  // cache so "refresh" actually recomputes from the warehouse.
-  const bypassUntilRef = useRef(0)
-  const noCache = useCallback(() => Date.now() < bypassUntilRef.current, [])
-  const reload = useCallback(() => {
-    clearClientDashboardCache()
-    bypassUntilRef.current = Date.now() + 5000
-    setScaleAttempt(0)
-    setIsRefreshing(true)
-    setRefreshKey((k) => k + 1)
-  }, [])
-
-  // Request ids: a response is applied only while its id is still the latest.
-  // Every effect run bumps its id, including cache hits, so a request still in
-  // flight for a state the user already left can never land on top of it.
-  const coreRequestRef = useRef(0)
-  const chartsRequestRef = useRef(0)
-  const mapRequestRef = useRef(0)
-  const entityRequestRef = useRef({ accounts: 0, centers: 0, prospects: 0 })
-
-  // A failed piece is marked applied for its key so its pending cue stops; the
-  // previous data stays on screen and the error is surfaced instead.
   const reportError = useCallback((message: string) => {
     setError(message)
     setFailure((prev) => ({ message, seq: (prev?.seq ?? 0) + 1 }))
   }, [])
+
+  const hasState = enabled && !!effectiveKey
+
+  // Summary + facets: always needed (cards + sidebar are always visible). Two
+  // parallel queries, applied independently: the summary is a handful of
+  // count statements and lands well before the facets (23 grouped lists in
+  // one statement), so the cards update first.
+  const summaryQ = useQuery({ ...summaryQuery(effectiveKey), enabled: hasState })
+  const facetsQ = useQuery({ ...facetsQuery(effectiveKey), enabled: hasState })
+  // Charts and map aggregates: only while their view is visible.
+  const chartsQ = useQuery({ ...chartsQuery(effectiveKey), enabled: hasState && views.needCharts })
+  const mapQ = useQuery({ ...mapQuery(effectiveKey), enabled: hasState && views.needMap })
+  // The colour scale: once a map has been shown, retried after a failure (#291).
+  const scaleQ = useQuery({ ...scaleQuery(), enabled: enabled && views.needMap })
+
+  // Base ranges are read through a ref inside effects so a facets update does
+  // not itself retrigger the debounce (the normalized filters only change if
+  // the user actually narrowed a range).
+  const rangesRef = useRef<FacetRanges | null>(null)
+  const facetsData = facetsQ.data
+  useEffect(() => {
+    if (facetsData) rangesRef.current = facetsData.ranges
+  }, [facetsData])
 
   // Debounced application of filter changes. Cached states apply immediately
   // (removing a filter snaps back); unseen states coalesce rapid clicks.
@@ -210,7 +278,10 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
       setSettledFiltersKey(filtersKey)
       return
     }
-    if (!effectiveKey || (summaryCache.has(key) && facetsCache.has(key))) {
+    const cached =
+      queryClient.getQueryData(summaryQuery(key).queryKey) !== undefined &&
+      queryClient.getQueryData(facetsQuery(key).queryKey) !== undefined
+    if (!effectiveKey || cached) {
       setEffectiveKey(key)
       setSettledFiltersKey(filtersKey)
       return
@@ -220,151 +291,57 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
       setSettledFiltersKey(filtersKey)
     }, DEBOUNCE_MS)
     return () => clearTimeout(timer)
-  }, [enabled, filtersKey, effectiveKey])
+  }, [enabled, filtersKey, effectiveKey, queryClient])
 
-  // One AbortController per filter state (and refresh): moving on cancels
-  // every request still in flight for the previous state, prefetches
-  // included, so rapid filtering does not keep the server computing states
-  // nobody will see (#293). Declared before the fetch effects so a new state
-  // has its controller before they run. Aborted requests are never reported.
-  const stateAbortRef = useRef<AbortController | null>(null)
+  // Moving to a new filter state cancels every request still in flight for
+  // the previous one, prefetches included, so rapid filtering does not keep
+  // the server computing states nobody will see (#293). TanStack Query
+  // cancels a query as soon as its observer's key moves on, which covers the
+  // visible queries and the prefetches (each has an observer, if disabled,
+  // on the same key); this also cancels any old-state request without one.
+  // Cancelled queries revert rather than fail, so nothing is reported.
   useEffect(() => {
-    const controller = new AbortController()
-    stateAbortRef.current = controller
-    return () => controller.abort()
-  }, [effectiveKey, refreshKey])
-
-  // Summary + facets: always needed (cards + sidebar are always visible).
-  // Two parallel requests, applied independently: the summary is a handful of
-  // count statements and lands well before the facets (23 grouped lists in
-  // one statement), so the cards update first instead of waiting for the
-  // sidebar. Both share the dashboard cache keys on the server.
+    if (!effectiveKey) return
+    void queryClient.cancelQueries({
+      predicate: (q) => {
+        const stateKey = stateKeyOf(q.queryKey)
+        return stateKey !== null && stateKey !== effectiveKey
+      },
+    })
+  }, [effectiveKey, queryClient])
   useEffect(() => {
-    if (!enabled || !effectiveKey) return
-    const requestId = ++coreRequestRef.current
-    const cachedSummary = summaryCache.get(effectiveKey)
-    const cachedFacets = facetsCache.get(effectiveKey)
-    if (cachedSummary && cachedFacets) {
-      setIsFetching(false)
-      setSummary(cachedSummary)
-      setFacets(cachedFacets)
-      setAppliedKeys((prev) => ({ ...prev, summary: effectiveKey, facets: effectiveKey }))
-      setError(null)
-      setIsRefreshing(false)
-      return
+    return () => {
+      void queryClient.cancelQueries({ queryKey: DASHBOARD_KEY })
     }
-    const wireFilters = JSON.parse(effectiveKey) as Filters
-    const bypass = { noCache: noCache(), signal: stateAbortRef.current?.signal }
-    const startedAt = Date.now()
-    setIsFetching(true)
+  }, [queryClient])
 
-    const summaryPromise = cachedSummary
-      ? Promise.resolve(cachedSummary)
-      : fetchDashboardSummary(wireFilters, bypass).then((res) => {
-          if (coreRequestRef.current !== requestId) return res
-          lruSet(summaryCache, effectiveKey, res)
-          setSummary(res)
-          setAppliedKeys((prev) => ({ ...prev, summary: effectiveKey }))
-          return res
-        })
-    const facetsPromise = cachedFacets
-      ? Promise.resolve(cachedFacets)
-      : fetchDashboardFacets(wireFilters, bypass).then((res) => {
-          if (coreRequestRef.current !== requestId) return res
-          lruSet(facetsCache, effectiveKey, res)
-          setFacets(res)
-          setAppliedKeys((prev) => ({ ...prev, facets: effectiveKey }))
-          return res
-        })
-    if (cachedSummary) {
-      setSummary(cachedSummary)
-      setAppliedKeys((prev) => ({ ...prev, summary: effectiveKey }))
-    }
-    if (cachedFacets) {
-      setFacets(cachedFacets)
-      setAppliedKeys((prev) => ({ ...prev, facets: effectiveKey }))
-    }
-
-    Promise.all([summaryPromise, facetsPromise])
-      .then(() => {
-        if (coreRequestRef.current !== requestId) return
-        setError(null)
-        captureEvent(ANALYTICS_EVENTS.DATA_LOAD_SUCCEEDED, {
-          duration_ms: Date.now() - startedAt,
-          is_refresh: bypass.noCache,
-        })
-      })
-      .catch((err) => {
-        if (coreRequestRef.current !== requestId || isAbortError(err)) return
-        devError("dashboard summary/facets fetch failed:", err)
-        const message = err instanceof Error ? err.message : "Failed to load dashboard data"
-        reportError(message)
-        setAppliedKeys((prev) => ({ ...prev, summary: effectiveKey, facets: effectiveKey }))
-        captureEvent(ANALYTICS_EVENTS.DATA_LOAD_FAILED, { error_message: message })
-      })
-      .finally(() => {
-        if (coreRequestRef.current === requestId) {
-          setIsFetching(false)
-          setIsRefreshing(false)
-        }
-      })
-  }, [enabled, effectiveKey, refreshKey, noCache, reportError])
-
-  // Charts: only when a chart view is visible.
+  // Per-entity paginated rows: only the active section fetches; the others
+  // fetch on first activation (or come from the prefetch). Each table is its
+  // own query, so a page, sort or filter change cancels only that table's
+  // previous request (#293). While a filter change is debouncing, a table
+  // keeps its last settled page (#289) instead of page 1 for the old filters.
+  const filtersSettled = settledFiltersKey === filtersKey
+  const liveParams: Record<Entity, PageParams> = {
+    accounts: { stateKey: effectiveKey, page: pages.accounts, sort: sorts.accounts },
+    centers: { stateKey: effectiveKey, page: pages.centers, sort: sorts.centers },
+    prospects: { stateKey: effectiveKey, page: pages.prospects, sort: sorts.prospects },
+  }
+  const [settledParams, setSettledParams] = useState<Record<Entity, PageParams> | null>(null)
+  const liveParamsKey = JSON.stringify(liveParams)
   useEffect(() => {
-    if (!enabled || !effectiveKey || !views.needCharts) return
-    const requestId = ++chartsRequestRef.current
-    const cached = chartsCache.get(effectiveKey)
-    if (cached) {
-      setCharts(cached)
-      setAppliedKeys((prev) => ({ ...prev, charts: effectiveKey }))
-      return
-    }
-    fetchDashboardCharts(JSON.parse(effectiveKey) as Filters, { noCache: noCache(), signal: stateAbortRef.current?.signal })
-      .then((res) => {
-        if (chartsRequestRef.current !== requestId) return
-        lruSet(chartsCache, effectiveKey, res)
-        setCharts(res)
-        setAppliedKeys((prev) => ({ ...prev, charts: effectiveKey }))
-      })
-      .catch((err) => {
-        if (chartsRequestRef.current !== requestId || isAbortError(err)) return
-        devError("dashboard charts fetch failed:", err)
-        reportError(err instanceof Error ? err.message : "Failed to load charts")
-        setAppliedKeys((prev) => ({ ...prev, charts: effectiveKey }))
-      })
-  }, [enabled, effectiveKey, views.needCharts, refreshKey, noCache, reportError])
-
-  // Map aggregates: only when a map view is visible.
-  useEffect(() => {
-    if (!enabled || !effectiveKey || !views.needMap) return
-    const requestId = ++mapRequestRef.current
-    const cached = mapCache.get(effectiveKey)
-    if (cached) {
-      setMap(cached)
-      setAppliedKeys((prev) => ({ ...prev, map: effectiveKey }))
-      return
-    }
-    fetchCentersMap(JSON.parse(effectiveKey) as Filters, { noCache: noCache(), signal: stateAbortRef.current?.signal })
-      .then((res) => {
-        if (mapRequestRef.current !== requestId) return
-        lruSet(mapCache, effectiveKey, res)
-        setMap(res)
-        setAppliedKeys((prev) => ({ ...prev, map: effectiveKey }))
-      })
-      .catch((err) => {
-        if (mapRequestRef.current !== requestId || isAbortError(err)) return
-        devError("centres map fetch failed:", err)
-        reportError(err instanceof Error ? err.message : "Failed to load the map")
-        setAppliedKeys((prev) => ({ ...prev, map: effectiveKey }))
-      })
-  }, [enabled, effectiveKey, views.needMap, refreshKey, noCache, reportError])
+    if (filtersSettled) setSettledParams(JSON.parse(liveParamsKey) as Record<Entity, PageParams>)
+  }, [filtersSettled, liveParamsKey])
+  const paramsFor = (entity: Entity) => (filtersSettled || !settledParams ? liveParams[entity] : settledParams[entity])
+  const pageEnabled = (entity: Entity) => hasState && filtersSettled && views.activeEntity === entity
+  const accountsQ = useQuery({ ...pageQuery("accounts", paramsFor("accounts"), pageSize), enabled: pageEnabled("accounts") })
+  const centersQ = useQuery({ ...pageQuery("centers", paramsFor("centers"), pageSize), enabled: pageEnabled("centers") })
+  const prospectsQ = useQuery({ ...pageQuery("prospects", paramsFor("prospects"), pageSize), enabled: pageEnabled("prospects") })
 
   // Background prefetch: ~400ms after a new filter state settles (visible
-  // requests go out first), quietly warm the client cache with whatever the
-  // lazy effects are not already fetching: charts, map aggregates, and the
+  // requests go out first), quietly warm the cache with whatever the visible
+  // queries are not already fetching: charts, map aggregates, and the
   // inactive tabs' pages. View/tab switches then hit the cache and feel
-  // instant. Fire-and-forget cache writes only; the lazy effects own state.
+  // instant. Failures are only logged; a view shown later fetches again.
   const viewsRef = useRef(views)
   const pagesRef = useRef(pages)
   const sortsRef = useRef(sorts)
@@ -374,162 +351,115 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
     sortsRef.current = sorts
   }, [views, pages, sorts])
   useEffect(() => {
-    if (!enabled || !effectiveKey) return
-    const signal = stateAbortRef.current?.signal
+    if (!hasState) return
     const timer = setTimeout(() => {
-      const wireFilters = JSON.parse(effectiveKey) as Filters
-      const bypass = { noCache: noCache(), signal }
       const logFailure = (what: string) => (err: unknown) => {
-        if (!isAbortError(err)) devError(`${what} prefetch failed:`, err)
+        if (!isAbortError(err) && !isCancelledError(err)) devError(`${what} prefetch failed:`, err)
       }
-
-      if (!viewsRef.current.needCharts && !chartsCache.has(effectiveKey)) {
-        fetchDashboardCharts(wireFilters, bypass)
-          .then((res) => lruSet(chartsCache, effectiveKey, res))
-          .catch(logFailure("charts"))
+      if (!viewsRef.current.needCharts) {
+        queryClient.fetchQuery(chartsQuery(effectiveKey)).catch(logFailure("charts"))
       }
-      if (!viewsRef.current.needMap && !mapCache.has(effectiveKey)) {
-        fetchCentersMap(wireFilters, bypass)
-          .then((res) => lruSet(mapCache, effectiveKey, res))
-          .catch(logFailure("map"))
+      if (!viewsRef.current.needMap) {
+        queryClient.fetchQuery(mapQuery(effectiveKey)).catch(logFailure("map"))
       }
       for (const entity of ["accounts", "centers", "prospects"] as const) {
         if (viewsRef.current.activeEntity === entity) continue
-        const sort = sortsRef.current[entity]
-        const sortKey = sort ? `${sort.column}:${sort.direction}` : ""
-        const cacheKey = `${entity}:${effectiveKey}:${pageSize}:${pagesRef.current[entity]}:${sortKey}`
-        if (pageCache.has(cacheKey)) continue
-        fetchEntityPage(entity, wireFilters, pagesRef.current[entity], pageSize, sort, bypass)
-          .then((res) => lruSet(pageCache, cacheKey, res as EntityPage<Record<string, unknown>>))
-          .catch(logFailure(`${entity} page`))
+        const params = { stateKey: effectiveKey, page: pagesRef.current[entity], sort: sortsRef.current[entity] }
+        queryClient.fetchQuery(pageQuery(entity, params, pageSize)).catch(logFailure(`${entity} page`))
       }
-    }, 400)
+    }, PREFETCH_DELAY_MS)
     return () => clearTimeout(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, effectiveKey, refreshKey, pageSize])
+  }, [hasState, effectiveKey, refreshKey, pageSize, queryClient])
 
-  // Unfiltered state aggregates for the choropleth color scale (once, and only
-  // once a map has been shown). A failure retries with backoff, then again on
-  // refresh or the next time the map is shown (#291).
-  useEffect(() => {
-    if (!enabled || !views.needMap || scaleStates !== null) return
-    const controller = new AbortController()
-    let retryTimer: ReturnType<typeof setTimeout> | undefined
-    fetchCentersMap(
-      createDefaultFilters({
-        accountVisibilityMode: "all",
-        accountHqRevenueRange: WIDE_RANGE,
-        accountYearsInIndiaRange: WIDE_RANGE,
-        centerIncYearRange: WIDE_RANGE,
-      }),
-      { signal: controller.signal }
-    )
-      .then((res) => {
-        if (!controller.signal.aborted) setScaleStates(res.states)
-      })
-      .catch((err) => {
-        if (controller.signal.aborted || isAbortError(err)) return
-        devError("scale aggregates fetch failed:", err)
-        const delay = SCALE_RETRY_DELAYS_MS[scaleAttempt]
-        if (delay !== undefined) retryTimer = setTimeout(() => setScaleAttempt((n) => n + 1), delay)
-      })
-    return () => {
-      controller.abort()
-      clearTimeout(retryTimer)
-    }
-  }, [enabled, views.needMap, scaleStates, scaleAttempt, refreshKey])
-
-  // Per-entity paginated rows: only the active section fetches; the others
-  // fetch on first activation (and then hit the cache). Each table has its own
-  // controller, so a page, sort or filter change cancels that table's previous
-  // request (#293).
-  const entityAbortRef = useRef<Record<"accounts" | "centers" | "prospects", AbortController | null>>({
-    accounts: null,
-    centers: null,
-    prospects: null,
-  })
-  useEffect(() => {
-    const controllers = entityAbortRef.current
-    return () => {
-      for (const controller of Object.values(controllers)) controller?.abort()
-    }
-  }, [])
-  const loadEntityPage = useCallback(
-    (entity: "accounts" | "centers" | "prospects", page: number, sort: EntitySort | null) => {
-      if (!effectiveKey) return
-      const sortKey = sort ? `${sort.column}:${sort.direction}` : ""
-      const cacheKey = `${entity}:${effectiveKey}:${pageSize}:${page}:${sortKey}`
-      const requestId = ++entityRequestRef.current[entity]
-      entityAbortRef.current[entity]?.abort()
-      entityAbortRef.current[entity] = null
-      const cached = pageCache.get(cacheKey)
-      if (cached) {
-        setEntityPages((prev) => ({ ...prev, [entity]: cached }))
-        setAppliedKeys((prev) => ({ ...prev, pages: { ...prev.pages, [entity]: cacheKey } }))
-        return
-      }
-      const controller = new AbortController()
-      entityAbortRef.current[entity] = controller
-      const wireFilters = JSON.parse(effectiveKey) as Filters
-      fetchEntityPage(entity, wireFilters, page, pageSize, sort, { noCache: noCache(), signal: controller.signal })
-        .then((res) => {
-          if (entityRequestRef.current[entity] !== requestId) return
-          lruSet(pageCache, cacheKey, res as EntityPage<Record<string, unknown>>)
-          setEntityPages((prev) => ({ ...prev, [entity]: res }))
-          setAppliedKeys((prev) => ({ ...prev, pages: { ...prev.pages, [entity]: cacheKey } }))
-        })
-        .catch((err) => {
-          if (entityRequestRef.current[entity] !== requestId || isAbortError(err)) return
-          devError(`${entity} page fetch failed:`, err)
-          reportError(err instanceof Error ? err.message : `Failed to load ${entity}`)
-          setAppliedKeys((prev) => ({ ...prev, pages: { ...prev.pages, [entity]: cacheKey } }))
-        })
+  // Failures: reported once each, while the piece is visible. A failed piece
+  // keeps its previous data on screen and stops its pending cue.
+  const reportCoreFailure = useCallback(
+    (message: string) => {
+      devError("dashboard summary/facets fetch failed:", message)
+      reportError(message)
+      captureEvent(ANALYTICS_EVENTS.DATA_LOAD_FAILED, { error_message: message })
     },
-    [effectiveKey, pageSize, noCache, reportError]
+    [reportError]
   )
+  const reportPieceFailure = useCallback(
+    (message: string, id: string) => {
+      devError(`${id} fetch failed:`, message)
+      reportError(message)
+    },
+    [reportError]
+  )
+  useReportFailure(summaryQ, `summary:${effectiveKey}`, hasState, reportCoreFailure)
+  useReportFailure(facetsQ, `facets:${effectiveKey}`, hasState, reportCoreFailure)
+  useReportFailure(chartsQ, `charts:${effectiveKey}`, hasState && views.needCharts, reportPieceFailure)
+  useReportFailure(mapQ, `map:${effectiveKey}`, hasState && views.needMap, reportPieceFailure)
+  useReportFailure(accountsQ, `accounts:${JSON.stringify(paramsFor("accounts"))}`, pageEnabled("accounts"), reportPieceFailure)
+  useReportFailure(centersQ, `centers:${JSON.stringify(paramsFor("centers"))}`, pageEnabled("centers"), reportPieceFailure)
+  useReportFailure(prospectsQ, `prospects:${JSON.stringify(paramsFor("prospects"))}`, pageEnabled("prospects"), reportPieceFailure)
 
-  const filtersSettled = settledFiltersKey === filtersKey
-  const useEntityEffect = (entity: "accounts" | "centers" | "prospects", page: number, sort: EntitySort | null) => {
-    const sortKey = sort ? `${sort.column}:${sort.direction}` : ""
-    const active = views.activeEntity === entity
-    useEffect(() => {
-      if (!enabled || !active || !filtersSettled) return
-      loadEntityPage(entity, page, sort)
-      // sort is keyed by sortKey so an equal sort object does not refetch.
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [enabled, active, filtersSettled, page, sortKey, refreshKey, loadEntityPage])
-  }
-  // Fixed call order: the three entities are static.
-  useEntityEffect("accounts", pages.accounts, sorts.accounts)
-  useEntityEffect("centers", pages.centers, sorts.centers)
-  useEntityEffect("prospects", pages.prospects, sorts.prospects)
+  // A successful summary + facets load clears the error, and a load that
+  // actually went to the network (not a cache hit) is measured.
+  const coreFetching = hasState && (summaryQ.isFetching || facetsQ.isFetching)
+  const coreSucceeded = hasState && summaryQ.isSuccess && facetsQ.isSuccess
+  const coreLoadRef = useRef<{ key: string; startedAt: number } | null>(null)
+  useEffect(() => {
+    if (coreFetching) {
+      if (coreLoadRef.current?.key !== effectiveKey) coreLoadRef.current = { key: effectiveKey, startedAt: Date.now() }
+      return
+    }
+    const load = coreLoadRef.current
+    coreLoadRef.current = null
+    if (!coreSucceeded) return
+    setError(null)
+    if (load?.key === effectiveKey) {
+      captureEvent(ANALYTICS_EVENTS.DATA_LOAD_SUCCEEDED, { duration_ms: Date.now() - load.startedAt, is_refresh: noCache() })
+    }
+  }, [coreFetching, coreSucceeded, effectiveKey])
+
+  const reload = useCallback(() => {
+    bypassUntil = Date.now() + 5000
+    setIsRefreshing(true)
+    setRefreshKey((k) => k + 1)
+    void clearClientDashboardCache(queryClient).finally(() => setIsRefreshing(false))
+  }, [queryClient])
+
+  const summary = useLastValue(summaryQ.data)
+  const facets = useLastValue(facetsQ.data)
+  const charts = useLastValue(chartsQ.data)
+  const map = useLastValue(mapQ.data)
+  const accountsPage = useLastValue(accountsQ.data)
+  const centersPage = useLastValue(centersQ.data)
+  const prospectsPage = useLastValue(prospectsQ.data)
+  const scaleStates = scaleQ.data?.states ?? null
+
+  const entityPages = useMemo<EntityPages>(
+    () => ({
+      accounts: accountsPage as EntityPage<Account> | null,
+      centers: centersPage as EntityPage<Center> | null,
+      prospects: prospectsPage as EntityPage<Prospect> | null,
+    }),
+    [accountsPage, centersPage, prospectsPage]
+  )
 
   const initialLoading = enabled && summary === null && error === null
 
-  // "Showing a previous state while the current one loads" per piece. Cache
-  // hits apply synchronously, so revisited states never flash a pending cue.
-  const pending = useMemo(() => {
-    const pageKeyFor = (entity: "accounts" | "centers" | "prospects") => {
-      const sort = sorts[entity]
-      return `${entity}:${effectiveKey}:${pageSize}:${pages[entity]}:${sort ? `${sort.column}:${sort.direction}` : ""}`
-    }
-    const stale = (applied: string, target: string) => enabled && !!effectiveKey && applied !== target
-    const summary = stale(appliedKeys.summary, effectiveKey)
-    const facets = stale(appliedKeys.facets, effectiveKey)
-    return {
-      /** Cards: only the summary counts. */
-      summary,
-      /** Sidebar option lists. */
-      facets,
-      /** Either of the always-visible pieces. */
-      core: summary || facets,
-      charts: stale(appliedKeys.charts, effectiveKey),
-      map: stale(appliedKeys.map, effectiveKey),
-      accounts: stale(appliedKeys.pages.accounts, pageKeyFor("accounts")),
-      centers: stale(appliedKeys.pages.centers, pageKeyFor("centers")),
-      prospects: stale(appliedKeys.pages.prospects, pageKeyFor("prospects")),
-    }
-  }, [enabled, effectiveKey, appliedKeys, pages, sorts, pageSize])
+  // "Showing a previous state while the current one loads" per piece. Cached
+  // states apply synchronously, so revisited states never flash a pending cue.
+  const stale = (q: { data: unknown; isError: boolean }) => hasState && q.data === undefined && !q.isError
+  const pageStale = (entity: Entity, q: { data: unknown; isError: boolean }) =>
+    stale(q) || (hasState && !filtersSettled && JSON.stringify(liveParams[entity]) !== JSON.stringify(paramsFor(entity)))
+  const pending = {
+    /** Cards: only the summary counts. */
+    summary: stale(summaryQ),
+    /** Sidebar option lists. */
+    facets: stale(facetsQ),
+    /** Either of the always-visible pieces. */
+    core: stale(summaryQ) || stale(facetsQ),
+    charts: stale(chartsQ),
+    map: stale(mapQ),
+    accounts: pageStale("accounts", accountsQ),
+    centers: pageStale("centers", centersQ),
+    prospects: pageStale("prospects", prospectsQ),
+  }
 
   return {
     summary,
@@ -540,7 +470,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
     entityPages,
     error,
     failure,
-    isFetching,
+    isFetching: coreFetching,
     isRefreshing,
     initialLoading,
     pending,
