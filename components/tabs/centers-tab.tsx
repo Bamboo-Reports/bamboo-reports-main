@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useRef, useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { TabsContent } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 import { RiMapLine, RiMapPinLine, RiPieChartLine, RiStackLine, RiTableLine } from "@remixicon/react"
@@ -323,10 +323,11 @@ export function CentersTab({
 
       {/* Map Section */}
        {centersView === "map" && (
-         <Card data-tour="map-view" className="w-full flex flex-col h-[var(--dashboard-panel-height)] border shadow-sm view-content">
-           <CardHeader className="shrink-0 px-6 py-3">
-             <div className="flex items-center gap-3">
-               <CardTitle className="text-base">Centres Map</CardTitle>
+         <Card data-tour="map-view" className="w-full flex flex-col h-[var(--dashboard-panel-height)] overflow-hidden border shadow-sm view-content">
+           <CardContent className="relative p-0 flex flex-col flex-1 overflow-hidden">
+             {mapLoading && <MapUpdatingPill />}
+             {/* Top-right is the one free corner: zoom and fullscreen sit top-left, the legend bottom-left. */}
+             <div className="absolute right-3 top-3 z-20">
                <ViewSwitcher
                  value={mapMode}
                  onValueChange={(value) => setMapMode(value as "city" | "state")}
@@ -342,12 +343,8 @@ export function CentersTab({
                      icon: <RiStackLine className="h-4 w-4" />,
                    },
                  ]}
-                 className="ml-auto"
                />
              </div>
-           </CardHeader>
-           <CardContent className="relative p-0 flex flex-col flex-1 overflow-hidden">
-             {mapLoading && <MapUpdatingPill />}
              <MapErrorBoundary>
                {mapMode === "city" ? (
                  <CentersMap centers={centers} cities={mapData?.cities} heightClass="h-full" />
