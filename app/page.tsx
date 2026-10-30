@@ -18,6 +18,7 @@ import { ErrorState } from "@/components/states/error-state"
 import { LoadingState } from "@/components/states/loading-state"
 import { AccountsTab, CentersTab } from "@/components/tabs"
 import { ProspectsTab } from "@/components/tabs/prospects-tab"
+import type { TabSort } from "@/components/tabs/accounts-tab"
 import { SummaryCards } from "@/components/dashboard/summary-cards"
 import { TopProgressBar } from "@/components/ui/top-progress-bar"
 import { Tabs } from "@/components/ui/tabs"
@@ -76,6 +77,11 @@ const NO_SERVICES: Service[] = []
 const NO_TECH: Tech[] = []
 const NO_PROSPECTS: Prospect[] = []
 const NO_ALIASES: Alias[] = []
+
+function toEntitySort(entity: "accounts" | "centers" | "prospects", sort: TabSort | null): EntitySort | null {
+  const column = sort ? TAB_SORT_COLUMNS[entity][sort.key] : undefined
+  return sort && column ? { column, direction: sort.direction } : null
+}
 
 function DashboardContent(): React.JSX.Element | null {
   const accountsEnabled = isSectionEnabled("accounts")
@@ -153,10 +159,19 @@ function DashboardContent(): React.JSX.Element | null {
   })
   const [activeSection, setActiveSection] = useState<"accounts" | "centers" | "prospects">(defaultSection)
 
-  // Server mode: per-entity sort state (the tabs report sort changes here).
-  const [accountsSort, setAccountsSort] = useState<EntitySort | null>(null)
-  const [centersSort, setCentersSort] = useState<EntitySort | null>(null)
-  const [prospectsSort, setProspectsSort] = useState<EntitySort | null>(null)
+  // Server mode: per-entity sort state, keyed by the tab's column id. The
+  // tables read it back through their server props, so this is the only copy.
+  const [accountsSort, setAccountsSort] = useState<TabSort | null>(null)
+  const [centersSort, setCentersSort] = useState<TabSort | null>(null)
+  const [prospectsSort, setProspectsSort] = useState<TabSort | null>(null)
+  const entitySorts = useMemo(
+    () => ({
+      accounts: toEntitySort("accounts", accountsSort),
+      centers: toEntitySort("centers", centersSort),
+      prospects: toEntitySort("prospects", prospectsSort),
+    }),
+    [accountsSort, centersSort, prospectsSort]
+  )
 
   // What is visible right now, so charts/map/rows fetch lazily (#249 perf).
   const activeView =
@@ -174,7 +189,7 @@ function DashboardContent(): React.JSX.Element | null {
     enabled: authReady && !!userId,
     filters,
     pages: { accounts: accountsPage, centers: centersPage, prospects: prospectsPage },
-    sorts: { accounts: accountsSort, centers: centersSort, prospects: prospectsSort },
+    sorts: entitySorts,
     pageSize: itemsPerPage,
     views: dashboardViews,
   })
@@ -191,10 +206,9 @@ function DashboardContent(): React.JSX.Element | null {
   }, [serverData.facets])
 
   const makeSortHandler = useCallback(
-    (entity: "accounts" | "centers" | "prospects", set: (s: EntitySort | null) => void) =>
+    (entity: "accounts" | "centers" | "prospects", set: (s: TabSort | null) => void) =>
       (key: string, direction: "asc" | "desc" | null) => {
-        const column = TAB_SORT_COLUMNS[entity][key]
-        set(direction && column ? { column, direction } : null)
+        set(direction && TAB_SORT_COLUMNS[entity][key] ? { key, direction } : null)
       },
     []
   )
@@ -205,31 +219,37 @@ function DashboardContent(): React.JSX.Element | null {
     () =>
       ({
         total: serverData.entityPages.accounts?.total ?? 0,
-        loading: serverData.entityPages.accounts === null || serverData.pending.accounts,
+        loading: serverData.entityPages.accounts === null,
+        refreshing: serverData.entityPages.accounts !== null && serverData.pending.accounts,
+        sort: accountsSort,
         onSortChange: makeSortHandler("accounts", setAccountsSort),
         selectionResetKey: filtersPaginationResetKey,
       }),
-    [serverData.entityPages.accounts, serverData.pending.accounts, makeSortHandler, filtersPaginationResetKey]
+    [serverData.entityPages.accounts, serverData.pending.accounts, accountsSort, makeSortHandler, filtersPaginationResetKey]
   )
   const centersServerProps = useMemo(
     () =>
       ({
         total: serverData.entityPages.centers?.total ?? 0,
-        loading: serverData.entityPages.centers === null || serverData.pending.centers,
+        loading: serverData.entityPages.centers === null,
+        refreshing: serverData.entityPages.centers !== null && serverData.pending.centers,
+        sort: centersSort,
         onSortChange: makeSortHandler("centers", setCentersSort),
         selectionResetKey: filtersPaginationResetKey,
       }),
-    [serverData.entityPages.centers, serverData.pending.centers, makeSortHandler, filtersPaginationResetKey]
+    [serverData.entityPages.centers, serverData.pending.centers, centersSort, makeSortHandler, filtersPaginationResetKey]
   )
   const prospectsServerProps = useMemo(
     () =>
       ({
         total: serverData.entityPages.prospects?.total ?? 0,
-        loading: serverData.entityPages.prospects === null || serverData.pending.prospects,
+        loading: serverData.entityPages.prospects === null,
+        refreshing: serverData.entityPages.prospects !== null && serverData.pending.prospects,
+        sort: prospectsSort,
         onSortChange: makeSortHandler("prospects", setProspectsSort),
         selectionResetKey: filtersPaginationResetKey,
       }),
-    [serverData.entityPages.prospects, serverData.pending.prospects, makeSortHandler, filtersPaginationResetKey]
+    [serverData.entityPages.prospects, serverData.pending.prospects, prospectsSort, makeSortHandler, filtersPaginationResetKey]
   )
   const serverMapData = useMemo(
     () =>
@@ -264,6 +284,8 @@ function DashboardContent(): React.JSX.Element | null {
     | { dataset: "prospects"; prospectIds: string[] }
     | null
   >(null)
+  /** Sheets ticked when the full export opens; undefined ticks every sheet. */
+  const [exportStartDatasets, setExportStartDatasets] = useState<ExportDatasetKey[] | undefined>(undefined)
   const [exportsDialogOpen, setExportsDialogOpen] = useState(false)
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
@@ -756,14 +778,21 @@ function DashboardContent(): React.JSX.Element | null {
     }
   }, [])
 
-  const handleExportAll = useCallback(() => {
-    if (!canExport) {
-      return
-    }
-    cancelPendingScopeClear()
-    setExportScope(null)
-    setExportDialogOpen(true)
-  }, [canExport, cancelPendingScopeClear])
+  // The full (filtered) export. From a table it starts with only that
+  // table's sheet ticked; from the sidebar every sheet starts ticked.
+  const openFullExport = useCallback(
+    (startWith: ExportDatasetKey | null) => {
+      if (!canExport) {
+        return
+      }
+      cancelPendingScopeClear()
+      setExportScope(null)
+      setExportStartDatasets(startWith ? [startWith] : undefined)
+      setExportDialogOpen(true)
+    },
+    [canExport, cancelPendingScopeClear]
+  )
+  const handleExportAll = useCallback(() => openFullExport(null), [openFullExport])
 
   const handleDownloadSelection = useCallback(
     (
@@ -1389,6 +1418,7 @@ function DashboardContent(): React.JSX.Element | null {
             rowCounts={exportPayload.rowCounts}
             allowedDatasets={exportPayload.allowedDatasets}
             compact={Boolean(exportPayload.allowedDatasets)}
+            initialDatasets={exportScope ? undefined : exportStartDatasets}
             exportScope={exportScope ? "selection" : "all"}
             onExportCompleted={handleExportCompleted}
           />
@@ -1458,6 +1488,7 @@ function DashboardContent(): React.JSX.Element | null {
                       itemsPerPage={itemsPerPage}
                       setItemsPerPage={setItemsPerPage}
                       onDownloadSelection={canExport ? handleDownloadSelection : undefined}
+                      onExportAll={canExport ? openFullExport : undefined}
                     />
                   )}
 
@@ -1484,6 +1515,7 @@ function DashboardContent(): React.JSX.Element | null {
                       itemsPerPage={itemsPerPage}
                       setItemsPerPage={setItemsPerPage}
                       onDownloadSelection={canExport ? handleDownloadSelection : undefined}
+                      onExportAll={canExport ? openFullExport : undefined}
                     />
                   )}
 
@@ -1507,6 +1539,7 @@ function DashboardContent(): React.JSX.Element | null {
                       itemsPerPage={itemsPerPage}
                       setItemsPerPage={setItemsPerPage}
                       onDownloadSelection={canExport ? handleDownloadSelection : undefined}
+                      onExportAll={canExport ? openFullExport : undefined}
                     />
                   )}
                 </Tabs>

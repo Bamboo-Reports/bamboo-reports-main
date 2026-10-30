@@ -27,13 +27,20 @@ import { canAccessAccountsMapView } from "@/lib/config/dashboard-access"
 import type { CityAggregate, StateAggregate } from "@/lib/dashboard/api-client"
 import type { Account, Center, Prospect, Service, Function, Tech } from "@/lib/types"
 
+export type TabSort = { key: string; direction: "asc" | "desc" }
+
 /**
  * Server mode (#249): rows arrive pre-paginated/sorted from the query
  * endpoints; the tab reports sort changes upward and renders server totals.
  */
 export interface TabServerProps {
   total: number
+  /** No page has arrived yet: the table shows skeleton rows. */
   loading?: boolean
+  /** The previous page stays on screen, dimmed, while the next one loads. */
+  refreshing?: boolean
+  /** The active sort, owned by the dashboard (column id from the tab's columns). */
+  sort?: TabSort | null
   onSortChange: (key: string, direction: "asc" | "desc" | null) => void
   /** Changes whenever the filters do; selected rows are cleared then. */
   selectionResetKey?: string
@@ -61,6 +68,8 @@ interface AccountsTabProps {
   itemsPerPage: number
   setItemsPerPage: (size: number) => void
   onDownloadSelection?: (scope: { dataset: "accounts"; accountNames: string[] }) => void
+  /** Opens the full Export (every row matching the filters), starting with this table's sheet. */
+  onExportAll?: (dataset: "accounts") => void
   server?: TabServerProps | null
   mapData?: { cities: CityAggregate[]; states: StateAggregate[]; scaleStates?: StateAggregate[] | null } | null
   chartsLoading?: boolean
@@ -83,6 +92,7 @@ export function AccountsTab({
   itemsPerPage,
   setItemsPerPage,
   onDownloadSelection,
+  onExportAll,
   server,
   mapData,
   chartsLoading = false,
@@ -109,6 +119,7 @@ export function AccountsTab({
     itemsPerPage,
     setItemsPerPage,
   })
+  const allPageSelected = table.getIsAllPageRowsSelected()
   const pageAccounts = table.getRowModel().rows.map((row) => row.original)
   const nameColumn = table.getColumn("name")
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -379,6 +390,7 @@ export function AccountsTab({
                 key="table"
                 table={table}
                 loading={server?.loading}
+                refreshing={server?.refreshing}
                 onRowOpen={handleRowOpen}
                 getRowLabel={(account) => `View account details for ${account.account_global_legal_name || "account"}`}
                 renderRowMenu={(account) => <AccountRowMenu account={account} onOpen={handleRowOpen} />}
@@ -387,7 +399,13 @@ export function AccountsTab({
             ) : (
               <div key="grid" ref={scrollContainerRef} className="view-content min-h-0 flex-1 overflow-auto rounded-md border">
                 <DataGridSortBar column={nameColumn} label="account name" />
-                <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div
+                  className={cn(
+                    "grid grid-cols-1 gap-4 p-4 transition-opacity sm:grid-cols-2 lg:grid-cols-3",
+                    server?.refreshing && "pointer-events-none opacity-50"
+                  )}
+                  aria-busy={server?.loading || server?.refreshing}
+                >
                   {server?.loading ? <GridSkeletonCards /> : pageAccounts.map((account) => (
                     <AccountGridCard
                       key={account.account_global_legal_name}
@@ -410,6 +428,8 @@ export function AccountsTab({
         count={selectedNames.size}
         onClear={clearSelection}
         onExport={() => onDownloadSelection?.({ dataset: "accounts", accountNames: Array.from(selectedNames) })}
+        matchingCount={allPageSelected && totalRows > selectedNames.size ? totalRows : undefined}
+        onExportAll={onExportAll && (() => onExportAll("accounts"))}
       />
 
       {/* Account Details Dialog */}

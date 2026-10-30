@@ -100,6 +100,7 @@ export const ANALYTICS_EVENTS = {
   ROWS_SELECTED: "rows_selected",
   ROW_SELECTION_CLEARED: "row_selection_cleared",
   SELECTION_EXPORT_CLICKED: "selection_export_clicked",
+  SELECTION_EXPORT_ALL_CLICKED: "selection_export_all_clicked",
   THEME_CHANGED: "theme_changed",
   NOTIFICATIONS_OPENED: "notifications_opened",
   NOTIFICATIONS_MARKED_READ: "notifications_marked_read",

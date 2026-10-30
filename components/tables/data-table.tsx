@@ -55,7 +55,10 @@ export function createSelectColumn<TData extends RowData>(getLabel: (item: TData
 
 interface DataTableProps<TData extends RowData> {
   table: DashboardTable<TData>
+  /** Nothing to show yet: render skeleton rows. */
   loading?: boolean
+  /** Keep the current rows, dimmed and inert, while the next ones load. */
+  refreshing?: boolean
   skeletonLead?: TableLeadColumn
   onRowOpen: (item: TData) => void
   /** Accessible name for a row, e.g. "View account details for Acme". */
@@ -68,6 +71,7 @@ interface DataTableProps<TData extends RowData> {
 export function DataTable<TData extends RowData>({
   table,
   loading = false,
+  refreshing = false,
   skeletonLead,
   onRowOpen,
   getRowLabel,
@@ -78,7 +82,7 @@ export function DataTable<TData extends RowData>({
 
   return (
     <div className="min-h-0 flex-1 overflow-hidden rounded-md border">
-      <div ref={scrollRef} className="h-full overflow-auto">
+      <div ref={scrollRef} className="h-full overflow-auto" aria-busy={loading || refreshing}>
         <Table className="table-fixed">
           {/* Sticky, so it needs an opaque fill: the card colour keeps it part of the surface. */}
           <TableHeader className="sticky top-0 z-10 bg-card shadow-[inset_0_-1px_0_hsl(var(--border))] [&_tr]:border-b-0">
@@ -96,7 +100,7 @@ export function DataTable<TData extends RowData>({
               </TableRow>
             ))}
           </TableHeader>
-          <TableBody>
+          <TableBody className={cn("transition-opacity", refreshing && "pointer-events-none opacity-50")}>
             {loading ? (
               <TableSkeletonRows lead={skeletonLead} columns={table.getAllLeafColumns().length} />
             ) : rows.length ? (
@@ -160,15 +164,25 @@ export function DataTable<TData extends RowData>({
 export const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const
 export const DEFAULT_PAGE_SIZE = 50
 
-/**
- * Page numbers to show (1-based): three pages starting at the current one,
- * e.g. 1 2 3 on page 1 and 3 4 5 on page 3. Near the end the run stops at
- * the last page (248 249 250).
- */
-export function getPageItems(current: number, total: number): number[] {
-  const start = Math.max(1, Math.min(current, total - 2))
-  const end = Math.min(total, start + 2)
+export type PageItem = number | "start-ellipsis" | "end-ellipsis"
+
+const PAGE_ITEM_SLOTS = 7
+
+function pageRange(start: number, end: number): number[] {
   return Array.from({ length: end - start + 1 }, (_, i) => start + i)
+}
+
+/**
+ * Page links to show (1-based). The first and last pages are always there, so
+ * either end is one click away, and the current page keeps a neighbour on each
+ * side: 1 … 48 49 50 … 250. The list is always seven items long once there
+ * are more than seven pages, so the buttons never shift as you page.
+ */
+export function getPageItems(current: number, total: number): PageItem[] {
+  if (total <= PAGE_ITEM_SLOTS) return pageRange(1, total)
+  if (current <= 4) return [...pageRange(1, 5), "end-ellipsis", total]
+  if (current >= total - 3) return [1, "start-ellipsis", ...pageRange(total - 4, total)]
+  return [1, "start-ellipsis", current - 1, current, current + 1, "end-ellipsis", total]
 }
 
 interface DataTablePaginationProps<TData extends RowData> {
@@ -218,19 +232,25 @@ export function DataTablePagination<TData extends RowData>({ table, totalRows }:
           >
             <RiArrowLeftSLine />
           </Button>
-          {getPageItems(currentPage, pageCount).map((page) => (
-            <Button
-              key={page}
-              variant={page === currentPage ? "outline" : "ghost"}
-              size="sm"
-              className={cn("min-w-8 px-2 tabular-nums", page !== currentPage && "text-muted-foreground")}
-              onClick={() => table.setPageIndex(page - 1)}
-              aria-label={`Page ${page}`}
-              aria-current={page === currentPage ? "page" : undefined}
-            >
-              {page.toLocaleString()}
-            </Button>
-          ))}
+          {getPageItems(currentPage, pageCount).map((page) =>
+            typeof page === "string" ? (
+              <span key={page} className="min-w-8 text-center text-sm text-muted-foreground" aria-hidden="true">
+                …
+              </span>
+            ) : (
+              <Button
+                key={page}
+                variant={page === currentPage ? "outline" : "ghost"}
+                size="sm"
+                className={cn("min-w-8 px-2 tabular-nums", page !== currentPage && "text-muted-foreground")}
+                onClick={() => table.setPageIndex(page - 1)}
+                aria-label={`Page ${page}`}
+                aria-current={page === currentPage ? "page" : undefined}
+              >
+                {page.toLocaleString()}
+              </Button>
+            )
+          )}
           <Button
             variant="outline"
             size="icon-sm"

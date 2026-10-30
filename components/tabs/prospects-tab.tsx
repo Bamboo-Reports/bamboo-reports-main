@@ -47,6 +47,8 @@ interface ProspectsTabProps {
   itemsPerPage: number
   setItemsPerPage: (size: number) => void
   onDownloadSelection?: (scope: { dataset: "prospects"; prospectIds: string[] }) => void
+  /** Opens the full Export (every row matching the filters), starting with this table's sheet. */
+  onExportAll?: (dataset: "prospects") => void
   server?: TabServerProps | null
   chartsLoading?: boolean
 }
@@ -68,6 +70,7 @@ export function ProspectsTab({
   itemsPerPage,
   setItemsPerPage,
   onDownloadSelection,
+  onExportAll,
   server,
   chartsLoading = false,
 }: ProspectsTabProps) {
@@ -92,6 +95,7 @@ export function ProspectsTab({
     itemsPerPage,
     setItemsPerPage,
   })
+  const allPageSelected = table.getIsAllPageRowsSelected()
   const pageProspects = table.getRowModel().rows.map((row) => row.original)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
@@ -321,6 +325,7 @@ export function ProspectsTab({
                   key="table"
                   table={table}
                   loading={server?.loading}
+                  refreshing={server?.refreshing}
                   skeletonLead="avatar"
                   onRowOpen={handleRowOpen}
                   getRowLabel={(prospect) => `View prospect details for ${getProspectDisplayName(prospect)}`}
@@ -330,7 +335,13 @@ export function ProspectsTab({
               ) : (
                 <div key="grid" ref={scrollContainerRef} className="view-content min-h-0 flex-1 overflow-auto rounded-md border">
                   <DataGridSortBar column={table.getColumn("name")} label="prospect name" />
-                  <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <div
+                    className={cn(
+                      "grid grid-cols-1 gap-4 p-4 transition-opacity sm:grid-cols-2 lg:grid-cols-3",
+                      server?.refreshing && "pointer-events-none opacity-50"
+                    )}
+                    aria-busy={server?.loading || server?.refreshing}
+                  >
                     {server?.loading ? <GridSkeletonCards statRows={3} avatar /> : pageProspects.map((prospect) => (
                       <ProspectGridCard
                         key={getProspectRecordId(prospect)}
@@ -373,6 +384,8 @@ export function ProspectsTab({
         count={selectedKeys.size}
         onClear={clearSelection}
         onExport={handleExportSelection}
+        matchingCount={allPageSelected && totalRows > selectedKeys.size ? totalRows : undefined}
+        onExportAll={onExportAll && (() => onExportAll("prospects"))}
       />
     </TabsContent>
   )
