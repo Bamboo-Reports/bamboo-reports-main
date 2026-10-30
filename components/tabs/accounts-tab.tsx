@@ -1,17 +1,15 @@
 "use client"
 
 import React, { useEffect, useRef, useState } from "react"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TabsContent } from "@/components/ui/tabs"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Checkbox } from "@/components/ui/checkbox"
-import { GridSkeletonCards, MapUpdatingPill, TableSkeletonRows } from "@/components/ui/data-skeletons"
+import { GridSkeletonCards, MapUpdatingPill } from "@/components/ui/data-skeletons"
 import { cn } from "@/lib/utils"
-import { RiExpandUpDownLine, RiLayoutGridLine, RiMapLine, RiMapPinLine, RiPieChartLine, RiSortAlphabetAsc, RiSortAlphabetDesc, RiStackLine, RiTableLine } from "@remixicon/react"
-import { AccountRow } from "@/components/tables"
+import { RiLayoutGridLine, RiMapLine, RiMapPinLine, RiPieChartLine, RiStackLine, RiTableLine } from "@remixicon/react"
+import { AccountRowMenu, accountColumns, getAccountKey } from "@/components/tables/account-columns"
+import { DataGridSortBar, DataTable, DataTablePagination } from "@/components/tables/data-table"
 import { SelectionActionBar } from "@/components/tables/selection-action-bar"
-import { useTableRowSelection } from "@/hooks/use-table-row-selection"
+import { useDataTable } from "@/components/tables/use-data-table"
 import { AccountGridCard } from "@/components/cards/account-grid-card"
 import {
   PieChartCard,
@@ -23,14 +21,10 @@ import { CentersMap } from "@/components/maps/centers-map"
 import { CentersChoroplethMap } from "@/components/maps/centers-choropleth-map"
 import { MapErrorBoundary } from "@/components/maps/map-error-boundary"
 import { ViewSwitcher } from "@/components/ui/view-switcher"
-import { SortButton } from "@/components/ui/sort-button"
-import { PaginationControls } from "@/components/ui/pagination-controls"
 import { TableColumnMenu } from "@/components/tables/table-column-menu"
-import { useTableColumnPreferences } from "@/hooks/use-table-column-preferences"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { canAccessAccountsMapView } from "@/lib/config/dashboard-access"
-import { getPaginatedData } from "@/lib/utils/helpers"
 import type { CityAggregate, StateAggregate } from "@/lib/dashboard/api-client"
 import type { Account, Center, Prospect, Service, Function, Tech } from "@/lib/types"
 
@@ -64,15 +58,13 @@ interface AccountsTabProps {
   currentPage: number
   setCurrentPage: (page: number | ((prev: number) => number)) => void
   itemsPerPage: number
+  setItemsPerPage: (size: number) => void
   onDownloadSelection?: (scope: { dataset: "accounts"; accountNames: string[] }) => void
   server?: TabServerProps | null
   mapData?: { cities: CityAggregate[]; states: StateAggregate[] } | null
   chartsLoading?: boolean
   mapLoading?: boolean
 }
-
-// Module-level so the reference is stable across renders (passed to memo'd rows).
-const getAccountKey = (account: Account) => account.account_global_legal_name ?? ""
 
 export function AccountsTab({
   accounts,
@@ -88,6 +80,7 @@ export function AccountsTab({
   currentPage,
   setCurrentPage,
   itemsPerPage,
+  setItemsPerPage,
   onDownloadSelection,
   server,
   mapData,
@@ -97,22 +90,27 @@ export function AccountsTab({
   const allowMapView = canAccessAccountsMapView()
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [sort, setSort] = useState<{
-    key: "name" | "location" | "industry" | "revenue" | "employees"
-    direction: "asc" | "desc" | null
-  }>({
-    key: "name",
-    direction: null,
-  })
   const [dataLayout, setDataLayout] = useState<"table" | "grid">("table")
   const [mapMode, setMapMode] = useState<"city" | "state">("state")
   const {
-    columns,
-    visibleColumnSet,
-    isColumnVisible,
-    setColumnVisible,
-    resetColumns,
-  } = useTableColumnPreferences("accounts")
+    table,
+    totalRows,
+    selectedKeys: selectedNames,
+    clearSelection,
+    columnPreferences: { columns, visibleColumnSet, setColumnVisible, resetColumns },
+  } = useDataTable({
+    dataset: "accounts",
+    data: accounts,
+    columns: accountColumns,
+    getRowKey: getAccountKey,
+    server,
+    currentPage,
+    setCurrentPage,
+    itemsPerPage,
+    setItemsPerPage,
+  })
+  const pageAccounts = table.getRowModel().rows.map((row) => row.original)
+  const nameColumn = table.getColumn("name")
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -161,28 +159,6 @@ export function AccountsTab({
     })
   }, [isDialogOpen, accountsView, dataLayout])
 
-  const handleSort = (key: typeof sort.key) => {
-    let nextDirection: "asc" | "desc" | null = "asc"
-    setSort((prev) => {
-      if (prev.key !== key || prev.direction === null) {
-        nextDirection = "asc"
-        return { key, direction: "asc" }
-      }
-      if (prev.direction === "asc") {
-        nextDirection = "desc"
-        return { key, direction: "desc" }
-      }
-      nextDirection = null
-      return { key, direction: null }
-    })
-    captureEvent(ANALYTICS_EVENTS.SORT_CHANGED, {
-      entity: "account",
-      sort_key: key,
-      sort_direction: nextDirection ?? "none",
-    })
-    server?.onSortChange(key, nextDirection)
-    setCurrentPage(1)
-  }
 
   React.useEffect(() => {
     if (previousDataLayoutRef.current === dataLayout) {
@@ -226,50 +202,6 @@ export function AccountsTab({
   }, [isDialogOpen])
 
 
-  const sortedAccounts = React.useMemo(() => {
-    // Server mode: rows arrive already sorted and paginated.
-    if (server || !sort.direction) return accounts
-
-    const compare = (a: string | undefined | null, b: string | undefined | null) =>
-      (a || "").localeCompare(b || "", undefined, { sensitivity: "base" })
-
-    const getValue = (account: Account) => {
-      switch (sort.key) {
-        case "employees":
-          return account.account_center_employees_range
-        case "industry":
-          return account.account_hq_industry
-        case "revenue":
-          return account.account_hq_revenue_range
-        default:
-          return account.account_global_legal_name
-      }
-    }
-
-    const sorted = [...accounts].sort((a, b) => compare(getValue(a), getValue(b)))
-    return sort.direction === "asc" ? sorted : sorted.reverse()
-  }, [accounts, sort, server])
-
-  const pageAccounts = React.useMemo(
-    () => (server ? sortedAccounts : getPaginatedData(sortedAccounts, currentPage, itemsPerPage)),
-    [server, sortedAccounts, currentPage, itemsPerPage]
-  )
-  const {
-    selected: selectedNames,
-    toggleMany,
-    clear: clearSelection,
-    pageKeys: pageNames,
-    allPageSelected,
-    somePageSelected,
-    handleRowSelectChange,
-  } = useTableRowSelection({
-    entity: "account",
-    items: server ? pageAccounts : accounts,
-    pageItems: pageAccounts,
-    getKey: getAccountKey,
-  })
-
-  // Tab-specific open handler kept stable so memo'd rows don't re-render.
   const handleRowOpen = React.useCallback(
     (account: Account) => handleAccountClick(account, "table_row"),
     [handleAccountClick]
@@ -442,103 +374,32 @@ export function AccountsTab({
               </div>
             </div>
           </CardHeader>
-          <CardContent className="p-0 flex flex-col flex-1 overflow-hidden">
-            <div ref={scrollContainerRef} key={dataLayout} className="flex-1 overflow-auto view-content">
-              {dataLayout === "table" ? (
-                <Table className="table-fixed">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[44px]">
-                        <Checkbox
-                          checked={allPageSelected ? true : somePageSelected ? "indeterminate" : false}
-                          onCheckedChange={(checked) => toggleMany(pageNames, checked === true)}
-                          aria-label="Select all accounts on this page"
-                        />
-                      </TableHead>
-                      {isColumnVisible("name") && (
-                      <TableHead className="w-[280px]">
-                        <SortButton label="Account Name" sortKey="name" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
-                      </TableHead>
-                      )}
-                      {isColumnVisible("industry") && (
-                      <TableHead className="w-[220px]">
-                        <SortButton label="Sub Industry" sortKey="industry" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
-                      </TableHead>
-                      )}
-                      {isColumnVisible("revenue") && (
-                      <TableHead className="w-[140px]">
-                        <SortButton label="Revenue Range" sortKey="revenue" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
-                      </TableHead>
-                      )}
-                      {isColumnVisible("employees") && (
-                      <TableHead className="w-[200px]">
-                        <SortButton label="GCC Aggregate Headcount (India)" sortKey="employees" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
-                      </TableHead>
-                      )}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {server?.loading ? (
-                      <TableSkeletonRows columns={1 + (["name", "industry", "revenue", "employees"] as const).filter(isColumnVisible).length} />
-                    ) : pageAccounts.map(
-                      (account) => (
-                        <AccountRow
-                          key={account.account_global_legal_name}
-                          account={account}
-                          onOpen={handleRowOpen}
-                          visibleColumns={visibleColumnSet}
-                          selectable
-                          isSelected={selectedNames.has(account.account_global_legal_name ?? "")}
-                          onSelectChange={getAccountKey(account) ? handleRowSelectChange : undefined}
-                        />
-                      )
-                    )}
-                  </TableBody>
-                </Table>
-              ) : (
-                  <div className="flex flex-col">
-                    <div className="flex items-center gap-2 px-6 py-3 border-b bg-muted/20">
-                      <span className="text-xs font-medium text-muted-foreground">Sort</span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon-sm"
-                        onClick={() => handleSort("name")}
-                        aria-label="Sort by account name"
-                        aria-pressed={sort.key === "name" && sort.direction !== null}
-                      >
-                        {sort.key !== "name" || sort.direction === null ? (
-                          <RiExpandUpDownLine className="h-3.5 w-3.5 text-muted-foreground" />
-                        ) : sort.direction === "asc" ? (
-                          <RiSortAlphabetAsc className="h-3.5 w-3.5 text-primary" />
-                        ) : (
-                          <RiSortAlphabetDesc className="h-3.5 w-3.5 text-primary" />
-                        )}
-                      </Button>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
-                      {server?.loading ? <GridSkeletonCards /> : pageAccounts.map(
-                        (account) => (
-                        <AccountGridCard
-                          key={account.account_global_legal_name}
-                          account={account}
-                          onClick={() => handleAccountClick(account, "grid_card")}
-                        />
-                      )
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-            {(server ? server.total : accounts.length) > 0 && (
-              <PaginationControls
-                currentPage={currentPage}
-                totalItems={server ? server.total : accounts.length}
-                itemsPerPage={itemsPerPage}
-                onPageChange={setCurrentPage}
-                dataLength={server ? server.total : accounts.length}
+          <CardContent className="flex min-h-0 flex-1 flex-col px-6 pb-0">
+            {dataLayout === "table" ? (
+              <DataTable
+                key="table"
+                table={table}
+                loading={server?.loading}
+                onRowOpen={handleRowOpen}
+                getRowLabel={(account) => `View account details for ${account.account_global_legal_name || "account"}`}
+                renderRowMenu={(account) => <AccountRowMenu account={account} onOpen={handleRowOpen} />}
+                scrollRef={scrollContainerRef}
               />
+            ) : (
+              <div key="grid" ref={scrollContainerRef} className="view-content min-h-0 flex-1 overflow-auto rounded-md border">
+                <DataGridSortBar column={nameColumn} label="account name" />
+                <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {server?.loading ? <GridSkeletonCards /> : pageAccounts.map((account) => (
+                    <AccountGridCard
+                      key={account.account_global_legal_name}
+                      account={account}
+                      onClick={() => handleAccountClick(account, "grid_card")}
+                    />
+                  ))}
+                </div>
+              </div>
             )}
+            <DataTablePagination table={table} totalRows={totalRows} />
           </CardContent>
         </Card>
       )}

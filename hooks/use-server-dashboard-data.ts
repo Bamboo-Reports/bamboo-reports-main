@@ -395,7 +395,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
         if (viewsRef.current.activeEntity === entity) continue
         const sort = sortsRef.current[entity]
         const sortKey = sort ? `${sort.column}:${sort.direction}` : ""
-        const cacheKey = `${entity}:${effectiveKey}:${pagesRef.current[entity]}:${sortKey}`
+        const cacheKey = `${entity}:${effectiveKey}:${pageSize}:${pagesRef.current[entity]}:${sortKey}`
         if (pageCache.has(cacheKey)) continue
         fetchEntityPage(entity, wireFilters, pagesRef.current[entity], pageSize, sort, bypass)
           .then((res) => lruSet(pageCache, cacheKey, res as EntityPage<Record<string, unknown>>))
@@ -404,7 +404,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
     }, 400)
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, effectiveKey, refreshKey])
+  }, [enabled, effectiveKey, refreshKey, pageSize])
 
   // Unfiltered state aggregates for the choropleth color scale (once, and only
   // once a map has been shown). A failure retries with backoff, then again on
@@ -456,7 +456,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
     (entity: "accounts" | "centers" | "prospects", page: number, sort: EntitySort | null) => {
       if (!effectiveKey) return
       const sortKey = sort ? `${sort.column}:${sort.direction}` : ""
-      const cacheKey = `${entity}:${effectiveKey}:${page}:${sortKey}`
+      const cacheKey = `${entity}:${effectiveKey}:${pageSize}:${page}:${sortKey}`
       const requestId = ++entityRequestRef.current[entity]
       entityAbortRef.current[entity]?.abort()
       entityAbortRef.current[entity] = null
@@ -509,7 +509,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
   const pending = useMemo(() => {
     const pageKeyFor = (entity: "accounts" | "centers" | "prospects") => {
       const sort = sorts[entity]
-      return `${entity}:${effectiveKey}:${pages[entity]}:${sort ? `${sort.column}:${sort.direction}` : ""}`
+      return `${entity}:${effectiveKey}:${pageSize}:${pages[entity]}:${sort ? `${sort.column}:${sort.direction}` : ""}`
     }
     const stale = (applied: string, target: string) => enabled && !!effectiveKey && applied !== target
     const summary = stale(appliedKeys.summary, effectiveKey)
@@ -527,7 +527,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
       centers: stale(appliedKeys.pages.centers, pageKeyFor("centers")),
       prospects: stale(appliedKeys.pages.prospects, pageKeyFor("prospects")),
     }
-  }, [enabled, effectiveKey, appliedKeys, pages, sorts])
+  }, [enabled, effectiveKey, appliedKeys, pages, sorts, pageSize])
 
   return {
     summary,

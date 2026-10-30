@@ -1,15 +1,13 @@
 "use client"
 
 import React, { useEffect, useRef, useState } from "react"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TabsContent } from "@/components/ui/tabs"
-import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Checkbox } from "@/components/ui/checkbox"
-import { RiExpandUpDownLine, RiLayoutGridLine, RiPieChartLine, RiSortAlphabetAsc, RiSortAlphabetDesc, RiTableLine } from "@remixicon/react"
-import { ProspectRow } from "@/components/tables/prospect-row"
+import { RiLayoutGridLine, RiPieChartLine, RiTableLine } from "@remixicon/react"
+import { DataGridSortBar, DataTable, DataTablePagination } from "@/components/tables/data-table"
+import { ProspectRowMenu, getProspectKey, prospectColumns } from "@/components/tables/prospect-columns"
 import { SelectionActionBar } from "@/components/tables/selection-action-bar"
-import { useTableRowSelection } from "@/hooks/use-table-row-selection"
+import { useDataTable } from "@/components/tables/use-data-table"
 import { useRecordOpener } from "@/hooks/use-record-opener"
 import { getProspectDisplayName as getProspectDisplayNameUtil, getProspectRecordId as getProspectRecordIdUtil } from "@/lib/dashboard/prospect-id"
 import { ProspectGridCard } from "@/components/cards/prospect-grid-card"
@@ -20,17 +18,13 @@ import {
 import { EmptyState } from "@/components/states/empty-state"
 import { ProspectDetailsDialog } from "@/components/dialogs/prospect-details-dialog"
 import { AccountDetailsDialog } from "@/components/dialogs/account-details-tabbed-dialog"
-import { getPaginatedData, formatProspectLocation } from "@/lib/utils/helpers"
 import { ViewSwitcher } from "@/components/ui/view-switcher"
-import { SortButton } from "@/components/ui/sort-button"
-import { PaginationControls } from "@/components/ui/pagination-controls"
 import { TableColumnMenu } from "@/components/tables/table-column-menu"
-import { useTableColumnPreferences } from "@/hooks/use-table-column-preferences"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { fetchAccountRelated } from "@/lib/dashboard/api-client"
 import type { TabServerProps } from "@/components/tabs/accounts-tab"
-import { GridSkeletonCards, TableSkeletonRows } from "@/components/ui/data-skeletons"
+import { GridSkeletonCards } from "@/components/ui/data-skeletons"
 import { cn } from "@/lib/utils"
 import type { Account, Center, Prospect, Service, Tech } from "@/lib/types"
 
@@ -52,6 +46,7 @@ interface ProspectsTabProps {
   currentPage: number
   setCurrentPage: (page: number | ((prev: number) => number)) => void
   itemsPerPage: number
+  setItemsPerPage: (size: number) => void
   onDownloadSelection?: (scope: { dataset: "prospects"; prospectIds: string[] }) => void
   server?: TabServerProps | null
   chartsLoading?: boolean
@@ -72,6 +67,7 @@ export function ProspectsTab({
   currentPage,
   setCurrentPage,
   itemsPerPage,
+  setItemsPerPage,
   onDownloadSelection,
   server,
   chartsLoading = false,
@@ -80,21 +76,25 @@ export function ProspectsTab({
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null)
   const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false)
-  const [sort, setSort] = useState<{
-    key: "name" | "location" | "title" | "department"
-    direction: "asc" | "desc" | null
-  }>({
-    key: "name",
-    direction: null,
-  })
   const [dataLayout, setDataLayout] = useState<"table" | "grid">("table")
   const {
-    columns,
-    visibleColumnSet,
-    isColumnVisible,
-    setColumnVisible,
-    resetColumns,
-  } = useTableColumnPreferences("prospects")
+    table,
+    totalRows,
+    selectedKeys,
+    clearSelection,
+    columnPreferences: { columns, visibleColumnSet, setColumnVisible, resetColumns },
+  } = useDataTable({
+    dataset: "prospects",
+    data: prospects,
+    columns: prospectColumns,
+    getRowKey: getProspectKey,
+    server,
+    currentPage,
+    setCurrentPage,
+    itemsPerPage,
+    setItemsPerPage,
+  })
+  const pageProspects = table.getRowModel().rows.map((row) => row.original)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -183,28 +183,6 @@ export function ProspectsTab({
     }
   }
 
-  const handleSort = (key: typeof sort.key) => {
-    let nextDirection: "asc" | "desc" | null = "asc"
-    setSort((prev) => {
-      if (prev.key !== key || prev.direction === null) {
-        nextDirection = "asc"
-        return { key, direction: "asc" }
-      }
-      if (prev.direction === "asc") {
-        nextDirection = "desc"
-        return { key, direction: "desc" }
-      }
-      nextDirection = null
-      return { key, direction: null }
-    })
-    captureEvent(ANALYTICS_EVENTS.SORT_CHANGED, {
-      entity: "prospect",
-      sort_key: key,
-      sort_direction: nextDirection ?? "none",
-    })
-    server?.onSortChange(key, nextDirection)
-    setCurrentPage(1)
-  }
 
   React.useEffect(() => {
     if (previousDataLayoutRef.current === dataLayout) {
@@ -235,53 +213,6 @@ export function ProspectsTab({
   }, [isDialogOpen])
 
 
-  const sortedProspects = React.useMemo(() => {
-    // Server mode: rows arrive already sorted and paginated.
-    if (server || !sort.direction) return prospects
-
-    const compare = (a: string | undefined | null, b: string | undefined | null) =>
-      (a || "").localeCompare(b || "", undefined, { sensitivity: "base" })
-
-    const getValue = (prospect: Prospect) => {
-      switch (sort.key) {
-        case "name":
-          return (
-            prospect.prospect_full_name ||
-            [prospect.prospect_first_name, prospect.prospect_last_name].filter(Boolean).join(" ")
-          )
-        case "location":
-          return formatProspectLocation(prospect.prospect_city, prospect.prospect_state, prospect.prospect_country)
-        case "title":
-          return prospect.prospect_title
-        default:
-          return prospect.prospect_department
-      }
-    }
-
-    const sorted = [...prospects].sort((a, b) => compare(getValue(a), getValue(b)))
-    return sort.direction === "asc" ? sorted : sorted.reverse()
-  }, [prospects, sort, server])
-
-  const pageProspects = React.useMemo(
-    () => (server ? sortedProspects : getPaginatedData(sortedProspects, currentPage, itemsPerPage)),
-    [server, sortedProspects, currentPage, itemsPerPage]
-  )
-  const {
-    selected: selectedKeys,
-    toggleMany,
-    clear: clearSelection,
-    pageKeys,
-    allPageSelected,
-    somePageSelected,
-    handleRowSelectChange,
-  } = useTableRowSelection({
-    entity: "prospect",
-    items: server ? pageProspects : prospects,
-    pageItems: pageProspects,
-    getKey: getProspectRecordIdUtil,
-  })
-
-  // Tab-specific open handler kept stable so memo'd rows don't re-render.
   const handleRowOpen = React.useCallback(
     (prospect: Prospect) => handleProspectClick(prospect, "table_row"),
     [handleProspectClick]
@@ -394,102 +325,33 @@ export function ProspectsTab({
                </div>
              </div>
            </CardHeader>
-            <CardContent className="p-0 flex flex-col flex-1 overflow-hidden">
-              <div ref={scrollContainerRef} key={dataLayout} className="flex-1 overflow-auto view-content">
-                {dataLayout === "table" ? (
-                  <Table className="table-fixed">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[44px]">
-                          <Checkbox
-                            checked={allPageSelected ? true : somePageSelected ? "indeterminate" : false}
-                            onCheckedChange={(checked) => toggleMany(pageKeys, checked === true)}
-                            aria-label="Select all prospects on this page"
-                          />
-                        </TableHead>
-                        {isColumnVisible("avatar") && (
-                        <TableHead className="w-16"></TableHead>
-                        )}
-                        {isColumnVisible("name") && (
-                        <TableHead className="w-[220px]">
-                          <SortButton label="Name" sortKey="name" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
-                        </TableHead>
-                        )}
-                        {isColumnVisible("location") && (
-                        <TableHead className="w-[200px]">
-                          <SortButton label="Location" sortKey="location" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
-                        </TableHead>
-                        )}
-                        {isColumnVisible("title") && (
-                        <TableHead className="w-[180px]">
-                          <SortButton label="Job Title" sortKey="title" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
-                        </TableHead>
-                        )}
-                        {isColumnVisible("department") && (
-                        <TableHead className="w-[180px]">
-                          <SortButton label="Department" sortKey="department" currentKey={sort.key} direction={sort.direction} onClick={handleSort} />
-                        </TableHead>
-                        )}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {server?.loading ? (
-                        <TableSkeletonRows lead="avatar" columns={1 + (["avatar", "name", "location", "title", "department"] as const).filter(isColumnVisible).length} />
-                      ) : pageProspects.map((prospect) => (
-                        <ProspectRow
-                          key={getProspectRecordId(prospect)}
-                          prospect={prospect}
-                          onOpen={handleRowOpen}
-                          visibleColumns={visibleColumnSet}
-                          selectable
-                          isSelected={selectedKeys.has(getProspectRecordId(prospect))}
-                          onSelectChange={handleRowSelectChange}
-                        />
-                      ))}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <div className="flex flex-col">
-                    <div className="flex items-center gap-2 px-6 py-3 border-b bg-muted/20">
-                      <span className="text-xs font-medium text-muted-foreground">Sort</span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon-sm"
-                        onClick={() => handleSort("name")}
-                        aria-label="Sort by prospect name"
-                        aria-pressed={sort.key === "name" && sort.direction !== null}
-                      >
-                        {sort.key !== "name" || sort.direction === null ? (
-                          <RiExpandUpDownLine className="h-3.5 w-3.5 text-muted-foreground" />
-                        ) : sort.direction === "asc" ? (
-                          <RiSortAlphabetAsc className="h-3.5 w-3.5 text-primary" />
-                        ) : (
-                          <RiSortAlphabetDesc className="h-3.5 w-3.5 text-primary" />
-                        )}
-                      </Button>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
-                      {server?.loading ? <GridSkeletonCards statRows={3} avatar /> : pageProspects.map((prospect) => (
-                        <ProspectGridCard
-                          key={getProspectRecordId(prospect)}
-                          prospect={prospect}
-                          onClick={() => handleProspectClick(prospect, "grid_card")}
-                        />
-                      ))}
-                    </div>
+            <CardContent className="flex min-h-0 flex-1 flex-col px-6 pb-0">
+              {dataLayout === "table" ? (
+                <DataTable
+                  key="table"
+                  table={table}
+                  loading={server?.loading}
+                  skeletonLead="avatar"
+                  onRowOpen={handleRowOpen}
+                  getRowLabel={(prospect) => `View prospect details for ${getProspectDisplayName(prospect)}`}
+                  renderRowMenu={(prospect) => <ProspectRowMenu prospect={prospect} onOpen={handleRowOpen} />}
+                  scrollRef={scrollContainerRef}
+                />
+              ) : (
+                <div key="grid" ref={scrollContainerRef} className="view-content min-h-0 flex-1 overflow-auto rounded-md border">
+                  <DataGridSortBar column={table.getColumn("name")} label="prospect name" />
+                  <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {server?.loading ? <GridSkeletonCards statRows={3} avatar /> : pageProspects.map((prospect) => (
+                      <ProspectGridCard
+                        key={getProspectRecordId(prospect)}
+                        prospect={prospect}
+                        onClick={() => handleProspectClick(prospect, "grid_card")}
+                      />
+                    ))}
                   </div>
-                )}
-              </div>
-                  {(server ? server.total : sortedProspects.length) > 0 && (
-                    <PaginationControls
-                      currentPage={currentPage}
-                      totalItems={server ? server.total : sortedProspects.length}
-                      itemsPerPage={itemsPerPage}
-                      onPageChange={setCurrentPage}
-                      dataLength={server ? server.total : sortedProspects.length}
-                    />
-                  )}
+                </div>
+              )}
+              <DataTablePagination table={table} totalRows={totalRows} />
             </CardContent>
          </Card>
        )}
