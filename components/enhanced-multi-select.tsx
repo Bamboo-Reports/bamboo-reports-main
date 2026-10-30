@@ -4,7 +4,7 @@ import * as React from "react"
 import { RiAddLine, RiCloseLine, RiSubtractLine } from "@remixicon/react"
 import { cn } from "@/lib/utils"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { FilterChip } from "@/components/filters/filter-chip"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
@@ -94,9 +94,11 @@ const EnhancedSelectItem = React.memo(({
         mode === "exclude" && "bg-exclude/[0.07] data-[selected=true]:bg-exclude/[0.11]"
       )}
     >
-      <span className={cn("grid h-4 w-4 shrink-0 place-items-center", mode === "include" ? "text-include" : "text-exclude")} aria-hidden="true">
-        {mode === "include" ? <RiAddLine className="h-3.5 w-3.5" /> : mode === "exclude" ? <RiSubtractLine className="h-3.5 w-3.5" /> : null}
-      </span>
+      {mode && (
+        <span className={cn("-mr-1 grid h-4 w-3.5 shrink-0 place-items-center", mode === "include" ? "text-include" : "text-exclude")} aria-hidden="true">
+          {mode === "include" ? <RiAddLine className="h-3.5 w-3.5" /> : <RiSubtractLine className="h-3.5 w-3.5" />}
+        </span>
+      )}
       <span className={cn("min-w-0 flex-1 truncate", mode === "exclude" && "text-exclude")}>{value}</span>
       {typeof count === "number" && (
         <span className="shrink-0 text-[11.5px] tabular-nums text-muted-foreground group-hover:hidden group-data-[selected=true]:hidden">
@@ -327,16 +329,16 @@ export const EnhancedMultiSelect = React.memo(function EnhancedMultiSelect({
   }, [isApplying])
 
   return (
-    <div className={cn("flex flex-wrap items-center gap-1.5", className)}>
-      {selected.map((item) => (
-        <FilterChip
-          key={item.value}
-          item={item}
-          onRemove={() => handleUnselect(item)}
-          onToggleMode={() => handleToggleMode(item)}
-        />
-      ))}
-      <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen}>
+      <div className={cn("relative flex flex-wrap items-center gap-1.5", className)}>
+        {selected.map((item) => (
+          <FilterChip
+            key={item.value}
+            item={item}
+            onRemove={() => handleUnselect(item)}
+            onToggleMode={() => handleToggleMode(item)}
+          />
+        ))}
         <PopoverTrigger asChild>
           <button
             type="button"
@@ -349,29 +351,35 @@ export const EnhancedMultiSelect = React.memo(function EnhancedMultiSelect({
             {selected.length > 0 ? "Add" : placeholder}
           </button>
         </PopoverTrigger>
-        <PopoverContent className="w-72 p-0" align="start" sideOffset={6}>
-          <Command shouldFilter={false}>
-            <CommandInput
-              placeholder={hasMoreOptions ? `Search all ${options.length.toLocaleString()} options` : "Search"}
-              className="h-9"
-              value={searchQuery}
-              onValueChange={setSearchQuery}
-            />
-            <CommandList id={listId} className="max-h-64 p-1">
-              <CommandEmpty>Nothing matches</CommandEmpty>
-              <CommandGroup className="p-0">
-                {renderOptions}
-              </CommandGroup>
-            </CommandList>
-            {hasMoreOptions ? (
-              <p className="border-t px-3 py-1.5 text-[11px] text-muted-foreground">
-                Showing the top {DEFAULT_VISIBLE_OPTIONS}. Search to find the rest.
-              </p>
-            ) : null}
-          </Command>
-        </PopoverContent>
-      </Popover>
-    </div>
+        {/* The picker hangs from the field's top edge, which never moves as chips are added
+            and wrap, so it doesn't drift or flip while values are being picked. Rendered after
+            the trigger so Radix registers it as the anchor last. */}
+        <PopoverAnchor asChild>
+          <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-px" />
+        </PopoverAnchor>
+      </div>
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] min-w-64 p-0" align="start" sideOffset={0}>
+        <Command shouldFilter={false}>
+          <CommandInput
+            placeholder={hasMoreOptions ? `Search all ${options.length.toLocaleString()} options` : "Search"}
+            className="h-9"
+            value={searchQuery}
+            onValueChange={setSearchQuery}
+          />
+          <CommandList id={listId} className="max-h-64 p-1">
+            <CommandEmpty>Nothing matches</CommandEmpty>
+            <CommandGroup className="p-0">
+              {renderOptions}
+            </CommandGroup>
+          </CommandList>
+          {hasMoreOptions ? (
+            <p className="border-t px-3 py-1.5 text-[11px] text-muted-foreground">
+              Showing the top {DEFAULT_VISIBLE_OPTIONS}. Search to find the rest.
+            </p>
+          ) : null}
+        </Command>
+      </PopoverContent>
+    </Popover>
   )
 })
 

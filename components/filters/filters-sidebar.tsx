@@ -13,7 +13,6 @@ import {
   RiFilePdf2Line,
   RiGroupLine,
   RiLoader4Line,
-  RiSearchLine,
   RiShieldFlashLine,
   RiSideBarFill,
   RiSideBarLine,
@@ -24,7 +23,6 @@ import {
   CenterFiltersSection,
   ProspectFiltersSection,
 } from '@/components/filters/filter-sections'
-import { FilterSearchContext } from '@/components/filters/filter-row'
 import { countActiveFields, type FilterRangeBounds, type FilterSectionId } from '@/components/filters/filter-fields'
 import { ProfileMenu } from '@/components/layout/profile-menu'
 import { Button } from '@/components/ui/button'
@@ -124,12 +122,10 @@ export function FiltersSidebar({
   const user = useCurrentProfile()
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
   const [openSection, setOpenSection] = useState<FilterSectionId | null>('accounts')
-  const [findQuery, setFindQuery] = useState("")
   const [exportAccessError, setExportAccessError] = useState<string | null>(null)
   const [savedMenuSignal, setSavedMenuSignal] = useState(0)
   const [accountListsSignal, setAccountListsSignal] = useState(0)
   const scrollRef = useRef<HTMLDivElement>(null)
-  const findInputRef = useRef<HTMLInputElement>(null)
   const [canScrollDown, setCanScrollDown] = useState(false)
   const [optimisticVisibilityMode, setOptimisticVisibilityMode] = useState(pendingFilters.accountVisibilityMode)
 
@@ -141,7 +137,6 @@ export function FiltersSidebar({
   const visibilityCounts =
     isFilterEnabled("accountVisibilityMode") && (pendingFilters.accountVisibilityMode ?? DEFAULT_VISIBILITY_MODE) !== DEFAULT_VISIBILITY_MODE
   const totalActiveFilters = Object.values(sectionCounts).reduce((sum, n) => sum + n, 0) + (visibilityCounts ? 1 : 0)
-  const searchQuery = findQuery.trim().toLowerCase()
 
   const checkScroll = useCallback(() => {
     requestAnimationFrame(() => {
@@ -153,7 +148,7 @@ export function FiltersSidebar({
 
   useEffect(() => {
     checkScroll()
-  }, [openSection, searchQuery, checkScroll])
+  }, [openSection, checkScroll])
 
   useEffect(() => {
     setOptimisticVisibilityMode(pendingFilters.accountVisibilityMode)
@@ -177,19 +172,6 @@ export function FiltersSidebar({
   useEffect(() => {
     if (canExport && exportAccessError) setExportAccessError(null)
   }, [canExport, exportAccessError])
-
-  // "/" jumps to "Find a filter" when focus isn't already in a field.
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "/" || isCollapsed) return
-      const target = event.target as HTMLElement | null
-      if (target?.closest("input, textarea, select, [contenteditable='true']")) return
-      event.preventDefault()
-      findInputRef.current?.focus()
-    }
-    window.addEventListener("keydown", onKeyDown)
-    return () => window.removeEventListener("keydown", onKeyDown)
-  }, [isCollapsed])
 
   const handleExport = () => {
     if (!canExport) {
@@ -399,10 +381,7 @@ export function FiltersSidebar({
             <span className="flex-1" />
             <button
               type="button"
-              onClick={() => {
-                setFindQuery("")
-                resetFilters()
-              }}
+              onClick={resetFilters}
               disabled={totalActiveFilters === 0}
               className="rounded-md px-1.5 py-1 text-[12.5px] font-medium text-primary transition-colors hover:bg-primary/[0.08] disabled:pointer-events-none disabled:text-muted-foreground disabled:opacity-60"
             >
@@ -431,28 +410,6 @@ export function FiltersSidebar({
               openAccountListsSignal={accountListsSignal}
             />
           </div>
-
-          <label className="flex h-8 items-center gap-2 rounded-lg border border-transparent bg-muted/70 px-2.5 text-muted-foreground transition-shadow focus-within:border-primary/60 focus-within:ring-[3px] focus-within:ring-primary/15">
-            <RiSearchLine className="h-3.5 w-3.5 shrink-0" />
-            <input
-              ref={findInputRef}
-              value={findQuery}
-              onChange={(event) => setFindQuery(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Escape") setFindQuery("")
-              }}
-              placeholder="Find a filter"
-              aria-label="Find a filter"
-              className="min-w-0 flex-1 bg-transparent text-[12.5px] text-foreground placeholder:text-muted-foreground focus:outline-none"
-            />
-            {findQuery ? (
-              <button type="button" onClick={() => setFindQuery("")} className="grid h-5 w-5 place-items-center rounded hover:bg-muted" aria-label="Clear filter search">
-                <RiCloseLine className="h-3.5 w-3.5" />
-              </button>
-            ) : (
-              <kbd className="rounded border border-border bg-background px-1 font-sans text-[10.5px] font-medium">/</kbd>
-            )}
-          </label>
 
           {isFilterEnabled("accountVisibilityMode") && (
             <div>
@@ -489,50 +446,36 @@ export function FiltersSidebar({
           )}
         </div>
 
-        <FilterSearchContext.Provider value={searchQuery}>
-          <div
-            ref={scrollRef}
-            className="relative min-h-0 flex-1 overflow-y-auto scrollbar-gutter-stable px-1.5 pb-3 pt-1.5 [&:has([data-filter-row])_[data-no-match]]:hidden"
-          >
-            {visibleSections.map(({ id, label, icon: Icon }) => {
-              const open = searchQuery ? true : openSection === id
-              const count = sectionCounts[id]
-              return (
-                <section
-                  key={id}
-                  className={cn(
-                    "border-sidebar-border [&+section]:border-t",
-                    searchQuery && "[&:not(:has([data-filter-row]))]:hidden",
-                    !isSectionEnabled(id) && "opacity-80"
-                  )}
+        <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-y-auto scrollbar-gutter-stable px-1.5 pb-3 pt-1.5">
+          {visibleSections.map(({ id, label, icon: Icon }) => {
+            const open = openSection === id
+            const count = sectionCounts[id]
+            return (
+              <section
+                key={id}
+                className={cn("border-sidebar-border [&+section]:border-t", !isSectionEnabled(id) && "opacity-80")}
+              >
+                <button
+                  type="button"
+                  onClick={() => setOpenSection(open ? null : id)}
+                  aria-expanded={open}
+                  className="flex h-11 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[13.5px] font-semibold text-foreground transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <button
-                    type="button"
-                    onClick={() => setOpenSection(open && !searchQuery ? null : id)}
-                    aria-expanded={open}
-                    className="flex h-11 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[13.5px] font-semibold text-foreground transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <Icon className="h-[17px] w-[17px] shrink-0 text-primary" />
-                    {label}
-                    <CountBadge count={count} />
-                    <RiArrowDownSLine
-                      className={cn(
-                        "ml-auto h-[17px] w-[17px] shrink-0 text-muted-foreground transition-transform duration-200 ease-out motion-reduce:transition-none",
-                        open && "rotate-180"
-                      )}
-                    />
-                  </button>
-                  {open && <div className="pb-2">{renderSection(id)}</div>}
-                </section>
-              )
-            })}
-            {searchQuery && (
-              <p data-no-match className="px-3 py-5 text-[12.5px] text-muted-foreground">
-                No filter called &ldquo;{findQuery.trim()}&rdquo;.
-              </p>
-            )}
-          </div>
-        </FilterSearchContext.Provider>
+                  <Icon className="h-[17px] w-[17px] shrink-0 text-primary" />
+                  {label}
+                  <CountBadge count={count} />
+                  <RiArrowDownSLine
+                    className={cn(
+                      "ml-auto h-[17px] w-[17px] shrink-0 text-muted-foreground transition-transform duration-200 ease-out motion-reduce:transition-none",
+                      open && "rotate-180"
+                    )}
+                  />
+                </button>
+                {open && <div className="pb-2">{renderSection(id)}</div>}
+              </section>
+            )
+          })}
+        </div>
 
         <div className="relative shrink-0 border-t border-sidebar-border bg-sidebar px-3 pb-3 pt-2.5">
           {/* Fade above the footer while there's more to scroll. */}

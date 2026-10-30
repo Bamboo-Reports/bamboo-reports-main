@@ -4,13 +4,6 @@ import React from "react"
 import { RiArrowRightSLine, RiLockLine } from "@remixicon/react"
 import { cn } from "@/lib/utils"
 
-/** The "Find a filter" query, lower-cased. Rows whose label doesn't match hide themselves. */
-export const FilterSearchContext = React.createContext("")
-
-export function matchesFilterSearch(label: string, query: string) {
-  return !query || label.toLowerCase().includes(query)
-}
-
 interface FilterRowProps {
   label: string
   /** Shown on the collapsed row when the filter is set; otherwise the row reads "Any". */
@@ -24,11 +17,8 @@ interface FilterRowProps {
  * place to edit. Rows that are set open on first render.
  */
 export function FilterRow({ label, summary, active, children }: FilterRowProps) {
-  const query = React.useContext(FilterSearchContext)
   const [open, setOpen] = React.useState(active)
   const bodyId = React.useId()
-
-  if (!matchesFilterSearch(label, query)) return null
 
   return (
     <div data-filter-row className={cn("rounded-lg", open && "my-0.5 bg-sidebar-accent")}>
@@ -69,10 +59,8 @@ export function FilterRow({ label, summary, active, children }: FilterRowProps) 
   )
 }
 
-/** Divider before the less-used filters (what used to sit behind "Show More"). Hidden while searching. */
+/** Divider before the less-used filters (what used to sit behind "Show More"). */
 export function FilterMoreDivider({ locked = false, onLockedClick }: { locked?: boolean; onLockedClick?: () => void }) {
-  const query = React.useContext(FilterSearchContext)
-  if (query) return null
   return (
     <div className="mx-2.5 mb-1 mt-2.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
       More
