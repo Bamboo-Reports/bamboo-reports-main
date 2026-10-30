@@ -8,7 +8,9 @@ import { buildAccountsQuery } from "@/lib/dashboard/filtering-sql"
 // Loads DATABASE_URL from .env (vitest does not do this automatically).
 loadEnv()
 const DATABASE_URL = process.env.DATABASE_URL
-const gated = DATABASE_URL ? describe : describe.skip
+// Opt-in only (RUN_REALDATA_TESTS=1): these pull large parts of the live
+// warehouse and would otherwise run on every local `npm test`.
+const gated = DATABASE_URL && process.env.RUN_REALDATA_TESTS === "1" ? describe : describe.skip
 
 const inc = (...vs: string[]) => vs.map((value) => ({ value, mode: "include" as const }))
 const exc = (...vs: string[]) => vs.map((value) => ({ value, mode: "exclude" as const }))
