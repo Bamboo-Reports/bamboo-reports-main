@@ -36,8 +36,9 @@ import { buildTrackedFiltersSnapshot, normalizeTrackedText, toTrackedStringArray
 import type { Filters } from "@/lib/types"
 import { calculateActiveFilters } from "@/lib/dashboard/filter-summary"
 import { cn } from "@/lib/utils"
-import { SavedFilterCard, type SavedFilter } from "@/components/filters/saved-filter-card"
-import { useSavedFilters, type FilterShare } from "@/hooks/use-saved-filters"
+import { SavedFiltersLibrary } from "@/components/filters/saved-filters-library"
+import type { DescribedSection } from "@/components/filters/filter-description"
+import { useSavedFilters, type FilterShare, type SavedFilter } from "@/hooks/use-saved-filters"
 import { AccountListsDialog } from "@/components/filters/account-lists-dialog"
 import { useAccountLists } from "@/contexts/account-lists-context"
 import { withAccountLists, type AccountList } from "@/lib/accounts/account-lists"
@@ -52,6 +53,8 @@ interface SavedFiltersManagerProps {
   openAccountListsSignal?: number
   /** How many filters a saved filter sets, counted the same way as the sidebar total. */
   countFilters?: (filters: Filters) => number
+  /** What a saved filter selects, grouped like the sidebar (for the saved filters window). */
+  describeFilters?: (filters: Filters) => DescribedSection[]
 }
 
 const RELATIVE_TIME = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" })
@@ -74,6 +77,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
   openMenuSignal = 0,
   openAccountListsSignal = 0,
   countFilters = calculateActiveFilters,
+  describeFilters = () => [],
 }: SavedFiltersManagerProps) {
   const {
     savedFilters,
@@ -109,8 +113,6 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
   const [savedFiltersDropdownOpen, setSavedFiltersDropdownOpen] = useState(false)
   const [filterName, setFilterName] = useState("")
 
-  const [editingFilter, setEditingFilter] = useState<SavedFilter | null>(null)
-  const [editName, setEditName] = useState("")
 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [filterToDelete, setFilterToDelete] = useState<SavedFilter | null>(null)
@@ -195,19 +197,10 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
     }
   }, [filterToDelete, deleteFilter])
 
-  const handleUpdateFilter = useCallback(async () => {
-    if (!editingFilter || !editName.trim()) return
-    const success = await updateFilter(editingFilter.id, editName, editingFilter.filters)
-    if (success) {
-      setEditingFilter(null)
-      setEditName("")
-    }
-  }, [editingFilter, editName, updateFilter])
-
-  const handleEdit = useCallback((filter: SavedFilter) => {
-    setEditingFilter(filter)
-    setEditName(filter.name)
-  }, [])
+  const handleRename = useCallback(async (filter: SavedFilter, name: string) => {
+    const success = await updateFilter(filter.id, name, filter.filters)
+    if (success && appliedFilter?.id === filter.id) setAppliedFilter({ ...appliedFilter, name: name.trim() })
+  }, [updateFilter, appliedFilter])
 
   // Share handlers
   const handleOpenShareDialog = useCallback(async (filter: SavedFilter) => {
@@ -440,63 +433,27 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
 
       <AccountListsDialog open={accountListsOpen} onOpenChange={setAccountListsOpen} onApply={handleApplyAccountList} />
 
-      {/* Manage Saved Filters Dialog */}
-      <Dialog open={manageDialogOpen} onOpenChange={setManageDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Manage Saved Filters</DialogTitle>
-            <DialogDescription>View, edit, or delete your saved filter sets.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            {myFilters.length === 0 && sharedWithMeFilters.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">No saved filters found.</div>
-            ) : (
-              <>
-                {myFilters.length > 0 && (
-                  <>
-                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">My Filters</h3>
-                    {myFilters.map((filter) => (
-                      <SavedFilterCard
-                        key={filter.id}
-                        filter={filter}
-                        isOwner={true}
-                        onLoad={(f) => {
-                          handleLoadFilter(f)
-                          setManageDialogOpen(false)
-                        }}
-                        onEdit={handleEdit}
-                        onDelete={handleDeleteFilter}
-                        onShare={handleOpenShareDialog}
-                      />
-                    ))}
-                  </>
-                )}
-                {sharedWithMeFilters.length > 0 && (
-                  <>
-                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 mt-6">
-                      <RiGroupLine className="h-3.5 w-3.5" />
-                      Shared with me
-                    </h3>
-                    {sharedWithMeFilters.map((filter) => (
-                      <SavedFilterCard
-                        key={filter.id}
-                        filter={filter}
-                        isOwner={false}
-                        onLoad={(f) => {
-                          handleLoadFilter(f)
-                          setManageDialogOpen(false)
-                        }}
-                        onEdit={handleEdit}
-                        onDelete={handleDeleteFilter}
-                      />
-                    ))}
-                  </>
-                )}
-              </>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <SavedFiltersLibrary
+        open={manageDialogOpen}
+        onOpenChange={setManageDialogOpen}
+        myFilters={myFilters}
+        sharedFilters={sharedWithMeFilters}
+        appliedId={activeSavedFilter?.id ?? null}
+        appliedModified={isModified}
+        loading={loading}
+        countFilters={countFilters}
+        describe={describeFilters}
+        formatUpdated={(iso) => formatUpdated(iso)}
+        onApply={(filter) => {
+          handleLoadFilter(filter)
+          setManageDialogOpen(false)
+        }}
+        onShare={handleOpenShareDialog}
+        onRename={handleRename}
+        onDelete={handleDeleteFilter}
+        onSaveCurrent={() => setSaveDialogOpen(true)}
+        canSaveCurrent={totalActiveFilters > 0}
+      />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
@@ -519,37 +476,6 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Rename Filter Dialog */}
-      <Dialog
-        open={!!editingFilter}
-        onOpenChange={(open) => {
-          if (!open) {
-            setEditingFilter(null)
-            setEditName("")
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Rename Filter Set</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="edit-name">Name</Label>
-              <Input id="edit-name" value={editName} onChange={(e) => setEditName(e.target.value)} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingFilter(null)}>
-              Cancel
-            </Button>
-            <Button onClick={handleUpdateFilter} disabled={!editName.trim() || loading}>
-              {loading ? "Updating..." : "Update Name"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Share Filter Dialog */}
       <Dialog

@@ -1,7 +1,7 @@
 "use client"
 
-import { useCallback, useMemo, useState } from "react"
-import { RiAddLine, RiArrowDownSLine, RiArrowUpSLine, RiCheckLine, RiCloseLine, RiDeleteBinLine, RiGroupLine, RiListCheck3, RiPencilLine, RiRefreshLine, RiShareLine, RiSubtractLine, RiUploadLine } from "@remixicon/react"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { RiAddLine, RiCloseLine, RiDeleteBinLine, RiErrorWarningLine, RiFileList3Line, RiFileUploadLine, RiGroupLine, RiPencilLine, RiSearchLine, RiShareLine, RiSubtractLine, RiUploadLine } from "@remixicon/react"
 import { toast } from "sonner"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,9 +17,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { AccountListUploadDialog } from "@/components/filters/account-list-upload-dialog"
+import { AccountListUploadPanel } from "@/components/filters/account-list-upload-panel"
+import {
+  LibraryCountBadge,
+  LibraryDialog,
+  LibraryEmpty,
+  LibraryItem,
+  LibraryPaneHeader,
+  LibraryPaneTitle,
+  LibraryRename,
+  type LibraryTab,
+} from "@/components/filters/library-dialog"
 import { useAccountLists, type AccountListShare } from "@/contexts/account-lists-context"
-import type { AccountList } from "@/lib/accounts/account-lists"
+import { MAX_ACCOUNT_LIST_NAME_LENGTH, type AccountList } from "@/lib/accounts/account-lists"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 
@@ -36,18 +46,43 @@ function formatDate(value: string): string {
   return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })
 }
 
-/** Manage uploaded account lists: upload, rename, update from a new file, apply, delete. */
+const plural = (n: number, word: string) => `${n.toLocaleString()} ${word}${n === 1 ? "" : "s"}`
+
+/** Account lists: browse, search, upload, apply, share, rename, replace from a file, delete. */
 export function AccountListsDialog({ open, onOpenChange, onApply }: AccountListsDialogProps) {
   const { lists, loading, userId, updateList, deleteList, shareList, unshareList, getListShares } = useAccountLists()
-  const [uploadOpen, setUploadOpen] = useState(false)
-  const [uploadTarget, setUploadTarget] = useState<AccountList | null>(null)
+  const [tab, setTab] = useState<LibraryTab>("mine")
+  const [query, setQuery] = useState("")
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [accountQuery, setAccountQuery] = useState("")
   const [renamingId, setRenamingId] = useState<string | null>(null)
-  const [renameValue, setRenameValue] = useState("")
-  const [expandedId, setExpandedId] = useState<string | null>(null)
+  // Upload runs in the right pane: target is the list being replaced, or null for a new one.
+  const [uploading, setUploading] = useState<{ target: AccountList | null } | null>(null)
   const [listToDelete, setListToDelete] = useState<AccountList | null>(null)
 
   const myLists = useMemo(() => lists.filter((l) => l.user_id === userId), [lists, userId])
   const sharedLists = useMemo(() => lists.filter((l) => l.user_id !== userId), [lists, userId])
+  const tabLists = tab === "mine" ? myLists : sharedLists
+  const visibleLists = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return q ? tabLists.filter((l) => l.name.toLowerCase().includes(q)) : tabLists
+  }, [tabLists, query])
+  const selected = visibleLists.find((l) => l.id === selectedId) ?? visibleLists[0] ?? null
+
+  // Each opening starts on your lists with nothing half-done.
+  useEffect(() => {
+    if (!open) return
+    setTab("mine")
+    setQuery("")
+    setSelectedId(null)
+    setRenamingId(null)
+    setUploading(null)
+  }, [open])
+
+  useEffect(() => {
+    setAccountQuery("")
+    setRenamingId(null)
+  }, [selected?.id])
 
   // Share dialog state
   const [listToShare, setListToShare] = useState<AccountList | null>(null)
@@ -101,24 +136,19 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
   )
 
   const openUpload = useCallback((target: AccountList | null) => {
-    setUploadTarget(target)
-    setUploadOpen(true)
-  }, [])
-
-  const startRename = useCallback((list: AccountList) => {
-    setRenamingId(list.id)
-    setRenameValue(list.name)
-  }, [])
-
-  const commitRename = useCallback(async () => {
-    if (!renamingId) return
-    const name = renameValue.trim()
-    if (!name) return
-    const updated = await updateList(renamingId, { name })
-    if (updated) captureEvent(ANALYTICS_EVENTS.ACCOUNT_LIST_RENAMED, { account_list_id: renamingId })
-    else toast.error("Could not rename the list.")
     setRenamingId(null)
-  }, [renamingId, renameValue, updateList])
+    setUploading({ target })
+  }, [])
+
+  const commitRename = useCallback(
+    async (list: AccountList, name: string) => {
+      const updated = await updateList(list.id, { name })
+      if (updated) captureEvent(ANALYTICS_EVENTS.ACCOUNT_LIST_RENAMED, { account_list_id: list.id })
+      else toast.error("Could not rename the list.")
+      setRenamingId(null)
+    },
+    [updateList]
+  )
 
   const confirmDelete = useCallback(async () => {
     if (!listToDelete) return
@@ -147,154 +177,185 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
     [onApply, onOpenChange, userId]
   )
 
-  const renderList = (list: AccountList, own: boolean) => {
-                const expanded = expandedId === list.id
-                const renaming = renamingId === list.id
-                return (
-                  <li key={list.id} className="px-3 py-2.5">
-                    <div className="flex items-start gap-3">
-                      <div className="min-w-0 flex-1">
-                        {renaming ? (
-                          <div className="flex items-center gap-1.5">
-                            <Input
-                              value={renameValue}
-                              onChange={(e) => setRenameValue(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") void commitRename()
-                                if (e.key === "Escape") setRenamingId(null)
-                              }}
-                              className="h-8"
-                              autoFocus
-                              aria-label="List name"
-                            />
-                            <Button size="icon-sm" variant="ghost" onClick={commitRename} aria-label="Save name" disabled={!renameValue.trim() || loading}>
-                              <RiCheckLine className="h-4 w-4" />
-                            </Button>
-                            <Button size="icon-sm" variant="ghost" onClick={() => setRenamingId(null)} aria-label="Cancel rename">
-                              <RiCloseLine className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <p className="truncate text-sm font-medium" title={list.name}>
-                            {list.name}
-                          </p>
-                        )}
-                        <p className="mt-0.5 text-xs text-muted-foreground">
-                          {[
-                            `${list.accounts.length} account${list.accounts.length === 1 ? "" : "s"}`,
-                            list.unmatched.length > 0 && `${list.unmatched.length} unmatched`,
-                            list.updated_at && `updated ${formatDate(list.updated_at)}`,
-                            list.source_file && `from ${list.source_file}`,
-                            !own && list.owner_email && `shared by ${list.owner_email}`,
-                          ]
-                            .filter(Boolean)
-                            .join(", ")}
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-0.5">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleApply(list, "include")}
-                          title="Show only these accounts on the dashboard"
-                        >
-                          <RiAddLine className="h-3.5 w-3.5" />
-                          Include
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleApply(list, "exclude")}
-                          title="Hide these accounts from the dashboard"
-                        >
-                          <RiSubtractLine className="h-3.5 w-3.5" />
-                          Exclude
-                        </Button>
-                        {own && (
-                          <>
-                            <Button size="icon-sm" variant="ghost" onClick={() => openShare(list)} aria-label={`Share ${list.name}`} title="Share">
-                              <RiShareLine className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button size="icon-sm" variant="ghost" onClick={() => startRename(list)} aria-label={`Rename ${list.name}`} title="Rename">
-                              <RiPencilLine className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button size="icon-sm" variant="ghost" onClick={() => openUpload(list)} aria-label={`Update ${list.name} from a file`} title="Update from a new file">
-                              <RiRefreshLine className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button size="icon-sm" variant="ghost-destructive" onClick={() => setListToDelete(list)} aria-label={`Delete ${list.name}`} title="Delete">
-                              <RiDeleteBinLine className="h-3.5 w-3.5" />
-                            </Button>
-                          </>
-                        )}
-                        <Button size="icon-sm" variant="ghost" onClick={() => setExpandedId(expanded ? null : list.id)} aria-label={expanded ? "Hide accounts" : "Show accounts"} aria-expanded={expanded}>
-                          {expanded ? <RiArrowUpSLine className="h-4 w-4" /> : <RiArrowDownSLine className="h-4 w-4" />}
-                        </Button>
-                      </div>
-                    </div>
-                    {expanded && (
-                      <div className="mt-2 space-y-2">
-                        <div className="flex max-h-40 flex-wrap gap-1 overflow-y-auto rounded-md border bg-muted/30 p-2">
-                          {list.accounts.map((name) => (
-                            <span key={name} className="rounded-full border bg-background px-2 py-0.5 text-xs" title={name}>
-                              {name}
-                            </span>
-                          ))}
-                        </div>
-                        {list.unmatched.length > 0 && (
-                          <details className="text-xs text-muted-foreground">
-                            <summary className="cursor-pointer">Unmatched names ({list.unmatched.length})</summary>
-                            <p className="mt-1 break-words">{list.unmatched.join(", ")}</p>
-                          </details>
-                        )}
-                      </div>
-                    )}
-                  </li>
-                )
+  const renderItems = () => {
+    if (visibleLists.length > 0) {
+      return visibleLists.map((list) => (
+        <LibraryItem
+          key={list.id}
+          selected={!uploading && selected?.id === list.id}
+          onSelect={() => {
+            setUploading(null)
+            setSelectedId(list.id)
+          }}
+          icon={tab === "mine" ? <RiFileList3Line className="h-4 w-4" /> : <RiGroupLine className="h-4 w-4" />}
+          name={list.name}
+          meta={[plural(list.accounts.length, "account"), tab === "mine" ? (list.updated_at && `updated ${formatDate(list.updated_at)}`) : list.owner_email && `from ${list.owner_email}`].filter(Boolean).join(" · ")}
+          badge={list.unmatched.length > 0 ? <LibraryCountBadge count={list.unmatched.length} title={`${plural(list.unmatched.length, "name")} not matched`} /> : undefined}
+        />
+      ))
+    }
+    if (query.trim()) return <LibraryEmpty>No lists match &ldquo;{query.trim()}&rdquo;.</LibraryEmpty>
+    return <LibraryEmpty>{tab === "mine" ? "You haven't uploaded a list yet." : "No one has shared a list with you yet."}</LibraryEmpty>
+  }
+
+  const renderDetail = () => {
+    if (uploading) {
+      return (
+        <AccountListUploadPanel
+          key={uploading.target?.id ?? "new"}
+          existingList={uploading.target}
+          onApply={(list) => handleApply(list, "include")}
+          onDone={(saved) => {
+            setUploading(null)
+            if (saved) {
+              setTab("mine")
+              setQuery("")
+              setSelectedId(saved.id)
+            }
+          }}
+        />
+      )
+    }
+    if (!selected) {
+      return (
+        <div className="grid flex-1 place-items-center p-8">
+          <div className="max-w-sm text-center">
+            <RiFileList3Line className="mx-auto h-7 w-7 text-primary" />
+            <p className="mt-3 text-sm font-medium">Filter by your own account lists</p>
+            <p className="mt-1 text-[12.5px] leading-relaxed text-muted-foreground">
+              Upload a CSV, TSV, TXT or XLSX file with company names. Each name is matched to an account and saved as a list you can apply any time.
+            </p>
+            <Button className="mt-4" onClick={() => openUpload(null)}>
+              <RiUploadLine />
+              Upload list
+            </Button>
+          </div>
+        </div>
+      )
+    }
+
+    const own = selected.user_id === userId
+    const q = accountQuery.trim().toLowerCase()
+    const accounts = q ? selected.accounts.filter((name) => name.toLowerCase().includes(q)) : selected.accounts
+    return (
+      <>
+        <LibraryPaneHeader
+          title={
+            renamingId === selected.id ? (
+              <LibraryRename
+                initial={selected.name}
+                maxLength={MAX_ACCOUNT_LIST_NAME_LENGTH}
+                saving={loading}
+                onSave={(name) => void commitRename(selected, name)}
+                onCancel={() => setRenamingId(null)}
+              />
+            ) : (
+              <LibraryPaneTitle>{selected.name}</LibraryPaneTitle>
+            )
+          }
+          meta={[
+            plural(selected.accounts.length, "account"),
+            selected.updated_at && `updated ${formatDate(selected.updated_at)}`,
+            selected.source_file && `from ${selected.source_file}`,
+            !own && selected.owner_email && `shared by ${selected.owner_email}`,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+          actions={
+            <>
+              <Button variant="outline" size="sm" className="text-include" onClick={() => handleApply(selected, "include")} title="Show only these accounts on the dashboard">
+                <RiAddLine />
+                Include in filters
+              </Button>
+              <Button variant="outline" size="sm" className="text-exclude" onClick={() => handleApply(selected, "exclude")} title="Hide these accounts from the dashboard">
+                <RiSubtractLine />
+                Exclude
+              </Button>
+              {own && (
+                <span className="ml-auto flex items-center gap-0.5">
+                  <Button size="icon-sm" variant="ghost" onClick={() => openShare(selected)} aria-label={`Share ${selected.name}`} title="Share">
+                    <RiShareLine />
+                  </Button>
+                  <Button size="icon-sm" variant="ghost" onClick={() => setRenamingId(selected.id)} aria-label={`Rename ${selected.name}`} title="Rename">
+                    <RiPencilLine />
+                  </Button>
+                  <Button size="icon-sm" variant="ghost" onClick={() => openUpload(selected)} aria-label={`Replace ${selected.name} from a file`} title="Replace from a file">
+                    <RiFileUploadLine />
+                  </Button>
+                  <Button size="icon-sm" variant="ghost-destructive" onClick={() => setListToDelete(selected)} aria-label={`Delete ${selected.name}`} title="Delete">
+                    <RiDeleteBinLine />
+                  </Button>
+                </span>
+              )}
+            </>
+          }
+        />
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+          {selected.unmatched.length > 0 && (
+            <div className="mb-4 flex gap-2 rounded-lg border border-amber-500/30 bg-amber-500/[0.08] px-3 py-2.5 text-[12.5px]">
+              <RiErrorWarningLine className="mt-px h-4 w-4 shrink-0 text-amber-600 dark:text-amber-300" />
+              <p className="min-w-0">
+                <span className="font-semibold text-amber-700 dark:text-amber-300">{plural(selected.unmatched.length, "name")} not matched: </span>
+                <span className="break-words">{selected.unmatched.join(", ")}</span>
+              </p>
+            </div>
+          )}
+          {selected.accounts.length > 8 && (
+            <label className="mb-3 flex h-[34px] items-center gap-2 rounded-lg border border-transparent bg-muted/80 px-2.5 text-muted-foreground transition-shadow focus-within:border-primary/60 focus-within:ring-[3px] focus-within:ring-primary/15">
+              <RiSearchLine className="h-4 w-4 shrink-0" />
+              <input
+                value={accountQuery}
+                onChange={(event) => setAccountQuery(event.target.value)}
+                placeholder={`Search ${plural(selected.accounts.length, "account")}`}
+                aria-label="Search accounts in this list"
+                className="min-w-0 flex-1 bg-transparent text-[13px] text-foreground placeholder:text-muted-foreground focus:outline-none"
+              />
+            </label>
+          )}
+          {accounts.length > 0 ? (
+            <ul className="gap-x-6 text-[13px] sm:columns-2">
+              {accounts.map((name) => (
+                <li key={name} className="break-inside-avoid truncate border-b border-border/50 py-1.5" title={name}>
+                  {name}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-[12.5px] text-muted-foreground">No accounts match &ldquo;{accountQuery.trim()}&rdquo;.</p>
+          )}
+        </div>
+      </>
+    )
   }
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[85vh] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <RiListCheck3 className="h-5 w-5" />
-              Account Lists
-            </DialogTitle>
-            <DialogDescription className="sr-only">Manage uploaded account lists.</DialogDescription>
-          </DialogHeader>
-
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-sm text-muted-foreground">
-              {myLists.length === 0 ? "No lists yet." : `${myLists.length} list${myLists.length === 1 ? "" : "s"}`}
-            </p>
-            <Button size="sm" onClick={() => openUpload(null)}>
-              <RiUploadLine className="h-4 w-4" />
-              Upload list
-            </Button>
-          </div>
-
-          {myLists.length === 0 ? (
-            <div className="rounded-lg border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">
-              Upload a CSV, TSV, TXT or XLSX file with company names. We map each name to an account and save the result as a list you can apply any time.
-            </div>
-          ) : (
-            <ul className="divide-y rounded-lg border">{myLists.map((list) => renderList(list, true))}</ul>
-          )}
-
-          {sharedLists.length > 0 && (
-            <div className="space-y-2">
-              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                <RiGroupLine className="h-3 w-3" />
-                Shared with me
-              </p>
-              <ul className="divide-y rounded-lg border">{sharedLists.map((list) => renderList(list, false))}</ul>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <AccountListUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} existingList={uploadTarget} onApply={handleApply} />
+      <LibraryDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        title="Account lists"
+        description="Upload, apply and manage account lists."
+        searchPlaceholder="Search lists"
+        query={query}
+        onQueryChange={setQuery}
+        tab={tab}
+        onTabChange={(next) => {
+          setTab(next)
+          setSelectedId(null)
+          setUploading(null)
+        }}
+        mineCount={myLists.length}
+        sharedCount={sharedLists.length}
+        items={renderItems()}
+        footer={
+          <Button className="w-full" onClick={() => openUpload(null)}>
+            <RiUploadLine />
+            Upload list
+          </Button>
+        }
+      >
+        {renderDetail()}
+      </LibraryDialog>
 
       <Dialog open={Boolean(listToShare)} onOpenChange={(o) => !o && setListToShare(null)}>
         <DialogContent>

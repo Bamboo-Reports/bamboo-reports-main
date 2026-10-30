@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Lists and saved filters</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css" rel="stylesheet" />
+<style>
+  /* Tokens copied from app/globals.css */
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 214 45% 15%;
+    --card: 0 0% 100%;
+    --primary: 204 100% 41%;
+    --primary-foreground: 0 0% 100%;
+    --muted: 210 25% 94%;
+    --muted-foreground: 215 20% 39%;
+    --border: 212 24% 86%;
+    --ring: 204 100% 41%;
+    --include: 142 64% 32%;
+    --exclude: 0 72% 46%;
+    --warn: 32 90% 40%;
+    --dialog-shadow: 0 30px 80px -30px rgba(15,30,50,.45), 0 2px 8px rgba(15,30,50,.08);
+  }
+  .dark {
+    --background: 0 0% 10%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 12%;
+    --primary: 204 92% 56%;
+    --primary-foreground: 0 0% 10%;
+    --muted: 0 0% 16%;
+    --muted-foreground: 0 0% 65%;
+    --border: 0 0% 24%;
+    --ring: 0 0% 83.1%;
+    --include: 142 55% 55%;
+    --exclude: 0 80% 66%;
+    --warn: 36 90% 60%;
+    --dialog-shadow: 0 30px 80px -30px rgba(0,0,0,.8);
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: light; }
+  html.dark { color-scheme: dark; }
+  body { margin: 0; font-family: "Inter", system-ui, sans-serif; background: hsl(var(--background)); color: hsl(var(--foreground)); -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; font-size: 13px; }
+  button, input, textarea, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+  .muted { color: hsl(var(--muted-foreground)); }
+
+  .page { max-width: 1440px; margin: 0 auto; padding: 32px 24px 80px; }
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+  .top h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .toggle { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 13px; font-weight: 500; }
+  .toggle[aria-pressed="true"] { background: hsl(var(--primary) / .1); border-color: hsl(var(--primary) / .5); color: hsl(var(--primary)); }
+  .variant { padding: 22px 0 30px; border-top: 1px solid hsl(var(--border)); }
+  .vh { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+  .vh h2 { margin: 0; font-size: 15px; font-weight: 600; }
+  .tag { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: hsl(var(--primary) / .12); color: hsl(var(--primary)); }
+  .note { margin: 0 0 16px; max-width: 92ch; font-size: 13px; line-height: 1.5; color: hsl(var(--muted-foreground)); }
+  .pair { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start; }
+  .backdrop { padding: 28px; border-radius: 16px; background: hsl(214 30% 12% / .08); border: 1px dashed hsl(var(--border)); }
+  .dark .backdrop { background: hsl(0 0% 0% / .35); }
+
+  /* ---------- dialog shell ---------- */
+  .dlg { display: flex; flex-direction: column; height: 580px; border-radius: 14px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); box-shadow: var(--dialog-shadow); overflow: hidden; }
+  .dlg.narrow { width: 600px; }
+  .dlg.wide { width: 900px; }
+  .dh { flex: none; display: flex; align-items: center; gap: 10px; padding: 14px 16px 12px 20px; }
+  .dh h3 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: -0.005em; }
+  .dh .sp { flex: 1; }
+  .x { display: grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 7px; background: transparent; color: hsl(var(--muted-foreground)); font-size: 18px; }
+  .x:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 13px; font-weight: 500; white-space: nowrap; }
+  .btn:hover { border-color: hsl(var(--foreground) / .25); }
+  .btn i { font-size: 15px; }
+  .btn.primary { border-color: transparent; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+  .btn.primary:hover { filter: brightness(1.05); }
+  .btn.sm { height: 28px; padding: 0 9px; font-size: 12.5px; }
+  .btn.in { color: hsl(var(--include)); }
+  .btn.ex { color: hsl(var(--exclude)); }
+  .btn.danger { color: hsl(var(--exclude)); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .ib { display: grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 7px; background: transparent; color: hsl(var(--muted-foreground)); font-size: 16px; }
+  .ib:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
+  .ib.danger:hover { color: hsl(var(--exclude)); background: hsl(var(--exclude) / .1); }
+
+  .search { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; border-radius: 8px; border: 1px solid transparent; background: hsl(var(--muted) / .8); color: hsl(var(--muted-foreground)); }
+  .search:focus-within { border-color: hsl(var(--primary) / .6); box-shadow: 0 0 0 3px hsl(var(--primary) / .12); }
+  .search input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font-size: 13px; color: hsl(var(--foreground)); }
+  .search input::placeholder { color: hsl(var(--muted-foreground)); }
+  .seg { display: inline-grid; grid-auto-flow: column; padding: 3px; border-radius: 9px; background: hsl(var(--muted) / .8); }
+  .seg button { height: 26px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent; font-size: 12.5px; font-weight: 500; color: hsl(var(--muted-foreground)); }
+  .seg button.on { background: hsl(var(--card)); color: hsl(var(--foreground)); box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 0 0 1px hsl(var(--border) / .6); }
+  .seg button .c { margin-left: 4px; font-size: 11.5px; color: hsl(var(--muted-foreground)); }
+
+  .chip { display: inline-flex; align-items: center; gap: 3px; height: 24px; padding: 0 8px 0 5px; border-radius: 6px; border: 1px solid; font-size: 12px; font-weight: 500; }
+  .chip i { font-size: 13px; }
+  .chip.in { border-color: hsl(var(--include) / .35); background: hsl(var(--include) / .08); }
+  .chip.in i { color: hsl(var(--include)); }
+  .chip.ex { border-color: hsl(var(--exclude) / .35); background: hsl(var(--exclude) / .07); color: hsl(var(--exclude)); }
+  .chip.plain { padding: 0 8px; border-color: hsl(var(--border)); background: hsl(var(--card)); }
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .pill { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 7px; border-radius: 999px; font-size: 11px; font-weight: 600; background: hsl(var(--primary) / .12); color: hsl(var(--primary)); }
+  .pill.warn { background: hsl(var(--warn) / .14); color: hsl(var(--warn)); }
+
+  /* ---------- compact list (option 1) ---------- */
+  .tools { flex: none; display: flex; align-items: center; gap: 8px; padding: 0 20px 12px; }
+  .tools .search { flex: 1; }
+  .list { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 12px 12px; border-top: 1px solid hsl(var(--border)); }
+  .grp { padding: 12px 8px 6px; font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: hsl(var(--muted-foreground)); }
+  .row { border-radius: 9px; }
+  .row.open { background: hsl(var(--muted) / .55); }
+  .rh { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 6px 8px 6px 10px; border-radius: 9px; cursor: pointer; }
+  .row:not(.open) .rh:hover { background: hsl(var(--muted) / .6); }
+  .rh > i.lead { flex: none; font-size: 16px; color: hsl(var(--muted-foreground)); }
+  .rh > i.lead.ok { color: hsl(var(--primary)); }
+  .rh .who { flex: 1; min-width: 0; }
+  .rh .nm { display: flex; align-items: center; gap: 6px; min-width: 0; font-weight: 500; }
+  .rh .nm span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rh .meta { margin-top: 1px; font-size: 12px; color: hsl(var(--muted-foreground)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rh .acts { flex: none; display: flex; align-items: center; gap: 4px; opacity: 0; transition: opacity .12s; }
+  .rh:hover .acts, .row.open .acts, .rh:focus-within .acts { opacity: 1; }
+  .rb { padding: 2px 10px 14px 36px; }
+  .rb .sec + .sec { margin-top: 10px; }
+  .rb .sec h5 { margin: 0 0 6px; font-size: 11.5px; font-weight: 600; color: hsl(var(--muted-foreground)); }
+  .kv { display: grid; grid-template-columns: 130px 1fr; gap: 6px 10px; align-items: start; }
+  .kv .k { padding-top: 4px; font-size: 12px; color: hsl(var(--muted-foreground)); }
+  .menu { position: absolute; right: 8px; top: 40px; z-index: 5; width: 200px; padding: 4px; border-radius: 10px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); box-shadow: 0 14px 30px -14px rgba(0,0,0,.35); }
+  .menu button { display: flex; align-items: center; gap: 8px; width: 100%; height: 32px; padding: 0 8px; border: 0; border-radius: 6px; background: transparent; text-align: left; font-size: 13px; }
+  .menu button:hover { background: hsl(var(--muted)); }
+  .menu button i { font-size: 15px; color: hsl(var(--muted-foreground)); }
+  .menu button.danger, .menu button.danger i { color: hsl(var(--exclude)); }
+  .menu .rule { height: 1px; margin: 4px 0; background: hsl(var(--border)); }
+  .rel { position: relative; }
+
+  /* ---------- list + detail (option 2) ---------- */
+  .split { flex: 1; min-height: 0; display: grid; grid-template-columns: 300px 1fr; border-top: 1px solid hsl(var(--border)); }
+  .side { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid hsl(var(--border)); background: hsl(var(--muted) / .3); }
+  .side .tools { padding: 12px 12px 8px; flex-direction: column; align-items: stretch; }
+  .side .items { flex: 1; min-height: 0; overflow-y: auto; padding: 0 8px 8px; }
+  .item { display: flex; align-items: center; gap: 9px; width: 100%; padding: 8px 10px; border: 0; border-radius: 8px; background: transparent; text-align: left; }
+  .item:hover { background: hsl(var(--muted) / .8); }
+  .item.sel { background: hsl(var(--card)); box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 0 0 1px hsl(var(--border)); }
+  .item i { flex: none; font-size: 15px; color: hsl(var(--muted-foreground)); }
+  .item i.ok { color: hsl(var(--primary)); }
+  .item .who { flex: 1; min-width: 0; }
+  .item .nm { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .item .meta { font-size: 11.5px; color: hsl(var(--muted-foreground)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .side .foot { flex: none; padding: 10px 12px; border-top: 1px solid hsl(var(--border)); }
+  .side .foot .btn { width: 100%; }
+  .empty { padding: 24px 12px; text-align: center; font-size: 12.5px; color: hsl(var(--muted-foreground)); }
+
+  .pane { display: flex; flex-direction: column; min-height: 0; }
+  .ph { flex: none; padding: 18px 22px 14px; border-bottom: 1px solid hsl(var(--border)); }
+  .ph .t { display: flex; align-items: center; gap: 8px; }
+  .ph h4 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+  .ph .meta { margin-top: 3px; font-size: 12.5px; color: hsl(var(--muted-foreground)); }
+  .ph .acts { display: flex; align-items: center; gap: 6px; margin-top: 12px; }
+  .ph .acts .sp { flex: 1; }
+  .pb { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 22px 20px; }
+  .pb h5 { display: flex; align-items: center; gap: 7px; margin: 0 0 10px; font-size: 13px; font-weight: 600; }
+  .pb h5 i { color: hsl(var(--primary)); font-size: 15px; }
+  .pb .block + .block { margin-top: 18px; padding-top: 16px; border-top: 1px solid hsl(var(--border) / .7); }
+  .names { columns: 2; column-gap: 24px; font-size: 13px; }
+  .names div { break-inside: avoid; padding: 4px 0; border-bottom: 1px solid hsl(var(--border) / .5); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .unm { margin-top: 14px; padding: 10px 12px; border-radius: 9px; background: hsl(var(--warn) / .08); border: 1px solid hsl(var(--warn) / .25); font-size: 12.5px; }
+  .unm b { color: hsl(var(--warn)); }
+  .rename { display: flex; align-items: center; gap: 6px; }
+  .rename input { height: 32px; width: 280px; padding: 0 10px; border-radius: 8px; border: 1px solid hsl(var(--primary) / .6); box-shadow: 0 0 0 3px hsl(var(--primary) / .12); outline: none; background: hsl(var(--card)); font-size: 15px; font-weight: 600; }
+
+  /* Upload, in the pane */
+  .steps { display: flex; align-items: center; gap: 8px; font-size: 12px; color: hsl(var(--muted-foreground)); }
+  .steps b { display: inline-grid; place-items: center; width: 20px; height: 20px; margin-right: 4px; border-radius: 999px; background: hsl(var(--muted)); font-size: 11px; color: hsl(var(--muted-foreground)); }
+  .steps .on { color: hsl(var(--foreground)); font-weight: 500; }
+  .steps .on b { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+  .steps .done b { background: hsl(var(--include) / .15); color: hsl(var(--include)); }
+  .steps .line { width: 24px; height: 1px; background: hsl(var(--border)); }
+  .drop { display: grid; place-items: center; gap: 4px; padding: 26px; border-radius: 12px; border: 1.5px dashed hsl(var(--border)); background: hsl(var(--muted) / .35); text-align: center; }
+  .drop i { font-size: 22px; color: hsl(var(--primary)); }
+  .drop .s { font-size: 12px; color: hsl(var(--muted-foreground)); }
+  .or { display: flex; align-items: center; gap: 10px; margin: 14px 0 8px; font-size: 12px; color: hsl(var(--muted-foreground)); }
+  .or::before, .or::after { content: ""; flex: 1; height: 1px; background: hsl(var(--border)); }
+  textarea { width: 100%; height: 110px; padding: 10px 12px; border-radius: 9px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); resize: none; font-size: 13px; line-height: 1.5; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 12px; font-weight: 500; }
+  .field input { height: 34px; padding: 0 10px; border-radius: 8px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th { height: 32px; padding: 0 10px; text-align: left; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: hsl(var(--muted-foreground)); border-bottom: 1px solid hsl(var(--border)); }
+  td { height: 38px; padding: 0 10px; border-bottom: 1px solid hsl(var(--border) / .6); }
+  .st { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+  .st.ok { color: hsl(var(--include)); }
+  .st.rv { color: hsl(var(--warn)); }
+  .st.no { color: hsl(var(--exclude)); }
+  .pick { display: inline-flex; align-items: center; justify-content: space-between; gap: 6px; width: 100%; height: 28px; padding: 0 8px; white-space: nowrap; overflow: hidden; border-radius: 6px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); color: hsl(var(--muted-foreground)); }
+  .pick.set { color: hsl(var(--foreground)); }
+  .pfoot { flex: none; display: flex; align-items: center; gap: 8px; padding: 12px 22px; border-top: 1px solid hsl(var(--border)); }
+  .pfoot .sp { flex: 1; }
+
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); padding: 10px 14px; border-radius: 10px; background: hsl(var(--foreground)); color: hsl(var(--background)); font-size: 13px; box-shadow: 0 14px 30px -12px rgba(0,0,0,.4); opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="top">
+    <h1>Account lists and saved filters</h1>
+    <button class="toggle" id="t-dark" aria-pressed="false"><i class="ri-moon-line"></i> Dark</button>
+  </div>
+
+  <section class="variant">
+    <div class="vh"><h2>1 · Compact list</h2></div>
+    <p class="note">One line per item, actions on hover. Click a row to see what's inside. Fewer, labelled actions; the rest live in ⋯.</p>
+    <div class="pair">
+      <div class="backdrop"><div class="dlg narrow" id="c-lists"></div></div>
+      <div class="backdrop"><div class="dlg narrow" id="c-saved"></div></div>
+    </div>
+  </section>
+
+  <section class="variant">
+    <div class="vh"><h2>2 · List and detail</h2><span class="tag">Recommended</span></div>
+    <p class="note">Search and pick on the left, everything about the selected item on the right. Uploading a list happens in the same window, no second dialog. Try "Upload list".</p>
+    <div class="pair" style="flex-direction:column">
+      <div class="backdrop"><div class="dlg wide" id="s-lists"></div></div>
+      <div class="backdrop"><div class="dlg wide" id="s-saved"></div></div>
+    </div>
+  </section>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+  // ---------------- Placeholder data ----------------
+  const LISTS = [
+    { id: "l1", name: "Q4 target accounts", mine: true, accounts: ["Accenture", "Adobe", "Airbus", "American Express", "Barclays", "BNY Mellon", "Boeing", "Caterpillar", "Cisco", "Citi", "Deutsche Bank", "Goldman Sachs"], unmatched: [], file: null, updated: "updated 16 Oct" },
+    { id: "l2", name: "Competitor exclusions", mine: true, accounts: ["Abbott Laboratories", "Anheuser-Busch InBev", "Comcast Corp.", "Dell Technologies", "HP Inc.", "Landmark Group", "Mercedes-Benz Group", "Metro AG", "NatWest Group", "Sabre Corp.", "Shell plc", "Sony Group", "Suzuki Motor", "Telus Corp.", "Unilever plc", "UPS", "Verizon", "Visa Inc.", "Walmart Inc."], unmatched: ["Acme Holdings Pvt"], file: "competitors.xlsx", updated: "updated 12 Oct" },
+    { id: "l3", name: "Event attendees, October", mine: true, accounts: ["Agilent", "Akamai", "Alcon", "Allianz", "Amgen", "Aon", "AstraZeneca"], unmatched: ["Northwind Traders", "Contoso Ltd"], file: "attendees.csv", updated: "updated 3 Oct" },
+    { id: "l4", name: "Banking prospects", mine: false, owner: "a teammate", accounts: ["HSBC", "JPMorgan Chase", "Wells Fargo", "Standard Chartered", "UBS", "Morgan Stanley"], unmatched: [], file: null, updated: "updated 28 Sep" },
+  ];
+  const SAVED = [
+    { id: "s1", name: "Q4 BFSI targets", mine: true, updated: "updated yesterday", applied: true, content: {
+      Accounts: [["Accounts to show", [["GCCs", "plain"]]], ["Industry", [["BFSI", "in"], ["Technology", "in"]]], ["HQ country", [["India", "ex"]]], ["HQ revenue", [["$1B to $50B", "plain"]]]],
+      Centres: [["City", [["Bengaluru", "in"], ["Hyderabad", "in"]]]],
+      Prospects: [["Job title", [["VP", "in"], ["Assistant", "ex"]]]],
+    } },
+    { id: "s2", name: "Pune expansion", mine: true, updated: "updated 2 days ago", content: {
+      Centres: [["City", [["Pune", "in"]]], ["Status", [["Operational", "in"]]], ["Incorporation year", [["2021 to 2026", "plain"]]]],
+    } },
+    { id: "s3", name: "Retail analysis", mine: true, updated: "updated last week", content: {
+      Accounts: [["Industry", [["Retail & Consumer Goods", "in"]]], ["HQ country", [["United States", "in"]]]],
+      Prospects: [["Seniority level", [["VP", "in"], ["Director", "in"]]]],
+    } },
+    { id: "s4", name: "Large GCCs, India", mine: true, updated: "updated 3 weeks ago", content: {
+      Accounts: [["GCC headcount (India)", [["1K - 5K", "in"], ["5K - 10K", "in"], [">10K", "in"]]], ["Years in India", [["15 to 68", "plain"]]]],
+    } },
+    { id: "s5", name: "Sales team filters", mine: false, owner: "a teammate", updated: "shared 2 weeks ago", content: {
+      Accounts: [["Accounts to show", [["Non-GCCs", "plain"]]]],
+      Prospects: [["Department", [["IT", "in"]]], ["Job title", [["Head", "in"]]]],
+    } },
+  ];
+  const SECTION_ICON = { Accounts: "ri-building-line", Centres: "ri-briefcase-line", Prospects: "ri-group-line" };
+  const fieldCount = (s) => Object.values(s.content).reduce((n, f) => n + f.length, 0);
+  // The "not matched" count shows as its own badge, so it stays out of this line.
+  const listMeta = (l) => [`${l.accounts.length} accounts`, l.mine ? l.updated : `from ${l.owner}`].join(" · ");
+  const savedMeta = (s) => [`${fieldCount(s)} ${fieldCount(s) === 1 ? "filter" : "filters"}`, s.mine ? s.updated : `from ${s.owner}`].join(" · ");
+  const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  const chip = ([v, m]) => m === "plain" ? `<span class="chip plain">${esc(v)}</span>` : `<span class="chip ${m}"><i class="${m === "in" ? "ri-add-line" : "ri-subtract-line"}"></i>${esc(v)}</span>`;
+
+  let toastTimer;
+  function toast(msg) {
+    const t = document.getElementById("toast");
+    t.textContent = msg; t.classList.add("show");
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 1800);
+  }
+  function contentHtml(s, compact) {
+    return Object.entries(s.content).map(([sec, fields]) => compact
+      ? `<div class="sec"><h5>${sec}</h5><div class="kv">${fields.map(([k, vals]) => `<span class="k">${esc(k)}</span><div class="chips">${vals.map(chip).join("")}</div>`).join("")}</div></div>`
+      : `<div class="block"><h5><i class="${SECTION_ICON[sec]}"></i>${sec}</h5><div class="kv">${fields.map(([k, vals]) => `<span class="k">${esc(k)}</span><div class="chips">${vals.map(chip).join("")}</div>`).join("")}</div></div>`).join("");
+  }
+
+  // ---------------- Option 1: compact list ----------------
+  const c = { lists: { tab: "mine", q: "", open: null, menu: null }, saved: { tab: "mine", q: "", open: null, menu: null } };
+
+  function compactLists() {
+    const st = c.lists;
+    const all = LISTS.filter((l) => (st.tab === "mine") === l.mine && l.name.toLowerCase().includes(st.q.toLowerCase()));
+    const mineN = LISTS.filter((l) => l.mine).length, sharedN = LISTS.length - mineN;
+    return `<div class="dh"><h3>Account lists</h3><span class="sp"></span><button class="btn primary sm" data-a="toast" data-m="Opens the upload step"><i class="ri-upload-2-line"></i>Upload list</button><button class="x" aria-label="Close"><i class="ri-close-line"></i></button></div>
+      <div class="tools"><label class="search"><i class="ri-search-line"></i><input data-q="lists" value="${esc(st.q)}" placeholder="Search lists" /></label>
+        <div class="seg"><button class="${st.tab === "mine" ? "on" : ""}" data-tab="lists" data-v="mine">Mine<span class="c">${mineN}</span></button><button class="${st.tab === "shared" ? "on" : ""}" data-tab="lists" data-v="shared">Shared<span class="c">${sharedN}</span></button></div></div>
+      <div class="list">${all.length ? all.map((l) => `<div class="row ${st.open === l.id ? "open" : ""}">
+        <div class="rh rel" data-open="lists" data-id="${l.id}">
+          <i class="lead ${l.mine ? "ri-file-list-3-line" : "ri-group-line"}"></i>
+          <div class="who"><div class="nm"><span>${esc(l.name)}</span>${l.unmatched.length ? `<span class="pill warn">${l.unmatched.length} not matched</span>` : ""}</div><div class="meta">${listMeta(l)}</div></div>
+          <div class="acts"><button class="btn sm in" data-a="toast" data-m="Showing only ${esc(l.name)}"><i class="ri-add-line"></i>Include</button><button class="btn sm ex" data-a="toast" data-m="Hiding ${esc(l.name)}"><i class="ri-subtract-line"></i>Exclude</button>${l.mine ? `<button class="ib" data-menu="lists" data-id="${l.id}" aria-label="More actions"><i class="ri-more-2-fill"></i></button>` : ""}</div>
+          ${st.menu === l.id ? `<div class="menu"><button data-a="toast" data-m="Share dialog"><i class="ri-share-line"></i>Share…</button><button data-a="toast" data-m="Rename inline"><i class="ri-edit-line"></i>Rename</button><button data-a="toast" data-m="Upload a new file for this list"><i class="ri-file-upload-line"></i>Replace from file…</button><div class="rule"></div><button class="danger" data-a="toast" data-m="Asks to confirm, then deletes"><i class="ri-delete-bin-line"></i>Delete…</button></div>` : ""}
+        </div>
+        ${st.open === l.id ? `<div class="rb"><div class="chips">${l.accounts.map((a) => `<span class="chip plain">${esc(a)}</span>`).join("")}</div>${l.unmatched.length ? `<div class="unm"><b>Not matched:</b> ${l.unmatched.map(esc).join(", ")}</div>` : ""}</div>` : ""}
+      </div>`).join("") : `<div class="empty">No lists match "${esc(st.q)}"</div>`}</div>`;
+  }
+
+  function compactSaved() {
+    const st = c.saved;
+    const all = SAVED.filter((s) => (st.tab === "mine") === s.mine && s.name.toLowerCase().includes(st.q.toLowerCase()));
+    const mineN = SAVED.filter((s) => s.mine).length, sharedN = SAVED.length - mineN;
+    return `<div class="dh"><h3>Saved filters</h3><span class="sp"></span><button class="x" aria-label="Close"><i class="ri-close-line"></i></button></div>
+      <div class="tools"><label class="search"><i class="ri-search-line"></i><input data-q="saved" value="${esc(st.q)}" placeholder="Search saved filters" /></label>
+        <div class="seg"><button class="${st.tab === "mine" ? "on" : ""}" data-tab="saved" data-v="mine">Mine<span class="c">${mineN}</span></button><button class="${st.tab === "shared" ? "on" : ""}" data-tab="saved" data-v="shared">Shared<span class="c">${sharedN}</span></button></div></div>
+      <div class="list">${all.length ? all.map((s) => `<div class="row ${st.open === s.id ? "open" : ""}">
+        <div class="rh rel" data-open="saved" data-id="${s.id}">
+          <i class="lead ${s.applied ? "ri-check-line ok" : s.mine ? "ri-bookmark-line" : "ri-group-line"}"></i>
+          <div class="who"><div class="nm"><span>${esc(s.name)}</span>${s.applied ? `<span class="pill">Applied</span>` : ""}</div><div class="meta">${savedMeta(s)}</div></div>
+          <div class="acts"><button class="btn sm" data-a="toast" data-m="Applied ${esc(s.name)}">Apply</button>${s.mine ? `<button class="ib" data-menu="saved" data-id="${s.id}" aria-label="More actions"><i class="ri-more-2-fill"></i></button>` : ""}</div>
+          ${st.menu === s.id ? `<div class="menu"><button data-a="toast" data-m="Share dialog"><i class="ri-share-line"></i>Share…</button><button data-a="toast" data-m="Rename inline"><i class="ri-edit-line"></i>Rename</button><div class="rule"></div><button class="danger" data-a="toast" data-m="Asks to confirm, then deletes"><i class="ri-delete-bin-line"></i>Delete…</button></div>` : ""}
+        </div>
+        ${st.open === s.id ? `<div class="rb">${contentHtml(s, true)}</div>` : ""}
+      </div>`).join("") : `<div class="empty">No saved filters match "${esc(st.q)}"</div>`}</div>`;
+  }
+
+  // ---------------- Option 2: list + detail ----------------
+  const s = {
+    lists: { tab: "mine", q: "", sel: "l2", renaming: false, upload: null, nameQ: "" },
+    saved: { tab: "mine", q: "", sel: "s1", renaming: false },
+  };
+  const REVIEW = [
+    ["Infosys Ltd", "ok", "Infosys Limited"],
+    ["TCS", "alias", "Tata Consultancy Services"],
+    ["Accenture India", "rv", "Accenture plc"],
+    ["Wipro", "ok", "Wipro Limited"],
+    ["Northwind Traders", "no", ""],
+  ];
+
+  function sideHtml(kind) {
+    const st = s[kind];
+    const data = kind === "lists" ? LISTS : SAVED;
+    const items = data.filter((d) => (st.tab === "mine") === d.mine && d.name.toLowerCase().includes(st.q.toLowerCase()));
+    const mineN = data.filter((d) => d.mine).length, sharedN = data.length - mineN;
+    return `<div class="side">
+      <div class="tools"><label class="search"><i class="ri-search-line"></i><input data-sq="${kind}" value="${esc(st.q)}" placeholder="Search ${kind === "lists" ? "lists" : "saved filters"}" /></label>
+        <div class="seg" style="display:grid;grid-template-columns:1fr 1fr"><button class="${st.tab === "mine" ? "on" : ""}" data-stab="${kind}" data-v="mine">Mine<span class="c">${mineN}</span></button><button class="${st.tab === "shared" ? "on" : ""}" data-stab="${kind}" data-v="shared">Shared with me<span class="c">${sharedN}</span></button></div></div>
+      <div class="items">${items.length ? items.map((d) => `<button class="item ${st.sel === d.id && !(kind === "lists" && st.upload) ? "sel" : ""}" data-sel="${kind}" data-id="${d.id}">
+          <i class="${d.applied ? "ri-check-line ok" : kind === "lists" ? (d.mine ? "ri-file-list-3-line" : "ri-group-line") : (d.mine ? "ri-bookmark-line" : "ri-group-line")}"></i>
+          <span class="who"><span class="nm" style="display:block">${esc(d.name)}</span><span class="meta" style="display:block">${kind === "lists" ? listMeta(d) : savedMeta(d)}</span></span>
+          ${d.unmatched && d.unmatched.length ? `<span class="pill warn" title="${d.unmatched.length} names not matched">${d.unmatched.length}</span>` : ""}
+        </button>`).join("") : `<div class="empty">Nothing matches "${esc(st.q)}"</div>`}</div>
+      ${kind === "lists" ? `<div class="foot"><button class="btn primary" data-up="start"><i class="ri-upload-2-line"></i>Upload list</button></div>` : `<div class="foot"><button class="btn" data-a="toast" data-m="Saves the filters applied now"><i class="ri-add-line"></i>Save current filters</button></div>`}
+    </div>`;
+  }
+
+  function titleHtml(kind, d) {
+    const st = s[kind];
+    if (st.renaming && d.mine) return `<div class="rename"><input value="${esc(d.name)}" data-rename="${kind}" aria-label="Name" /><button class="btn sm primary" data-a="renameDone" data-k="${kind}">Save</button><button class="btn sm" data-a="renameDone" data-k="${kind}">Cancel</button></div>`;
+    return `<div class="t"><h4>${esc(d.name)}</h4>${d.applied ? `<span class="pill">Applied</span>` : ""}</div>`;
+  }
+
+  function listDetail() {
+    const st = s.lists;
+    if (st.upload) return uploadPane();
+    const l = LISTS.find((x) => x.id === st.sel) || LISTS[0];
+    const names = l.accounts.filter((a) => a.toLowerCase().includes(st.nameQ.toLowerCase()));
+    return `<div class="pane">
+      <div class="ph">${titleHtml("lists", l)}
+        <div class="meta">${[`${l.accounts.length} accounts`, l.mine ? l.updated : `shared by ${l.owner}`, l.file ? `from ${esc(l.file)}` : null].filter(Boolean).join(" · ")}</div>
+        <div class="acts">
+          <button class="btn in" data-a="toast" data-m="Filter: only ${esc(l.name)}"><i class="ri-add-line"></i>Include in filters</button>
+          <button class="btn ex" data-a="toast" data-m="Filter: hide ${esc(l.name)}"><i class="ri-subtract-line"></i>Exclude</button>
+          <span class="sp"></span>
+          ${l.mine ? `<button class="ib" title="Share" aria-label="Share" data-a="toast" data-m="Share dialog"><i class="ri-share-line"></i></button>
+          <button class="ib" title="Rename" aria-label="Rename" data-a="rename" data-k="lists"><i class="ri-edit-line"></i></button>
+          <button class="ib" title="Replace from file" aria-label="Replace from file" data-up="start"><i class="ri-file-upload-line"></i></button>
+          <button class="ib danger" title="Delete" aria-label="Delete" data-a="toast" data-m="Asks to confirm, then deletes"><i class="ri-delete-bin-line"></i></button>` : ""}
+        </div>
+      </div>
+      <div class="pb">
+        ${l.unmatched.length ? `<div class="unm" style="margin:0 0 14px"><b>${l.unmatched.length} not matched:</b> ${l.unmatched.map(esc).join(", ")}. ${l.mine ? `<a href="#" data-up="start" style="color:hsl(var(--primary))">Match them</a>` : ""}</div>` : ""}
+        <label class="search" style="margin-bottom:10px"><i class="ri-search-line"></i><input data-nq value="${esc(st.nameQ)}" placeholder="Search ${l.accounts.length} accounts" /></label>
+        <div class="names">${names.map((a) => `<div>${esc(a)}</div>`).join("") || `<div class="muted">No accounts match</div>`}</div>
+      </div>
+    </div>`;
+  }
+
+  function uploadPane() {
+    const step = s.lists.upload;
+    const steps = `<div class="steps"><span class="${step === 1 ? "on" : "done"}"><b>${step === 1 ? 1 : "✓"}</b>Add names</span><span class="line"></span><span class="${step === 2 ? "on" : ""}"><b>2</b>Check matches</span></div>`;
+    if (step === 1) return `<div class="pane">
+      <div class="ph"><div class="t"><h4>Upload a list</h4></div><div style="margin-top:10px">${steps}</div></div>
+      <div class="pb">
+        <div class="drop"><i class="ri-upload-cloud-2-line"></i><div><b>Drop a file</b> or click to browse</div><div class="s">CSV, TSV, TXT or XLSX · up to 1,000 names</div></div>
+        <div class="or">or paste names, one per line</div>
+        <textarea placeholder="Infosys Ltd&#10;Tata Consultancy Services&#10;Accenture">Infosys Ltd&#10;TCS&#10;Accenture India&#10;Wipro&#10;Northwind Traders</textarea>
+      </div>
+      <div class="pfoot"><button class="btn" data-up="cancel">Cancel</button><span class="sp"></span><button class="btn primary" data-up="next">Match accounts<i class="ri-arrow-right-line"></i></button></div>
+    </div>`;
+    return `<div class="pane">
+      <div class="ph"><div class="t"><h4>Upload a list</h4></div><div style="margin-top:10px">${steps}</div></div>
+      <div class="pb">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><div class="seg"><button class="on">All<span class="c">5</span></button><button>Matched<span class="c">3</span></button><button>Check<span class="c">1</span></button><button>Not found<span class="c">1</span></button></div></div>
+        <table><thead><tr><th style="width:34%">Uploaded name</th><th style="width:20%">Status</th><th>Account in database</th></tr></thead>
+        <tbody>${REVIEW.map(([n, st, m]) => `<tr><td>${esc(n)}</td><td><span class="st ${st === "alias" ? "ok" : st}">${st === "ok" ? '<i class="ri-check-line"></i>Matched' : st === "alias" ? '<i class="ri-check-line"></i>Via alias' : st === "rv" ? '<i class="ri-question-line"></i>Check' : '<i class="ri-close-line"></i>Not found'}</span></td><td><span class="pick ${m ? "set" : ""}">${m ? esc(m) : "Search to map manually"}<i class="ri-arrow-down-s-line"></i></span></td></tr>`).join("")}</tbody></table>
+        <div class="field" style="margin-top:16px"><label for="ln">List name</label><input id="ln" value="October partners" /></div>
+      </div>
+      <div class="pfoot"><button class="btn" data-up="back"><i class="ri-arrow-left-line"></i>Back</button><span class="sp"></span><span class="muted" style="font-size:12px">4 of 5 will be saved</span><button class="btn primary" data-up="save">Save list</button></div>
+    </div>`;
+  }
+
+  function savedDetail() {
+    const st = s.saved;
+    const d = SAVED.find((x) => x.id === st.sel) || SAVED[0];
+    return `<div class="pane">
+      <div class="ph">${titleHtml("saved", d)}
+        <div class="meta">${savedMeta(d)}</div>
+        <div class="acts">
+          <button class="btn primary" data-a="toast" data-m="Applied ${esc(d.name)}"><i class="ri-filter-3-line"></i>${d.applied ? "Apply again" : "Apply filters"}</button>
+          <span class="sp"></span>
+          ${d.mine ? `<button class="ib" title="Share" aria-label="Share" data-a="toast" data-m="Share dialog"><i class="ri-share-line"></i></button>
+          <button class="ib" title="Rename" aria-label="Rename" data-a="rename" data-k="saved"><i class="ri-edit-line"></i></button>
+          <button class="ib danger" title="Delete" aria-label="Delete" data-a="toast" data-m="Asks to confirm, then deletes"><i class="ri-delete-bin-line"></i></button>` : ""}
+        </div>
+      </div>
+      <div class="pb">${contentHtml(d, false)}</div>
+    </div>`;
+  }
+
+  function render() {
+    const keep = document.activeElement;
+    const key = keep && (keep.dataset.q || keep.dataset.sq || (keep.dataset.nq !== undefined ? "nq" : null));
+    const caret = key ? keep.selectionStart : null;
+    document.getElementById("c-lists").innerHTML = compactLists();
+    document.getElementById("c-saved").innerHTML = compactSaved();
+    document.getElementById("s-lists").innerHTML = `<div class="dh"><h3>Account lists</h3><span class="sp"></span><button class="x" aria-label="Close"><i class="ri-close-line"></i></button></div><div class="split">${sideHtml("lists")}${listDetail()}</div>`;
+    document.getElementById("s-saved").innerHTML = `<div class="dh"><h3>Saved filters</h3><span class="sp"></span><button class="x" aria-label="Close"><i class="ri-close-line"></i></button></div><div class="split">${sideHtml("saved")}${savedDetail()}</div>`;
+    if (key) {
+      const sel = key === "nq" ? "[data-nq]" : `[data-q="${key}"], [data-sq="${key}"]`;
+      const el = [...document.querySelectorAll(sel)].find((e) => (keep.dataset.q ? e.dataset.q : keep.dataset.sq ? e.dataset.sq : true));
+      if (el) { el.focus(); el.setSelectionRange(caret, caret); }
+    }
+  }
+
+  document.addEventListener("click", (e) => {
+    const t = e.target;
+    const b = t.closest("[data-a],[data-tab],[data-menu],[data-open],[data-sel],[data-stab],[data-up]");
+    if (!b) { c.lists.menu = c.saved.menu = null; render(); return; }
+    if (b.dataset.a === "toast") { e.preventDefault(); toast(b.dataset.m); c.lists.menu = c.saved.menu = null; render(); return; }
+    if (b.dataset.a === "rename") { s[b.dataset.k].renaming = true; render(); document.querySelector(`[data-rename="${b.dataset.k}"]`)?.select(); return; }
+    if (b.dataset.a === "renameDone") { s[b.dataset.k].renaming = false; render(); return; }
+    if (b.dataset.tab) { c[b.dataset.tab].tab = b.dataset.v; c[b.dataset.tab].open = null; render(); return; }
+    if (b.dataset.menu) { e.stopPropagation(); const st = c[b.dataset.menu]; st.menu = st.menu === b.dataset.id ? null : b.dataset.id; render(); return; }
+    if (b.dataset.open) { if (t.closest("button")) return; const st = c[b.dataset.open]; st.open = st.open === b.dataset.id ? null : b.dataset.id; st.menu = null; render(); return; }
+    if (b.dataset.stab) { const st = s[b.dataset.stab]; st.tab = b.dataset.v; const first = (b.dataset.stab === "lists" ? LISTS : SAVED).find((d) => (st.tab === "mine") === d.mine); if (first) st.sel = first.id; st.upload = null; render(); return; }
+    if (b.dataset.sel) { const st = s[b.dataset.sel]; st.sel = b.dataset.id; st.renaming = false; st.upload = null; st.nameQ = ""; render(); return; }
+    if (b.dataset.up) {
+      e.preventDefault();
+      const st = s.lists; const a = b.dataset.up;
+      if (a === "start") st.upload = 1; else if (a === "next") st.upload = 2; else if (a === "back") st.upload = 1; else if (a === "cancel") st.upload = null;
+      else if (a === "save") { st.upload = null; toast("Saved October partners: 4 accounts"); }
+      render(); return;
+    }
+  });
+  document.addEventListener("input", (e) => {
+    const t = e.target;
+    if (t.dataset.q) { c[t.dataset.q].q = t.value; render(); }
+    else if (t.dataset.sq) { s[t.dataset.sq].q = t.value; render(); }
+    else if (t.dataset.nq !== undefined) { s.lists.nameQ = t.value; render(); }
+  });
+  document.getElementById("t-dark").onclick = (e) => { const on = document.documentElement.classList.toggle("dark"); e.currentTarget.setAttribute("aria-pressed", on); };
+  render();
+</script>
+</body>
+</html>

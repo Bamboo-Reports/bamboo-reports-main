@@ -23,7 +23,9 @@ import {
   ProspectFiltersSection,
 } from '@/components/filters/filter-sections'
 import { countActiveFields, countActiveFilters, type FilterRangeBounds, type FilterSectionId } from '@/components/filters/filter-fields'
+import { describeFilters } from '@/components/filters/filter-description'
 import { ProfileMenu } from '@/components/layout/profile-menu'
+import { useAccountLists } from '@/contexts/account-lists-context'
 import { Button } from '@/components/ui/button'
 import { useCurrentProfile } from '@/hooks/use-current-profile'
 import { getSectionUnavailableMessage, isSectionEnabled } from '@/lib/config/dashboard-access'
@@ -117,6 +119,7 @@ export function FiltersSidebar({
   onOpenHistory,
 }: FiltersSidebarProps): React.JSX.Element {
   const user = useCurrentProfile()
+  const { lists: accountLists } = useAccountLists()
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
   const [openSection, setOpenSection] = useState<FilterSectionId | null>('accounts')
   const [exportAccessError, setExportAccessError] = useState<string | null>(null)
@@ -127,6 +130,7 @@ export function FiltersSidebar({
   const [optimisticVisibilityMode, setOptimisticVisibilityMode] = useState(pendingFilters.accountVisibilityMode)
 
   const bounds: FilterRangeBounds = { revenue: revenueRange, yearsInIndia: yearsInIndiaRange, centerIncYear: centerIncYearRange }
+  const listNames = new Map(accountLists.map((list) => [list.id, list.name]))
   const visibleSections = SECTIONS.filter(({ id }) => isSectionVisible(id))
   const sectionCounts = Object.fromEntries(
     visibleSections.map(({ id }) => [id, isSectionEnabled(id) ? countActiveFields(id, pendingFilters, bounds) : 0])
@@ -403,6 +407,7 @@ export function FiltersSidebar({
               openMenuSignal={savedMenuSignal}
               openAccountListsSignal={accountListsSignal}
               countFilters={(saved) => countActiveFilters(saved, bounds)}
+              describeFilters={(saved) => describeFilters(saved, bounds, listNames)}
             />
           </div>
 

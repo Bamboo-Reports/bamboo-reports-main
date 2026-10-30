@@ -70,3 +70,23 @@ export function FilterValuesSummary({ values }: { values: FilterValue[] }) {
     </span>
   )
 }
+
+/** A value as a read-only chip, marked + (included) or − (excluded) like FilterChip. */
+export function FilterValueTag({ item }: { item: FilterValue }) {
+  const isInclude = item.mode === "include"
+  return (
+    <span
+      className={cn(
+        "inline-flex h-6 min-w-0 max-w-full items-center gap-0.5 rounded-md border pl-1 pr-2 text-xs font-medium",
+        isInclude ? "border-include/35 bg-include/[0.08]" : "border-exclude/35 bg-exclude/[0.07] text-exclude"
+      )}
+    >
+      {isInclude ? (
+        <RiAddLine className="h-3.5 w-3.5 shrink-0 text-include" aria-label="including" />
+      ) : (
+        <RiSubtractLine className="h-3.5 w-3.5 shrink-0" aria-label="excluding" />
+      )}
+      <span className="truncate" title={item.value}>{item.value}</span>
+    </span>
+  )
+}
