@@ -31,4 +31,12 @@ describe("pie chart data labels", () => {
   it.each(cases)("formats %s", (_name, display, expected) => {
     expect(formatPieChartDataLabel("India", 42, display)).toBe(expected)
   })
+
+  it("shortens long names but always keeps the percentage", () => {
+    const display = { showCategoryLabels: true, showPercentages: true }
+    expect(formatPieChartDataLabel("Healthcare Life Sciences & Pharma", 7, display)).toBe(
+      "Healthcare Life Sci…: 7%"
+    )
+    expect(formatPieChartDataLabel("Customer Support", 5, display)).toBe("Customer Support: 5%")
+  })
 })

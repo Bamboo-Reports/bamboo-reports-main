@@ -24,11 +24,19 @@ export interface PieChartLabelDisplay {
   showPercentages: boolean
 }
 
+// Longer names are shortened in the slice label (the tooltip shows them in
+// full) so the percentage is never cut off.
+const MAX_LABEL_CATEGORY_LENGTH = 20
+
 export function formatPieChartDataLabel(
-  category: string,
+  categoryName: string,
   percent: number,
   display: PieChartLabelDisplay
 ) {
+  const category =
+    categoryName.length > MAX_LABEL_CATEGORY_LENGTH
+      ? `${categoryName.slice(0, MAX_LABEL_CATEGORY_LENGTH - 1).trimEnd()}…`
+      : categoryName
   if (display.showCategoryLabels && display.showPercentages) {
     return `${category}: ${percent}%`
   }
@@ -194,7 +202,9 @@ export const PieChartCard = memo(({
           dataLabels: {
             enabled: labelDisplay.showCategoryLabels || labelDisplay.showPercentages,
             distance: 12,
-            allowOverlap: false,
+            // Highcharts already spreads pie labels apart; its extra overlap
+            // check is conservative and hid labels that did not touch.
+            allowOverlap: true,
             connectorWidth: 1,
             connectorColor: "hsl(var(--border))",
             style: {
@@ -203,6 +213,9 @@ export const PieChartCard = memo(({
               fontWeight: "600",
               fontFamily: "'DM Sans', ui-sans-serif, system-ui, sans-serif",
               textOutline: "none",
+              // One line per label: a wrapped label is twice as tall and
+              // crowds its neighbours (names are shortened in the formatter).
+              whiteSpace: "nowrap",
             },
             formatter: function () {
               const point = this as unknown as Point
@@ -236,6 +249,33 @@ export const PieChartCard = memo(({
           data: seriesData,
         },
       ],
+      responsive: {
+        rules: [
+          {
+            // On narrow charts a name plus percentage gets trimmed to "IT: …",
+            // losing the number; show only the percentage (the tooltip has the name).
+            condition: { maxWidth: 420 },
+            chartOptions: {
+              plotOptions: {
+                pie: {
+                  dataLabels: {
+                    formatter: function () {
+                      const point = this as unknown as Point
+                      const value = typeof point.y === "number" ? point.y : 0
+                      if (value <= 0 || total <= 0) return ""
+                      const percent = Math.round((value / total) * 100)
+                      return formatPieChartDataLabel(point.name, percent, {
+                        showCategoryLabels: labelDisplay.showCategoryLabels && !labelDisplay.showPercentages,
+                        showPercentages: labelDisplay.showPercentages,
+                      })
+                    },
+                  },
+                },
+              },
+            },
+          },
+        ],
+      },
     }
   }, [seriesData, total, countLabel, showBigPercentage, title, labelDisplay])
 
