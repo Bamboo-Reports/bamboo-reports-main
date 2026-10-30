@@ -62,7 +62,7 @@ interface AccountsTabProps {
   setItemsPerPage: (size: number) => void
   onDownloadSelection?: (scope: { dataset: "accounts"; accountNames: string[] }) => void
   server?: TabServerProps | null
-  mapData?: { cities: CityAggregate[]; states: StateAggregate[] } | null
+  mapData?: { cities: CityAggregate[]; states: StateAggregate[]; scaleStates?: StateAggregate[] | null } | null
   chartsLoading?: boolean
   mapLoading?: boolean
 }
@@ -329,7 +329,12 @@ export function AccountsTab({
               {mapMode === "city" ? (
                 <CentersMap centers={centers} cities={mapData?.cities} heightClass="h-full" />
               ) : (
-                <CentersChoroplethMap centers={centers} states={mapData?.states} heightClass="h-full" />
+                <CentersChoroplethMap
+                  centers={centers}
+                  states={mapData?.states}
+                  scaleStates={mapData?.scaleStates}
+                  heightClass="h-full"
+                />
               )}
             </MapErrorBoundary>
           </CardContent>
