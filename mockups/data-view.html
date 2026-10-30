@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Data view: layout mockups</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css" rel="stylesheet" />
+<style>
+  /* Tokens copied from app/globals.css */
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 214 45% 15%;
+    --card: 0 0% 100%;
+    --primary: 204 100% 41%;
+    --secondary: 210 25% 94%;
+    --muted: 210 25% 94%;
+    --muted-foreground: 215 20% 39%;
+    --border: 212 24% 86%;
+    --ring: 204 100% 41%;
+    --destructive: 0 84.2% 60.2%;
+    --radius: 0.5rem;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.05);
+  }
+  .dark {
+    --background: 0 0% 10%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 12%;
+    --primary: 204 92% 56%;
+    --secondary: 0 0% 16%;
+    --muted: 0 0% 16%;
+    --muted-foreground: 0 0% 65%;
+    --border: 0 0% 24%;
+    --ring: 0 0% 83.1%;
+    --destructive: 0 62.8% 50%;
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: light; }
+  html.dark { color-scheme: dark; }
+  body {
+    margin: 0; font-family: "DM Sans", system-ui, sans-serif;
+    background: hsl(var(--background)); color: hsl(var(--foreground));
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+  .num { font-variant-numeric: tabular-nums; }
+  .muted { color: hsl(var(--muted-foreground)); }
+
+  /* ---------- page chrome ---------- */
+  .page { max-width: 1380px; margin: 0 auto; padding: 32px 24px 80px; }
+  .intro { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 32px; margin-bottom: 28px; }
+  .intro h1 { margin: 0 0 6px; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .intro p { margin: 0; max-width: 70ch; font-size: 14px; line-height: 1.5; color: hsl(var(--muted-foreground)); }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; }
+  .toggle {
+    display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 999px;
+    border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 13px; font-weight: 500; cursor: pointer;
+  }
+  .toggle[aria-pressed="true"] { background: hsl(var(--primary) / .1); border-color: hsl(var(--primary) / .5); color: hsl(var(--primary)); }
+
+  .variant { padding: 24px 0 32px; border-top: 1px solid hsl(var(--border)); }
+  .variant-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; margin-bottom: 6px; }
+  .variant-head h2 { margin: 0; font-size: 16px; font-weight: 600; }
+  .tag { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: hsl(var(--secondary)); color: hsl(var(--muted-foreground)); }
+  .tag b { color: hsl(var(--foreground)); }
+  .tag.rec { background: hsl(var(--primary) / .12); color: hsl(var(--primary)); }
+  .variant > p, .variant ul { margin: 0 0 14px; max-width: 92ch; font-size: 13.5px; line-height: 1.55; color: hsl(var(--muted-foreground)); }
+  .variant ul { padding-left: 18px; }
+  .variant li b { color: hsl(var(--foreground)); font-weight: 600; }
+  /* Mimics the dashboard content column. Panel height is fixed so row counts compare. */
+  .stage { padding: 20px 24px; border-radius: 12px; border: 1px dashed hsl(var(--border)); background: hsl(var(--background)); overflow-x: auto; }
+  .stage-inner { min-width: 980px; }
+
+  /* ---------- shared app pieces ---------- */
+  .section-head { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; min-height: 40px; }
+  .section-head .ico { font-size: 20px; color: hsl(var(--primary)); }
+  .section-head h3 { margin: 0; font-size: 18px; font-weight: 600; }
+  .section-head .right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+  /* ViewSwitcher, as rendered by components/ui/view-switcher.tsx */
+  .seg { display: inline-flex; gap: 8px; padding: 4px; border-radius: calc(var(--radius) + 2px); background: hsl(var(--secondary) / .8); box-shadow: var(--shadow-sm); }
+  .seg button { display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px; border: 1px solid transparent; border-radius: var(--radius); background: transparent; font-size: 14px; font-weight: 500; color: hsl(var(--muted-foreground)); cursor: pointer; }
+  .seg button i { font-size: 16px; }
+  .seg button.on { background: hsl(var(--card)); color: hsl(var(--primary)); box-shadow: 0 0 0 1px rgba(0,0,0,.1); }
+  .dark .seg button.on { box-shadow: 0 0 0 1px rgba(255,255,255,.15); }
+  /* Small icon-only variant for the secondary layout control */
+  .seg.sm { gap: 2px; padding: 3px; }
+  .seg.sm button { height: 26px; width: 30px; padding: 0; justify-content: center; }
+  .divider { width: 1px; height: 22px; background: hsl(var(--border)); }
+
+  .card { display: flex; flex-direction: column; height: 560px; border-radius: 12px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); box-shadow: var(--shadow-sm); overflow: hidden; }
+  .card-head { flex: none; display: flex; align-items: center; gap: 12px; padding: 12px 24px; min-height: 64px; }
+  .card-head h4 { margin: 0; font-size: 16px; font-weight: 600; }
+  .card-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .card-body.inset { padding: 0 24px; }
+
+  .scroll { flex: 1; min-height: 0; overflow: auto; }
+  .boxed { border: 1px solid hsl(var(--border)); border-radius: 6px; }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 14px; }
+  thead th {
+    position: sticky; top: 0; z-index: 1; height: 44px; padding: 0 12px; text-align: left; background: hsl(var(--card));
+    font-size: 12px; font-weight: 500; letter-spacing: .04em; text-transform: uppercase; color: hsl(var(--muted-foreground));
+    box-shadow: inset 0 -1px 0 hsl(var(--border)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  thead th i { font-size: 13px; vertical-align: -2px; margin-left: 4px; opacity: .7; }
+  tbody td { padding: 0 12px; border-bottom: 1px solid hsl(var(--border)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  tbody tr { cursor: pointer; }
+  tbody tr:hover td { background: hsl(var(--muted) / .5); }
+  .flush thead th:first-child, .flush tbody td:first-child { padding-left: 20px; }
+  .flush thead th:last-child, .flush tbody td:last-child { padding-right: 20px; }
+  .cb { width: 16px; height: 16px; border: 1.5px solid hsl(var(--primary) / .6); border-radius: 4px; display: inline-block; vertical-align: middle; }
+  .name { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .logo { flex: none; width: 28px; height: 28px; border-radius: 6px; display: grid; place-items: center; font-size: 10px; font-weight: 700; color: #fff; }
+  .name .t { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+  .badge { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 7px; border-radius: 6px; font-size: 11px; font-weight: 600; background: hsl(var(--destructive) / .12); color: hsl(0 70% 45%); }
+  .dark .badge { color: hsl(0 80% 70%); }
+  .stack { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; }
+  /* Row heights: tall (current, badge stacked under name) vs compact (badge inline) */
+  .rows-tall tbody td { height: 72px; }
+  .rows-compact tbody td { height: 48px; }
+
+  .pager { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 0; font-size: 14px; }
+  .pager.foot { padding: 8px 20px; border-top: 1px solid hsl(var(--border)); background: hsl(var(--muted) / .35); }
+  .pager .sel { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 10px; border: 1px solid hsl(var(--border)); border-radius: 6px; background: hsl(var(--card)); }
+  .pages { display: flex; align-items: center; gap: 4px; }
+  .pages span { min-width: 30px; height: 30px; display: grid; place-items: center; border-radius: 6px; font-size: 13px; color: hsl(var(--muted-foreground)); }
+  .pages span.cur { border: 1px solid hsl(var(--border)); color: hsl(var(--foreground)); background: hsl(var(--card)); }
+  .pages span.arw { border: 1px solid hsl(var(--border)); }
+
+  /* Toolbar strip (V2) */
+  .toolbar { flex: none; display: flex; align-items: center; gap: 12px; height: 48px; padding: 0 12px 0 20px; border-bottom: 1px solid hsl(var(--border)); font-size: 13px; }
+  .toolbar .count b { font-weight: 600; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 6px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 13px; color: hsl(var(--muted-foreground)); }
+  .chip i { font-size: 15px; }
+  .toolbar .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .search { display: inline-flex; align-items: center; gap: 6px; width: 220px; height: 30px; padding: 0 10px; border-radius: 6px; border: 1px solid hsl(var(--border)); color: hsl(var(--muted-foreground)); font-size: 13px; }
+
+  /* Annotation callouts */
+  .note { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 600; background: hsl(28 90% 55% / .14); color: hsl(28 80% 38%); white-space: nowrap; }
+  .dark .note { color: hsl(28 90% 65%); }
+  .anno { outline: 2px dashed hsl(28 90% 55% / .7); outline-offset: 3px; border-radius: 8px; }
+
+  .refs { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top: 8px; }
+  .ref { padding: 14px 16px; border-radius: 10px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 13px; line-height: 1.5; }
+  .ref b { display: block; margin-bottom: 4px; font-size: 13.5px; }
+  .ref span { color: hsl(var(--muted-foreground)); }
+
+  /* ---------- grid layout ---------- */
+  .scroll.grid-well { background: hsl(var(--muted) / .35); }
+  .sortbar { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid hsl(var(--border)); font-size: 12px; font-weight: 500; color: hsl(var(--muted-foreground)); }
+  .icon-btn { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 6px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); color: hsl(var(--muted-foreground)); }
+  .tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .tiles.cur { gap: 16px; padding: 16px; }
+  .tiles.new { gap: 12px; padding: 16px 20px; }
+  .tile { position: relative; border-radius: 10px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); box-shadow: var(--shadow-sm); cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+  .chip-pill { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border-radius: 999px; font-size: 11px; font-weight: 600; background: hsl(2 60% 47% / .15); color: hsl(2 60% 47%); }
+  .dark .chip-pill { color: hsl(2 80% 70%); }
+
+  /* Current tile, as rendered by components/cards/account-grid-card.tsx */
+  .tile.cur { display: flex; flex-direction: column; gap: 16px; padding: 16px; }
+  .tile.cur .top { display: flex; align-items: flex-start; gap: 12px; min-width: 0; }
+  .tile.cur .logo { width: 44px; height: 44px; border-radius: 10px; font-size: 12px; }
+  .tile.cur h5 { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tile.cur .loc { margin-top: 4px; font-size: 14px; color: hsl(var(--muted-foreground)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tile.cur .chips { margin-top: 8px; }
+  .tile.cur .kv { margin-top: auto; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+  .tile.cur .kv div { display: flex; justify-content: space-between; gap: 12px; min-width: 0; }
+  .tile.cur .kv span:first-child { color: hsl(var(--muted-foreground)); }
+  .tile.cur .kv span:last-child { max-width: 160px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tile.cur .btn { display: flex; align-items: center; justify-content: space-between; height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid hsl(var(--border)); font-size: 14px; font-weight: 500; }
+
+  /* Proposed tile: whole tile opens the account, checkbox for selection, metadata gets the width */
+  .tile.new { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; }
+  .tile.new:hover { border-color: hsl(var(--primary) / .45); box-shadow: 0 6px 18px -10px rgba(0,0,0,.25); }
+  .tile.new .top { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .tile.new .logo { width: 36px; height: 36px; border-radius: 8px; font-size: 11px; }
+  .tile.new .id { min-width: 0; flex: 1; }
+  .tile.new .nm { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .tile.new h5 { margin: 0; min-width: 0; font-size: 14.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tile.new .chip-pill { flex: none; height: 18px; padding: 0 6px; font-size: 10.5px; }
+  .tile.new .loc { margin-top: 2px; font-size: 12.5px; color: hsl(var(--muted-foreground)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tile.new .cb { flex: none; align-self: flex-start; margin-top: 2px; }
+  .tile.new .meta { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr); gap: 12px; padding-top: 10px; border-top: 1px solid hsl(var(--border) / .7); }
+  .tile.new .meta dt { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 11px; font-weight: 500; letter-spacing: .03em; text-transform: uppercase; color: hsl(var(--muted-foreground)); }
+  .tile.new .meta dd { margin: 2px 0 0; font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tile.new .go { position: absolute; right: 12px; bottom: 12px; font-size: 15px; color: hsl(var(--primary)); opacity: 0; transition: opacity .15s; }
+  .tile.new:hover .go { opacity: 1; }
+  .tile.new.sel { border-color: hsl(var(--primary) / .6); background: hsl(var(--primary) / .04); }
+  .tile.new.sel .cb { background: hsl(var(--primary)); border-color: hsl(var(--primary)); position: relative; }
+  .tile.new.sel .cb::after { content: ""; position: absolute; left: 4px; top: 1px; width: 4px; height: 8px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  .tile dl { margin: 0; }
+
+  /* V3/V4: layout control in the footer or on the grid's top edge */
+  thead th.lay { padding: 0 12px 0 0; text-align: right; overflow: visible; text-transform: none; letter-spacing: 0; }
+  tbody td.go-cell { text-align: right; padding-right: 20px; color: hsl(var(--primary)); }
+  tbody td.go-cell i { opacity: 0; transition: opacity .15s; }
+  tbody tr:hover td.go-cell i { opacity: 1; }
+  .strip { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 12px 0 20px; background: hsl(var(--card)); box-shadow: inset 0 -1px 0 hsl(var(--border)); font-size: 13px; color: hsl(var(--muted-foreground)); }
+  .strip .seg { margin-left: auto; }
+  .lead { display: flex; align-items: center; gap: 10px; }
+
+  @media (max-width: 720px) { .page { padding: 20px 16px 60px; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="intro">
+    <div>
+      <h1>Accounts Data: layout options</h1>
+      <p>Same 560px panel in every variant, so the visible row count compares directly. Today the Data view spends a 64px card header and 48px of side padding to restate "Accounts Data", and the second switcher looks as important as the main one. The same pattern repeats on the Centres and Prospects tabs.</p>
+    </div>
+    <div class="controls">
+      <div class="seg" id="t-layout"><button class="on" data-l="table"><i class="ri-table-line"></i>Table</button><button data-l="grid"><i class="ri-layout-grid-line"></i>Grid</button></div>
+      <button class="toggle" id="t-compact" aria-pressed="false"><i class="ri-line-height"></i> <span id="t-compact-l">Compact rows</span></button>
+      <button class="toggle" id="t-dark" aria-pressed="false"><i class="ri-moon-line"></i> Dark</button>
+    </div>
+  </div>
+
+  <!-- V0 -->
+  <section class="variant">
+    <div class="variant-head"><h2>V0 · Current</h2><span class="tag"><span class="rv-l">rows visible</span> <b class="rv" data-v="0">~5.5</b></span></div>
+    <ul>
+      <li><b>Three frames deep:</b> card border, then 24px padding, then the table's own border and radius. The inner box looks like a second card.</li>
+      <li><b>Duplicate title:</b> "Accounts Data" repeats what "Account Analytics" plus the active Data tab already say.</li>
+      <li><b>Two equal switchers:</b> Table/Grid uses the same big segmented control as Charts/Map/Data, so the sub-option gets as much visual weight as the main one.</li>
+    </ul>
+    <div class="stage"><div class="stage-inner">
+      <div class="section-head">
+        <i class="ri-pie-chart-line ico"></i><h3>Account Analytics</h3>
+        <div class="right"><div class="seg main"></div></div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h4 class="anno">Accounts Data</h4>
+          <span class="note">64px to repeat the title</span>
+          <div style="margin-left:auto" class="anno"><div class="seg layout-big"></div></div>
+        </div>
+        <div class="card-body inset">
+          <div class="scroll boxed anno" style="outline-offset:-2px" data-mode="v0"></div>
+          <div class="pager"></div>
+        </div>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- V1 -->
+  <section class="variant">
+    <div class="variant-head"><h2>V1 · The card is the table</h2><span class="tag rec">Recommended</span><span class="tag"><span class="rv-l">rows visible</span> <b class="rv" data-v="1">~6.5</b></span></div>
+    <ul>
+      <li><b>Remove the card header.</b> The table header becomes the top edge of the card, and the table runs edge to edge with no inner border. One frame instead of three.</li>
+      <li><b>Layout toggle moves up into the section header,</b> as a small icon-only control next to Charts/Map/Data, separated by a divider. It only appears while Data is active, so it reads as a sub-option of Data.</li>
+      <li><b>Pagination becomes the card footer,</b> on a tinted strip with a hairline above, like Stripe and Linear.</li>
+      <li>Saves about 64px of height and 48px of width with no new controls. The map card can lose its header the same way (City/State moves up too).</li>
+    </ul>
+    <div class="stage"><div class="stage-inner">
+      <div class="section-head">
+        <i class="ri-pie-chart-line ico"></i><h3>Account Analytics</h3>
+        <div class="right">
+          <span class="note">appears only on Data</span>
+          <div class="seg sm layout-icons anno"></div>
+          <span class="divider"></span>
+          <div class="seg main"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body">
+          <div class="scroll" data-mode="v1"></div>
+          <div class="pager foot"></div>
+        </div>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- V2 -->
+  <section class="variant">
+    <div class="variant-head"><h2>V2 · Header becomes a working toolbar</h2><span class="tag"><span class="rv-l">rows visible</span> <b class="rv" data-v="2">~5.8</b></span></div>
+    <ul>
+      <li><b>Keep a header row, but give it a job.</b> It's 48px instead of 64px and shows the result count, an in-table search and the layout toggle. This is the Airtable and Attio "view bar" pattern.</li>
+      <li>Table edge to edge, pagination in the footer, same as V1.</li>
+      <li>Best if you plan to add table-local controls later (column visibility, density, quick search). Otherwise V1 is leaner.</li>
+    </ul>
+    <div class="stage"><div class="stage-inner">
+      <div class="section-head">
+        <i class="ri-pie-chart-line ico"></i><h3>Account Analytics</h3>
+        <div class="right"><div class="seg main"></div></div>
+      </div>
+      <div class="card">
+        <div class="toolbar">
+          <span class="count num"><b>2,493</b> <span class="muted">accounts</span></span>
+          <div class="right">
+            <span class="search"><i class="ri-search-line"></i>Find in results</span>
+            <div class="seg sm layout-icons"></div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="scroll" data-mode="v2"></div>
+          <div class="pager foot"></div>
+        </div>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- V3 -->
+  <section class="variant">
+    <div class="variant-head"><h2>V3 · Layout lives with the pager</h2><span class="tag"><span class="rv-l">rows visible</span> <b class="rv">~6.5</b></span></div>
+    <ul>
+      <li><b>The section header keeps only Charts, Map and Data.</b> The layout toggle goes in the card footer: layout, then rows per page, then pages. That's where the "how am I looking at these rows" settings already live.</li>
+      <li>Same flat card as V1, so you get the same height back. The header never changes when you switch between Data and the other views.</li>
+      <li>Trade-off: the toggle is easier to miss down there. Remembering the last layout per user (plus a one-time hint) makes up for it.</li>
+    </ul>
+    <div class="stage"><div class="stage-inner">
+      <div class="section-head">
+        <i class="ri-pie-chart-line ico"></i><h3>Account Analytics</h3>
+        <div class="right"><div class="seg main"></div></div>
+      </div>
+      <div class="card">
+        <div class="card-body">
+          <div class="scroll" data-mode="v3"></div>
+          <div class="pager foot" data-lead="1"></div>
+        </div>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- V4 -->
+  <section class="variant">
+    <div class="variant-head"><h2>V4 · Toggle in the column header row</h2><span class="tag"><span class="rv-l">rows visible</span> <b class="rv">~6.5</b></span></div>
+    <ul>
+      <li><b>No extra row at all.</b> The sticky column header gets a narrow trailing column holding the layout icons. The same column shows an "open" arrow on each row when you hover it.</li>
+      <li><b>In Grid, the header row becomes a 44px strip</b> at the same height, with "Select all on this page" on the left (the same job as the table's header checkbox) and the toggle in exactly the same spot. Switching layouts doesn't move the control under your cursor.</li>
+      <li>The densest option. It reads like Airtable and AG Grid, where view settings sit on the grid's own edge. It costs about 84px of table width.</li>
+    </ul>
+    <div class="stage"><div class="stage-inner">
+      <div class="section-head">
+        <i class="ri-pie-chart-line ico"></i><h3>Account Analytics</h3>
+        <div class="right"><div class="seg main"></div></div>
+      </div>
+      <div class="card">
+        <div class="card-body">
+          <div class="scroll" data-mode="v4"></div>
+          <div class="pager foot"></div>
+        </div>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- Density -->
+  <section class="variant">
+    <div class="variant-head"><h2>Also worth doing: row density</h2></div>
+    <p>Rows are 72 to 80px tall today because the NASSCOM badge sits on its own line under the name. Moving it inline after the name (or into its own narrow column) brings rows down to 48px. Combined with V1, that's about 10 visible rows instead of about 5.5. Use the <b>Compact rows</b> toggle above to see it in every variant.</p>
+  </section>
+
+  <section class="variant">
+    <div class="variant-head"><h2>Grid layout: what changes</h2></div>
+    <p>Switch the page to <b>Grid</b> at the top. V0 shows today's grid. The other variants show the same tiles in the new shell, and <b>Compact tiles</b> swaps in the proposed tile.</p>
+    <ul>
+      <li><b>Four levels deep today:</b> card, then the bordered box, then a sort bar holding one unlabelled icon button, then the tiles. With sort removed from Grid, that bar goes too, and the tiles sit straight in the card.</li>
+      <li><b>Drop the "View Details" button.</b> The whole tile already opens the account, and a button inside a clickable tile means two nested controls. An arrow appears on hover instead.</li>
+      <li><b>Add a checkbox to each tile.</b> Grid has no selection today, so the export bar only works in Table. With a checkbox, both layouts share one selection.</li>
+      <li><b>Let the metadata use the width.</b> Today "Industry" and "Revenue" are label/value pairs capped at 160px, so "Business Software Solutions" gets cut off. Labels above values in three columns (Industry, Revenue, Headcount) fit more and stay readable.</li>
+      <li>The proposed tile is about 125px tall instead of about 220px, so roughly twice as many accounts fit on one screen (about 11 instead of 5).</li>
+    </ul>
+  </section>
+
+  <section class="variant">
+    <div class="variant-head"><h2>Reference patterns</h2></div>
+    <div class="refs">
+      <div class="ref"><b>Linear</b><span>The list is the surface. No card around it, display options in the view header, and grouping and layout behind one small control.</span></div>
+      <div class="ref"><b>Stripe Dashboard</b><span>The table is the card. Column headers sit on the card's top edge, with the "Viewing 1 to 20 of N" and prev/next pager in a footer strip.</span></div>
+      <div class="ref"><b>Airtable / Attio</b><span>A thin view bar above an edge-to-edge grid: record count, sort, filter, search and layout all on one 40 to 48px row.</span></div>
+    </div>
+  </section>
+</div>
+
+<script>
+  const ROWS = [
+    ["[24]7.ai, Inc.", "#111", "24", true, "Business Software Solutions", "1Bn - 5Bn", "5K - 10K", "Campbell, United States"],
+    ["3M Co.", "#d41f26", "3M", true, "Holding Companies", "10Bn - 25Bn", "1K - 5K", "Saint Paul, United States"],
+    ["7-Eleven, Inc.", "#0c7a3e", "7E", true, "Stores & Market", ">50Bn", "501 - 1K", "Irving, United States"],
+    ["A. O. Smith Corp.", "#2f7d4a", "AO", false, "Industrial Manufacturing", "1Bn - 5Bn", "201 - 500", "Milwaukee, United States"],
+    ["A.P. Moller Maersk A/S", "#3aa0d8", "M", true, "Transportation & Logistics", ">50Bn", "1K - 5K", "Copenhagen, Denmark"],
+    ["AAR Corp.", "#0d2240", "AAR", false, "Aerospace Components Manufacturing", "1Bn - 5Bn", "51 - 100", "Wood Dale, United States"],
+    ["Abbott Laboratories", "#0069b4", "Ab", true, "Medical Devices", "25Bn - 50Bn", "1K - 5K", "Abbott Park, United States"],
+    ["Accenture plc", "#7b2fbf", "Ac", true, "IT Services & Consulting", ">50Bn", ">10K", "Dublin, Ireland"],
+    ["Adobe Inc.", "#e3241b", "Ad", true, "Business Software Solutions", "10Bn - 25Bn", "5K - 10K", "San Jose, United States"],
+    ["ADP, Inc.", "#d0271d", "ADP", false, "HR & Payroll Services", "10Bn - 25Bn", "5K - 10K", "Roseland, United States"],
+    ["Aflac Inc.", "#00a7e1", "Af", false, "Insurance", "10Bn - 25Bn", "501 - 1K", "Columbus, United States"],
+    ["Agilent Technologies", "#0085d5", "Ag", true, "Life Sciences Tools", "5Bn - 10Bn", "1K - 5K", "Santa Clara, United States"],
+    ["Airbus SE", "#00205b", "Ai", true, "Aerospace & Defense", ">50Bn", "1K - 5K", "Leiden, Netherlands"],
+    ["Akamai Technologies", "#0096d6", "Ak", false, "Cloud & Network Services", "1Bn - 5Bn", "1K - 5K", "Cambridge, United States"],
+    ["Alcon Inc.", "#003595", "Al", true, "Medical Devices", "5Bn - 10Bn", "501 - 1K", "Geneva, Switzerland"],
+  ];
+  // Pre-selected tiles in the proposed grid, to show the selection state.
+  const SELECTED = new Set([1, 4]);
+  let compact = false;
+
+  const MAIN = [["chart", "Charts", "ri-pie-chart-line"], ["map", "Map", "ri-map-2-line"], ["data", "Data", "ri-table-line"]];
+  const LAYOUTS = [["table", "Table", "ri-table-line"], ["grid", "Grid", "ri-layout-grid-line"]];
+  function seg(items, on, iconOnly = false) {
+    return items.map(([v, label, icon]) =>
+      `<button type="button" data-l="${v}" class="${v === on ? "on" : ""}" ${iconOnly ? `aria-label="${label}" title="${label}"` : ""}><i class="${icon}"></i>${iconOnly ? "" : label}</button>`
+    ).join("");
+  }
+
+  const LEAD = `<div class="seg sm layout-icons"></div><span class="divider"></span>`;
+  const pager = (lead) => `<div style="display:flex;align-items:center;gap:10px">${lead ? LEAD : ""}<span class="muted">Rows per page</span><span class="sel num">25 <i class="ri-arrow-down-s-line"></i></span></div>
+    <div style="display:flex;align-items:center;gap:16px"><span class="muted num">1-25 of 2,493</span>
+    <div class="pages num"><span class="arw"><i class="ri-arrow-left-s-line"></i></span><span class="cur">1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>…</span><span>100</span><span class="arw"><i class="ri-arrow-right-s-line"></i></span></div></div>`;
+  document.querySelectorAll(".pager").forEach((el) => (el.innerHTML = pager(el.dataset.lead)));
+
+  const logo = (r) => `<span class="logo" style="background:${r[1]}">${r[2]}</span>`;
+
+  function nameCell(r) {
+    const badge = r[3] ? `<span class="badge"><i class="ri-forbid-line"></i>NASSCOM</span>` : "";
+    if (compact) return `<div class="name">${logo(r)}<span class="t">${r[0]}</span>${badge}</div>`;
+    return `<div class="name">${logo(r)}<div class="stack"><span class="t">${r[0]}</span>${badge}</div></div>`;
+  }
+  function tableHtml(mode) {
+    const cls = (mode === "v0" ? "" : "flush ") + (compact ? "rows-compact" : "rows-tall");
+    const v4 = mode === "v4";
+    return `<table class="${cls}"><colgroup><col style="width:${mode === "v0" ? 44 : 56}px"><col style="width:32%"><col><col style="width:16%"><col style="width:22%">${v4 ? `<col style="width:84px">` : ""}</colgroup>
+      <thead><tr><th><span class="cb"></span></th><th>Account name<i class="ri-expand-up-down-line"></i></th><th>Sub industry<i class="ri-expand-up-down-line"></i></th><th>Revenue range<i class="ri-expand-up-down-line"></i></th><th>GCC aggregate headcount (India)<i class="ri-expand-up-down-line"></i></th>${v4 ? `<th class="lay"><div class="seg sm layout-icons anno" style="display:inline-flex"></div></th>` : ""}</tr></thead>
+      <tbody>${ROWS.map((r) => `<tr><td><span class="cb"></span></td><td>${nameCell(r)}</td><td>${r[4]}</td><td class="num">${r[5]}</td><td class="num">${r[6]}</td>${v4 ? `<td class="go-cell"><i class="ri-arrow-right-up-line"></i></td>` : ""}</tr>`).join("")}</tbody></table>`;
+  }
+
+  const curTile = (r) => `<div class="tile cur">
+      <div class="top">${logo(r)}<div style="min-width:0"><h5 title="${r[0]}">${r[0]}</h5><div class="loc">${r[7]}</div>
+        ${r[3] ? `<div class="chips"><span class="chip-pill"><i class="ri-checkbox-circle-line"></i>NASSCOM</span></div>` : ""}</div></div>
+      <div class="kv"><div><span>Industry</span><span>${r[4]}</span></div><div><span>Revenue</span><span>${r[5]}</span></div></div>
+      <div class="btn">View Details <i class="ri-arrow-right-up-line"></i></div>
+    </div>`;
+  const newTile = (r, i) => `<div class="tile new${SELECTED.has(i) ? " sel" : ""}" role="button" tabindex="0" aria-label="View details for ${r[0]}">
+      <div class="top">${logo(r)}
+        <div class="id"><div class="nm"><h5 title="${r[0]}">${r[0]}</h5>${r[3] ? `<span class="chip-pill">NASSCOM</span>` : ""}</div><div class="loc">${r[7]}</div></div>
+        <span class="cb" role="checkbox" aria-checked="${SELECTED.has(i)}" aria-label="Select ${r[0]}"></span>
+      </div>
+      <dl class="meta">
+        <div><dt>Industry</dt><dd title="${r[4]}">${r[4]}</dd></div>
+        <div><dt>Revenue</dt><dd class="num">${r[5]}</dd></div>
+        <div><dt title="GCC aggregate headcount (India)">Headcount</dt><dd class="num">${r[6]}</dd></div>
+      </dl>
+      <i class="ri-arrow-right-up-line go" aria-hidden="true"></i>
+    </div>`;
+  function gridHtml(mode) {
+    const proposed = mode !== "v0" && compact;
+    const lead =
+      mode === "v0" ? `<div class="sortbar">Sort <span class="icon-btn"><i class="ri-expand-up-down-line"></i></span></div>`
+      : mode === "v4" ? `<div class="strip"><span class="cb"></span>Select all on this page<div class="seg sm layout-icons anno"></div></div>`
+      : "";
+    return `${lead}<div class="tiles ${proposed ? "new" : "cur"}">${ROWS.map((r, i) => (proposed ? newTile(r, i) : curTile(r))).join("")}</div>`;
+  }
+
+  // Each variant keeps its own layout; the page toggle sets all of them.
+  const sections = [...document.querySelectorAll(".scroll[data-mode]")].map((sc) => ({ sc, section: sc.closest(".variant"), layout: "table" }));
+
+  function measure(v) {
+    const { sc, layout } = v;
+    const tag = v.section.querySelector(".rv");
+    const label = v.section.querySelector(".rv-l");
+    if (layout === "table") {
+      const head = sc.querySelector("thead").offsetHeight;
+      const row = sc.querySelector("tbody tr").offsetHeight;
+      label.textContent = "rows visible";
+      tag.textContent = "~" + ((sc.clientHeight - head) / row).toFixed(1);
+    } else {
+      const grid = sc.querySelector(".tiles");
+      const tile = grid.firstElementChild.getBoundingClientRect();
+      const gap = parseFloat(getComputedStyle(grid).rowGap);
+      const avail = sc.getBoundingClientRect().top + sc.clientHeight - tile.top;
+      const cols = getComputedStyle(grid).gridTemplateColumns.split(" ").length;
+      label.textContent = "cards visible";
+      tag.textContent = "~" + (((avail + gap) / (tile.height + gap)) * cols).toFixed(1);
+    }
+  }
+
+  function render(v) {
+    const mode = v.sc.dataset.mode;
+    const isGrid = v.layout === "grid";
+    v.sc.innerHTML = isGrid ? gridHtml(mode) : tableHtml(mode);
+    v.sc.classList.toggle("grid-well", isGrid && mode !== "v0");
+    v.sc.scrollTop = 0;
+    v.section.classList.toggle("is-grid", isGrid);
+    v.section.querySelectorAll(".seg.layout-big").forEach((el) => (el.innerHTML = seg(LAYOUTS, v.layout)));
+    v.section.querySelectorAll(".seg.layout-icons").forEach((el) => (el.innerHTML = seg(LAYOUTS, v.layout, true)));
+    v.section.querySelectorAll(".seg.main").forEach((el) => (el.innerHTML = seg(MAIN, "data")));
+    measure(v);
+  }
+  const renderAll = () => sections.forEach(render);
+
+  // Clicking Table or Grid inside a variant switches just that variant.
+  sections.forEach((v) => {
+    v.section.addEventListener("click", (e) => {
+      const b = e.target.closest(".seg button[data-l]");
+      if (!b || !["table", "grid"].includes(b.dataset.l)) return;
+      v.layout = b.dataset.l;
+      render(v);
+    });
+  });
+
+  const layoutSeg = document.getElementById("t-layout");
+  layoutSeg.addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-l]");
+    if (!b) return;
+    layoutSeg.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
+    sections.forEach((v) => (v.layout = b.dataset.l));
+    document.getElementById("t-compact-l").textContent = b.dataset.l === "grid" ? "Compact tiles" : "Compact rows";
+    renderAll();
+  });
+  document.getElementById("t-compact").onclick = (e) => {
+    compact = !compact; e.currentTarget.setAttribute("aria-pressed", compact); renderAll();
+  };
+  document.getElementById("t-dark").onclick = (e) => {
+    const on = document.documentElement.classList.toggle("dark"); e.currentTarget.setAttribute("aria-pressed", on);
+  };
+  renderAll();
+</script>
+</body>
+</html>

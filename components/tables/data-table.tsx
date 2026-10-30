@@ -1,20 +1,15 @@
 "use client"
 
 import { Fragment, type ReactNode, type Ref } from "react"
-import { createColumnHelper, type Column, type ReactTable, type RowData } from "@tanstack/react-table"
-import {
-  RiArrowLeftSLine,
-  RiArrowRightSLine,
-  RiExpandUpDownLine,
-  RiSortAlphabetAsc,
-  RiSortAlphabetDesc,
-} from "@remixicon/react"
+import { createColumnHelper, type ReactTable, type RowData } from "@tanstack/react-table"
+import { RiArrowLeftSLine, RiArrowRightSLine, RiLayoutGridLine, RiTableLine } from "@remixicon/react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from "@/components/ui/context-menu"
 import { TableSkeletonRows, type TableLeadColumn } from "@/components/ui/data-skeletons"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { ViewSwitcher } from "@/components/ui/view-switcher"
 import type { DataTableFeatures } from "@/components/tables/data-table-features"
 import { cn } from "@/lib/utils"
 
@@ -81,7 +76,7 @@ export function DataTable<TData extends RowData>({
   const rows = table.getRowModel().rows
 
   return (
-    <div className="min-h-0 flex-1 overflow-hidden rounded-md border">
+    <div className="min-h-0 flex-1 overflow-hidden">
       <div ref={scrollRef} className="h-full overflow-auto" aria-busy={loading || refreshing}>
         <Table className="table-fixed">
           {/* Sticky, so it needs an opaque fill: the card colour keeps it part of the surface. */}
@@ -188,10 +183,13 @@ export function getPageItems(current: number, total: number): PageItem[] {
 interface DataTablePaginationProps<TData extends RowData> {
   table: DashboardTable<TData>
   totalRows: number
+  /** Controls placed before "Rows per page", such as the layout switcher. */
+  leading?: ReactNode
 }
 
-export function DataTablePagination<TData extends RowData>({ table, totalRows }: DataTablePaginationProps<TData>) {
-  if (totalRows === 0) return null
+/** Footer strip of the data card: optional leading controls, page size, then pages. */
+export function DataTablePagination<TData extends RowData>({ table, totalRows, leading }: DataTablePaginationProps<TData>) {
+  if (totalRows === 0 && !leading) return null
 
   const { pageIndex, pageSize } = table.state.pagination
   const pageCount = Math.max(1, table.getPageCount())
@@ -200,8 +198,14 @@ export function DataTablePagination<TData extends RowData>({ table, totalRows }:
   const lastRow = Math.min(currentPage * pageSize, totalRows)
 
   return (
-    <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-3 py-3">
+    <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t bg-muted/35 px-4 py-2.5">
       <div className="flex items-center gap-2">
+        {leading && (
+          <>
+            {leading}
+            <span className="mx-1 h-5 w-px bg-border" aria-hidden="true" />
+          </>
+        )}
         <span className="text-sm text-muted-foreground">Rows per page</span>
         <Select value={String(pageSize)} onValueChange={(value) => table.setPageSize(Number(value))}>
           <SelectTrigger className="h-8 w-[72px]" aria-label="Rows per page">
@@ -218,82 +222,69 @@ export function DataTablePagination<TData extends RowData>({ table, totalRows }:
           </SelectContent>
         </Select>
       </div>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-        <p className="text-sm text-muted-foreground tabular-nums">
-          {firstRow.toLocaleString()}-{lastRow.toLocaleString()} of {totalRows.toLocaleString()}
-        </p>
-        <nav aria-label="Pagination" className="flex items-center gap-1">
-          <Button
-            variant="outline"
-            size="icon-sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-            aria-label="Previous page"
-          >
-            <RiArrowLeftSLine />
-          </Button>
-          {getPageItems(currentPage, pageCount).map((page) =>
-            typeof page === "string" ? (
-              <span key={page} className="min-w-8 text-center text-sm text-muted-foreground" aria-hidden="true">
-                …
-              </span>
-            ) : (
-              <Button
-                key={page}
-                variant={page === currentPage ? "outline" : "ghost"}
-                size="sm"
-                className={cn("min-w-8 px-2 tabular-nums", page !== currentPage && "text-muted-foreground")}
-                onClick={() => table.setPageIndex(page - 1)}
-                aria-label={`Page ${page}`}
-                aria-current={page === currentPage ? "page" : undefined}
-              >
-                {page.toLocaleString()}
-              </Button>
-            )
-          )}
-          <Button
-            variant="outline"
-            size="icon-sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-            aria-label="Next page"
-          >
-            <RiArrowRightSLine />
-          </Button>
-        </nav>
-      </div>
+      {totalRows > 0 && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+          <p className="text-sm text-muted-foreground tabular-nums">
+            {firstRow.toLocaleString()}-{lastRow.toLocaleString()} of {totalRows.toLocaleString()}
+          </p>
+          <nav aria-label="Pagination" className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="icon-sm"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+              aria-label="Previous page"
+            >
+              <RiArrowLeftSLine />
+            </Button>
+            {getPageItems(currentPage, pageCount).map((page) =>
+              typeof page === "string" ? (
+                <span key={page} className="min-w-8 text-center text-sm text-muted-foreground" aria-hidden="true">
+                  …
+                </span>
+              ) : (
+                <Button
+                  key={page}
+                  variant={page === currentPage ? "outline" : "ghost"}
+                  size="sm"
+                  className={cn("min-w-8 px-2 tabular-nums", page !== currentPage && "text-muted-foreground")}
+                  onClick={() => table.setPageIndex(page - 1)}
+                  aria-label={`Page ${page}`}
+                  aria-current={page === currentPage ? "page" : undefined}
+                >
+                  {page.toLocaleString()}
+                </Button>
+              )
+            )}
+            <Button
+              variant="outline"
+              size="icon-sm"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+              aria-label="Next page"
+            >
+              <RiArrowRightSLine />
+            </Button>
+          </nav>
+        </div>
+      )}
     </div>
   )
 }
 
-interface DataGridSortBarProps<TData extends RowData, TValue> {
-  /** The table's name column; the grid layout sorts by it. */
-  column: Column<DataTableFeatures, TData, TValue> | undefined
-  label: string
-}
+export type DataLayout = "table" | "grid"
 
-/** Sort control for the grid layout, sharing the table's sort state. */
-export function DataGridSortBar<TData extends RowData, TValue>({ column, label }: DataGridSortBarProps<TData, TValue>) {
-  const sorted = column?.getIsSorted() ?? false
+/** Icon-only Table/Grid switch for the data card footer. */
+export function DataLayoutSwitcher({ value, onValueChange }: { value: DataLayout; onValueChange: (value: DataLayout) => void }) {
   return (
-    <div className="flex items-center gap-2 border-b px-4 py-2.5">
-      <span className="text-xs font-medium text-muted-foreground">Sort</span>
-      <Button
-        type="button"
-        variant="outline"
-        size="icon-sm"
-        onClick={column?.getToggleSortingHandler()}
-        aria-label={`Sort by ${label}`}
-        aria-pressed={sorted !== false}
-      >
-        {sorted === false ? (
-          <RiExpandUpDownLine className="text-muted-foreground" />
-        ) : sorted === "asc" ? (
-          <RiSortAlphabetAsc className="text-primary" />
-        ) : (
-          <RiSortAlphabetDesc className="text-primary" />
-        )}
-      </Button>
-    </div>
+    <ViewSwitcher
+      size="sm"
+      value={value}
+      onValueChange={onValueChange}
+      options={[
+        { value: "table", label: "Table", icon: <RiTableLine className="h-4 w-4" /> },
+        { value: "grid", label: "Grid", icon: <RiLayoutGridLine className="h-4 w-4" /> },
+      ]}
+    />
   )
 }
