@@ -62,15 +62,11 @@ export function FilterChip({ item, onToggleMode, onRemove, className }: FilterCh
   )
 }
 
-/** A collapsed filter row's summary: how many values are included and excluded ("2 included · 1 excluded"). */
+/** A collapsed filter row's summary: how many values are set. Hovering lists them. */
 export function FilterValuesSummary({ values }: { values: FilterValue[] }) {
-  const included = values.filter((item) => item.mode === "include").length
-  const excluded = values.length - included
   return (
-    <span title={values.map((item) => (item.mode === "exclude" ? `not ${item.value}` : item.value)).join(", ")}>
-      {included > 0 && `${included} included`}
-      {included > 0 && excluded > 0 && " · "}
-      {excluded > 0 && <span className="text-exclude">{excluded} excluded</span>}
+    <span className="tabular-nums" title={values.map((item) => (item.mode === "exclude" ? `not ${item.value}` : item.value)).join(", ")}>
+      {values.length}
     </span>
   )
 }
