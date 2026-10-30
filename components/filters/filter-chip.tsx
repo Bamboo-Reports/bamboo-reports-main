@@ -62,23 +62,15 @@ export function FilterChip({ item, onToggleMode, onRemove, className }: FilterCh
   )
 }
 
-/** Comma-separated values for a collapsed filter row; excluded ones in red with a minus. */
+/** A collapsed filter row's summary: how many values are included and excluded ("2 included · 1 excluded"). */
 export function FilterValuesSummary({ values }: { values: FilterValue[] }) {
+  const included = values.filter((item) => item.mode === "include").length
+  const excluded = values.length - included
   return (
-    <>
-      {values.map((item, index) => (
-        <span key={item.value}>
-          {index > 0 && ", "}
-          {item.mode === "exclude" ? (
-            <span className="text-exclude">
-              <RiSubtractLine className="mr-px inline h-3 w-3 -translate-y-px" aria-label="excluding" />
-              {item.value}
-            </span>
-          ) : (
-            item.value
-          )}
-        </span>
-      ))}
-    </>
+    <span title={values.map((item) => (item.mode === "exclude" ? `not ${item.value}` : item.value)).join(", ")}>
+      {included > 0 && `${included} included`}
+      {included > 0 && excluded > 0 && " · "}
+      {excluded > 0 && <span className="text-exclude">{excluded} excluded</span>}
+    </span>
   )
 }
