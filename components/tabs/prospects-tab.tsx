@@ -8,6 +8,7 @@ import { DataLayoutSwitcher, DataTable, DataTablePagination, type DataLayout } f
 import { ProspectRowMenu, getProspectKey, prospectColumns } from "@/components/tables/prospect-columns"
 import { SelectionActionBar } from "@/components/tables/selection-action-bar"
 import { useDataTable } from "@/components/tables/use-data-table"
+import { useDataLayoutPreference } from "@/hooks/use-data-layout-preference"
 import { useRecordOpener } from "@/hooks/use-record-opener"
 import { getProspectDisplayName as getProspectDisplayNameUtil, getProspectRecordId as getProspectRecordIdUtil } from "@/lib/dashboard/prospect-id"
 import { ProspectGridCard } from "@/components/cards/prospect-grid-card"
@@ -79,7 +80,7 @@ export function ProspectsTab({
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null)
   const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false)
-  const [dataLayout, setDataLayout] = useState<DataLayout>("table")
+  const [dataLayout, setDataLayout] = useDataLayoutPreference()
   const {
     table,
     totalRows,
@@ -103,7 +104,6 @@ export function ProspectsTab({
   useEffect(() => {
     scrollContainerRef.current?.scrollTo({ top: 0 })
   }, [currentPage])
-  const previousDataLayoutRef = React.useRef<"table" | "grid">("table")
   const openedRecordRef = React.useRef<{
     recordId: string
     openedAt: number
@@ -187,18 +187,6 @@ export function ProspectsTab({
   }
 
 
-  React.useEffect(() => {
-    if (previousDataLayoutRef.current === dataLayout) {
-      return
-    }
-
-    captureEvent(ANALYTICS_EVENTS.DATA_LAYOUT_CHANGED, {
-      screen: "prospects",
-      data_layout: dataLayout,
-    })
-
-    previousDataLayoutRef.current = dataLayout
-  }, [dataLayout])
 
   React.useEffect(() => {
     if (isDialogOpen || !openedRecordRef.current) {
@@ -215,6 +203,14 @@ export function ProspectsTab({
     openedRecordRef.current = null
   }, [isDialogOpen])
 
+
+  const handleDataLayoutChange = React.useCallback((layout: DataLayout) => {
+    setDataLayout(layout)
+    captureEvent(ANALYTICS_EVENTS.DATA_LAYOUT_CHANGED, {
+      screen: "prospects",
+      data_layout: layout,
+    })
+  }, [setDataLayout])
 
   const handleRowOpen = React.useCallback(
     (prospect: Prospect) => handleProspectClick(prospect, "table_row"),
@@ -328,7 +324,7 @@ export function ProspectsTab({
               <DataTablePagination
                 table={table}
                 totalRows={totalRows}
-                leading={<DataLayoutSwitcher value={dataLayout} onValueChange={setDataLayout} />}
+                leading={<DataLayoutSwitcher value={dataLayout} onValueChange={handleDataLayoutChange} />}
               />
             </CardContent>
          </Card>

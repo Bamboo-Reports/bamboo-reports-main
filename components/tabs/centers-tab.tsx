@@ -9,6 +9,7 @@ import { CenterRowMenu, centerColumns, getCenterKey } from "@/components/tables/
 import { DataLayoutSwitcher, DataTable, DataTablePagination, type DataLayout } from "@/components/tables/data-table"
 import { SelectionActionBar } from "@/components/tables/selection-action-bar"
 import { useDataTable } from "@/components/tables/use-data-table"
+import { useDataLayoutPreference } from "@/hooks/use-data-layout-preference"
 import { useRecordOpener } from "@/hooks/use-record-opener"
 import { CenterGridCard } from "@/components/cards/center-grid-card"
 import {
@@ -90,7 +91,7 @@ export function CentersTab({
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null)
   const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false)
-  const [dataLayout, setDataLayout] = useState<DataLayout>("table")
+  const [dataLayout, setDataLayout] = useDataLayoutPreference()
   const [mapMode, setMapMode] = useState<"city" | "state">("state")
   const {
     table,
@@ -115,7 +116,6 @@ export function CentersTab({
   useEffect(() => {
     scrollContainerRef.current?.scrollTo({ top: 0 })
   }, [currentPage])
-  const previousDataLayoutRef = React.useRef<"table" | "grid">("table")
   const previousMapModeRef = React.useRef<"city" | "state">("state")
   const openedRecordRef = React.useRef<{
     recordId: string
@@ -187,18 +187,6 @@ export function CentersTab({
   }
 
 
-  React.useEffect(() => {
-    if (previousDataLayoutRef.current === dataLayout) {
-      return
-    }
-
-    captureEvent(ANALYTICS_EVENTS.DATA_LAYOUT_CHANGED, {
-      screen: "centers",
-      data_layout: dataLayout,
-    })
-
-    previousDataLayoutRef.current = dataLayout
-  }, [dataLayout])
 
   React.useEffect(() => {
     if (previousMapModeRef.current === mapMode) {
@@ -228,6 +216,14 @@ export function CentersTab({
     openedRecordRef.current = null
   }, [isDialogOpen])
 
+
+  const handleDataLayoutChange = React.useCallback((layout: DataLayout) => {
+    setDataLayout(layout)
+    captureEvent(ANALYTICS_EVENTS.DATA_LAYOUT_CHANGED, {
+      screen: "centers",
+      data_layout: layout,
+    })
+  }, [setDataLayout])
 
   const handleRowOpen = React.useCallback(
     (center: Center) => handleCenterClick(center, "table_row"),
@@ -406,7 +402,7 @@ export function CentersTab({
               <DataTablePagination
                 table={table}
                 totalRows={totalRows}
-                leading={<DataLayoutSwitcher value={dataLayout} onValueChange={setDataLayout} />}
+                leading={<DataLayoutSwitcher value={dataLayout} onValueChange={handleDataLayoutChange} />}
               />
             </CardContent>
          </Card>

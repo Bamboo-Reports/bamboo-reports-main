@@ -10,6 +10,7 @@ import { AccountRowMenu, accountColumns, getAccountKey } from "@/components/tabl
 import { DataLayoutSwitcher, DataTable, DataTablePagination, type DataLayout } from "@/components/tables/data-table"
 import { SelectionActionBar } from "@/components/tables/selection-action-bar"
 import { useDataTable } from "@/components/tables/use-data-table"
+import { useDataLayoutPreference } from "@/hooks/use-data-layout-preference"
 import { AccountGridCard } from "@/components/cards/account-grid-card"
 import {
   PieChartCard,
@@ -101,7 +102,7 @@ export function AccountsTab({
   const allowMapView = canAccessAccountsMapView()
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [dataLayout, setDataLayout] = useState<DataLayout>("table")
+  const [dataLayout, setDataLayout] = useDataLayoutPreference()
   const [mapMode, setMapMode] = useState<"city" | "state">("state")
   const {
     table,
@@ -133,7 +134,6 @@ export function AccountsTab({
       setAccountsView("chart")
     }
   }, [allowMapView, accountsView, setAccountsView])
-  const previousDataLayoutRef = React.useRef<"table" | "grid">("table")
   const previousMapModeRef = React.useRef<"city" | "state">("state")
   const openedRecordRef = React.useRef<{
     recordId: string
@@ -171,18 +171,6 @@ export function AccountsTab({
   }, [isDialogOpen, accountsView, dataLayout])
 
 
-  React.useEffect(() => {
-    if (previousDataLayoutRef.current === dataLayout) {
-      return
-    }
-
-    captureEvent(ANALYTICS_EVENTS.DATA_LAYOUT_CHANGED, {
-      screen: "accounts",
-      data_layout: dataLayout,
-    })
-
-    previousDataLayoutRef.current = dataLayout
-  }, [dataLayout])
 
   React.useEffect(() => {
     if (previousMapModeRef.current === mapMode) {
@@ -212,6 +200,14 @@ export function AccountsTab({
     openedRecordRef.current = null
   }, [isDialogOpen])
 
+
+  const handleDataLayoutChange = React.useCallback((layout: DataLayout) => {
+    setDataLayout(layout)
+    captureEvent(ANALYTICS_EVENTS.DATA_LAYOUT_CHANGED, {
+      screen: "accounts",
+      data_layout: layout,
+    })
+  }, [setDataLayout])
 
   const handleRowOpen = React.useCallback(
     (account: Account) => handleAccountClick(account, "table_row"),
@@ -391,7 +387,7 @@ export function AccountsTab({
             <DataTablePagination
                 table={table}
                 totalRows={totalRows}
-                leading={<DataLayoutSwitcher value={dataLayout} onValueChange={setDataLayout} />}
+                leading={<DataLayoutSwitcher value={dataLayout} onValueChange={handleDataLayoutChange} />}
               />
           </CardContent>
         </Card>
