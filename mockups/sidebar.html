@@ -1,0 +1,994 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Filters sidebar: mockups</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css" rel="stylesheet" />
+<style>
+  /* Tokens copied from app/globals.css */
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 214 45% 15%;
+    --card: 0 0% 100%;
+    --primary: 204 100% 41%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 25% 94%;
+    --muted: 210 25% 94%;
+    --muted-foreground: 215 20% 39%;
+    --border: 212 24% 86%;
+    --ring: 204 100% 41%;
+    --sidebar: 0 0% 100%;
+    --sidebar-accent: 210 30% 96%;
+    --sidebar-border: 212 24% 86%;
+    --include: 142 64% 32%;
+    --exclude: 0 72% 46%;
+    --radius: 0.5rem;
+    --shadow-panel: 0 24px 60px -45px rgba(0,0,0,.55);
+    --shadow-pop: 0 12px 32px -12px rgba(0,0,0,.28), 0 2px 6px rgba(0,0,0,.06);
+  }
+  .dark {
+    --background: 0 0% 10%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 12%;
+    --primary: 204 92% 56%;
+    --primary-foreground: 0 0% 10%;
+    --secondary: 0 0% 16%;
+    --muted: 0 0% 16%;
+    --muted-foreground: 0 0% 65%;
+    --border: 0 0% 24%;
+    --ring: 0 0% 83.1%;
+    --sidebar: 0 0% 10%;
+    --sidebar-accent: 0 0% 16%;
+    --sidebar-border: 0 0% 24%;
+    --include: 142 55% 55%;
+    --exclude: 0 80% 66%;
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: light; }
+  html.dark { color-scheme: dark; }
+  body { margin: 0; font-family: "Inter", system-ui, sans-serif; background: hsl(var(--background)); color: hsl(var(--foreground)); -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
+  button, input { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+  ::selection { background: hsl(var(--primary) / .2); }
+  .muted { color: hsl(var(--muted-foreground)); }
+
+  /* ---------- page chrome ---------- */
+  .page { max-width: 1440px; margin: 0 auto; padding: 32px 24px 96px; }
+  .intro { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 32px; margin-bottom: 24px; }
+  .intro h1 { margin: 0 0 6px; font-size: 24px; font-weight: 600; letter-spacing: -0.015em; }
+  .intro p { margin: 0; max-width: 74ch; font-size: 14px; line-height: 1.55; color: hsl(var(--muted-foreground)); }
+  .toggle { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 13px; font-weight: 500; }
+  .toggle[aria-pressed="true"] { background: hsl(var(--primary) / .1); border-color: hsl(var(--primary) / .5); color: hsl(var(--primary)); }
+  .part { padding: 28px 0 8px; border-top: 1px solid hsl(var(--border)); }
+  .part > h2 { margin: 0 0 6px; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+  .part > p { margin: 0 0 18px; max-width: 90ch; font-size: 14px; line-height: 1.55; color: hsl(var(--muted-foreground)); }
+  .frames { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 28px 24px; }
+  .frame { display: flex; flex-direction: column; gap: 10px; }
+  .frame-cap { max-width: 330px; font-size: 13px; line-height: 1.45; }
+  .frame-cap b { display: block; margin-bottom: 2px; font-size: 13.5px; font-weight: 600; }
+  .frame-cap span { color: hsl(var(--muted-foreground)); }
+  .stage { padding: 16px; border-radius: 14px; border: 1px dashed hsl(var(--border)); background: hsl(var(--background)); }
+  .issues, .changes { margin: 0; padding-left: 20px; max-width: 96ch; font-size: 14px; line-height: 1.6; color: hsl(var(--muted-foreground)); }
+  .issues li + li, .changes li + li { margin-top: 6px; }
+  .issues b, .changes b { color: hsl(var(--foreground)); font-weight: 600; }
+  .callout { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; margin-right: 6px; border-radius: 999px; font-size: 11px; font-weight: 700; background: hsl(28 90% 55% / .16); color: hsl(28 80% 38%); vertical-align: 1px; }
+  .dark .callout { color: hsl(28 90% 65%); }
+  [data-pin] { position: relative; }
+  .pin { position: absolute; top: -8px; right: -8px; z-index: 30; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 999px; font-size: 11px; font-weight: 700; background: hsl(24 85% 36%); color: #fff; box-shadow: 0 0 0 2px hsl(var(--background)); pointer-events: none; }
+  .refs { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; margin: 8px 0 20px; }
+  .ref { padding: 14px 16px; border-radius: 10px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 13px; line-height: 1.5; }
+  .ref b { display: block; margin-bottom: 4px; font-size: 13.5px; }
+  .ref span { color: hsl(var(--muted-foreground)); }
+  h3.sub { margin: 26px 0 10px; font-size: 15px; font-weight: 600; }
+
+  /* ---------- shared sidebar shell ---------- */
+  .sb { position: relative; width: 320px; height: 760px; border-radius: 16px; border: 1px solid hsl(var(--sidebar-border)); background: hsl(var(--sidebar) / .9); box-shadow: var(--shadow-panel); overflow: hidden; }
+  .sb.rail { width: 64px; overflow: visible; }
+  .sb-scroll { position: absolute; inset: 0; overflow-y: auto; scrollbar-gutter: stable; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 13.5px; font-weight: 500; white-space: nowrap; }
+  .btn.primary { border-color: transparent; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+  .btn.ghost { border-color: transparent; background: transparent; }
+  .btn.icon { width: 36px; padding: 0; }
+  .btn i { font-size: 16px; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+
+  /* ===================== CURRENT ===================== */
+  .cur { padding: 16px 14px 16px 16px; display: flex; flex-direction: column; gap: 12px; font-size: 13px; }
+  .cur .hdr { display: flex; align-items: center; justify-content: space-between; }
+  .cur .hdr .t { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
+  .cur .ico-tile { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 6px; background: hsl(var(--primary) / .1); color: hsl(var(--primary)); font-size: 16px; }
+  .cur .box { padding: 10px; border-radius: 12px; border: 1px solid hsl(var(--border) / .7); background: hsl(var(--sidebar-accent) / .6); display: flex; flex-direction: column; gap: 8px; }
+  .cur .row { display: flex; gap: 8px; }
+  .cur .row .btn { flex: 1; }
+  .cur .rule { height: 1px; background: hsl(var(--sidebar-border)); margin: 2px 0; }
+  .cur .vis { display: grid; grid-template-columns: repeat(3, 1fr); padding: 4px; border-radius: 10px; border: 1px solid hsl(var(--border) / .7); background: hsl(var(--muted) / .3); }
+  .cur .vis span { display: grid; place-items: center; height: 32px; border-radius: 7px; font-size: 11px; font-weight: 600; color: hsl(var(--muted-foreground)); }
+  .cur .vis span.on { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+  .cur .acc { border-radius: 12px; border: 1px solid hsl(var(--border) / .7); background: hsl(var(--secondary) / .3); padding: 0 12px; }
+  .cur .acc.open { background: hsl(var(--card)); box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+  .cur .acc-h { display: flex; align-items: center; gap: 10px; height: 46px; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+  .cur .acc-h i:first-child { font-size: 16px; color: hsl(var(--primary)); }
+  .cur .acc-h i:last-child { margin-left: auto; font-size: 16px; color: hsl(var(--muted-foreground)); }
+  .cur .acc.open .acc-h { color: hsl(var(--primary)); }
+  .cur .acc-b { display: flex; flex-direction: column; gap: 14px; padding: 2px 0 14px; }
+  .cur .fld { display: flex; flex-direction: column; gap: 6px; }
+  .cur .fld > label, .cur .lbl { font-size: 12px; font-weight: 500; }
+  .cur .lblrow { display: flex; align-items: center; justify-content: space-between; }
+  .cur .chk { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+  .cur .chk i { display: grid; place-items: center; width: 14px; height: 14px; border-radius: 3px; background: hsl(var(--primary)); color: #fff; font-size: 11px; }
+  .cur .inp { display: flex; align-items: center; justify-content: space-between; height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); color: hsl(var(--muted-foreground)); font-size: 13px; }
+  .cur .inp.val { color: hsl(var(--foreground)); }
+  .cur .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .cur .two span { font-size: 11.5px; }
+  .cur .slider { position: relative; height: 20px; margin: 4px 8px 0; }
+  .cur .slider::before { content: ""; position: absolute; left: 0; right: 0; top: 8px; height: 5px; border-radius: 9px; background: hsl(var(--primary)); }
+  .cur .slider b { position: absolute; top: 1px; width: 18px; height: 18px; border-radius: 999px; border: 2px solid hsl(var(--primary)); background: hsl(var(--card)); transform: translateX(-50%); }
+  .cur .ends { display: flex; justify-content: space-between; font-size: 11px; color: hsl(var(--muted-foreground)); }
+  .cur .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .cur .chip { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 4px 0 3px; border-radius: 6px; font-size: 11.5px; font-weight: 600; border: 1px solid; }
+  .cur .chip .m { display: grid; place-items: center; width: 16px; height: 16px; border-radius: 3px; font-size: 12px; }
+  .cur .chip.in { background: hsl(142 70% 45% / .2); border-color: hsl(142 70% 45% / .5); color: hsl(142 72% 26%); }
+  .cur .chip.in .m { background: hsl(142 70% 35% / .3); }
+  .cur .chip.ex { background: hsl(0 84% 60% / .2); border-color: hsl(0 84% 60% / .5); color: hsl(0 74% 38%); }
+  .cur .chip.ex .m { background: hsl(0 74% 45% / .3); }
+  .dark .cur .chip.in { color: hsl(142 70% 70%); }
+  .dark .cur .chip.ex { color: hsl(0 85% 75%); }
+  .cur .more { display: flex; align-items: center; justify-content: center; gap: 4px; height: 32px; border-radius: 8px; font-size: 12.5px; font-weight: 500; color: hsl(var(--primary)); background: hsl(var(--primary) / .06); }
+  .cur-rail { display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; padding: 16px 8px; }
+  .cur-rail .r { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 8px; color: hsl(var(--primary)); font-size: 17px; }
+  .cur-rail .r.first { color: hsl(var(--foreground)); }
+  .cur-rail .r.tile { border: 1px solid hsl(var(--sidebar-border)); background: hsl(var(--background) / .7); }
+  .cur-rail .count { margin-top: auto; display: grid; place-items: center; min-width: 40px; height: 40px; border-radius: 8px; border: 1px solid hsl(var(--sidebar-border)); background: hsl(var(--background) / .7); font-size: 11px; font-weight: 600; }
+  .scrollhint { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; padding: 22px 0 12px; background: linear-gradient(to top, hsl(var(--sidebar)), transparent); pointer-events: none; }
+  .scrollhint span { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 999px; border: 1px solid hsl(var(--border)); background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); font-size: 14px; }
+
+  /* Current popovers */
+  .pop { width: 288px; border-radius: 10px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); box-shadow: var(--shadow-pop); overflow: hidden; font-size: 13px; }
+  .pop .search { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border-bottom: 1px solid hsl(var(--border)); color: hsl(var(--muted-foreground)); }
+  .pop .opts { padding: 4px; }
+  .pop .opt { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 8px; border-radius: 6px; }
+  .pop .opt .v { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pop .opt .pm { display: flex; gap: 2px; }
+  .pop .opt .pm span { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 5px; font-size: 14px; }
+  .pop .opt .pm .p { color: hsl(var(--include)); }
+  .pop .opt .pm .x { color: hsl(var(--exclude)); }
+  .pop .opt.hl { background: hsl(28 90% 94%); }
+  .dark .pop .opt.hl { background: hsl(0 0% 16%); }
+  .pop .grp { padding: 8px 10px 4px; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: hsl(var(--muted-foreground)); }
+  .pop .sep { height: 1px; margin: 4px 0; background: hsl(var(--border)); }
+  .pop .mi { display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 34px; padding: 0 10px; border-radius: 6px; }
+  .pop .mi i { color: hsl(var(--muted-foreground)); }
+  .pop .foot { display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 10px; color: hsl(var(--muted-foreground)); font-size: 12.5px; }
+
+  /* ===================== PROPOSED ===================== */
+  .pr { display: flex; flex-direction: column; height: 100%; font-size: 13px; }
+  .pr-top { flex: none; padding: 14px 14px 12px 16px; display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid hsl(var(--sidebar-border)); }
+  .pr-hdr { display: flex; align-items: center; gap: 8px; }
+  .pr-hdr h4 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -0.005em; }
+  .count-pill { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 999px; font-size: 11.5px; font-weight: 600; background: hsl(var(--primary) / .12); color: hsl(var(--primary)); }
+  .pr-hdr .sp { flex: 1; }
+  .link { border: 0; background: none; padding: 4px 6px; border-radius: 6px; font-size: 12.5px; font-weight: 500; color: hsl(var(--primary)); }
+  .link:hover { background: hsl(var(--primary) / .08); }
+  .link:disabled { color: hsl(var(--muted-foreground)); opacity: .6; cursor: not-allowed; background: none; }
+  .icon-btn { display: grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 7px; background: transparent; color: hsl(var(--muted-foreground)); font-size: 17px; }
+  .icon-btn:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
+  .saved { display: flex; gap: 6px; }
+  .saved .combo { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; border-radius: 8px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 13px; text-align: left; }
+  .saved .combo i { font-size: 15px; color: hsl(var(--muted-foreground)); }
+  .saved .combo .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .saved .combo .nm.placeholder { color: hsl(var(--muted-foreground)); }
+  .saved .combo .dot { width: 7px; height: 7px; border-radius: 999px; background: hsl(28 88% 53%); }
+  .saved .sq { width: 34px; height: 34px; flex: none; display: grid; place-items: center; border-radius: 8px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); color: hsl(var(--muted-foreground)); font-size: 16px; }
+  .find { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 10px; border-radius: 8px; background: hsl(var(--muted) / .7); color: hsl(var(--muted-foreground)); font-size: 12.5px; }
+  .find kbd { margin-left: auto; padding: 1px 5px; border-radius: 4px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font: 500 10.5px "Inter", sans-serif; }
+  .seg3 { display: grid; grid-template-columns: repeat(3, 1fr); padding: 3px; border-radius: 9px; background: hsl(var(--muted) / .8); }
+  .seg3 button { height: 28px; border: 0; border-radius: 7px; background: transparent; font-size: 12.5px; font-weight: 500; color: hsl(var(--muted-foreground)); }
+  .seg3 button.on { background: hsl(var(--card)); color: hsl(var(--foreground)); box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 0 0 1px hsl(var(--border) / .6); }
+  .seg-lbl { display: flex; align-items: center; justify-content: space-between; font-size: 11.5px; font-weight: 500; color: hsl(var(--muted-foreground)); margin-bottom: -4px; }
+
+
+  .pr-body { flex: 1; min-height: 0; overflow-y: auto; scrollbar-gutter: stable; padding: 6px 6px 12px 8px; }
+  .sec + .sec { border-top: 1px solid hsl(var(--sidebar-border)); }
+  .sec-h { display: flex; align-items: center; gap: 10px; width: 100%; height: 44px; padding: 0 10px; border: 0; background: transparent; border-radius: 8px; font-size: 13.5px; font-weight: 600; text-align: left; }
+  .sec-h:hover { background: hsl(var(--muted) / .6); }
+  .sec-h > i:first-child { font-size: 17px; color: hsl(var(--primary)); }
+  .sec-h .n { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; font-size: 11px; font-weight: 600; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+  .sec-h .chev { margin-left: auto; font-size: 17px; color: hsl(var(--muted-foreground)); transition: transform .2s cubic-bezier(.22,1,.36,1); }
+  .sec.open .sec-h .chev { transform: rotate(180deg); }
+  .sec-b { display: none; padding: 0 0 8px; }
+  .sec.open .sec-b { display: block; }
+  .sec-b .lock { margin: 4px 10px 8px; padding: 8px 10px; border-radius: 8px; border: 1px dashed hsl(var(--border)); font-size: 12px; color: hsl(var(--muted-foreground)); }
+
+  .f { border-radius: 8px; }
+  .f.open { background: hsl(var(--sidebar-accent)); margin: 2px 0; }
+  .f-h { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 36px; padding: 0 8px 0 10px; border: 0; background: transparent; border-radius: 8px; text-align: left; font-size: 13px; }
+  .f-h:hover { background: hsl(var(--muted) / .6); }
+  .f.open .f-h:hover { background: transparent; }
+  .f-h .l { flex: none; color: hsl(var(--foreground)); }
+  .f.active .f-h .l { font-weight: 600; }
+  .f-h .s { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; color: hsl(var(--muted-foreground)); font-size: 12.5px; }
+  .f.active .f-h .s { color: hsl(var(--foreground)); }
+  .f-h .s .neg { color: hsl(var(--exclude)); }
+  .f-h .s .neg i { margin-right: 1px; font-size: 12px; vertical-align: -1px; }
+  .f-h .chev { flex: none; font-size: 15px; color: hsl(var(--muted-foreground)); transition: transform .2s cubic-bezier(.22,1,.36,1); }
+  .f.open .f-h .chev { transform: rotate(90deg); }
+  .f-b { display: none; padding: 2px 10px 12px; }
+  .f.open .f-b { display: flex; flex-direction: column; gap: 10px; }
+  .more-h { display: flex; align-items: center; gap: 8px; margin: 10px 10px 4px; font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: hsl(var(--muted-foreground)); }
+  .more-h::after { content: ""; flex: 1; height: 1px; background: hsl(var(--sidebar-border)); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .chip { display: inline-flex; align-items: center; gap: 2px; max-width: 100%; height: 26px; padding: 0 3px 0 3px; border-radius: 7px; border: 1px solid; font-size: 12.5px; font-weight: 500; }
+  .chip .mode { display: grid; place-items: center; width: 20px; height: 20px; border: 0; border-radius: 5px; background: transparent; font-size: 14px; }
+  .chip .t { min-width: 0; padding: 0 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chip .x { display: grid; place-items: center; width: 20px; height: 20px; border: 0; border-radius: 5px; background: transparent; color: hsl(var(--muted-foreground)); font-size: 14px; }
+  .chip.in { border-color: hsl(var(--include) / .35); background: hsl(var(--include) / .08); }
+  .chip.in .mode { color: hsl(var(--include)); }
+  .chip.ex { border-color: hsl(var(--exclude) / .35); background: hsl(var(--exclude) / .07); }
+  .chip.ex .mode { color: hsl(var(--exclude)); }
+  .chip.ex .t { color: hsl(var(--exclude)); }
+  .chip .mode:hover, .chip .x:hover { background: hsl(var(--foreground) / .08); }
+  .add { display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px; border-radius: 7px; border: 1px dashed hsl(var(--border)); background: hsl(var(--card)); font-size: 12.5px; color: hsl(var(--muted-foreground)); }
+  .add i { font-size: 14px; }
+  .field-inp { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; border-radius: 8px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); color: hsl(var(--muted-foreground)); font-size: 12.5px; }
+  .field-inp i { font-size: 15px; }
+  .hint { font-size: 11.5px; line-height: 1.4; color: hsl(var(--muted-foreground)); }
+  .hint kbd { padding: 0 4px; border-radius: 4px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font: 500 10.5px "Inter", sans-serif; }
+
+  .rng { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 6px; }
+  .rng .box { display: flex; align-items: center; height: 34px; padding: 0 10px; border-radius: 8px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 13px; font-weight: 500; }
+  .rng .box span { margin-right: 4px; color: hsl(var(--muted-foreground)); font-weight: 400; font-size: 12px; }
+  .rng .to { font-size: 12px; color: hsl(var(--muted-foreground)); }
+  .track { position: relative; height: 18px; margin: 0 8px; }
+  .track::before { content: ""; position: absolute; left: 0; right: 0; top: 7px; height: 4px; border-radius: 9px; background: hsl(var(--border)); }
+  .track .fill { position: absolute; top: 7px; height: 4px; border-radius: 9px; background: hsl(var(--primary)); }
+  .track .th { position: absolute; top: 0; width: 18px; height: 18px; border-radius: 999px; border: 2px solid hsl(var(--primary)); background: hsl(var(--card)); transform: translateX(-50%); box-shadow: 0 1px 3px rgba(0,0,0,.15); }
+  .presets { display: flex; flex-wrap: wrap; gap: 5px; }
+  .presets button { height: 24px; padding: 0 8px; border-radius: 999px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 11.5px; font-weight: 500; color: hsl(var(--muted-foreground)); }
+  .presets button.on { border-color: hsl(var(--primary) / .5); background: hsl(var(--primary) / .1); color: hsl(var(--primary)); }
+  .sw { display: flex; align-items: center; gap: 8px; font-size: 12px; color: hsl(var(--muted-foreground)); }
+  .sw .k { position: relative; flex: none; width: 28px; height: 16px; border-radius: 999px; background: hsl(var(--primary)); }
+  .sw .k::after { content: ""; position: absolute; top: 2px; left: 14px; width: 12px; height: 12px; border-radius: 999px; background: #fff; }
+  .sw.off .k { background: hsl(var(--border)); }
+  .sw.off .k::after { left: 2px; }
+
+  .pr-foot { flex: none; display: flex; align-items: center; gap: 8px; padding: 10px 14px 12px 16px; border-top: 1px solid hsl(var(--sidebar-border)); background: hsl(var(--sidebar)); }
+  .pr-foot .btn { height: 34px; }
+  .pr-foot .grow { flex: 1; }
+  .pr-foot .meta { flex: 1; min-width: 0; font-size: 11.5px; line-height: 1.3; color: hsl(var(--muted-foreground)); }
+  .pr-foot .meta b { display: block; color: hsl(var(--foreground)); font-size: 12.5px; font-weight: 600; }
+
+  /* Proposed rail */
+  .rail-p { display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; padding: 12px 0; }
+  .rail-p .rb { position: relative; display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 9px; background: transparent; color: hsl(var(--muted-foreground)); font-size: 18px; }
+  .rail-p .rb:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
+  .rail-p .rb.sec { color: hsl(var(--primary)); }
+  .rail-p .rb .b { position: absolute; top: 3px; right: 2px; display: grid; place-items: center; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; font-size: 10px; font-weight: 700; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); box-shadow: 0 0 0 2px hsl(var(--sidebar)); }
+  .rail-p .total { display: grid; place-items: center; width: 40px; height: 26px; margin: 2px 0 6px; border-radius: 999px; font-size: 11.5px; font-weight: 600; background: hsl(var(--primary) / .12); color: hsl(var(--primary)); }
+  .rail-p .div { width: 24px; height: 1px; margin: 6px 0; background: hsl(var(--sidebar-border)); }
+  .rail-p .end { margin-top: auto; display: flex; flex-direction: column; gap: 4px; }
+  .tip { position: absolute; left: 50px; top: 50%; z-index: 5; transform: translateY(-50%); padding: 5px 8px; border-radius: 6px; background: hsl(var(--foreground)); color: hsl(var(--background)); font-size: 12px; font-weight: 500; white-space: nowrap; box-shadow: var(--shadow-pop); }
+  .rail-wrap { position: relative; width: 210px; }
+
+  /* Proposed popovers */
+  .pop2 { width: 300px; border-radius: 12px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); box-shadow: var(--shadow-pop); overflow: hidden; font-size: 13px; }
+  .pop2 .ph { display: flex; align-items: center; gap: 8px; height: 42px; padding: 0 12px; border-bottom: 1px solid hsl(var(--border)); color: hsl(var(--muted-foreground)); }
+  .pop2 .ph i { font-size: 16px; }
+  .pop2 .ph b { color: hsl(var(--foreground)); font-weight: 500; }
+  .pop2 .list { padding: 4px; max-height: 400px; overflow: auto; }
+  .pop2 .grp { display: flex; justify-content: space-between; padding: 8px 8px 4px; font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: hsl(var(--muted-foreground)); }
+  .pop2 .o { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 6px 0 8px; border-radius: 7px; }
+  .pop2 .o:hover, .pop2 .o.kb { background: hsl(var(--muted) / .8); }
+  .pop2 .o .st { display: grid; place-items: center; width: 16px; height: 16px; flex: none; border-radius: 4px; border: 1.5px solid hsl(var(--border)); font-size: 12px; }
+  .pop2 .o.in .st { border-color: hsl(var(--include)); background: hsl(var(--include)); color: #fff; }
+  .pop2 .o.ex .st { border-color: hsl(var(--exclude)); background: hsl(var(--exclude)); color: #fff; }
+  .pop2 .o .v { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pop2 .o.ex .v { color: hsl(var(--exclude)); }
+  .pop2 .o .c { font-size: 12px; color: hsl(var(--muted-foreground)); }
+  .pop2 .o .acts { display: none; gap: 2px; }
+  .pop2 .o:hover .acts, .pop2 .o.kb .acts { display: flex; }
+  .pop2 .o:hover .c, .pop2 .o.kb .c { display: none; }
+  .pop2 .o .acts span { display: inline-flex; align-items: center; gap: 2px; height: 22px; padding: 0 6px; border-radius: 5px; font-size: 11.5px; font-weight: 600; }
+  .pop2 .o .acts .ai { color: hsl(var(--include)); background: hsl(var(--include) / .1); }
+  .pop2 .o .acts .ae { color: hsl(var(--exclude)); background: hsl(var(--exclude) / .1); }
+  .pop2 .o.dis { opacity: .45; }
+  .pop2 .pf { display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 40px; padding: 0 12px; border-top: 1px solid hsl(var(--border)); font-size: 11.5px; color: hsl(var(--muted-foreground)); }
+  .pop2 .pf kbd { padding: 0 4px; border-radius: 4px; border: 1px solid hsl(var(--border)); font: 500 10.5px "Inter", sans-serif; }
+  .pop2 .sv { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 7px; }
+  .pop2 .sv:hover { background: hsl(var(--muted) / .8); }
+  .pop2 .sv .nm { flex: 1; min-width: 0; }
+  .pop2 .sv .nm div:first-child { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pop2 .sv .nm div:last-child { font-size: 11.5px; color: hsl(var(--muted-foreground)); }
+  .pop2 .sv i { font-size: 16px; color: hsl(var(--muted-foreground)); }
+  .pop2 .sv .ok { color: hsl(var(--primary)); }
+  .pop2 .sv.applied { background: hsl(var(--primary) / .06); }
+  .pop2 .act { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 8px; border-radius: 7px; font-weight: 500; }
+  .pop2 .act i { font-size: 16px; color: hsl(var(--muted-foreground)); }
+  .pop2 .act.pri { color: hsl(var(--primary)); }
+  .pop2 .act.pri i { color: hsl(var(--primary)); }
+  .pop2 .rule { height: 1px; margin: 4px 0; background: hsl(var(--border)); }
+
+
+  /* Live controls in the proposed panel */
+  .picker { border: 1px solid hsl(var(--border)); border-radius: 9px; background: hsl(var(--card)); overflow: hidden; box-shadow: 0 6px 16px -10px rgba(0,0,0,.25); }
+  .picker .ps { display: flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px; border-bottom: 1px solid hsl(var(--border)); color: hsl(var(--muted-foreground)); }
+  .picker input, .find input, .field-inp input, .rng .box input, .pop2 .ph input { flex: 1; min-width: 0; width: 100%; border: 0; outline: none; background: transparent; font-size: 12.5px; color: hsl(var(--foreground)); }
+  .picker input::placeholder, .find input::placeholder, .field-inp input::placeholder, .pop2 .ph input::placeholder { color: hsl(var(--muted-foreground)); }
+  .picker .pl { max-height: 232px; overflow: auto; padding: 3px; }
+  .picker .pg { display: flex; justify-content: space-between; padding: 7px 7px 3px; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: hsl(var(--muted-foreground)); }
+  .po { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 4px 0 7px; border-radius: 6px; font-size: 12.5px; cursor: pointer; }
+  .po:hover { background: hsl(var(--muted) / .8); }
+  .po .st { display: grid; place-items: center; flex: none; width: 16px; height: 16px; font-size: 15px; }
+  .po.in { background: hsl(var(--include) / .08); }
+  .po.in .st { color: hsl(var(--include)); }
+  .po.ex { background: hsl(var(--exclude) / .07); }
+  .po.ex .st { color: hsl(var(--exclude)); }
+  .po.in:hover { background: hsl(var(--include) / .13); }
+  .po.ex:hover { background: hsl(var(--exclude) / .11); }
+  .po.ex .v { color: hsl(var(--exclude)); }
+  .po .v { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .po .c { font-size: 11.5px; color: hsl(var(--muted-foreground)); }
+  .po .pa { display: none; gap: 2px; }
+  .po:hover .pa { display: flex; }
+  .po:hover .c { display: none; }
+  .po .pa button { display: inline-flex; align-items: center; gap: 2px; height: 22px; padding: 0 6px; border: 0; border-radius: 5px; font-size: 11px; font-weight: 600; }
+  .po .pa .ai { color: hsl(var(--include)); background: hsl(var(--include) / .12); }
+  .po .pa .ae { color: hsl(var(--exclude)); background: hsl(var(--exclude) / .1); }
+  .po .pa .ar { width: 22px; padding: 0; justify-content: center; color: hsl(var(--muted-foreground)); background: hsl(var(--muted)); }
+  .po.dis { opacity: .45; cursor: default; }
+  .po.dis:hover { background: transparent; }
+  .pempty { padding: 12px 8px; font-size: 12.5px; color: hsl(var(--muted-foreground)); }
+  .picker .pfoot { display: flex; align-items: center; justify-content: space-between; height: 32px; padding: 0 6px 0 10px; border-top: 1px solid hsl(var(--border)); }
+  .add { cursor: pointer; }
+  .add:hover { border-color: hsl(var(--primary) / .5); color: hsl(var(--primary)); }
+  .find .x2 { display: grid; place-items: center; width: 20px; height: 20px; border: 0; border-radius: 5px; background: transparent; color: hsl(var(--muted-foreground)); }
+  .rng .box { cursor: text; }
+  .rng .box:focus-within, .field-inp:focus-within, .find:focus-within { border-color: hsl(var(--primary) / .6); box-shadow: 0 0 0 3px hsl(var(--primary) / .12); }
+  .find { border: 1px solid transparent; }
+  .presets button:hover { border-color: hsl(var(--primary) / .45); }
+  button.sw { border: 0; background: transparent; padding: 0; text-align: left; }
+  .saved { position: relative; }
+  .savedmenu { position: absolute; top: 40px; left: 0; z-index: 20; width: 100%; }
+  .savedmenu .sv, .savedmenu .act { cursor: pointer; }
+  .savedmenu .act:hover { background: hsl(var(--muted) / .8); }
+  .sb.rail .rail-p .rb[data-act="railSec"], .sb.rail .rail-p .rb[data-act="expand"], .sb.rail .rail-p .rb[data-act="railSaved"] { cursor: pointer; }
+
+  /* Profile in the footer and rail */
+  .av { display: grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: 999px; background: hsl(var(--primary) / .14); color: hsl(var(--primary)); font-size: 11px; font-weight: 700; letter-spacing: .02em; }
+  .me { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 6px 0 4px; margin-left: -4px; border: 0; border-radius: 8px; background: transparent; text-align: left; }
+  .me:hover { background: hsl(var(--muted) / .8); }
+  .me .who { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+  .me .who b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; font-weight: 600; }
+  .me .who span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11.5px; color: hsl(var(--muted-foreground)); }
+  .me > i { flex: none; font-size: 14px; color: hsl(var(--muted-foreground)); }
+
+  @media (max-width: 720px) { .page { padding: 20px 16px 60px; } }
+  @media (prefers-reduced-motion: reduce) { .sec-h .chev, .f-h .chev { transition: none; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="intro">
+    <h1>Filters sidebar</h1>
+    <button class="toggle" id="t-dark" aria-pressed="false"><i class="ri-moon-line"></i> Dark</button>
+  </div>
+
+  <!-- ===================== PART 1: CURRENT ===================== -->
+  <section class="part">
+    <h2>Today</h2>
+
+    <div class="frames">
+      <div class="frame">
+        <div class="stage">
+          <div class="sb" style="position:relative">
+            <div class="sb-scroll"><div class="cur">
+              <div class="hdr"><span class="t"><span class="ico-tile"><i class="ri-filter-3-line"></i></span>FILTERS</span><span class="btn ghost icon"><i class="ri-arrow-left-s-line"></i></span></div>
+              <div class="box" data-pin><span class="pin">1</span>
+                <div class="row"><span class="btn" style="justify-content:space-between;flex:1"><span style="display:inline-flex;gap:8px;align-items:center"><i class="ri-folder-line"></i>Saved Filters</span><i class="ri-arrow-down-s-line"></i></span><span class="btn icon" style="flex:none" data-pin><i class="ri-save-3-line"></i><span class="pin">2</span></span><span class="btn icon" style="flex:none"><i class="ri-list-check-3"></i></span></div>
+                <div class="row"><span class="btn">Reset</span><span class="btn primary">Export</span></div>
+                <span class="btn"><i class="ri-file-text-line"></i>Summary PDF</span>
+              </div>
+              <div class="rule"></div>
+              <div class="vis"><span>ALL</span><span class="on">GCCs</span><span>NON-GCCs</span></div>
+              <div class="acc open">
+                <div class="acc-h" data-pin><i class="ri-building-line"></i>Account Attributes<i class="ri-arrow-up-s-line"></i><span class="pin">3</span></div>
+                <div class="acc-b">
+                  <div class="fld"><label>Account Name</label><span class="inp">Type to search account names...</span></div>
+                  <div class="fld"><label>Account List</label><span class="inp">Select account lists...<i class="ri-expand-up-down-line"></i></span></div>
+                  <div class="fld">
+                    <div class="lblrow"><span class="lbl" data-pin>HQ Company Revenue<span class="pin" style="right:-24px">4</span></span><span class="chk"><i class="ri-check-line"></i>Include all</span></div>
+                    <div class="two"><span>Min</span><span>Max</span></div>
+                    <div class="two"><span class="inp val">1</span><span class="inp val">716924</span></div>
+                    <div class="slider"><b style="left:0"></b><b style="left:100%"></b></div>
+                    <div class="ends"><span>1M</span><span>716,924M</span></div>
+                  </div>
+                  <div class="fld"><label>GCC Aggregate Headcount (India)</label><span class="inp">Select headcount range...<i class="ri-expand-up-down-line"></i></span></div>
+                  <div class="fld">
+                    <div class="lblrow"><span class="lbl">Years In India</span><span class="chk"><i class="ri-check-line"></i>Include all</span></div>
+                    <div class="two"><span>Min</span><span>Max</span></div>
+                    <div class="two"><span class="inp val">0</span><span class="inp val">68</span></div>
+                    <div class="slider"><b style="left:0"></b><b style="left:100%"></b></div>
+                  </div>
+                  <div class="fld"><label>Industry</label>
+                    <span class="inp val" style="height:auto;min-height:36px;padding:6px 10px;align-items:flex-start">
+                      <span class="chips"><span class="chip in"><span class="m"><i class="ri-add-line"></i></span>BFSI<i class="ri-close-line"></i></span><span class="chip in"><span class="m"><i class="ri-add-line"></i></span>Technology<i class="ri-close-line"></i></span></span>
+                      <i class="ri-expand-up-down-line muted" style="margin-top:3px"></i></span>
+                  </div>
+                  <div class="fld" data-pin><span class="pin">5</span><label>HQ Country</label>
+                    <span class="inp val" style="height:auto;min-height:36px;padding:6px 10px"><span class="chips"><span class="chip ex"><span class="m"><i class="ri-subtract-line"></i></span>India<i class="ri-close-line"></i></span></span><i class="ri-expand-up-down-line muted"></i></span>
+                  </div>
+                  <span class="more" data-pin><i class="ri-arrow-down-s-line"></i>Show More<span class="pin">6</span></span>
+                </div>
+              </div>
+              <div class="acc"><div class="acc-h"><i class="ri-briefcase-line"></i>Centre Attributes<i class="ri-arrow-down-s-line"></i></div></div>
+              <div class="acc"><div class="acc-h"><i class="ri-group-line"></i>Prospect Attributes<i class="ri-arrow-down-s-line"></i></div></div>
+            </div></div>
+            <div class="scrollhint"><span><i class="ri-arrow-down-s-line"></i></span></div>
+          </div>
+        </div>
+        <div class="frame-cap"><b>Expanded, Accounts open</b></div>
+      </div>
+
+      <div class="frame">
+        <div class="stage">
+          <div class="sb rail" style="position:relative">
+            <div class="cur-rail">
+              <span class="r first"><i class="ri-arrow-right-s-line"></i></span>
+              <span class="r tile" data-pin><i class="ri-filter-3-line"></i><span class="pin">7</span></span>
+              <span class="r"><i class="ri-building-line"></i></span>
+              <span class="r"><i class="ri-briefcase-line"></i></span>
+              <span class="r"><i class="ri-group-line"></i></span>
+              <span class="count">5</span>
+            </div>
+          </div>
+        </div>
+        <div class="frame-cap"><b>Collapsed</b></div>
+      </div>
+
+      <div class="frame">
+        <div class="stage" style="padding-bottom:20px">
+          <div class="pop" data-pin style="overflow:visible"><span class="pin">8</span>
+            <div class="search"><i class="ri-search-line"></i>Search...</div>
+            <div class="opts">
+              <div class="opt hl"><span class="v">1K - 5K</span><span class="pm"><span class="p"><i class="ri-add-line"></i></span><span class="x"><i class="ri-subtract-line"></i></span></span></div>
+              <div class="opt"><span class="v">201 - 500</span><span class="pm"><span class="p"><i class="ri-add-line"></i></span><span class="x"><i class="ri-subtract-line"></i></span></span></div>
+              <div class="opt"><span class="v">&lt;50</span><span class="pm"><span class="p"><i class="ri-add-line"></i></span><span class="x"><i class="ri-subtract-line"></i></span></span></div>
+              <div class="opt"><span class="v">501 - 1K</span><span class="pm"><span class="p"><i class="ri-add-line"></i></span><span class="x"><i class="ri-subtract-line"></i></span></span></div>
+              <div class="opt"><span class="v">101 - 200</span><span class="pm"><span class="p"><i class="ri-add-line"></i></span><span class="x"><i class="ri-subtract-line"></i></span></span></div>
+              <div class="opt"><span class="v">51 - 100</span><span class="pm"><span class="p"><i class="ri-add-line"></i></span><span class="x"><i class="ri-subtract-line"></i></span></span></div>
+              <div class="opt"><span class="v">5K - 10K</span><span class="pm"><span class="p"><i class="ri-add-line"></i></span><span class="x"><i class="ri-subtract-line"></i></span></span></div>
+            </div>
+          </div>
+          <div style="height:22px"></div>
+          <div class="pop">
+            <div class="grp">My saved filters</div>
+            <div class="opts">
+              <div class="mi">Q4 BFSI targets<i class="ri-share-line"></i></div>
+              <div class="mi">Pune expansion<i class="ri-share-line"></i></div>
+              <div class="mi">Retail analysis<i class="ri-share-line"></i></div>
+            </div>
+            <div class="sep"></div>
+            <div class="grp"><i class="ri-group-line"></i> Shared with me</div>
+            <div class="opts"><div class="mi">Sales team filters</div></div>
+            <div class="sep"></div>
+            <div class="foot"><i class="ri-settings-3-line"></i>Manage all filters (32)...</div>
+          </div>
+          
+        </div>
+        <div class="frame-cap"><b>A list filter open, and Saved Filters</b></div>
+      </div>
+    </div>
+
+    <h3 class="sub">What gets in the way</h3>
+    <ol class="issues" style="list-style:none;padding-left:0">
+      <li><span class="callout">1</span><b>Six buttons before any filter.</b> Saved Filters, Save, Account lists, Reset, Export and Summary PDF stack up in three rows. Export is the only solid blue button, so the strongest thing in a filter panel is an action that isn't a filter.</li>
+      <li><span class="callout">2</span><b>Two unlabelled icon buttons.</b> Save and Account lists are a disk and a list icon. Neither says what it does until you hover.</li>
+      <li><span class="callout">3</span><b>No overview of what's applied.</b> To see your active filters you open each section and scroll. The only summary is a number at the bottom of the collapsed rail.</li>
+      <li><span class="callout">4</span><b>Revenue is in raw millions.</b> "1" to "716924" with "716,924M" underneath is hard to read. "Include all" really means "also include accounts with no revenue data", which the label doesn't say.</li>
+      <li><span class="callout">5</span><b>Include and exclude rely on colour.</b> The chips are green with + or red with −. For colour-blind users, or at a glance, "not India" and "India" look almost the same.</li>
+      <li><span class="callout">6</span><b>Every field is always fully open.</b> Each filter takes its full height even when unused, so Accounts alone runs past one screen. "Show More" hides another 8 Account and 4 Centre fields to compensate, and those are easy to forget.</li>
+      <li><span class="callout">7</span><b>The collapsed rail doesn't show where filters are.</b> The section icons look the same whether they have filters or not. The filter tile can't be clicked, and the count sits at the bottom (where the dev badge covers it locally).</li>
+      <li><span class="callout">8</span><b>Option lists give no counts, and ranges come out of order.</b> The data has a count per option, but it isn't shown. Headcount and revenue ranges are sorted by count, so "1K - 5K" comes before "&lt;50". Saved Filters doesn't show which one is applied or whether you've changed it since.</li>
+    </ol>
+  </section>
+
+  <!-- ===================== PART 2: PROPOSED ===================== -->
+  <section class="part">
+    <h2>Proposed</h2>
+    <p>Click anything in the two panels: sections, fields, values, presets, saved filters, "Find a filter", collapse.</p>
+
+    <div class="frames">
+      <div class="frame">
+        <div class="stage"><div class="sb" id="p-example"></div></div>
+        <div class="frame-cap"><b>Expanded, with filters applied</b></div>
+      </div>
+      <div class="frame">
+        <div class="stage"><div class="sb" id="p-empty"></div></div>
+        <div class="frame-cap"><b>Expanded, nothing applied</b></div>
+      </div>
+      <div class="frame">
+        <div class="stage"><div class="rail-wrap"><div class="sb rail" id="p-rail"></div></div></div>
+        <div class="frame-cap"><b>Collapsed</b></div>
+      </div>
+    </div>
+
+    <h3 class="sub">What changes, and why</h3>
+    <ol class="changes">
+      <li><b>One header line:</b> "Filters", the active count, Clear all and collapse. Reset becomes Clear all and is greyed out when nothing is applied.</li>
+      <li><b>Saved filters becomes a labelled picker</b> that shows the applied filter's name, with an orange dot when you've changed it since saving. Account lists stays as an icon button next to it, now with a tooltip naming it.</li>
+      <li><b>"Find a filter"</b> searches all 30 fields by name, so "City" or "NASSCOM" is one keystroke away instead of a scroll and a "Show More".</li>
+      <li><b>Sections in sentence case with a count</b> ("Accounts 4"), so you can see where the filters are before opening anything.</li>
+      <li><b>Every field is a one-line row</b> showing "Any" or its current value. Fields you use open in place; unused ones take 36px. The "More" fields sit in the same list under a divider, so "Show More" goes away.</li>
+      <li><b>Exclude no longer relies on colour alone:</b> excluded values carry a minus icon as well as the red tint, in chips, rows and lists. Clicking the icon still switches between include and exclude.</li>
+      <li><b>Ranges read in real units</b> ($1B to $50B, 1998 to 2015), with presets for common bands and a clear "Include accounts with no revenue data" switch in place of "Include all".</li>
+      <li><b>Option lists show counts and keep ranges in order.</b> Selected values are pinned on top, and Include/Exclude are labelled buttons with keyboard shortcuts.</li>
+      <li><b>Export and Summary PDF move to a footer</b> that's always visible, next to your profile. Export stays the primary button, but it no longer competes with the filters at the top.</li>
+      <li><b>The collapsed rail shows counts per section</b> and keeps saved filters, account lists, Export and PDF reachable without expanding.</li>
+    </ol>
+
+    <h3 class="sub">Where the ideas come from</h3>
+    <div class="refs">
+      <div class="ref"><b>LinkedIn Sales Navigator</b><span>Every filter offers Include and Exclude side by side, and excluded values are visibly different pills. The model behind items 7 and 9.</span></div>
+      <div class="ref"><b>Apollo.io</b><span>Its filter sidebar is a list of one-line rows that open in place, each showing a count of what's set. The model behind item 6, and how it fits 30+ filters without "Show More".</span></div>
+      <div class="ref"><b>Datadog facets</b><span>Facet values show their counts, the panel has a search box for facets, and collapsed groups still show what's selected. Item 8.</span></div>
+      <div class="ref"><b>ZoomInfo</b><span>Saved searches show when they were last run and whether results changed, with Save and Update kept together. Item 2 and the saved filters menu.</span></div>
+      <div class="ref"><b>Linear and Notion</b><span>A collapsed navigation rail that still shows counts and keeps the main actions reachable. Item 11.</span></div>
+    </div>
+  </section>
+</div>
+
+<script>
+  // ================= Placeholder data (illustrative, not real counts) =================
+  const ACCOUNTS_TOTAL = 2710;
+  const OPTIONS = {
+    acctName: ["Accenture", "Adobe", "Airbus", "American Express", "Barclays", "BNY Mellon", "Boeing", "Caterpillar", "Cisco", "Citi", "Deutsche Bank", "Goldman Sachs", "HSBC", "JPMorgan Chase", "Lowe's", "Mercedes-Benz", "Microsoft", "Nike", "Shell", "Target", "Walmart", "Wells Fargo"].map((v) => [v, null]),
+    acctList: [["Q4 target accounts", 48], ["Banking prospects", 120], ["Event attendees, October", 65]],
+    industry: [["BFSI", 612], ["Technology", 540], ["Healthcare & Life Sciences", 318], ["Manufacturing", 296], ["Retail & CPG", 241], ["Energy & Utilities", 128], ["Telecom & Media", 117], ["Automotive", 104], ["Professional Services", 96], ["Logistics", 74]],
+    hqCountry: [["United States", 1042], ["India", 412], ["United Kingdom", 214], ["Germany", 167], ["Japan", 121], ["France", 98], ["Switzerland", 76], ["Netherlands", 71], ["Canada", 64], ["Sweden", 41], ["Singapore", 38], ["Australia", 35], ["Iceland", 0]],
+    gccHeadcount: [["<50", 388], ["51 - 100", 241], ["101 - 200", 302], ["201 - 500", 466], ["501 - 1K", 319], ["1K - 5K", 512], ["5K - 10K", 97], [">10K", 58]],
+    hqRegion: [["North America", 1106], ["Europe", 742], ["APAC", 598], ["Middle East", 87], ["Latin America", 49]],
+    hqEmployees: [["<1K", 210], ["1K - 5K", 480], ["5K - 10K", 390], ["10K - 50K", 820], ["50K - 100K", 410], [">100K", 400]],
+    subIndustry: [["Banking", 288], ["Business Software Solutions", 210], ["Insurance", 201], ["IT Services", 188], ["Industrial Manufacturing", 160], ["Pharmaceuticals", 140], ["Capital Markets", 123], ["Medical Devices", 102], ["Semiconductors", 92], ["Stores & Market", 88]],
+    segment: [["Enterprise", 1320], ["Upper Mid-Market", 820], ["Mid-Market", 410], ["SMB", 160]],
+    nasscom: [["Listed", 1102], ["Not listed", 1608]],
+    source: [["Primary research", 1450], ["Public filings", 760], ["Partner data", 500]],
+    acctType: [["Public", 1580], ["Private", 980], ["Subsidiary", 150]],
+    coverage: [["Full", 1820], ["Partial", 640], ["Basic", 250]],
+    status: [["Operational", 5480], ["Closed", 210], ["Upcoming", 145]],
+    centreType: [["GCC", 3120], ["R&D", 820], ["BPO", 980], ["SSC", 640], ["CoE", 410]],
+    services: [["IT", 3400], ["Finance & Accounting", 1820], ["Analytics", 1460], ["Engineering", 1210], ["Customer Support", 920], ["HR", 780]],
+    city: [["Bengaluru", 1609], ["Hyderabad", 980], ["Pune", 760], ["Chennai", 720], ["Gurugram", 610], ["Mumbai", 540], ["Noida", 380], ["Kolkata", 140], ["Ahmedabad", 95], ["Coimbatore", 70]],
+    centreHeadcount: [["<50", 1200], ["51 - 100", 980], ["101 - 500", 1890], ["501 - 1K", 860], ["1K - 5K", 920], [">5K", 280]],
+    state: [["Karnataka", 1650], ["Maharashtra", 1310], ["Telangana", 990], ["Tamil Nadu", 810], ["Haryana", 610], ["Uttar Pradesh", 390], ["West Bengal", 140], ["Gujarat", 120]],
+    focus: [["Captive", 4200], ["Hybrid", 1100], ["Outsourced", 535]],
+    centreCountry: [["India", 6129]],
+    role: [["Influencer", 21400], ["Head", 18200], ["Individual contributor", 12400], ["Decision maker", 9400]],
+    level: [["CXO", 2100], ["VP", 6800], ["Director", 14100], ["Senior Manager", 12300], ["Manager", 15800], ["Junior", 10300]],
+    dept: [["IT", 26400], ["Operations", 9500], ["FnA", 6800], ["HR", 6700], ["Marketing", 4300], ["Sales", 4000], ["Senior Management", 3700]],
+    pCity: [["Bengaluru", 21000], ["Hyderabad", 12000], ["Pune", 9000], ["Chennai", 8200], ["Gurugram", 6400], ["Mumbai", 4800]],
+    engaged: [["No", 58200], ["Yes", 3200]],
+  };
+  // Lists whose order carries meaning keep it; everything else sorts by count.
+  const ORDERED = new Set(["gccHeadcount", "hqEmployees", "centreHeadcount", "level"]);
+
+  const RANGES = {
+    revenue: { min: 1, max: 716924, log: true, fmt: "money", unknown: "Include accounts with no revenue data",
+      presets: [["Under $100M", 1, 100], ["$100M to $1B", 100, 1000], ["$1B to $10B", 1000, 10000], ["$10B+", 10000, 716924]] },
+    years: { min: 0, max: 68, fmt: "int", unknown: "Include accounts with no start year",
+      presets: [["New (0 to 5)", 0, 5], ["5 to 15", 5, 15], ["15+", 15, 68]] },
+    incYear: { min: 1950, max: 2026, fmt: "year", unknown: "Include centres with no year",
+      presets: [["Last 2 years", 2024, 2026], ["Last 5 years", 2021, 2026], ["Before 2010", 1950, 2009]] },
+  };
+
+  const SECTIONS = [
+    { id: "accounts", label: "Accounts", icon: "ri-building-line", fields: [
+      { id: "acctName", label: "Account name", type: "multi", search: "Search account names" },
+      { id: "acctList", label: "Account list", type: "multi", search: "Search your lists" },
+      { id: "industry", label: "Industry", type: "multi" },
+      { id: "hqCountry", label: "HQ country", type: "multi" },
+      { id: "revenue", label: "HQ revenue", type: "range" },
+      { id: "gccHeadcount", label: "GCC headcount (India)", type: "multi" },
+      { id: "years", label: "Years in India", type: "range" },
+      { more: true },
+      { id: "hqRegion", label: "HQ region", type: "multi" },
+      { id: "hqEmployees", label: "HQ employee range", type: "multi" },
+      { id: "subIndustry", label: "Sub industry", type: "multi" },
+      { id: "segment", label: "Segment", type: "multi" },
+      { id: "nasscom", label: "NASSCOM listing", type: "multi" },
+      { id: "source", label: "Source", type: "multi" },
+      { id: "acctType", label: "Type", type: "multi" },
+      { id: "coverage", label: "Coverage", type: "multi" },
+    ]},
+    { id: "centres", label: "Centres", icon: "ri-briefcase-line", fields: [
+      { id: "status", label: "Status", type: "multi" },
+      { id: "centreType", label: "Centre type", type: "multi" },
+      { id: "services", label: "Services offered", type: "multi" },
+      { id: "city", label: "City", type: "multi" },
+      { id: "incYear", label: "Incorporation year", type: "range" },
+      { id: "centreHeadcount", label: "Centre headcount", type: "multi" },
+      { more: true },
+      { id: "state", label: "State", type: "multi" },
+      { id: "focus", label: "Centre focus", type: "multi" },
+      { id: "software", label: "Software in use", type: "keyword", placeholder: "e.g. SAP, Workday" },
+      { id: "centreCountry", label: "Country", type: "multi" },
+    ]},
+    { id: "prospects", label: "Prospects", icon: "ri-group-line", fields: [
+      { id: "title", label: "Job title", type: "keyword", placeholder: "e.g. Director, VP" },
+      { id: "role", label: "Role", type: "multi" },
+      { id: "level", label: "Seniority level", type: "multi" },
+      { id: "dept", label: "Department", type: "multi" },
+      { id: "pCity", label: "City", type: "multi" },
+      { id: "engaged", label: "Engaged", type: "multi" },
+    ]},
+  ];
+  const ALL_FIELDS = SECTIONS.flatMap((s) => s.fields.filter((f) => f.id).map((f) => ({ ...f, section: s.id })));
+  const fieldById = (id) => ALL_FIELDS.find((f) => f.id === id);
+
+  // Saved filters: loading one replaces the current filters.
+  const SAVED = [
+    { name: "Q4 BFSI targets", meta: "updated yesterday", mine: true, state: { visibility: "gcc",
+      values: { industry: [["BFSI", "in"], ["Technology", "in"]], hqCountry: [["India", "ex"]], city: [["Bengaluru", "in"]], title: [["VP", "in"], ["Assistant", "ex"]] },
+      ranges: { revenue: { lo: 1000, hi: 50000, unknown: true } } } },
+    { name: "Pune expansion", meta: "updated 2 days ago", mine: true, state: { visibility: "all",
+      values: { city: [["Pune", "in"]], status: [["Operational", "in"]] }, ranges: { incYear: { lo: 2021, hi: 2026, unknown: false } } } },
+    { name: "Retail analysis", meta: "updated last week", mine: true, state: { visibility: "all",
+      values: { industry: [["Retail & CPG", "in"]], hqCountry: [["United States", "in"]], level: [["VP", "in"], ["Director", "in"]] }, ranges: {} } },
+    { name: "Sales team filters", meta: "from a teammate", mine: false, state: { visibility: "nonGcc",
+      values: { dept: [["IT", "in"]], title: [["Head", "in"]] }, ranges: {} } },
+  ];
+
+  // ================= Helpers =================
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  const clone = (o) => JSON.parse(JSON.stringify(o));
+  const trimNum = (n) => String(+n.toFixed(1)).replace(/\.0$/, "");
+
+  function fmtRange(fid, v) {
+    const cfg = RANGES[fid];
+    if (cfg.fmt === "money") return v >= 1000 ? `$${trimNum(v / 1000)}B` : `$${trimNum(v)}M`;
+    return String(Math.round(v));
+  }
+  function parseRange(fid, text) {
+    const cfg = RANGES[fid];
+    const t = String(text).trim().replace(/[$,\s]/g, "").toLowerCase();
+    if (!t) return null;
+    if (cfg.fmt === "money") {
+      const m = t.match(/^(\d+(?:\.\d+)?)(b|bn|m|mn|k)?$/);
+      if (!m) return null;
+      const n = parseFloat(m[1]);
+      const unit = m[2] || "m";
+      return unit.startsWith("b") ? n * 1000 : unit === "k" ? n / 1000 : n;
+    }
+    const n = parseInt(t, 10);
+    return Number.isFinite(n) ? n : null;
+  }
+  function pos(fid, v) {
+    const { min, max, log } = RANGES[fid];
+    const p = log ? (Math.log(v) - Math.log(min)) / (Math.log(max) - Math.log(min)) : (v - min) / (max - min);
+    return Math.max(0, Math.min(100, p * 100));
+  }
+  const rangeOf = (st, fid) => st.ranges[fid] || { lo: RANGES[fid].min, hi: RANGES[fid].max, unknown: true };
+  const rangeActive = (st, fid) => { const r = st.ranges[fid]; if (!r) return false; const c = RANGES[fid]; return r.lo > c.min || r.hi < c.max || !r.unknown; };
+
+  const isActive = (st, f) => (f.type === "range" ? rangeActive(st, f.id) : (st.values[f.id]?.length || 0) > 0);
+  const sectionCount = (st, s) => s.fields.filter((f) => f.id && isActive(st, f)).length;
+  const totalCount = (st) => SECTIONS.reduce((n, s) => n + sectionCount(st, s), 0);
+  const snapshot = (st) => JSON.stringify({ v: st.visibility, values: st.values, ranges: Object.fromEntries(Object.entries(st.ranges).filter(([k]) => rangeActive(st, k))) });
+  const isModified = (st) => Boolean(st.saved) && snapshot(st) !== st.savedSnapshot;
+
+  function summary(st, f) {
+    if (f.type === "range") {
+      if (!rangeActive(st, f.id)) return "Any";
+      const r = rangeOf(st, f.id); const c = RANGES[f.id];
+      const span = r.lo > c.min || r.hi < c.max;
+      return esc(span ? `${fmtRange(f.id, r.lo)} to ${fmtRange(f.id, r.hi)}` : "Any value") + (r.unknown ? "" : ' <span class="muted">· known only</span>');
+    }
+    const vals = st.values[f.id] || [];
+    if (!vals.length) return "Any";
+    return vals.map(([v, m]) => (m === "ex" ? `<span class="neg"><i class="ri-subtract-line"></i>${esc(v)}</span>` : esc(v))).join(", ");
+  }
+
+  // ================= Rendering =================
+  function chipsHtml(st, f) {
+    return (st.values[f.id] || []).map(([v, m], i) => `<span class="chip ${m}"><button class="mode" data-act="mode" data-f="${f.id}" data-i="${i}" title="${m === "in" ? "Switch to exclude" : "Switch to include"}" aria-label="${m === "in" ? "Exclude" : "Include"} ${esc(v)}"><i class="${m === "in" ? "ri-add-line" : "ri-subtract-line"}"></i></button><span class="t">${esc(v)}</span><button class="x" data-act="rm" data-f="${f.id}" data-i="${i}" aria-label="Remove ${esc(v)}"><i class="ri-close-line"></i></button></span>`).join("");
+  }
+
+  function pickerHtml(st, f) {
+    const q = (st.pq || "").trim().toLowerCase();
+    const sel = new Map((st.values[f.id] || []).map(([v, m]) => [v, m]));
+    let opts = OPTIONS[f.id].slice();
+    if (!ORDERED.has(f.id) && opts[0][1] != null) opts.sort((a, b) => b[1] - a[1]);
+    const match = ([v]) => !q || v.toLowerCase().includes(q);
+    const row = ([v, c]) => {
+      const m = sel.get(v);
+      const dis = c === 0 && !m;
+      return `<div class="po ${m || ""} ${dis ? "dis" : ""}" data-act="${dis ? "" : "pick"}" data-f="${f.id}" data-v="${esc(v)}">
+        <span class="st">${m === "in" ? '<i class="ri-add-line"></i>' : m === "ex" ? '<i class="ri-subtract-line"></i>' : ""}</span>
+        <span class="v">${esc(v)}</span>${c != null ? `<span class="c">${c.toLocaleString()}</span>` : ""}
+        ${dis ? "" : `<span class="pa">${m === "in" ? "" : `<button class="ai" data-act="pickIn" data-f="${f.id}" data-v="${esc(v)}"><i class="ri-add-line"></i>Include</button>`}${m === "ex" ? "" : `<button class="ae" data-act="pickEx" data-f="${f.id}" data-v="${esc(v)}"><i class="ri-subtract-line"></i>Exclude</button>`}${m ? `<button class="ar" data-act="pickRm" data-f="${f.id}" data-v="${esc(v)}" aria-label="Remove ${esc(v)}"><i class="ri-close-line"></i></button>` : ""}</span>`}
+      </div>`;
+    };
+    // Ordered lists keep selections in place; others pin them on top.
+    const pinned = ORDERED.has(f.id) ? [] : opts.filter(([v]) => sel.has(v)).filter(match);
+    const rest = opts.filter(([v]) => ORDERED.has(f.id) || !sel.has(v)).filter(match);
+    return `<div class="picker">
+      <div class="ps"><i class="ri-search-line"></i><input data-key="pq-${f.id}" data-pq="${f.id}" placeholder="${esc(f.search || `Search ${f.label.replace(/^([A-Z])(?=[a-z])/, (c) => c.toLowerCase())}`)}" value="${esc(st.pq || "")}" autocomplete="off" /></div>
+      <div class="pl">
+        ${pinned.map(row).join("")}${rest.map(row).join("")}
+        ${!pinned.length && !rest.length ? `<div class="pempty">Nothing matches "${esc(st.pq)}"</div>` : ""}
+      </div>
+      <div class="pfoot"><span></span><button class="link" data-act="closePicker">Done</button></div>
+    </div>`;
+  }
+
+  function fieldBody(st, f) {
+    if (f.type === "multi") {
+      const n = (st.values[f.id] || []).length;
+      return `<div class="chips">${chipsHtml(st, f)}${st.picker === f.id ? "" : `<button class="add" data-act="openPicker" data-f="${f.id}"><i class="ri-add-line"></i>${n ? "Add" : "Choose values"}</button>`}</div>${st.picker === f.id ? pickerHtml(st, f) : ""}`;
+    }
+    if (f.type === "keyword") {
+      return `<div class="field-inp"><i class="ri-text"></i><input data-key="kw-${f.id}" data-kw="${f.id}" placeholder="${esc(f.placeholder)}" autocomplete="off" /></div>
+        ${(st.values[f.id] || []).length ? `<div class="chips">${chipsHtml(st, f)}</div>` : ""}`;
+    }
+    if (f.type === "range") {
+      const cfg = RANGES[f.id];
+      const r = rangeOf(st, f.id);
+      const a = pos(f.id, r.lo), b = pos(f.id, r.hi);
+      return `<div class="rng">
+          <label class="box"><input data-key="rlo-${f.id}" data-range="${f.id}" data-end="lo" value="${esc(fmtRange(f.id, r.lo))}" aria-label="${esc(f.label)} from" /></label>
+          <span class="to">to</span>
+          <label class="box"><input data-key="rhi-${f.id}" data-range="${f.id}" data-end="hi" value="${esc(fmtRange(f.id, r.hi))}" aria-label="${esc(f.label)} to" /></label></div>
+        <div class="track"><span class="fill" style="left:${a}%;right:${100 - b}%"></span><span class="th" style="left:${a}%"></span><span class="th" style="left:${b}%"></span></div>
+        <div class="presets">${cfg.presets.map(([l, lo, hi], i) => `<button data-act="preset" data-f="${f.id}" data-i="${i}" class="${r.lo === lo && r.hi === hi ? "on" : ""}">${l}</button>`).join("")}</div>
+        <button class="sw ${r.unknown ? "" : "off"}" data-act="unknown" data-f="${f.id}" role="switch" aria-checked="${r.unknown}"><span class="k"></span>${cfg.unknown}</button>`;
+    }
+    return "";
+  }
+
+  function savedMenuHtml(st) {
+    const q = (st.savedQ || "").toLowerCase();
+    const item = (s) => {
+      const applied = st.saved === s.name;
+      const idx = SAVED.indexOf(s);
+      const nFilters = Object.keys(s.state.values).length + Object.keys(s.state.ranges).length;
+      return `<div class="sv ${applied ? "applied" : ""}" data-act="loadSaved" data-i="${idx}">
+        <i class="${applied ? "ri-check-line ok" : s.mine ? "ri-bookmark-line" : "ri-group-line"}"></i>
+        <div class="nm"><div>${esc(s.name)}</div><div>${applied ? (isModified(st) ? "Applied · changed since saving" : "Applied") : `${nFilters} filters · ${esc(s.meta)}`}</div></div>
+        ${s.mine ? '<i class="ri-share-line" title="Share"></i>' : ""}</div>`;
+    };
+    const mine = SAVED.filter((s) => s.mine && s.name.toLowerCase().includes(q));
+    const shared = SAVED.filter((s) => !s.mine && s.name.toLowerCase().includes(q));
+    return `<div class="pop2 savedmenu">
+      <div class="ph"><i class="ri-search-line"></i><input data-key="savedQ" data-savedq placeholder="Search saved filters" value="${esc(st.savedQ || "")}" autocomplete="off" /></div>
+      <div class="list">
+        ${mine.length ? `<div class="grp"><span>My filters</span><span>${mine.length}</span></div>${mine.map(item).join("")}` : ""}
+        ${shared.length ? `<div class="grp"><span>Shared with me</span><span>${shared.length}</span></div>${shared.map(item).join("")}` : ""}
+        <div class="rule"></div>
+        ${isModified(st) ? `<div class="act pri" data-act="updateSaved"><i class="ri-save-3-line"></i>Update "${esc(st.saved)}"</div>` : ""}
+        <div class="act" data-act="saveNew"><i class="ri-add-line"></i>Save current filters as new</div>
+        <div class="act" data-act="closeSaved"><i class="ri-settings-3-line"></i>Manage all filters</div>
+      </div></div>`;
+  }
+
+  function railHtml(st, interactive) {
+    const total = totalCount(st);
+    return `<div class="rail-p">
+      <button class="rb" data-act="${interactive ? "expand" : ""}" title="Expand filters" aria-label="Expand filters"><i class="ri-side-bar-fill"></i></button>
+      ${total ? `<span class="total" title="${total} filters applied">${total}</span>` : `<span style="height:8px"></span>`}
+      ${SECTIONS.map((s, i) => { const n = sectionCount(st, s); return `<button class="rb sec" data-act="${interactive ? "railSec" : ""}" data-s="${s.id}" title="${s.label}${n ? `: ${n} filter${n === 1 ? "" : "s"}` : ""}" aria-label="${s.label}${n ? `, ${n} filters` : ""}"><i class="${s.icon}"></i>${n ? `<span class="b">${n}</span>` : ""}${!interactive && i === 0 ? `<span class="tip">Accounts: ${n} filter${n === 1 ? "" : "s"}</span>` : ""}</button>`; }).join("")}
+      <span class="div"></span>
+      <button class="rb" data-act="${interactive ? "railSaved" : ""}" title="Saved filters" aria-label="Saved filters"><i class="ri-bookmark-line"></i></button>
+      <button class="rb" title="Account lists" aria-label="Account lists"><i class="ri-file-list-3-line"></i></button>
+      <span class="end">
+        <button class="rb" title="Download summary PDF" aria-label="Download summary PDF"><i class="ri-file-pdf-2-line"></i></button>
+        <button class="rb" title="Export" aria-label="Export" style="color:hsl(var(--primary))"><i class="ri-download-2-line"></i></button>
+        <button class="rb" title="Abhishek F" aria-label="Account and settings"><span class="av">AF</span></button>
+      </span>
+    </div>`;
+  }
+
+  function bodyHtml(st) {
+    const q = (st.find || "").trim().toLowerCase();
+    const parts = SECTIONS.map((s) => {
+      const n = sectionCount(st, s);
+      const fields = q ? s.fields.filter((f) => f.id && f.label.toLowerCase().includes(q)) : s.fields;
+      if (q && !fields.length) return "";
+      const open = q ? true : st.open.section === s.id;
+      const rows = fields.map((f) => {
+        if (f.more) return `<div class="more-h">More</div>`;
+        const fo = st.open.fields.has(f.id);
+        return `<div class="f ${fo ? "open" : ""} ${isActive(st, f) ? "active" : ""}" id="${st.uid}-${f.id}">
+          <button class="f-h" data-act="field" data-f="${f.id}" aria-expanded="${fo}"><span class="l">${esc(f.label)}</span><span class="s">${summary(st, f)}</span><i class="ri-arrow-right-s-line chev"></i></button>
+          <div class="f-b">${fo ? fieldBody(st, f) : ""}</div></div>`;
+      }).join("");
+      return `<div class="sec ${open ? "open" : ""}"><button class="sec-h" data-act="sec" data-s="${s.id}" aria-expanded="${open}"><i class="${s.icon}"></i>${s.label}${n ? `<span class="n">${n}</span>` : ""}<i class="ri-arrow-down-s-line chev"></i></button><div class="sec-b">${rows}</div></div>`;
+    }).join("");
+    return parts || `<div class="pempty" style="padding:20px 12px">No filter called "${esc(st.find)}". Try "city", "revenue" or "title".</div>`;
+  }
+
+  function render(el, st) {
+    // Keep focus and caret in whichever input was being typed in.
+    const a = document.activeElement;
+    const key = el.contains(a) && a.dataset ? a.dataset.key : null;
+    const caret = key && "selectionStart" in a ? a.selectionStart : null;
+
+    el.classList.toggle("rail", st.collapsed);
+    if (st.collapsed) {
+      el.innerHTML = railHtml(st, true);
+    } else {
+      const total = totalCount(st);
+      const vis = [["all", "All"], ["gcc", "GCCs"], ["nonGcc", "Non-GCCs"]];
+      el.innerHTML = `<div class="pr">
+        <div class="pr-top">
+          <div class="pr-hdr"><h4>Filters</h4>${total ? `<span class="count-pill">${total}</span>` : ""}<span class="sp"></span>
+            <button class="link" data-act="clearAll" ${total || st.visibility !== "all" ? "" : "disabled"}>Clear all</button>
+            <button class="icon-btn" data-act="collapse" title="Collapse filters" aria-label="Collapse filters"><i class="ri-side-bar-line"></i></button></div>
+          <div class="saved">
+            <button class="combo" data-act="savedMenu" aria-expanded="${Boolean(st.savedMenu)}"><i class="ri-bookmark-line"></i><span class="nm ${st.saved ? "" : "placeholder"}">${st.saved ? esc(st.saved) : "Saved filters"}</span>${isModified(st) ? `<span class="dot" title="Changed since saving"></span>` : ""}<i class="ri-arrow-down-s-line"></i></button>
+            <button class="sq" title="Account lists: upload a client list and filter by it" aria-label="Account lists"><i class="ri-file-list-3-line"></i></button>
+            ${st.savedMenu ? savedMenuHtml(st) : ""}
+          </div>
+          <label class="find"><i class="ri-search-line"></i><input data-key="find" data-find placeholder="Find a filter" value="${esc(st.find || "")}" autocomplete="off" />${st.find ? `<button class="x2" data-act="clearFind" aria-label="Clear search"><i class="ri-close-line"></i></button>` : "<kbd>/</kbd>"}</label>
+          <div class="seg-lbl"><span>Accounts to show</span></div>
+          <div class="seg3">${vis.map(([v, l]) => `<button data-act="vis" data-v="${v}" class="${st.visibility === v ? "on" : ""}">${l}</button>`).join("")}</div>
+        </div>
+        <div class="pr-body">${bodyHtml(st)}</div>
+        <div class="pr-foot">
+          <button class="me" title="Account and settings"><span class="av">AF</span><span class="who"><b>Abhishek F</b><span>Research NXT</span></span><i class="ri-expand-up-down-line"></i></button>
+          <button class="btn icon" title="Download summary PDF" aria-label="Download summary PDF"><i class="ri-file-pdf-2-line"></i></button>
+          <button class="btn primary"><i class="ri-download-2-line"></i>Export</button>
+        </div>
+      </div>`;
+      if (st.scrollTo) {
+        el.querySelector(`#${st.uid}-${st.scrollTo}`)?.scrollIntoView({ block: "nearest" });
+        st.scrollTo = null;
+      }
+    }
+    if (key) {
+      const next = el.querySelector(`[data-key="${key}"]`);
+      if (next) { next.focus(); if (caret != null) next.setSelectionRange(caret, caret); }
+    }
+    if (st.onRender) st.onRender();
+  }
+
+  // ================= Behaviour =================
+  function setValue(st, fid, v, mode) {
+    const list = (st.values[fid] ||= []);
+    const i = list.findIndex(([x]) => x === v);
+    if (mode === null) { if (i >= 0) list.splice(i, 1); }
+    else if (i >= 0) list[i][1] = mode;
+    else list.push([v, mode]);
+    if (!list.length) delete st.values[fid];
+  }
+  function openField(st, fid) {
+    const f = fieldById(fid);
+    st.find = "";
+    st.open.section = f.section;
+    st.open.fields.add(fid);
+    st.scrollTo = fid;
+  }
+  function loadSaved(st, s) {
+    const c = clone(s.state);
+    st.visibility = c.visibility; st.values = c.values; st.ranges = c.ranges;
+    st.saved = s.name; st.savedSnapshot = snapshot(st); st.savedMenu = false; st.savedQ = "";
+    st.open.fields = new Set(Object.keys(c.values).concat(Object.keys(c.ranges)));
+    const first = ALL_FIELDS.find((f) => st.open.fields.has(f.id));
+    st.open.section = first ? first.section : st.open.section;
+  }
+
+  function mount(el, st) {
+    render(el, st);
+    const rerender = () => render(el, st);
+
+    el.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-act]");
+      if (!b || !b.dataset.act) return;
+      const f = b.dataset.f;
+      switch (b.dataset.act) {
+        case "sec": st.open.section = st.open.section === b.dataset.s ? null : b.dataset.s; break;
+        case "field":
+          if (st.open.fields.has(f)) { st.open.fields.delete(f); if (st.picker === f) st.picker = null; }
+          else st.open.fields.add(f);
+          break;
+        case "mode": { const v = st.values[f][+b.dataset.i]; v[1] = v[1] === "in" ? "ex" : "in"; break; }
+        case "rm": st.values[f].splice(+b.dataset.i, 1); if (!st.values[f].length) delete st.values[f]; break;
+        case "clear": e.stopPropagation(); delete st.values[f]; delete st.ranges[f]; break;
+        case "goto": openField(st, f); break;
+        case "clearAll": st.values = {}; st.ranges = {}; st.visibility = "all"; st.saved = null; st.picker = null; break;
+        case "vis": st.visibility = b.dataset.v; break;
+        case "openPicker": st.picker = f; st.pq = ""; break;
+        case "closePicker": st.picker = null; st.pq = ""; break;
+        case "pick": { const cur = (st.values[f] || []).find(([x]) => x === b.dataset.v); setValue(st, f, b.dataset.v, cur ? null : "in"); break; }
+        case "pickIn": e.stopPropagation(); setValue(st, f, b.dataset.v, "in"); break;
+        case "pickEx": e.stopPropagation(); setValue(st, f, b.dataset.v, "ex"); break;
+        case "pickRm": e.stopPropagation(); setValue(st, f, b.dataset.v, null); break;
+        case "preset": { const [, lo, hi] = RANGES[f].presets[+b.dataset.i]; const r = rangeOf(st, f); st.ranges[f] = { ...r, lo, hi }; break; }
+        case "unknown": { const r = rangeOf(st, f); st.ranges[f] = { ...r, unknown: !r.unknown }; break; }
+        case "collapse": st.collapsed = true; st.savedMenu = false; break;
+        case "expand": st.collapsed = false; break;
+        case "railSec": st.collapsed = false; st.open.section = b.dataset.s; break;
+        case "railSaved": st.collapsed = false; st.savedMenu = true; break;
+        case "savedMenu": st.savedMenu = !st.savedMenu; st.savedQ = ""; break;
+        case "closeSaved": st.savedMenu = false; break;
+        case "loadSaved": loadSaved(st, SAVED[+b.dataset.i]); break;
+        case "updateSaved": { const s = SAVED.find((x) => x.name === st.saved); s.state = { visibility: st.visibility, values: clone(st.values), ranges: clone(st.ranges) }; s.meta = "updated just now"; st.savedSnapshot = snapshot(st); st.savedMenu = false; break; }
+        case "saveNew": {
+          const name = `Untitled filter ${SAVED.filter((x) => x.name.startsWith("Untitled")).length + 1}`;
+          SAVED.splice(SAVED.findIndex((x) => !x.mine), 0, { name, meta: "saved just now", mine: true, state: { visibility: st.visibility, values: clone(st.values), ranges: clone(st.ranges) } });
+          st.saved = name; st.savedSnapshot = snapshot(st); st.savedMenu = false; break;
+        }
+        case "clearFind": st.find = ""; break;
+      }
+      rerender();
+    });
+
+    el.addEventListener("input", (e) => {
+      const t = e.target;
+      if (t.dataset.pq !== undefined) { st.pq = t.value; rerender(); }
+      else if (t.dataset.find !== undefined) { st.find = t.value; rerender(); }
+      else if (t.dataset.savedq !== undefined) { st.savedQ = t.value; rerender(); }
+    });
+
+    el.addEventListener("keydown", (e) => {
+      const t = e.target;
+      if (e.key === "Escape") { st.picker = null; st.savedMenu = false; rerender(); return; }
+      if (e.key !== "Enter") return;
+      if (t.dataset.kw) {
+        const v = t.value.trim();
+        if (v) { setValue(st, t.dataset.kw, v, e.shiftKey ? "ex" : "in"); t.value = ""; rerender(); }
+        e.preventDefault();
+      } else if (t.dataset.pq) {
+        const f = t.dataset.pq;
+        const q = t.value.trim().toLowerCase();
+        const hit = OPTIONS[f].find(([v, c]) => v.toLowerCase().includes(q) && c !== 0 && !(st.values[f] || []).some(([x]) => x === v));
+        if (hit) { setValue(st, f, hit[0], e.shiftKey ? "ex" : "in"); st.pq = ""; rerender(); }
+        e.preventDefault();
+      } else if (t.dataset.range) {
+        t.blur();
+      }
+    });
+
+    el.addEventListener("change", (e) => {
+      const t = e.target;
+      if (!t.dataset.range) return;
+      const fid = t.dataset.range; const cfg = RANGES[fid];
+      const v = parseRange(fid, t.value);
+      const r = rangeOf(st, fid);
+      if (v != null) {
+        const clamped = Math.max(cfg.min, Math.min(cfg.max, v));
+        const next = { ...r, [t.dataset.end]: clamped };
+        if (next.lo > next.hi) [next.lo, next.hi] = [next.hi, next.lo];
+        st.ranges[fid] = next;
+      }
+      rerender();
+    });
+  }
+
+  // ================= Frames =================
+  function makeState(uid, saved, openSection, extra = {}) {
+    const st = { uid, visibility: "all", values: {}, ranges: {}, saved: null, savedSnapshot: "", open: { section: openSection, fields: new Set() }, picker: null, pq: "", find: "", collapsed: false, savedMenu: false, savedQ: "", ...extra };
+    if (saved) { loadSaved(st, saved); st.open.section = openSection; }
+    return st;
+  }
+
+  const exampleState = makeState("ex", SAVED[0], "accounts");
+  // Show the example slightly edited, so the "changed since saving" dot and Update action are visible.
+  setValue(exampleState, "subIndustry", "Banking", "in");
+  exampleState.open.fields = new Set(["industry", "hqCountry", "revenue"]);
+  exampleState.onRender = () => document.getElementById("p-rail").innerHTML = railHtml(exampleState, false);
+  mount(document.getElementById("p-example"), exampleState);
+
+  const emptyState = makeState("em", null, "centres");
+  mount(document.getElementById("p-empty"), emptyState);
+
+  document.getElementById("t-dark").onclick = (e) => {
+    const on = document.documentElement.classList.toggle("dark");
+    e.currentTarget.setAttribute("aria-pressed", on);
+  };
+</script>
+</body>
+</html>

@@ -596,7 +596,7 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
                 left: `${(tooltipPosition?.x ?? mousePosition.x + 15)}px`,
                 top: `${(tooltipPosition?.y ?? mousePosition.y + 15)}px`,
                 fontFamily:
-                  "'Geist', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                  "var(--font-sans), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
               }}
             >
               <div className="flex min-w-[220px] overflow-hidden rounded-lg border border-border/80 bg-popover/95 text-popover-foreground shadow-[0_12px_40px_-12px_rgba(0,0,0,0.35)] backdrop-blur-md animate-in fade-in-0 zoom-in-95 duration-150">

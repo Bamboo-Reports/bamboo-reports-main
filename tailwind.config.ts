@@ -13,7 +13,7 @@ const config: Config = {
   		extend: {
   		fontFamily: {
   			sans: [
-  				'var(--font-geist-sans)',
+  				'var(--font-sans)',
   				'system-ui',
   				'-apple-system',
   				'BlinkMacSystemFont',
@@ -62,6 +62,8 @@ const config: Config = {
   				'4': 'hsl(var(--chart-4))',
   				'5': 'hsl(var(--chart-5))'
   			},
+  			include: 'hsl(var(--include))',
+  			exclude: 'hsl(var(--exclude))',
   			sidebar: {
   				DEFAULT: 'hsl(var(--sidebar-background))',
   				foreground: 'hsl(var(--sidebar-foreground))',

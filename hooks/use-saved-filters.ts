@@ -6,8 +6,17 @@ import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { buildTrackedFiltersSnapshot, normalizeTrackedText } from "@/lib/analytics/tracking"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { calculateActiveFilters, withFilterDefaults } from "@/lib/dashboard/filter-summary"
-import type { SavedFilter } from "@/components/filters/saved-filter-card"
 import type { Filters } from "@/lib/types"
+
+export interface SavedFilter {
+  id: string
+  name: string
+  filters: Filters
+  created_at: string
+  updated_at: string
+  user_id: string
+  owner_email?: string
+}
 
 export interface FilterShare {
   id: string

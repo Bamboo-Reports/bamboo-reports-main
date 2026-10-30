@@ -46,6 +46,7 @@ export const AccountGridCard = memo(({ account, onClick }: AccountGridCardProps)
                 companyName={accountName}
                 size="md"
                 theme="auto"
+                zoom
               />
               <div className="min-w-0">
                 <h3

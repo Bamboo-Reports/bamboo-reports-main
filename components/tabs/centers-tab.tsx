@@ -1,14 +1,15 @@
 "use client"
 
 import React, { useEffect, useRef, useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { TabsContent } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
-import { RiLayoutGridLine, RiMapLine, RiMapPinLine, RiPieChartLine, RiStackLine, RiTableLine } from "@remixicon/react"
+import { RiMapLine, RiMapPinLine, RiPieChartLine, RiStackLine, RiTableLine } from "@remixicon/react"
 import { CenterRowMenu, centerColumns, getCenterKey } from "@/components/tables/center-columns"
-import { DataGridSortBar, DataTable, DataTablePagination } from "@/components/tables/data-table"
+import { DataLayoutSwitcher, DataTable, DataTablePagination, type DataLayout } from "@/components/tables/data-table"
 import { SelectionActionBar } from "@/components/tables/selection-action-bar"
 import { useDataTable } from "@/components/tables/use-data-table"
+import { useDataLayoutPreference } from "@/hooks/use-data-layout-preference"
 import { useRecordOpener } from "@/hooks/use-record-opener"
 import { CenterGridCard } from "@/components/cards/center-grid-card"
 import {
@@ -90,7 +91,7 @@ export function CentersTab({
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null)
   const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false)
-  const [dataLayout, setDataLayout] = useState<"table" | "grid">("table")
+  const [dataLayout, setDataLayout] = useDataLayoutPreference()
   const [mapMode, setMapMode] = useState<"city" | "state">("state")
   const {
     table,
@@ -115,7 +116,6 @@ export function CentersTab({
   useEffect(() => {
     scrollContainerRef.current?.scrollTo({ top: 0 })
   }, [currentPage])
-  const previousDataLayoutRef = React.useRef<"table" | "grid">("table")
   const previousMapModeRef = React.useRef<"city" | "state">("state")
   const openedRecordRef = React.useRef<{
     recordId: string
@@ -187,18 +187,6 @@ export function CentersTab({
   }
 
 
-  React.useEffect(() => {
-    if (previousDataLayoutRef.current === dataLayout) {
-      return
-    }
-
-    captureEvent(ANALYTICS_EVENTS.DATA_LAYOUT_CHANGED, {
-      screen: "centers",
-      data_layout: dataLayout,
-    })
-
-    previousDataLayoutRef.current = dataLayout
-  }, [dataLayout])
 
   React.useEffect(() => {
     if (previousMapModeRef.current === mapMode) {
@@ -228,6 +216,14 @@ export function CentersTab({
     openedRecordRef.current = null
   }, [isDialogOpen])
 
+
+  const handleDataLayoutChange = React.useCallback((layout: DataLayout) => {
+    setDataLayout(layout)
+    captureEvent(ANALYTICS_EVENTS.DATA_LAYOUT_CHANGED, {
+      screen: "centers",
+      data_layout: layout,
+    })
+  }, [setDataLayout])
 
   const handleRowOpen = React.useCallback(
     (center: Center) => handleCenterClick(center, "table_row"),
@@ -327,10 +323,11 @@ export function CentersTab({
 
       {/* Map Section */}
        {centersView === "map" && (
-         <Card data-tour="map-view" className="w-full flex flex-col h-[var(--dashboard-panel-height)] border shadow-sm view-content">
-           <CardHeader className="shrink-0 px-6 py-3">
-             <div className="flex items-center gap-3">
-               <CardTitle className="text-base">Centres Map</CardTitle>
+         <Card data-tour="map-view" className="w-full flex flex-col h-[var(--dashboard-panel-height)] overflow-hidden border shadow-sm view-content">
+           <CardContent className="relative p-0 flex flex-col flex-1 overflow-hidden">
+             {mapLoading && <MapUpdatingPill />}
+             {/* Top-right is the one free corner: zoom and fullscreen sit top-left, the legend bottom-left. */}
+             <div className="absolute right-3 top-3 z-20">
                <ViewSwitcher
                  value={mapMode}
                  onValueChange={(value) => setMapMode(value as "city" | "state")}
@@ -346,12 +343,8 @@ export function CentersTab({
                      icon: <RiStackLine className="h-4 w-4" />,
                    },
                  ]}
-                 className="ml-auto"
                />
              </div>
-           </CardHeader>
-           <CardContent className="relative p-0 flex flex-col flex-1 overflow-hidden">
-             {mapLoading && <MapUpdatingPill />}
              <MapErrorBoundary>
                {mapMode === "city" ? (
                  <CentersMap centers={centers} cities={mapData?.cities} heightClass="h-full" />
@@ -371,35 +364,8 @@ export function CentersTab({
 
        {/* Data Table */}
        {centersView === "data" && (
-         <Card className="w-full flex flex-col h-[var(--dashboard-panel-height)] border shadow-sm view-content">
-           <CardHeader className="shrink-0 px-6 py-3">
-             <div className="flex flex-wrap items-center gap-3">
-               <CardTitle className="text-base">Centres Data</CardTitle>
-               <div className="ml-auto flex items-center gap-2">
-                 <ViewSwitcher
-                   value={dataLayout}
-                   onValueChange={(value) => setDataLayout(value as "table" | "grid")}
-                   options={[
-                     {
-                       value: "table",
-                       label: "Table",
-                       icon: (
-                         <RiTableLine className="h-4 w-4" />
-                       ),
-                     },
-                     {
-                       value: "grid",
-                       label: "Grid",
-                       icon: (
-                         <RiLayoutGridLine className="h-4 w-4" />
-                       ),
-                     },
-                   ]}
-                 />
-               </div>
-             </div>
-           </CardHeader>
-            <CardContent className="flex min-h-0 flex-1 flex-col px-6 pb-0">
+         <Card className="w-full flex flex-col h-[var(--dashboard-panel-height)] overflow-hidden border shadow-sm view-content">
+            <CardContent className="flex min-h-0 flex-1 flex-col p-0">
               {dataLayout === "table" ? (
                 <DataTable
                   key="table"
@@ -412,8 +378,7 @@ export function CentersTab({
                   scrollRef={scrollContainerRef}
                 />
               ) : (
-                <div key="grid" ref={scrollContainerRef} className="view-content min-h-0 flex-1 overflow-auto rounded-md border">
-                  <DataGridSortBar column={table.getColumn("name")} label="centre name" />
+                <div key="grid" ref={scrollContainerRef} className="view-content min-h-0 flex-1 overflow-auto">
                   <div
                     className={cn(
                       "grid grid-cols-1 gap-4 p-4 transition-opacity sm:grid-cols-2 lg:grid-cols-3",
@@ -431,7 +396,11 @@ export function CentersTab({
                   </div>
                 </div>
               )}
-              <DataTablePagination table={table} totalRows={totalRows} />
+              <DataTablePagination
+                table={table}
+                totalRows={totalRows}
+                leading={<DataLayoutSwitcher value={dataLayout} onValueChange={handleDataLayoutChange} />}
+              />
             </CardContent>
          </Card>
        )}

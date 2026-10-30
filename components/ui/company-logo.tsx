@@ -19,13 +19,17 @@ interface CompanyLogoProps {
   fallbackMode?: LogoFallbackMode
   retina?: boolean
   priority?: boolean
+  /** Enlarge the image 2px past its box to trim the padding built into the icons. */
+  zoom?: boolean
 }
 
 const sizeMap = {
-  sm: { container: "h-8 w-8", icon: "h-4 w-4", img: 80 },
-  md: { container: "h-12 w-12", icon: "h-6 w-6", img: 100 },
-  lg: { container: "h-16 w-16", icon: "h-8 w-8", img: 128 },
-  xl: { container: "h-24 w-24", icon: "h-12 w-12", img: 150 },
+  // Table rows: a slightly tighter corner than the 12px default reads better at 40px.
+  // zoom is the scale that grows the image 2px inside the 1px border (38 to 40, 46 to 48).
+  sm: { container: "h-10 w-10 rounded-[10px]", icon: "h-5 w-5", img: 80, zoom: "scale-105" },
+  md: { container: "h-12 w-12", icon: "h-6 w-6", img: 100, zoom: "scale-[1.045]" },
+  lg: { container: "h-16 w-16", icon: "h-8 w-8", img: 128, zoom: "scale-[1.033]" },
+  xl: { container: "h-24 w-24", icon: "h-12 w-12", img: 150, zoom: "scale-[1.022]" },
 }
 
 const BRANDFETCH_CLIENT_ID = getBrandfetchClientId()
@@ -39,6 +43,7 @@ export function CompanyLogo({
   fallbackMode = "monogram",
   retina = true,
   priority = false,
+  zoom = false,
 }: CompanyLogoProps) {
   const { resolvedTheme } = useTheme()
   const [imageError, setImageError] = useState(false)
@@ -91,7 +96,7 @@ export function CompanyLogo({
       aria-label={`${companyName} logo fallback`}
     >
       {fallbackMode === "monogram" ? (
-        <span className={cn("font-semibold text-primary", size === "sm" ? "text-xs" : size === "xl" ? "text-3xl" : "text-sm")}>
+        <span className={cn("font-semibold text-primary", size === "xl" ? "text-3xl" : "text-sm")}>
           {companyMonogram}
         </span>
       ) : (
@@ -142,6 +147,7 @@ export function CompanyLogo({
         unoptimized
         className={cn(
           "object-contain transition-opacity duration-300",
+          zoom && sizeConfig.zoom,
           imageLoaded ? "opacity-100" : "opacity-0"
         )}
         sizes={`${sizeConfig.img}px`}

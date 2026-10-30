@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Summary cards: round two</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css" rel="stylesheet" />
+<style>
+  /* Tokens copied from app/globals.css */
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 214 45% 15%;
+    --card: 0 0% 100%;
+    --primary: 204 100% 41%;
+    --primary-foreground: 0 0% 100%;
+    --muted: 210 25% 94%;
+    --muted-foreground: 215 20% 39%;
+    --border: 212 24% 86%;
+    --ring: 204 100% 41%;
+    --sidebar-ring: 28 88% 53%;
+    --shadow: 0 14px 42px -30px rgba(0,0,0,.45);
+  }
+  .dark {
+    --background: 0 0% 10%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 12%;
+    --primary: 204 92% 56%;
+    --primary-foreground: 0 0% 10%;
+    --muted: 0 0% 16%;
+    --muted-foreground: 0 0% 65%;
+    --border: 0 0% 24%;
+    --ring: 0 0% 83.1%;
+    --sidebar-ring: 28 88% 60%;
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: light; }
+  html.dark { color-scheme: dark; }
+  body { margin: 0; font-family: "Inter", system-ui, sans-serif; background: hsl(var(--background)); color: hsl(var(--foreground)); -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+
+  .page { max-width: 1380px; margin: 0 auto; padding: 32px 24px 80px; }
+  .top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; margin-bottom: 20px; }
+  .top h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .controls { display: flex; gap: 8px; }
+  .toggle { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 13px; font-weight: 500; cursor: pointer; }
+  .toggle[aria-pressed="true"] { background: hsl(var(--primary) / .1); border-color: hsl(var(--primary) / .5); color: hsl(var(--primary)); }
+
+  .variant { padding: 22px 0 26px; border-top: 1px solid hsl(var(--border)); }
+  .vh { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; margin-bottom: 4px; }
+  .vh h2 { margin: 0; font-size: 15px; font-weight: 600; }
+  .tag { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: hsl(var(--primary) / .12); color: hsl(var(--primary)); }
+  .note { margin: 0 0 14px; max-width: 90ch; font-size: 13px; line-height: 1.5; color: hsl(var(--muted-foreground)); }
+  .stage { padding: 20px 24px; border-radius: 12px; border: 1px dashed hsl(var(--border)); overflow-x: auto; }
+  .stage-inner { min-width: 1000px; }
+
+  .ico { font-size: 16px; color: hsl(var(--primary)); line-height: 1; }
+  .n { font-size: 24px; font-weight: 600; line-height: 1.15; letter-spacing: -0.01em; }
+  .of { font-size: 12px; color: hsl(var(--muted-foreground)); white-space: nowrap; }
+  .lbl { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 500; }
+  .fig { display: flex; align-items: baseline; gap: 6px; margin-top: 4px; }
+
+  /* A: today */
+  .a { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 12px; }
+  .a .c { text-align: left; padding: 10px 14px 11px; border-radius: 12px; border: 1px solid hsl(var(--border) / .7); background: hsl(var(--card)); box-shadow: var(--shadow); cursor: pointer; }
+  .a .c.ro { cursor: help; }
+  .a .c.on { box-shadow: 0 0 0 2px hsl(var(--sidebar-ring)), var(--shadow); border-color: transparent; }
+
+  /* Share bar: how much of the total the filters keep */
+  .share { position: relative; height: 3px; margin-top: 9px; border-radius: 9px; background: hsl(var(--muted)); overflow: hidden; }
+  .share i { position: absolute; inset: 0 auto 0 0; border-radius: 9px; background: hsl(var(--primary) / .55); transition: width .4s cubic-bezier(.22,1,.36,1); }
+  .pct { font-size: 12px; font-weight: 500; color: hsl(var(--muted-foreground)); margin-left: auto; }
+
+  /* B: tabs group + overview stats */
+  .b { display: flex; align-items: stretch; gap: 20px; }
+  .b .tabs { flex: 3; display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 4px; padding: 4px; border-radius: 14px; background: hsl(var(--muted) / .8); }
+  .b .t { position: relative; text-align: left; padding: 9px 12px 10px; border: 0; border-radius: 10px; background: transparent; cursor: pointer; }
+  .b .t:hover:not(.on) { background: hsl(var(--card) / .55); }
+  .b .t.on { background: hsl(var(--card)); box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 14px -8px rgba(0,0,0,.2); }
+  .b .t.on::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: 0; height: 2px; border-radius: 2px; background: hsl(var(--primary)); }
+  .b .t:not(.on) .lbl { color: hsl(var(--muted-foreground)); }
+  .b .t:not(.on) .ico { color: hsl(var(--muted-foreground)); }
+  .b .stats { flex: 2; display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 20px; align-items: center; padding-left: 20px; border-left: 1px solid hsl(var(--border)); }
+  .b .s .lbl { font-size: 12px; color: hsl(var(--muted-foreground)); }
+  .b .s .ico { color: hsl(var(--muted-foreground)); font-size: 14px; }
+  .b .s .n { font-size: 22px; }
+
+  /* C: five cards, tabs vs stats styled apart, with share bar */
+  .c5 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)) 1px repeat(2, minmax(0,1fr)); gap: 12px; align-items: stretch; }
+  .c5 .sep { background: hsl(var(--border)); margin: 6px 0; }
+  .c5 .c { text-align: left; padding: 10px 14px 11px; border-radius: 12px; }
+  .c5 .tab { border: 1px solid hsl(var(--border) / .7); background: hsl(var(--card)); box-shadow: var(--shadow); cursor: pointer; transition: border-color .15s, box-shadow .15s, background .15s; }
+  .c5 .tab:hover:not(.on) { border-color: hsl(var(--border)); }
+  .c5 .tab.on { border-color: hsl(var(--primary) / .55); background: hsl(var(--primary) / .05); box-shadow: 0 0 0 1px hsl(var(--primary) / .55), var(--shadow); }
+  .c5 .stat { border: 1px solid transparent; background: hsl(var(--muted) / .45); cursor: default; }
+  .c5 .stat .lbl { color: hsl(var(--muted-foreground)); }
+
+  /* D: one strip, tabs underlined, stats after a divider */
+  .dwrap { display: grid; grid-template-columns: 3fr 2fr; gap: 12px; }
+  .d { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0,1fr); border-radius: 14px; border: 1px solid hsl(var(--border) / .8); background: hsl(var(--card)); box-shadow: var(--shadow); overflow: hidden; }
+  .d .cell { position: relative; text-align: left; padding: 11px 16px 12px; border: 0; background: transparent; }
+  .d .cell + .cell { border-left: 1px solid hsl(var(--border) / .8); }
+  .d .tab { cursor: pointer; }
+  .d .tab:hover:not(.on) { background: hsl(var(--muted) / .5); }
+  .d .tab.on { background: hsl(var(--primary) / .06); }
+  .d .tab.on::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: hsl(var(--primary)); }
+  .d .tab:not(.on) .lbl, .d .stat .lbl { color: hsl(var(--muted-foreground)); }
+  .d .stat .ico, .d .tab:not(.on) .ico { color: hsl(var(--muted-foreground)); }
+
+  .below { margin-top: 16px; height: 38px; border-radius: 10px; background: hsl(var(--muted) / .7); display: flex; align-items: center; padding: 0 14px; font-size: 13px; color: hsl(var(--muted-foreground)); }
+  .below b { color: hsl(var(--foreground)); font-weight: 600; margin-left: 4px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="top">
+    <h1>Summary cards</h1>
+    <div class="controls">
+      <button class="toggle" id="t-filter" aria-pressed="false"><i class="ri-filter-3-line"></i> Filters applied</button>
+      <button class="toggle" id="t-dark" aria-pressed="false"><i class="ri-moon-line"></i> Dark</button>
+    </div>
+  </div>
+
+  <section class="variant">
+    <div class="vh"><h2>A · Today</h2></div>
+    <p class="note">All five look clickable; Upcoming Centres and Headcount only show a toast. The selected view is an orange ring, while selection elsewhere is blue.</p>
+    <div class="stage"><div class="stage-inner"><div class="a" data-v="a"></div><div class="below">Showing <b class="cur"></b></div></div></div>
+  </section>
+
+  <section class="variant">
+    <div class="vh"><h2>B · Views as tabs, stats on the side</h2><span class="tag">Recommended</span></div>
+    <p class="note">The three views sit in one tab group; Upcoming Centres and Headcount become plain figures with no card, so nothing invites a dead click.</p>
+    <div class="stage"><div class="stage-inner"><div class="b" data-v="b"></div><div class="below">Showing <b class="cur"></b></div></div></div>
+  </section>
+
+  <section class="variant">
+    <div class="vh"><h2>C · Same cards, told apart, with share</h2></div>
+    <p class="note">Keeps five cards. Views keep their card and get a blue selected state; stats lose the border and shadow. A thin bar shows how much of the total the filters keep.</p>
+    <div class="stage"><div class="stage-inner"><div class="c5" data-v="c"></div><div class="below">Showing <b class="cur"></b></div></div></div>
+  </section>
+
+  <section class="variant">
+    <div class="vh"><h2>D · Two strips</h2></div>
+    <p class="note">The densest: the three views in one strip with the selected one underlined, the two stats in a second strip beside it.</p>
+    <div class="stage"><div class="stage-inner"><div class="dwrap" data-v="d"></div><div class="below">Showing <b class="cur"></b></div></div></div>
+  </section>
+</div>
+
+<script>
+  // Illustrative counts. "default" is the app's opening state (GCCs only).
+  const DATA = {
+    default: { accounts: [2493, 2710], centres: [6129, 6512], upcoming: [126, 145], prospects: [61418, 63402], headcount: [3912000, 3948000] },
+    filtered: { accounts: [588, 2710], centres: [973, 6512], upcoming: [12, 145], prospects: [10140, 63402], headcount: [514500, 3948000] },
+  };
+  const ITEMS = [
+    { id: "accounts", label: "Accounts", icon: "ri-building-line", view: true },
+    { id: "centres", label: "Centres", icon: "ri-briefcase-line", view: true },
+    { id: "upcoming", label: "Upcoming Centres", icon: "ri-time-line", view: false },
+    { id: "prospects", label: "Prospects", icon: "ri-group-line", view: true },
+    { id: "headcount", label: "Headcount", icon: "ri-user-follow-line", view: false },
+  ];
+  let active = "accounts";
+  let filtered = false;
+
+  const compact = (n) => {
+    const t = (v) => { const x = Math.floor(v * 10) / 10; return x % 1 === 0 ? x.toFixed(0) : x.toFixed(1); };
+    if (n >= 1e6) return `${t(n / 1e6)}M`;
+    if (n >= 1e3) return `${t(n / 1e3)}K`;
+    return n.toLocaleString();
+  };
+  const figure = (id, opts = {}) => {
+    const [v, total] = DATA[filtered ? "filtered" : "default"][id];
+    const pct = Math.round((v / total) * 100);
+    return `<div class="fig"><span class="n">${compact(v)}</span><span class="of">of ${compact(total)}</span>${opts.pct ? `<span class="pct">${pct}%</span>` : ""}</div>${opts.bar ? `<div class="share" title="${pct}% of the total"><i style="width:${pct}%"></i></div>` : ""}`;
+  };
+  const label = (it) => `<div class="lbl"><i class="${it.icon} ico"></i>${it.label}</div>`;
+  const views = ITEMS.filter((i) => i.view), stats = ITEMS.filter((i) => !i.view);
+
+  const RENDER = {
+    a: () => ITEMS.map((it) => `<button class="c ${it.view ? "" : "ro"} ${active === it.id ? "on" : ""}" ${it.view ? `data-id="${it.id}"` : `title="Overview stat"`}>${label(it)}${figure(it.id)}</button>`).join(""),
+    b: () => `<div class="tabs" role="tablist">${views.map((it) => `<button role="tab" aria-selected="${active === it.id}" class="t ${active === it.id ? "on" : ""}" data-id="${it.id}">${label(it)}${figure(it.id)}</button>`).join("")}</div>
+      <div class="stats">${stats.map((it) => `<div class="s">${label(it)}${figure(it.id)}</div>`).join("")}</div>`,
+    c: () => [...views.map((it) => `<button class="c tab ${active === it.id ? "on" : ""}" data-id="${it.id}">${label(it)}${figure(it.id, { pct: true, bar: true })}</button>`), `<span class="sep"></span>`,
+      ...stats.map((it) => `<div class="c stat">${label(it)}${figure(it.id, { pct: true, bar: true })}</div>`)].join(""),
+    d: () => `<div class="d" role="tablist">${views.map((it) => `<button role="tab" aria-selected="${active === it.id}" class="cell tab ${active === it.id ? "on" : ""}" data-id="${it.id}">${label(it)}${figure(it.id)}</button>`).join("")}</div>
+      <div class="d">${stats.map((it) => `<div class="cell stat">${label(it)}${figure(it.id)}</div>`).join("")}</div>`,
+  };
+
+  function render() {
+    document.querySelectorAll("[data-v]").forEach((el) => (el.innerHTML = RENDER[el.dataset.v]()));
+    document.querySelectorAll(".cur").forEach((el) => (el.textContent = ITEMS.find((i) => i.id === active).label));
+  }
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-id]");
+    if (b) { active = b.dataset.id; render(); }
+  });
+  document.getElementById("t-filter").onclick = (e) => { filtered = !filtered; e.currentTarget.setAttribute("aria-pressed", filtered); render(); };
+  document.getElementById("t-dark").onclick = (e) => { const on = document.documentElement.classList.toggle("dark"); e.currentTarget.setAttribute("aria-pressed", on); };
+  render();
+</script>
+</body>
+</html>

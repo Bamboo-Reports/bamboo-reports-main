@@ -1,18 +1,17 @@
 import React from "react"
-import { RiArrowDownSLine, RiArrowUpSLine, RiLockLine } from "@remixicon/react"
 import { toast } from "sonner"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Slider } from "@/components/ui/slider"
-import { Button } from "@/components/ui/button"
 import { EnhancedMultiSelect } from "@/components/enhanced-multi-select"
 import { AccountAutocomplete } from "@/components/filters/account-autocomplete"
 import { TitleKeywordInput } from "@/components/filters/title-keyword-input"
 import { AccountListPicker } from "@/components/filters/account-list-picker"
+import { FilterValuesSummary } from "@/components/filters/filter-chip"
+import { FilterMoreDivider, FilterRow } from "@/components/filters/filter-row"
+import { FilterRangeField, formatRangeSummary, type RangePreset } from "@/components/filters/filter-range-field"
+import { isRangeActive } from "@/components/filters/filter-fields"
+import { useAccountLists } from "@/contexts/account-lists-context"
 import { withAccountLists } from "@/lib/accounts/account-lists"
 import { getPremiumFilterKeys, isFilterEnabled, isShowMoreEnabled } from "@/lib/config/filters"
-import type { Alias, Filters, AvailableOptions } from "@/lib/types"
+import type { Alias, AvailableOptions, FilterOption, FilterValue, Filters } from "@/lib/types"
 
 interface FilterSectionBaseProps {
   pendingFilters: Filters
@@ -23,878 +22,311 @@ interface FilterSectionBaseProps {
   setActiveFilter: (filter: string | null) => void
 }
 
+type Bounds = { min: number; max: number }
+
 interface AccountFilterSectionProps extends FilterSectionBaseProps {
   accountNames: string[]
   aliases?: Alias[]
   serverMode?: boolean
-  revenueRange: { min: number; max: number }
-  yearsInIndiaRange: { min: number; max: number }
-  handleMinRevenueChange: (value: string) => void
-  handleMaxRevenueChange: (value: string) => void
+  revenueRange: Bounds
+  yearsInIndiaRange: Bounds
   handleRevenueRangeChange: (value: [number, number]) => void
-  handleMinYearsInIndiaChange: (value: string) => void
-  handleMaxYearsInIndiaChange: (value: string) => void
   handleYearsInIndiaRangeChange: (value: [number, number]) => void
-  formatRevenueInMillions: (value: number) => string
 }
 
 interface CenterFilterSectionProps extends FilterSectionBaseProps {
-  centerIncYearRange: { min: number; max: number }
-  handleMinCenterIncYearChange: (value: string) => void
-  handleMaxCenterIncYearChange: (value: string) => void
+  centerIncYearRange: Bounds
   handleCenterIncYearRangeChange: (value: [number, number]) => void
 }
 
-interface ProspectFilterSectionProps extends FilterSectionBaseProps {}
+type ProspectFilterSectionProps = FilterSectionBaseProps
 
-export function AccountFiltersSection({
+type ValuesKey = {
+  [K in keyof Filters]: Filters[K] extends FilterValue[] ? K : never
+}[keyof Filters] & keyof AvailableOptions
+
+interface ValuesRowProps extends FilterSectionBaseProps {
+  filterKey: ValuesKey
+  label: string
+  /** List the options by size ("<50", "51 - 100") instead of by count. */
+  ordered?: boolean
+}
+
+/** A list filter (include/exclude any of the options) as a collapsible row. */
+function ValuesRow({
+  filterKey,
+  label,
+  ordered,
   pendingFilters,
   availableOptions,
   isApplying,
   activeFilter,
   setPendingFilters,
   setActiveFilter,
-  accountNames,
-  aliases,
-  serverMode,
-  revenueRange,
-  yearsInIndiaRange,
-  handleMinRevenueChange,
-  handleMaxRevenueChange,
-  handleRevenueRangeChange,
-  handleMinYearsInIndiaChange,
-  handleMaxYearsInIndiaChange,
-  handleYearsInIndiaRangeChange,
-  formatRevenueInMillions,
-}: AccountFilterSectionProps) {
-  const [showMoreAccountFilters, setShowMoreAccountFilters] = React.useState(false)
-  const hiddenAccountFilterKeys = getPremiumFilterKeys("accounts")
-  const canShowMoreAccountFilters = isShowMoreEnabled("accounts")
+}: ValuesRowProps) {
+  if (!isFilterEnabled(filterKey)) return null
+  const selected = pendingFilters[filterKey]
+  const options: FilterOption[] = availableOptions[filterKey] ?? []
+  return (
+    <FilterRow label={label} active={selected.length > 0} summary={<FilterValuesSummary values={selected} />}>
+      <EnhancedMultiSelect
+        options={options}
+        selected={selected}
+        trackingKey={filterKey}
+        ordered={ordered}
+        onChange={(next) => {
+          setPendingFilters((prev) => ({ ...prev, [filterKey]: next }))
+          setActiveFilter(filterKey)
+        }}
+        placeholder="Choose values"
+        isApplying={isApplying && activeFilter === filterKey}
+      />
+    </FilterRow>
+  )
+}
 
-  const hasPremiumAccountFilters = hiddenAccountFilterKeys.length > 0
+/** The "More" divider, or a locked one when the plan doesn't include those filters. */
+function MoreFilters({ section }: { section: "accounts" | "centers" }) {
+  if (getPremiumFilterKeys(section).length === 0) return null
+  const procured = isShowMoreEnabled(section)
+  return (
+    <FilterMoreDivider
+      locked={!procured}
+      onLockedClick={() => toast.info("Premium filters are Not Procured.")}
+    />
+  )
+}
+
+const CURRENT_YEAR = new Date().getFullYear()
+
+const REVENUE_PRESETS: RangePreset[] = [
+  { label: "Under $100M", range: [0, 100] },
+  { label: "$100M to $1B", range: [100, 1000] },
+  { label: "$1B to $10B", range: [1000, 10000] },
+  { label: "$10B+", range: [10000, Number.MAX_SAFE_INTEGER] },
+]
+
+const YEARS_IN_INDIA_PRESETS: RangePreset[] = [
+  { label: "0 to 5", range: [0, 5] },
+  { label: "5 to 15", range: [5, 15] },
+  { label: "15+", range: [15, Number.MAX_SAFE_INTEGER] },
+]
+
+const INC_YEAR_PRESETS: RangePreset[] = [
+  { label: "Last 2 years", range: [CURRENT_YEAR - 2, Number.MAX_SAFE_INTEGER] },
+  { label: "Last 5 years", range: [CURRENT_YEAR - 5, Number.MAX_SAFE_INTEGER] },
+  { label: "Before 2010", range: [0, 2009] },
+]
+
+export function AccountFiltersSection(props: AccountFilterSectionProps) {
+  const {
+    pendingFilters,
+    setPendingFilters,
+    accountNames,
+    aliases,
+    serverMode,
+    revenueRange,
+    yearsInIndiaRange,
+    handleRevenueRangeChange,
+    handleYearsInIndiaRangeChange,
+  } = props
+  const { lists } = useAccountLists()
+
+  const accountListNames = pendingFilters.accountListValues.map((item) => ({
+    ...item,
+    value: lists.find((list) => list.id === item.value)?.name ?? "List",
+  }))
+  const revenueIncludeNull = isFilterEnabled("accountHqRevenueIncludeNull")
+  const yearsIncludeNull = isFilterEnabled("yearsInIndiaIncludeNull")
 
   return (
-    <div className="pr-2">
-        <div className="space-y-4 pt-2">
-          <div className="space-y-3">
-          {isFilterEnabled("accountGlobalLegalNameKeywords") && (
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">Account Name</Label>
-            <AccountAutocomplete
-              accountNames={accountNames}
-              aliases={aliases}
-              serverSuggest={serverMode}
-              selectedAccounts={pendingFilters.accountGlobalLegalNameKeywords}
-              onChange={(keywords) => setPendingFilters((prev) => ({ ...prev, accountGlobalLegalNameKeywords: keywords }))}
-              placeholder="Type to search account names..."
-              trackingKey="accountGlobalLegalNameKeywords"
-            />
-          </div>
-          )}
+    <div>
+      {isFilterEnabled("accountGlobalLegalNameKeywords") && (
+        <FilterRow
+          label="Account name"
+          active={pendingFilters.accountGlobalLegalNameKeywords.length > 0}
+          summary={<FilterValuesSummary values={pendingFilters.accountGlobalLegalNameKeywords} />}
+        >
+          <AccountAutocomplete
+            accountNames={accountNames}
+            aliases={aliases}
+            serverSuggest={serverMode}
+            selectedAccounts={pendingFilters.accountGlobalLegalNameKeywords}
+            onChange={(keywords) => setPendingFilters((prev) => ({ ...prev, accountGlobalLegalNameKeywords: keywords }))}
+            placeholder="Search account names"
+            trackingKey="accountGlobalLegalNameKeywords"
+          />
+        </FilterRow>
+      )}
 
-          {isFilterEnabled("accountListValues") && (
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">Account List</Label>
-            <AccountListPicker
-              selected={pendingFilters.accountListValues}
-              accountNameCount={pendingFilters.accountNameValues.length}
-              onChange={(selection, lists) =>
-                setPendingFilters((prev) => withAccountLists(prev, selection, lists))
-              }
-              onClearNames={() => setPendingFilters((prev) => ({ ...prev, accountListValues: [], accountNameValues: [] }))}
-            />
-          </div>
-          )}
+      {isFilterEnabled("accountListValues") && (
+        <FilterRow
+          label="Account list"
+          active={pendingFilters.accountListValues.length > 0 || pendingFilters.accountNameValues.length > 0}
+          summary={
+            accountListNames.length > 0
+              ? <FilterValuesSummary values={accountListNames} />
+              : `${pendingFilters.accountNameValues.length.toLocaleString()} accounts`
+          }
+        >
+          <AccountListPicker
+            selected={pendingFilters.accountListValues}
+            accountNameCount={pendingFilters.accountNameValues.length}
+            onChange={(selection, nextLists) => setPendingFilters((prev) => withAccountLists(prev, selection, nextLists))}
+            onClearNames={() => setPendingFilters((prev) => ({ ...prev, accountListValues: [], accountNameValues: [] }))}
+          />
+        </FilterRow>
+      )}
 
-            {isFilterEnabled("accountHqRevenueRange") && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs font-medium">HQ Company Revenue</Label>
-                {isFilterEnabled("accountHqRevenueIncludeNull") && (
-                <div className="flex items-center gap-2">
-                <Checkbox
-                  id="include-null-revenue"
-                  checked={pendingFilters.accountHqRevenueIncludeNull}
-                  onCheckedChange={(checked) =>
-                    setPendingFilters((prev) => ({
-                      ...prev,
-                      accountHqRevenueIncludeNull: checked === true,
-                    }))
-                  }
-                  className="h-3.5 w-3.5"
-                />
-                <Label
-                  htmlFor="include-null-revenue"
-                  className="text-xs text-muted-foreground cursor-pointer select-none"
-                >
-                  Include all
-                </Label>
-              </div>
-                )}
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
-                <Label htmlFor="min-revenue" className="text-xs">Min</Label>
-                <Input
-                  id="min-revenue"
-                  type="number"
-                  value={pendingFilters.accountHqRevenueRange[0]}
-                  onChange={(e) => handleMinRevenueChange(e.target.value)}
-                  onFocus={(e) => e.target.select()}
-                  onBlur={() => {
-                    const val = pendingFilters.accountHqRevenueRange[0]
-                    const clamped = Math.max(revenueRange.min, Math.min(val, pendingFilters.accountHqRevenueRange[1]))
-                    if (clamped !== val) {
-                      toast.info(`Revenue data ranges from ${revenueRange.min}M to ${revenueRange.max}M`)
-                      setPendingFilters((prev) => ({ ...prev, accountHqRevenueRange: [clamped, prev.accountHqRevenueRange[1]] }))
-                    }
-                  }}
-                  min={revenueRange.min}
-                  max={pendingFilters.accountHqRevenueRange[1]}
-                  className="text-xs h-8"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="max-revenue" className="text-xs">Max</Label>
-                <Input
-                  id="max-revenue"
-                  type="number"
-                  value={pendingFilters.accountHqRevenueRange[1]}
-                  onChange={(e) => handleMaxRevenueChange(e.target.value)}
-                  onFocus={(e) => e.target.select()}
-                  onBlur={() => {
-                    const val = pendingFilters.accountHqRevenueRange[1]
-                    const clamped = Math.min(revenueRange.max, Math.max(val, pendingFilters.accountHqRevenueRange[0]))
-                    if (clamped !== val) {
-                      toast.info(`Revenue data ranges from ${revenueRange.min}M to ${revenueRange.max}M`)
-                      setPendingFilters((prev) => ({ ...prev, accountHqRevenueRange: [prev.accountHqRevenueRange[0], clamped] }))
-                    }
-                  }}
-                  min={pendingFilters.accountHqRevenueRange[0]}
-                  max={revenueRange.max}
-                  className="text-xs h-8"
-                />
-              </div>
-            </div>
-            <div className="px-2">
-              <Slider
-                value={pendingFilters.accountHqRevenueRange}
-                onValueChange={(value) => handleRevenueRangeChange(value as [number, number])}
-                min={revenueRange.min}
-                max={revenueRange.max}
-                step={Math.max(1, Math.floor((revenueRange.max - revenueRange.min) / 1000))}
-                className="w-full"
-              />
-            </div>
-            <div className="flex justify-between text-xs text-muted-foreground px-2">
-              <span>{formatRevenueInMillions(revenueRange.min)}</span>
-              <span>{formatRevenueInMillions(revenueRange.max)}</span>
-            </div>
-          </div>
-            )}
+      {isFilterEnabled("accountHqRevenueRange") && (
+        <FilterRow
+          label="HQ revenue"
+          active={isRangeActive(pendingFilters.accountHqRevenueRange, revenueRange, !revenueIncludeNull || pendingFilters.accountHqRevenueIncludeNull)}
+          summary={formatRangeSummary(pendingFilters.accountHqRevenueRange, revenueRange, !revenueIncludeNull || pendingFilters.accountHqRevenueIncludeNull, "money")}
+        >
+          <FilterRangeField
+            label="HQ revenue"
+            unit="money"
+            value={pendingFilters.accountHqRevenueRange}
+            bounds={revenueRange}
+            onChange={handleRevenueRangeChange}
+            presets={REVENUE_PRESETS}
+            includeNull={revenueIncludeNull ? pendingFilters.accountHqRevenueIncludeNull : undefined}
+            onIncludeNullChange={
+              revenueIncludeNull
+                ? (includeNull) => setPendingFilters((prev) => ({ ...prev, accountHqRevenueIncludeNull: includeNull }))
+                : undefined
+            }
+            includeNullLabel="Include accounts with no revenue data"
+          />
+        </FilterRow>
+      )}
 
-          {isFilterEnabled("accountCenterEmployeesRangeValues") && (
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">GCC Aggregate Headcount (India)</Label>
-            <EnhancedMultiSelect
-              options={availableOptions.accountCenterEmployeesRangeValues}
-              selected={pendingFilters.accountCenterEmployeesRangeValues}
-              trackingKey="accountCenterEmployeesRangeValues"
-              onChange={(selected) => {
-                setPendingFilters((prev) => ({ ...prev, accountCenterEmployeesRangeValues: selected }))
-                setActiveFilter("accountCenterEmployeesRangeValues")
-              }}
-              placeholder="Select headcount range..."
-              isApplying={isApplying && activeFilter === "accountCenterEmployeesRangeValues"}
-            />
-          </div>
-          )}
+      <ValuesRow {...props} filterKey="accountCenterEmployeesRangeValues" label="GCC headcount (India)" ordered />
 
-          {isFilterEnabled("accountYearsInIndiaRange") && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs font-medium">Years In India</Label>
-              {isFilterEnabled("yearsInIndiaIncludeNull") && (
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="include-null-years-in-india"
-                  checked={pendingFilters.yearsInIndiaIncludeNull}
-                  onCheckedChange={(checked) =>
-                    setPendingFilters((prev) => ({
-                      ...prev,
-                      yearsInIndiaIncludeNull: checked === true,
-                    }))
-                  }
-                  className="h-3.5 w-3.5"
-                />
-                <Label
-                  htmlFor="include-null-years-in-india"
-                  className="text-xs text-muted-foreground cursor-pointer select-none"
-                >
-                  Include all
-                </Label>
-              </div>
-              )}
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
-                <Label htmlFor="min-years-in-india" className="text-xs">Min</Label>
-                <Input
-                  id="min-years-in-india"
-                  type="number"
-                  value={pendingFilters.accountYearsInIndiaRange[0]}
-                  onChange={(e) => handleMinYearsInIndiaChange(e.target.value)}
-                  onFocus={(e) => e.target.select()}
-                  onBlur={() => {
-                    const val = pendingFilters.accountYearsInIndiaRange[0]
-                    const clamped = Math.max(yearsInIndiaRange.min, Math.min(val, pendingFilters.accountYearsInIndiaRange[1]))
-                    if (clamped !== val) {
-                      toast.info(`Years in India data ranges from ${yearsInIndiaRange.min} to ${yearsInIndiaRange.max}`)
-                      setPendingFilters((prev) => ({ ...prev, accountYearsInIndiaRange: [clamped, prev.accountYearsInIndiaRange[1]] }))
-                    }
-                  }}
-                  min={yearsInIndiaRange.min}
-                  max={pendingFilters.accountYearsInIndiaRange[1]}
-                  className="text-xs h-8"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="max-years-in-india" className="text-xs">Max</Label>
-                <Input
-                  id="max-years-in-india"
-                  type="number"
-                  value={pendingFilters.accountYearsInIndiaRange[1]}
-                  onChange={(e) => handleMaxYearsInIndiaChange(e.target.value)}
-                  onFocus={(e) => e.target.select()}
-                  onBlur={() => {
-                    const val = pendingFilters.accountYearsInIndiaRange[1]
-                    const clamped = Math.min(yearsInIndiaRange.max, Math.max(val, pendingFilters.accountYearsInIndiaRange[0]))
-                    if (clamped !== val) {
-                      toast.info(`Years in India data ranges from ${yearsInIndiaRange.min} to ${yearsInIndiaRange.max}`)
-                      setPendingFilters((prev) => ({ ...prev, accountYearsInIndiaRange: [prev.accountYearsInIndiaRange[0], clamped] }))
-                    }
-                  }}
-                  min={pendingFilters.accountYearsInIndiaRange[0]}
-                  max={yearsInIndiaRange.max}
-                  className="text-xs h-8"
-                />
-              </div>
-            </div>
-            <div className="px-2">
-              <Slider
-                value={pendingFilters.accountYearsInIndiaRange}
-                onValueChange={(value) => handleYearsInIndiaRangeChange(value as [number, number])}
-                min={yearsInIndiaRange.min}
-                max={yearsInIndiaRange.max}
-                step={1}
-                className="w-full"
-              />
-            </div>
-            <div className="flex justify-between text-xs text-muted-foreground px-2">
-              <span>{yearsInIndiaRange.min.toLocaleString()}</span>
-              <span>{yearsInIndiaRange.max.toLocaleString()}</span>
-            </div>
-          </div>
-          )}
+      {isFilterEnabled("accountYearsInIndiaRange") && (
+        <FilterRow
+          label="Years in India"
+          active={isRangeActive(pendingFilters.accountYearsInIndiaRange, yearsInIndiaRange, !yearsIncludeNull || pendingFilters.yearsInIndiaIncludeNull)}
+          summary={formatRangeSummary(pendingFilters.accountYearsInIndiaRange, yearsInIndiaRange, !yearsIncludeNull || pendingFilters.yearsInIndiaIncludeNull, "years")}
+        >
+          <FilterRangeField
+            label="Years in India"
+            unit="years"
+            value={pendingFilters.accountYearsInIndiaRange}
+            bounds={yearsInIndiaRange}
+            onChange={handleYearsInIndiaRangeChange}
+            presets={YEARS_IN_INDIA_PRESETS}
+            includeNull={yearsIncludeNull ? pendingFilters.yearsInIndiaIncludeNull : undefined}
+            onIncludeNullChange={
+              yearsIncludeNull
+                ? (includeNull) => setPendingFilters((prev) => ({ ...prev, yearsInIndiaIncludeNull: includeNull }))
+                : undefined
+            }
+            includeNullLabel="Include accounts with no start year"
+          />
+        </FilterRow>
+      )}
 
-          {isFilterEnabled("accountPrimaryCategoryValues") && (
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">Industry</Label>
-            <EnhancedMultiSelect
-              options={availableOptions.accountPrimaryCategoryValues}
-              selected={pendingFilters.accountPrimaryCategoryValues}
-              trackingKey="accountPrimaryCategoryValues"
-              onChange={(selected) => {
-                setPendingFilters((prev) => ({ ...prev, accountPrimaryCategoryValues: selected }))
-                setActiveFilter("accountPrimaryCategoryValues")
-              }}
-              placeholder="Select industries..."
-              isApplying={isApplying && activeFilter === "accountPrimaryCategoryValues"}
-            />
-          </div>
-          )}
-          {isFilterEnabled("accountHqCountryValues") && (
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">HQ Country</Label>
-            <EnhancedMultiSelect
-              options={availableOptions.accountHqCountryValues || []}
-              selected={pendingFilters.accountHqCountryValues}
-              trackingKey="accountHqCountryValues"
-              onChange={(selected) => {
-                setPendingFilters((prev) => ({ ...prev, accountHqCountryValues: selected }))
-                setActiveFilter("accountHqCountryValues")
-              }}
-              placeholder="Select countries..."
-              isApplying={isApplying && activeFilter === "accountHqCountryValues"}
-            />
-          </div>
-          )}
+      <ValuesRow {...props} filterKey="accountPrimaryCategoryValues" label="Industry" />
+      <ValuesRow {...props} filterKey="accountHqCountryValues" label="HQ country" />
 
-          {hasPremiumAccountFilters && (
-          <div className="flex justify-center py-1">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                if (!canShowMoreAccountFilters) {
-                  toast.info("Premium filters are Not Procured.")
-                  return
-                }
-                setShowMoreAccountFilters((prev) => !prev)
-              }}
-              aria-expanded={canShowMoreAccountFilters ? showMoreAccountFilters : false}
-              className="group"
-            >
-              {canShowMoreAccountFilters
-                ? (showMoreAccountFilters ? "Show Less" : "Show More")
-                : "Show More"}
-              {canShowMoreAccountFilters ? (
-                showMoreAccountFilters ? (
-                  <RiArrowUpSLine className="ml-1.5 h-3.5 w-3.5" />
-                ) : (
-                  <RiArrowDownSLine className="ml-1.5 h-3.5 w-3.5" />
-                )
-              ) : (
-                <RiLockLine className="ml-1.5 h-3.5 w-3.5" />
-              )}
-            </Button>
-          </div>
-          )}
-
-          {canShowMoreAccountFilters && showMoreAccountFilters && isFilterEnabled("accountHqRegionValues") && (
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">HQ Region</Label>
-            <EnhancedMultiSelect
-              options={availableOptions.accountHqRegionValues || []}
-              selected={pendingFilters.accountHqRegionValues}
-              trackingKey="accountHqRegionValues"
-              onChange={(selected) => {
-                setPendingFilters((prev) => ({ ...prev, accountHqRegionValues: selected }))
-                setActiveFilter("accountHqRegionValues")
-              }}
-              placeholder="Select regions..."
-              isApplying={isApplying && activeFilter === "accountHqRegionValues"}
-            />
-          </div>
-          )}
-          {canShowMoreAccountFilters && showMoreAccountFilters && isFilterEnabled("accountHqEmployeeRangeValues") && (
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">HQ Employee Range</Label>
-            <EnhancedMultiSelect
-              options={availableOptions.accountHqEmployeeRangeValues}
-              selected={pendingFilters.accountHqEmployeeRangeValues}
-              trackingKey="accountHqEmployeeRangeValues"
-              onChange={(selected) => {
-                setPendingFilters((prev) => ({ ...prev, accountHqEmployeeRangeValues: selected }))
-                setActiveFilter("accountHqEmployeeRangeValues")
-              }}
-              placeholder="Select employees range..."
-              isApplying={isApplying && activeFilter === "accountHqEmployeeRangeValues"}
-            />
-          </div>
-          )}
-          {canShowMoreAccountFilters && showMoreAccountFilters && isFilterEnabled("accountHqIndustryValues") && (
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">Sub Industry</Label>
-            <EnhancedMultiSelect
-              options={availableOptions.accountHqIndustryValues}
-              selected={pendingFilters.accountHqIndustryValues}
-              trackingKey="accountHqIndustryValues"
-              onChange={(selected) => {
-                setPendingFilters((prev) => ({ ...prev, accountHqIndustryValues: selected }))
-                setActiveFilter("accountHqIndustryValues")
-              }}
-              placeholder="Select sub industries..."
-              isApplying={isApplying && activeFilter === "accountHqIndustryValues"}
-            />
-          </div>
-          )}
-          {canShowMoreAccountFilters && showMoreAccountFilters && isFilterEnabled("accountPrimaryNatureValues") && (
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">Segment</Label>
-            <EnhancedMultiSelect
-              options={availableOptions.accountPrimaryNatureValues}
-              selected={pendingFilters.accountPrimaryNatureValues}
-              trackingKey="accountPrimaryNatureValues"
-              onChange={(selected) => {
-                setPendingFilters((prev) => ({ ...prev, accountPrimaryNatureValues: selected }))
-                setActiveFilter("accountPrimaryNatureValues")
-              }}
-              placeholder="Select segments..."
-              isApplying={isApplying && activeFilter === "accountPrimaryNatureValues"}
-            />
-          </div>
-          )}
-          {canShowMoreAccountFilters && showMoreAccountFilters && isFilterEnabled("accountNasscomStatusValues") && (
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">NASSCOM GCC Listing Status</Label>
-            <EnhancedMultiSelect
-              options={availableOptions.accountNasscomStatusValues}
-              selected={pendingFilters.accountNasscomStatusValues}
-              trackingKey="accountNasscomStatusValues"
-              onChange={(selected) => {
-                setPendingFilters((prev) => ({ ...prev, accountNasscomStatusValues: selected }))
-                setActiveFilter("accountNasscomStatusValues")
-              }}
-              placeholder="Select NASSCOM status..."
-              isApplying={isApplying && activeFilter === "accountNasscomStatusValues"}
-            />
-          </div>
-          )}
-          {canShowMoreAccountFilters && showMoreAccountFilters && isFilterEnabled("accountSourceValues") && (
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">Source</Label>
-            <EnhancedMultiSelect
-              options={availableOptions.accountSourceValues}
-              selected={pendingFilters.accountSourceValues}
-              trackingKey="accountSourceValues"
-              onChange={(selected) => {
-                setPendingFilters((prev) => ({ ...prev, accountSourceValues: selected }))
-                setActiveFilter("accountSourceValues")
-              }}
-              placeholder="Select account source..."
-              isApplying={isApplying && activeFilter === "accountSourceValues"}
-            />
-          </div>
-          )}
-          {canShowMoreAccountFilters && showMoreAccountFilters && isFilterEnabled("accountTypeValues") && (
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">Type</Label>
-            <EnhancedMultiSelect
-              options={availableOptions.accountTypeValues || []}
-              selected={pendingFilters.accountTypeValues}
-              trackingKey="accountTypeValues"
-              onChange={(selected) => {
-                setPendingFilters((prev) => ({ ...prev, accountTypeValues: selected }))
-                setActiveFilter("accountTypeValues")
-              }}
-              placeholder="Select account types..."
-              isApplying={isApplying && activeFilter === "accountTypeValues"}
-            />
-          </div>
-          )}
-          {canShowMoreAccountFilters && showMoreAccountFilters && isFilterEnabled("accountDataCoverageValues") && (
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">Coverage</Label>
-            <EnhancedMultiSelect
-              options={availableOptions.accountDataCoverageValues}
-              selected={pendingFilters.accountDataCoverageValues}
-              trackingKey="accountDataCoverageValues"
-              onChange={(selected) => {
-                setPendingFilters((prev) => ({ ...prev, accountDataCoverageValues: selected }))
-                setActiveFilter("accountDataCoverageValues")
-              }}
-              placeholder="Select data coverage..."
-              isApplying={isApplying && activeFilter === "accountDataCoverageValues"}
-            />
-          </div>
-          )}
-        </div>
-      </div>
+      <MoreFilters section="accounts" />
+      <ValuesRow {...props} filterKey="accountHqRegionValues" label="HQ region" />
+      <ValuesRow {...props} filterKey="accountHqEmployeeRangeValues" label="HQ employee range" ordered />
+      <ValuesRow {...props} filterKey="accountHqIndustryValues" label="Sub industry" />
+      <ValuesRow {...props} filterKey="accountPrimaryNatureValues" label="Segment" />
+      <ValuesRow {...props} filterKey="accountNasscomStatusValues" label="NASSCOM listing" />
+      <ValuesRow {...props} filterKey="accountSourceValues" label="Source" />
+      <ValuesRow {...props} filterKey="accountTypeValues" label="Type" />
+      <ValuesRow {...props} filterKey="accountDataCoverageValues" label="Coverage" />
     </div>
   )
 }
 
-export function CenterFiltersSection({
-  pendingFilters,
-  availableOptions,
-  isApplying,
-  activeFilter,
-  setPendingFilters,
-  setActiveFilter,
-  centerIncYearRange,
-  handleMinCenterIncYearChange,
-  handleMaxCenterIncYearChange,
-  handleCenterIncYearRangeChange,
-}: CenterFilterSectionProps) {
-  const [showMoreCenterFilters, setShowMoreCenterFilters] = React.useState(false)
-  const hiddenCenterFilterKeys = getPremiumFilterKeys("centers")
-  const canShowMoreCenterFilters = isShowMoreEnabled("centers")
-
-  const hasPremiumCenterFilters = hiddenCenterFilterKeys.length > 0
+export function CenterFiltersSection(props: CenterFilterSectionProps) {
+  const { pendingFilters, setPendingFilters, centerIncYearRange, handleCenterIncYearRangeChange } = props
+  const incYearIncludeNull = isFilterEnabled("centerIncYearIncludeNull")
 
   return (
-    <div className="pr-2">
-      <div className="space-y-4 pt-2">
-        <div className="space-y-3">
-          {isFilterEnabled("centerStatusValues") && (
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">Status</Label>
-            <EnhancedMultiSelect
-              options={availableOptions.centerStatusValues}
-              selected={pendingFilters.centerStatusValues}
-              trackingKey="centerStatusValues"
-              onChange={(selected) => {
-                setPendingFilters((prev) => ({ ...prev, centerStatusValues: selected }))
-                setActiveFilter("centerStatusValues")
-              }}
-              placeholder="Select status..."
-              isApplying={isApplying && activeFilter === "centerStatusValues"}
-            />
-          </div>
-          )}
-          {isFilterEnabled("centerTypeValues") && (
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">Centre Type</Label>
-            <EnhancedMultiSelect
-              options={availableOptions.centerTypeValues}
-              selected={pendingFilters.centerTypeValues}
-              trackingKey="centerTypeValues"
-              onChange={(selected) => {
-                setPendingFilters((prev) => ({ ...prev, centerTypeValues: selected }))
-                setActiveFilter("centerTypeValues")
-              }}
-              placeholder="Select types..."
-              isApplying={isApplying && activeFilter === "centerTypeValues"}
-            />
-          </div>
-          )}
-          {isFilterEnabled("functionNameValues") && (
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">Services Offered</Label>
-            <EnhancedMultiSelect
-              options={availableOptions.functionNameValues}
-              selected={pendingFilters.functionNameValues}
-              trackingKey="functionNameValues"
-              onChange={(selected) => {
-                setPendingFilters((prev) => ({ ...prev, functionNameValues: selected }))
-                setActiveFilter("functionNameValues")
-              }}
-              placeholder="Select services..."
-              isApplying={isApplying && activeFilter === "functionNameValues"}
-            />
-          </div>
-          )}
+    <div>
+      <ValuesRow {...props} filterKey="centerStatusValues" label="Status" />
+      <ValuesRow {...props} filterKey="centerTypeValues" label="Centre type" />
+      <ValuesRow {...props} filterKey="functionNameValues" label="Services offered" />
+      <ValuesRow {...props} filterKey="centerCityValues" label="City" />
 
-          {isFilterEnabled("centerCityValues") && (
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">City</Label>
-            <EnhancedMultiSelect
-              options={availableOptions.centerCityValues}
-              selected={pendingFilters.centerCityValues}
-              trackingKey="centerCityValues"
-              onChange={(selected) => {
-                setPendingFilters((prev) => ({ ...prev, centerCityValues: selected }))
-                setActiveFilter("centerCityValues")
-              }}
-              placeholder="Select cities..."
-              isApplying={isApplying && activeFilter === "centerCityValues"}
-            />
-          </div>
-          )}
+      {isFilterEnabled("centerIncYearRange") && (
+        <FilterRow
+          label="Incorporation year"
+          active={isRangeActive(pendingFilters.centerIncYearRange, centerIncYearRange, !incYearIncludeNull || pendingFilters.centerIncYearIncludeNull)}
+          summary={formatRangeSummary(pendingFilters.centerIncYearRange, centerIncYearRange, !incYearIncludeNull || pendingFilters.centerIncYearIncludeNull, "year")}
+        >
+          <FilterRangeField
+            label="Incorporation year"
+            unit="year"
+            value={pendingFilters.centerIncYearRange}
+            bounds={centerIncYearRange}
+            onChange={handleCenterIncYearRangeChange}
+            presets={INC_YEAR_PRESETS}
+            includeNull={incYearIncludeNull ? pendingFilters.centerIncYearIncludeNull : undefined}
+            onIncludeNullChange={
+              incYearIncludeNull
+                ? (includeNull) => setPendingFilters((prev) => ({ ...prev, centerIncYearIncludeNull: includeNull }))
+                : undefined
+            }
+            includeNullLabel="Include centres with no year"
+          />
+        </FilterRow>
+      )}
 
-          {isFilterEnabled("centerIncYearRange") && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs font-medium">Incorporation Timeline</Label>
-              {isFilterEnabled("centerIncYearIncludeNull") && (
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="include-null-center-inc-year"
-                  checked={pendingFilters.centerIncYearIncludeNull}
-                  onCheckedChange={(checked) =>
-                    setPendingFilters((prev) => ({
-                      ...prev,
-                      centerIncYearIncludeNull: checked === true,
-                    }))
-                  }
-                  className="h-3.5 w-3.5"
-                />
-                <Label
-                  htmlFor="include-null-center-inc-year"
-                  className="text-xs text-muted-foreground cursor-pointer select-none"
-                >
-                  Include all
-                </Label>
-              </div>
-              )}
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
-                <Label htmlFor="min-center-inc-year" className="text-xs">Min</Label>
-                <Input
-                  id="min-center-inc-year"
-                  type="number"
-                  value={pendingFilters.centerIncYearRange[0]}
-                  onChange={(e) => handleMinCenterIncYearChange(e.target.value)}
-                  onFocus={(e) => e.target.select()}
-                  onBlur={() => {
-                    const val = pendingFilters.centerIncYearRange[0]
-                    const clamped = Math.max(centerIncYearRange.min, Math.min(val, pendingFilters.centerIncYearRange[1]))
-                    if (clamped !== val) {
-                      toast.info(`Incorporation year data ranges from ${centerIncYearRange.min} to ${centerIncYearRange.max}`)
-                    }
-                    setPendingFilters((prev) => ({ ...prev, centerIncYearRange: [clamped, prev.centerIncYearRange[1]] }))
-                  }}
-                  min={centerIncYearRange.min}
-                  max={pendingFilters.centerIncYearRange[1]}
-                  className="text-xs h-8"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="max-center-inc-year" className="text-xs">Max</Label>
-                <Input
-                  id="max-center-inc-year"
-                  type="number"
-                  value={pendingFilters.centerIncYearRange[1]}
-                  onChange={(e) => handleMaxCenterIncYearChange(e.target.value)}
-                  onFocus={(e) => e.target.select()}
-                  onBlur={() => {
-                    const val = pendingFilters.centerIncYearRange[1]
-                    const clamped = Math.min(centerIncYearRange.max, Math.max(val, pendingFilters.centerIncYearRange[0]))
-                    if (clamped !== val) {
-                      toast.info(`Incorporation year data ranges from ${centerIncYearRange.min} to ${centerIncYearRange.max}`)
-                    }
-                    setPendingFilters((prev) => ({ ...prev, centerIncYearRange: [prev.centerIncYearRange[0], clamped] }))
-                  }}
-                  min={pendingFilters.centerIncYearRange[0]}
-                  max={centerIncYearRange.max}
-                  className="text-xs h-8"
-                />
-              </div>
-            </div>
-            <div className="px-2">
-              <Slider
-                value={pendingFilters.centerIncYearRange}
-                onValueChange={(value) => handleCenterIncYearRangeChange(value as [number, number])}
-                min={centerIncYearRange.min}
-                max={centerIncYearRange.max}
-                step={1}
-                className="w-full"
-              />
-            </div>
-            <div className="flex justify-between text-xs text-muted-foreground px-2">
-              <span>{centerIncYearRange.min}</span>
-              <span>{centerIncYearRange.max}</span>
-            </div>
-          </div>
-          )}
+      <ValuesRow {...props} filterKey="centerEmployeesRangeValues" label="Centre headcount" ordered />
 
-          {isFilterEnabled("centerEmployeesRangeValues") && (
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">Centre Headcount</Label>
-            <EnhancedMultiSelect
-              options={availableOptions.centerEmployeesRangeValues}
-              selected={pendingFilters.centerEmployeesRangeValues}
-              trackingKey="centerEmployeesRangeValues"
-              onChange={(selected) => {
-                setPendingFilters((prev) => ({ ...prev, centerEmployeesRangeValues: selected }))
-                setActiveFilter("centerEmployeesRangeValues")
-              }}
-              placeholder="Select headcount range..."
-              isApplying={isApplying && activeFilter === "centerEmployeesRangeValues"}
-            />
-          </div>
-          )}
-
-          {hasPremiumCenterFilters && (
-          <div className="flex justify-center py-1">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                if (!canShowMoreCenterFilters) {
-                  toast.info("Premium filters are Not Procured.")
-                  return
-                }
-                setShowMoreCenterFilters((prev) => !prev)
-              }}
-              aria-expanded={canShowMoreCenterFilters ? showMoreCenterFilters : false}
-              className="group"
-            >
-              {canShowMoreCenterFilters
-                ? (showMoreCenterFilters ? "Show Less" : "Show More")
-                : "Show More"}
-              {canShowMoreCenterFilters ? (
-                showMoreCenterFilters ? (
-                  <RiArrowUpSLine className="ml-1.5 h-3.5 w-3.5" />
-                ) : (
-                  <RiArrowDownSLine className="ml-1.5 h-3.5 w-3.5" />
-                )
-              ) : (
-                <RiLockLine className="ml-1.5 h-3.5 w-3.5" />
-              )}
-            </Button>
-          </div>
-          )}
-
-          {canShowMoreCenterFilters && showMoreCenterFilters && isFilterEnabled("centerStateValues") && (
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">State</Label>
-            <EnhancedMultiSelect
-              options={availableOptions.centerStateValues}
-              selected={pendingFilters.centerStateValues}
-              trackingKey="centerStateValues"
-              onChange={(selected) => {
-                setPendingFilters((prev) => ({ ...prev, centerStateValues: selected }))
-                setActiveFilter("centerStateValues")
-              }}
-              placeholder="Select states..."
-              isApplying={isApplying && activeFilter === "centerStateValues"}
-            />
-          </div>
-          )}
-
-          {canShowMoreCenterFilters && showMoreCenterFilters && isFilterEnabled("centerFocusValues") && (
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">Centre Focus</Label>
-            <EnhancedMultiSelect
-              options={availableOptions.centerFocusValues}
-              selected={pendingFilters.centerFocusValues}
-              trackingKey="centerFocusValues"
-              onChange={(selected) => {
-                setPendingFilters((prev) => ({ ...prev, centerFocusValues: selected }))
-                setActiveFilter("centerFocusValues")
-              }}
-              placeholder="Select focus..."
-              isApplying={isApplying && activeFilter === "centerFocusValues"}
-            />
-          </div>
-          )}
-
-          {canShowMoreCenterFilters && showMoreCenterFilters && isFilterEnabled("techSoftwareInUseKeywords") && (
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">Software In Use</Label>
-            <TitleKeywordInput
-              keywords={pendingFilters.techSoftwareInUseKeywords}
-              onChange={(keywords) =>
-                setPendingFilters((prev) => ({ ...prev, techSoftwareInUseKeywords: keywords }))
-              }
-              placeholder="e.g., SAP, Oracle, Workday..."
-              trackingKey="techSoftwareInUseKeywords"
-            />
-          </div>
-          )}
-
-          {canShowMoreCenterFilters && showMoreCenterFilters && isFilterEnabled("centerCountryValues") && (
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">Country</Label>
-            <EnhancedMultiSelect
-              options={availableOptions.centerCountryValues}
-              selected={pendingFilters.centerCountryValues}
-              trackingKey="centerCountryValues"
-              onChange={(selected) => {
-                setPendingFilters((prev) => ({ ...prev, centerCountryValues: selected }))
-                setActiveFilter("centerCountryValues")
-              }}
-              placeholder="Select countries..."
-              isApplying={isApplying && activeFilter === "centerCountryValues"}
-            />
-          </div>
-          )}
-        </div>
-      </div>
+      <MoreFilters section="centers" />
+      <ValuesRow {...props} filterKey="centerStateValues" label="State" />
+      <ValuesRow {...props} filterKey="centerFocusValues" label="Centre focus" />
+      {isFilterEnabled("techSoftwareInUseKeywords") && (
+        <FilterRow
+          label="Software in use"
+          active={pendingFilters.techSoftwareInUseKeywords.length > 0}
+          summary={<FilterValuesSummary values={pendingFilters.techSoftwareInUseKeywords} />}
+        >
+          <TitleKeywordInput
+            keywords={pendingFilters.techSoftwareInUseKeywords}
+            onChange={(keywords) => setPendingFilters((prev) => ({ ...prev, techSoftwareInUseKeywords: keywords }))}
+            placeholder="e.g. SAP, Oracle, Workday"
+            trackingKey="techSoftwareInUseKeywords"
+          />
+        </FilterRow>
+      )}
+      <ValuesRow {...props} filterKey="centerCountryValues" label="Country" />
     </div>
   )
 }
 
-export function ProspectFiltersSection({
-  pendingFilters,
-  availableOptions,
-  isApplying,
-  activeFilter,
-  setPendingFilters,
-  setActiveFilter,
-}: ProspectFilterSectionProps) {
+export function ProspectFiltersSection(props: ProspectFilterSectionProps) {
+  const { pendingFilters, setPendingFilters } = props
+
   return (
-    <div className="pr-2">
-      <div className="space-y-4 pt-2">
-        <div className="space-y-3">
-          {isFilterEnabled("prospectTitleKeywords") && (
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">Job Title</Label>
-            <TitleKeywordInput
-              keywords={pendingFilters.prospectTitleKeywords}
-              onChange={(keywords) => setPendingFilters((prev) => ({ ...prev, prospectTitleKeywords: keywords }))}
-              placeholder="e.g., Manager, Director, VP..."
-              trackingKey="prospectTitleKeywords"
-            />
-          </div>
-          )}
-          {isFilterEnabled("prospectHeadTypeValues") && (
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">Role</Label>
-            <EnhancedMultiSelect
-              options={availableOptions.prospectHeadTypeValues || []}
-              selected={pendingFilters.prospectHeadTypeValues}
-              trackingKey="prospectHeadTypeValues"
-              onChange={(selected) => {
-                setPendingFilters((prev) => ({ ...prev, prospectHeadTypeValues: selected }))
-                setActiveFilter("prospectHeadTypeValues")
-              }}
-              placeholder="Select roles..."
-              isApplying={isApplying && activeFilter === "prospectHeadTypeValues"}
-            />
-          </div>
-          )}
-          {isFilterEnabled("prospectLevelValues") && (
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">Seniority Level</Label>
-            <EnhancedMultiSelect
-              options={availableOptions.prospectLevelValues || []}
-              selected={pendingFilters.prospectLevelValues}
-              trackingKey="prospectLevelValues"
-              onChange={(selected) => {
-                setPendingFilters((prev) => ({ ...prev, prospectLevelValues: selected }))
-                setActiveFilter("prospectLevelValues")
-              }}
-              placeholder="Select levels..."
-              isApplying={isApplying && activeFilter === "prospectLevelValues"}
-            />
-          </div>
-          )}
-          {isFilterEnabled("prospectDepartmentValues") && (
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">Department</Label>
-            <EnhancedMultiSelect
-              options={availableOptions.prospectDepartmentValues || []}
-              selected={pendingFilters.prospectDepartmentValues}
-              trackingKey="prospectDepartmentValues"
-              onChange={(selected) => {
-                setPendingFilters((prev) => ({ ...prev, prospectDepartmentValues: selected }))
-                setActiveFilter("prospectDepartmentValues")
-              }}
-              placeholder="Select departments..."
-              isApplying={isApplying && activeFilter === "prospectDepartmentValues"}
-            />
-          </div>
-          )}
-          {isFilterEnabled("prospectCityValues") && (
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">City</Label>
-            <EnhancedMultiSelect
-              options={availableOptions.prospectCityValues || []}
-              selected={pendingFilters.prospectCityValues}
-              trackingKey="prospectCityValues"
-              onChange={(selected) => {
-                setPendingFilters((prev) => ({ ...prev, prospectCityValues: selected }))
-                setActiveFilter("prospectCityValues")
-              }}
-              placeholder="Select cities..."
-              isApplying={isApplying && activeFilter === "prospectCityValues"}
-            />
-          </div>
-          )}
-          {isFilterEnabled("prospectEngagedValues") && (
-          <div className="space-y-2">
-            <Label className="text-xs font-medium">Engaged</Label>
-            <EnhancedMultiSelect
-              options={availableOptions.prospectEngagedValues || []}
-              selected={pendingFilters.prospectEngagedValues}
-              trackingKey="prospectEngagedValues"
-              onChange={(selected) => {
-                setPendingFilters((prev) => ({ ...prev, prospectEngagedValues: selected }))
-                setActiveFilter("prospectEngagedValues")
-              }}
-              placeholder="Select engagement..."
-              isApplying={isApplying && activeFilter === "prospectEngagedValues"}
-            />
-          </div>
-          )}
-        </div>
-      </div>
+    <div>
+      {isFilterEnabled("prospectTitleKeywords") && (
+        <FilterRow
+          label="Job title"
+          active={pendingFilters.prospectTitleKeywords.length > 0}
+          summary={<FilterValuesSummary values={pendingFilters.prospectTitleKeywords} />}
+        >
+          <TitleKeywordInput
+            keywords={pendingFilters.prospectTitleKeywords}
+            onChange={(keywords) => setPendingFilters((prev) => ({ ...prev, prospectTitleKeywords: keywords }))}
+            placeholder="e.g. Manager, Director, VP"
+            trackingKey="prospectTitleKeywords"
+          />
+        </FilterRow>
+      )}
+      <ValuesRow {...props} filterKey="prospectHeadTypeValues" label="Role" />
+      <ValuesRow {...props} filterKey="prospectLevelValues" label="Seniority level" />
+      <ValuesRow {...props} filterKey="prospectDepartmentValues" label="Department" />
+      <ValuesRow {...props} filterKey="prospectCityValues" label="City" />
+      <ValuesRow {...props} filterKey="prospectEngagedValues" label="Engaged" />
     </div>
   )
 }

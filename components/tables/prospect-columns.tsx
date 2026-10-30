@@ -26,7 +26,7 @@ function ProspectAvatar({ prospect }: { prospect: Prospect }) {
     .map((part) => part[0])
     .join("")
   return (
-    <div className="flex size-8 items-center justify-center rounded-full bg-primary/10">
+    <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
       <span className="text-sm font-bold text-primary">{initials}</span>
     </div>
   )
@@ -56,7 +56,7 @@ export const prospectColumns = columnHelper.columns([
     id: "avatar",
     header: () => <span className="sr-only">Avatar</span>,
     cell: ({ row }) => <ProspectAvatar prospect={row.original} />,
-    meta: { className: "w-16" },
+    meta: { className: "w-[72px]" },
   }),
   columnHelper.accessor(getFullName, {
     id: "name",

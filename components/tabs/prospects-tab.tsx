@@ -1,13 +1,14 @@
 "use client"
 
 import React, { useEffect, useRef, useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { TabsContent } from "@/components/ui/tabs"
-import { RiLayoutGridLine, RiPieChartLine, RiTableLine } from "@remixicon/react"
-import { DataGridSortBar, DataTable, DataTablePagination } from "@/components/tables/data-table"
+import { RiPieChartLine, RiTableLine } from "@remixicon/react"
+import { DataLayoutSwitcher, DataTable, DataTablePagination, type DataLayout } from "@/components/tables/data-table"
 import { ProspectRowMenu, getProspectKey, prospectColumns } from "@/components/tables/prospect-columns"
 import { SelectionActionBar } from "@/components/tables/selection-action-bar"
 import { useDataTable } from "@/components/tables/use-data-table"
+import { useDataLayoutPreference } from "@/hooks/use-data-layout-preference"
 import { useRecordOpener } from "@/hooks/use-record-opener"
 import { getProspectDisplayName as getProspectDisplayNameUtil, getProspectRecordId as getProspectRecordIdUtil } from "@/lib/dashboard/prospect-id"
 import { ProspectGridCard } from "@/components/cards/prospect-grid-card"
@@ -79,7 +80,7 @@ export function ProspectsTab({
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null)
   const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false)
-  const [dataLayout, setDataLayout] = useState<"table" | "grid">("table")
+  const [dataLayout, setDataLayout] = useDataLayoutPreference()
   const {
     table,
     totalRows,
@@ -103,7 +104,6 @@ export function ProspectsTab({
   useEffect(() => {
     scrollContainerRef.current?.scrollTo({ top: 0 })
   }, [currentPage])
-  const previousDataLayoutRef = React.useRef<"table" | "grid">("table")
   const openedRecordRef = React.useRef<{
     recordId: string
     openedAt: number
@@ -187,18 +187,6 @@ export function ProspectsTab({
   }
 
 
-  React.useEffect(() => {
-    if (previousDataLayoutRef.current === dataLayout) {
-      return
-    }
-
-    captureEvent(ANALYTICS_EVENTS.DATA_LAYOUT_CHANGED, {
-      screen: "prospects",
-      data_layout: dataLayout,
-    })
-
-    previousDataLayoutRef.current = dataLayout
-  }, [dataLayout])
 
   React.useEffect(() => {
     if (isDialogOpen || !openedRecordRef.current) {
@@ -215,6 +203,14 @@ export function ProspectsTab({
     openedRecordRef.current = null
   }, [isDialogOpen])
 
+
+  const handleDataLayoutChange = React.useCallback((layout: DataLayout) => {
+    setDataLayout(layout)
+    captureEvent(ANALYTICS_EVENTS.DATA_LAYOUT_CHANGED, {
+      screen: "prospects",
+      data_layout: layout,
+    })
+  }, [setDataLayout])
 
   const handleRowOpen = React.useCallback(
     (prospect: Prospect) => handleProspectClick(prospect, "table_row"),
@@ -292,35 +288,8 @@ export function ProspectsTab({
 
        {/* Data Table */}
        {prospectsView === "data" && (
-         <Card className="w-full flex flex-col h-[var(--dashboard-panel-height)] border shadow-sm view-content">
-           <CardHeader className="shrink-0 px-6 py-3">
-             <div className="flex flex-wrap items-center gap-3">
-               <CardTitle className="text-base">Prospects Data</CardTitle>
-               <div className="ml-auto flex items-center gap-2">
-                 <ViewSwitcher
-                   value={dataLayout}
-                   onValueChange={(value) => setDataLayout(value as "table" | "grid")}
-                   options={[
-                     {
-                       value: "table",
-                       label: "Table",
-                       icon: (
-                         <RiTableLine className="h-4 w-4" />
-                       ),
-                     },
-                     {
-                       value: "grid",
-                       label: "Grid",
-                       icon: (
-                         <RiLayoutGridLine className="h-4 w-4" />
-                       ),
-                     },
-                   ]}
-                 />
-               </div>
-             </div>
-           </CardHeader>
-            <CardContent className="flex min-h-0 flex-1 flex-col px-6 pb-0">
+         <Card className="w-full flex flex-col h-[var(--dashboard-panel-height)] overflow-hidden border shadow-sm view-content">
+            <CardContent className="flex min-h-0 flex-1 flex-col p-0">
               {dataLayout === "table" ? (
                 <DataTable
                   key="table"
@@ -334,8 +303,7 @@ export function ProspectsTab({
                   scrollRef={scrollContainerRef}
                 />
               ) : (
-                <div key="grid" ref={scrollContainerRef} className="view-content min-h-0 flex-1 overflow-auto rounded-md border">
-                  <DataGridSortBar column={table.getColumn("name")} label="prospect name" />
+                <div key="grid" ref={scrollContainerRef} className="view-content min-h-0 flex-1 overflow-auto">
                   <div
                     className={cn(
                       "grid grid-cols-1 gap-4 p-4 transition-opacity sm:grid-cols-2 lg:grid-cols-3",
@@ -353,7 +321,11 @@ export function ProspectsTab({
                   </div>
                 </div>
               )}
-              <DataTablePagination table={table} totalRows={totalRows} />
+              <DataTablePagination
+                table={table}
+                totalRows={totalRows}
+                leading={<DataLayoutSwitcher value={dataLayout} onValueChange={handleDataLayoutChange} />}
+              />
             </CardContent>
          </Card>
        )}

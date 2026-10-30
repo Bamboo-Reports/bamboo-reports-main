@@ -1,13 +1,13 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { RiArrowLeftLine, RiCheckboxCircleLine, RiCloseCircleLine, RiErrorWarningLine, RiFileExcelLine, RiLoader4Line, RiQuestionLine, RiUploadLine } from "@remixicon/react"
+import { RiArrowLeftLine, RiCheckLine, RiCheckboxCircleLine, RiCloseCircleLine, RiErrorWarningLine, RiFileExcelLine, RiLoader4Line, RiQuestionLine, RiUploadLine } from "@remixicon/react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { LibraryPaneHeader, LibraryPaneTitle } from "@/components/filters/library-dialog"
 import { AccountPicker, type AccountPickerOption } from "@/components/filters/account-picker"
 import { cn } from "@/lib/utils"
 import { captureEvent } from "@/lib/analytics/client"
@@ -20,11 +20,11 @@ import { devError } from "@/lib/utils/dev-log"
 import { useAccountLists } from "@/contexts/account-lists-context"
 import type { AccountList } from "@/lib/accounts/account-lists"
 
-interface AccountListUploadDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+interface AccountListUploadPanelProps {
   /** When set, the upload replaces the accounts of this existing list instead of creating a new one. */
   existingList?: AccountList | null
+  /** Leaves the panel: with the saved list, or null when cancelled. */
+  onDone: (saved: AccountList | null) => void
   /** Called after the list is saved when the user chose "Save and apply". */
   onApply?: (list: AccountList) => void
 }
@@ -103,7 +103,11 @@ function viaLabel(candidate: AccountMatchCandidate | null): string | null {
   return null
 }
 
-export function AccountListUploadDialog({ open, onOpenChange, existingList = null, onApply }: AccountListUploadDialogProps) {
+/**
+ * Upload or paste account names, check how each one matched, and save the
+ * list. Rendered inside the account lists window, in place of a list's details.
+ */
+export function AccountListUploadPanel({ existingList = null, onDone, onApply }: AccountListUploadPanelProps) {
   const { createList, updateList, loading: saving } = useAccountLists()
   const [step, setStep] = useState<Step>("input")
   const [fileName, setFileName] = useState<string | null>(null)
@@ -113,33 +117,14 @@ export function AccountListUploadDialog({ open, onOpenChange, existingList = nul
   const [parseError, setParseError] = useState<string | null>(null)
   const [matching, setMatching] = useState(false)
   const [rows, setRows] = useState<ReviewRow[]>([])
-  const [filterName, setFilterName] = useState("")
+  const [filterName, setFilterName] = useState(existingList?.name ?? "")
   const [statusFilter, setStatusFilter] = useState<AccountMatchStatus | "all">("all")
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
 
-  const reset = useCallback(() => {
-    setStep("input")
-    setFileName(null)
-    setTable(null)
-    setColumn(0)
-    setPasted("")
-    setParseError(null)
-    setMatching(false)
-    setRows([])
-    setFilterName("")
-    setStatusFilter("all")
-    setDragging(false)
-  }, [])
-
   useEffect(() => {
-    if (!open) {
-      reset()
-      return
-    }
-    if (existingList) setFilterName(existingList.name)
     captureEvent(ANALYTICS_EVENTS.ACCOUNT_LIST_UPLOAD_OPENED, { mode: existingList ? "update" : "create" })
-  }, [open, reset, existingList])
+  }, [existingList])
 
   const names = useMemo(() => {
     if (table) return extractNames(table, column)
@@ -243,35 +228,26 @@ export function AccountListUploadDialog({ open, onOpenChange, existingList = nul
         unmapped_count: unmappedCount,
         applied: apply,
       })
-      if (apply && onApply) onApply(saved)
       toast.success(
         unmappedCount > 0
           ? `Saved "${name}" with ${mappedNames.length} accounts (${unmappedCount} skipped).`
           : `Saved "${name}" with ${mappedNames.length} accounts.`
       )
-      onOpenChange(false)
+      if (apply && onApply) onApply(saved)
+      else onDone(saved)
     },
-    [filterName, mappedNames, rows, fileName, existingList, updateList, createList, unmappedCount, onApply, onOpenChange]
+    [filterName, mappedNames, rows, fileName, existingList, updateList, createList, unmappedCount, onApply, onDone]
   )
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={cn("max-h-[90vh] w-[calc(100%-2rem)] overflow-x-hidden overflow-y-auto", step === "review" ? "max-w-4xl" : "max-w-lg")}>
-        <DialogHeader>
-          <DialogTitle>
-            {step === "input" ? (existingList ? `Update "${existingList.name}"` : "Upload account list") : "Review account matches"}
-          </DialogTitle>
-          {step === "input" ? (
-            <DialogDescription className="sr-only">Upload an account list file or paste account names.</DialogDescription>
-          ) : (
-            <DialogDescription>
-              Confirm the mapping for each uploaded name. Rows without a selected account are left out of the list.
-            </DialogDescription>
-          )}
-        </DialogHeader>
-
+    <>
+      <LibraryPaneHeader
+        title={<LibraryPaneTitle>{existingList ? `Replace "${existingList.name}"` : "Upload a list"}</LibraryPaneTitle>}
+        meta={<UploadSteps step={step} />}
+      />
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
         {step === "input" ? (
-          <div className="min-w-0 space-y-4 py-1">
+          <div className="min-w-0 space-y-4">
             <div
               role="button"
               tabIndex={0}
@@ -377,7 +353,10 @@ export function AccountListUploadDialog({ open, onOpenChange, existingList = nul
             )}
           </div>
         ) : (
-          <div className="min-w-0 space-y-4 py-1">
+          <div className="min-w-0 space-y-4">
+            <p className="text-[12.5px] text-muted-foreground">
+              Check each match. Names without an account are left out of the list.
+            </p>
             <div className="flex flex-wrap items-center gap-2">
               {(["all", "matched", "review", "not_found"] as const).map((key) => {
                 const count = key === "all" ? rows.length : counts[key]
@@ -404,7 +383,7 @@ export function AccountListUploadDialog({ open, onOpenChange, existingList = nul
               </span>
             </div>
 
-            <div className="max-h-[46vh] min-w-0 overflow-auto rounded-md border">
+            <div className="min-w-0 overflow-x-auto rounded-md border">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 z-10 bg-muted/80 backdrop-blur">
                   <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
@@ -482,19 +461,20 @@ export function AccountListUploadDialog({ open, onOpenChange, existingList = nul
           </div>
         )}
 
-        <DialogFooter className="gap-2 sm:gap-2">
+      </div>
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-t px-5 py-3">
           {step === "input" ? (
             <>
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
+              <Button variant="outline" onClick={() => onDone(null)}>
                 Cancel
               </Button>
-              <Button onClick={handleMatch} disabled={names.length === 0} loading={matching}>
+              <Button onClick={handleMatch} disabled={names.length === 0} loading={matching} className="ml-auto">
                 {matching ? "Matching..." : "Match accounts"}
               </Button>
             </>
           ) : (
             <>
-              <Button variant="ghost" onClick={() => setStep("input")} disabled={saving} className="sm:mr-auto">
+              <Button variant="ghost" onClick={() => setStep("input")} disabled={saving} className="mr-auto">
                 <RiArrowLeftLine className="h-4 w-4" />
                 Back
               </Button>
@@ -508,9 +488,34 @@ export function AccountListUploadDialog({ open, onOpenChange, existingList = nul
               )}
             </>
           )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </>
+  )
+}
+
+/** "1 Add names — 2 Check matches", marking the current step. */
+function UploadSteps({ step }: { step: Step }) {
+  const item = (index: number, label: string, state: "done" | "current" | "next") => (
+    <span className={cn("inline-flex items-center gap-1.5", state === "current" && "font-medium text-foreground")}>
+      <span
+        className={cn(
+          "grid h-5 w-5 place-items-center rounded-full text-[11px] font-semibold",
+          state === "current" && "bg-primary text-primary-foreground",
+          state === "done" && "bg-include/15 text-include",
+          state === "next" && "bg-muted text-muted-foreground"
+        )}
+      >
+        {state === "done" ? <RiCheckLine className="h-3 w-3" /> : index}
+      </span>
+      {label}
+    </span>
+  )
+  return (
+    <span className="mt-1 inline-flex items-center gap-2 text-xs">
+      {item(1, "Add names", step === "input" ? "current" : "done")}
+      <span className="h-px w-6 bg-border" aria-hidden="true" />
+      {item(2, "Check matches", step === "review" ? "current" : "next")}
+    </span>
   )
 }
 

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback, useId } from "react"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
+import { FilterChip } from "@/components/filters/filter-chip"
 import { Button } from "@/components/ui/button"
 import { RiAddLine, RiCloseLine, RiLoader4Line, RiSubtractLine } from "@remixicon/react"
 import { cn } from "@/lib/utils"
@@ -311,51 +311,15 @@ export function AccountAutocomplete({
     <div className="space-y-2">
       {/* Selected Accounts as Badges */}
       {selectedAccounts.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-2">
-          {selectedAccounts.map((account, index) => {
-            const isInclude = account.mode === 'include'
-            return (
-              <Badge
+        <div className="flex flex-wrap gap-1.5">
+          {selectedAccounts.map((account, index) => (
+              <FilterChip
                 key={`${account.value}-${index}`}
-                variant="secondary"
-                className={cn(
-                  "group flex items-center gap-1 pr-1 max-w-full",
-                  isInclude
-                    ? "bg-green-500/20 text-green-700 dark:bg-green-500/30 dark:text-green-300 border-green-500/50 hover:bg-green-500/30"
-                    : "bg-red-500/20 text-red-700 dark:bg-red-500/30 dark:text-red-300 border-red-500/50 hover:bg-red-500/30"
-                )}
-              >
-                <button
-                  type="button"
-                  onClick={() => handleToggleMode(index)}
-                  className={cn(
-                    "flex items-center justify-center w-4 h-4 rounded-sm shrink-0",
-                    isInclude
-                      ? "bg-green-600/30 hover:bg-green-600/50"
-                      : "bg-red-600/30 hover:bg-red-600/50"
-                  )}
-                  title={isInclude ? 'Click to exclude' : 'Click to include'}
-                  aria-label={isInclude ? `Exclude ${account.value}` : `Include ${account.value}`}
-                >
-                  {isInclude ? (
-                    <RiAddLine className="h-3 w-3" />
-                  ) : (
-                    <RiSubtractLine className="h-3 w-3" />
-                  )}
-                </button>
-                <span className="text-xs truncate max-w-[240px]" title={account.value}>{account.value}</span>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveAccount(index)}
-                  className="ml-1 rounded-sm opacity-70 hover:opacity-100 hover:bg-accent p-0.5 shrink-0"
-                  title="Remove"
-                  aria-label={`Remove ${account.value}`}
-                >
-                  <RiCloseLine className="h-3 w-3" />
-                </button>
-              </Badge>
-            )
-          })}
+                item={account}
+                onToggleMode={() => handleToggleMode(index)}
+                onRemove={() => handleRemoveAccount(index)}
+              />
+          ))}
         </div>
       )}
 
