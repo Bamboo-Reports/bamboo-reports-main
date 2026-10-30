@@ -47,6 +47,8 @@ interface ProspectsTabProps {
   itemsPerPage: number
   setItemsPerPage: (size: number) => void
   onDownloadSelection?: (scope: { dataset: "prospects"; prospectIds: string[] }) => void
+  /** Opens the full Export, which covers every row matching the filters. */
+  onExportAll?: () => void
   server?: TabServerProps | null
   chartsLoading?: boolean
 }
@@ -68,6 +70,7 @@ export function ProspectsTab({
   itemsPerPage,
   setItemsPerPage,
   onDownloadSelection,
+  onExportAll,
   server,
   chartsLoading = false,
 }: ProspectsTabProps) {
@@ -92,6 +95,7 @@ export function ProspectsTab({
     itemsPerPage,
     setItemsPerPage,
   })
+  const allPageSelected = table.getIsAllPageRowsSelected()
   const pageProspects = table.getRowModel().rows.map((row) => row.original)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
@@ -380,6 +384,8 @@ export function ProspectsTab({
         count={selectedKeys.size}
         onClear={clearSelection}
         onExport={handleExportSelection}
+        matchingCount={allPageSelected && totalRows > selectedKeys.size ? totalRows : undefined}
+        onExportAll={onExportAll}
       />
     </TabsContent>
   )

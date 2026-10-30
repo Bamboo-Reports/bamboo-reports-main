@@ -1478,6 +1478,7 @@ function DashboardContent(): React.JSX.Element | null {
                       itemsPerPage={itemsPerPage}
                       setItemsPerPage={setItemsPerPage}
                       onDownloadSelection={canExport ? handleDownloadSelection : undefined}
+                      onExportAll={canExport ? handleExportAll : undefined}
                     />
                   )}
 
@@ -1504,6 +1505,7 @@ function DashboardContent(): React.JSX.Element | null {
                       itemsPerPage={itemsPerPage}
                       setItemsPerPage={setItemsPerPage}
                       onDownloadSelection={canExport ? handleDownloadSelection : undefined}
+                      onExportAll={canExport ? handleExportAll : undefined}
                     />
                   )}
 
@@ -1527,6 +1529,7 @@ function DashboardContent(): React.JSX.Element | null {
                       itemsPerPage={itemsPerPage}
                       setItemsPerPage={setItemsPerPage}
                       onDownloadSelection={canExport ? handleDownloadSelection : undefined}
+                      onExportAll={canExport ? handleExportAll : undefined}
                     />
                   )}
                 </Tabs>

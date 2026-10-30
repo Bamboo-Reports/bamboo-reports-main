@@ -68,6 +68,8 @@ interface AccountsTabProps {
   itemsPerPage: number
   setItemsPerPage: (size: number) => void
   onDownloadSelection?: (scope: { dataset: "accounts"; accountNames: string[] }) => void
+  /** Opens the full Export, which covers every row matching the filters. */
+  onExportAll?: () => void
   server?: TabServerProps | null
   mapData?: { cities: CityAggregate[]; states: StateAggregate[]; scaleStates?: StateAggregate[] | null } | null
   chartsLoading?: boolean
@@ -90,6 +92,7 @@ export function AccountsTab({
   itemsPerPage,
   setItemsPerPage,
   onDownloadSelection,
+  onExportAll,
   server,
   mapData,
   chartsLoading = false,
@@ -116,6 +119,7 @@ export function AccountsTab({
     itemsPerPage,
     setItemsPerPage,
   })
+  const allPageSelected = table.getIsAllPageRowsSelected()
   const pageAccounts = table.getRowModel().rows.map((row) => row.original)
   const nameColumn = table.getColumn("name")
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -424,6 +428,8 @@ export function AccountsTab({
         count={selectedNames.size}
         onClear={clearSelection}
         onExport={() => onDownloadSelection?.({ dataset: "accounts", accountNames: Array.from(selectedNames) })}
+        matchingCount={allPageSelected && totalRows > selectedNames.size ? totalRows : undefined}
+        onExportAll={onExportAll}
       />
 
       {/* Account Details Dialog */}

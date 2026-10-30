@@ -15,10 +15,25 @@ interface SelectionActionBarProps {
   count: number
   onClear: () => void
   onExport: () => void
+  /**
+   * Rows matching the filters, set once the whole page is selected and more
+   * rows exist. The bar then points at the full Export, which already covers
+   * every matching row, instead of offering a cross-page selection.
+   */
+  matchingCount?: number
+  onExportAll?: () => void
 }
 
 /** Floating bottom-center bar for selective export. Animates in and out. */
-export function SelectionActionBar({ entity, show, count, onClear, onExport }: SelectionActionBarProps) {
+export function SelectionActionBar({
+  entity,
+  show,
+  count,
+  onClear,
+  onExport,
+  matchingCount,
+  onExportAll,
+}: SelectionActionBarProps) {
   const [mounted, setMounted] = useState(false)
   const [exiting, setExiting] = useState(false)
   const [displayCount, setDisplayCount] = useState(0)
@@ -64,6 +79,23 @@ export function SelectionActionBar({ entity, show, count, onClear, onExport }: S
           <RiCloseLine className="h-4 w-4" />
         </Button>
         <span className="text-sm font-medium">{displayCount} selected</span>
+        {matchingCount !== undefined && onExportAll && (
+          <Button
+            variant="link"
+            size="sm"
+            className="h-auto px-0 text-muted-foreground hover:text-foreground"
+            onClick={() => {
+              captureEvent(ANALYTICS_EVENTS.SELECTION_EXPORT_ALL_CLICKED, {
+                entity,
+                selected_count: count,
+                matching_count: matchingCount,
+              })
+              onExportAll()
+            }}
+          >
+            Need all {matchingCount.toLocaleString()}? Export all
+          </Button>
+        )}
         <Button size="sm" className="rounded-full px-4" onClick={() => {
             captureEvent(ANALYTICS_EVENTS.SELECTION_EXPORT_CLICKED, { entity, selected_count: count })
             onExport()

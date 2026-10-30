@@ -52,6 +52,8 @@ interface CentersTabProps {
   itemsPerPage: number
   setItemsPerPage: (size: number) => void
   onDownloadSelection?: (scope: { dataset: "centers"; centerKeys: string[] }) => void
+  /** Opens the full Export, which covers every row matching the filters. */
+  onExportAll?: () => void
   server?: TabServerProps | null
   mapData?: { cities: CityAggregate[]; states: StateAggregate[]; scaleStates?: StateAggregate[] | null } | null
   chartsLoading?: boolean
@@ -76,6 +78,7 @@ export function CentersTab({
   itemsPerPage,
   setItemsPerPage,
   onDownloadSelection,
+  onExportAll,
   server,
   mapData,
   chartsLoading = false,
@@ -103,6 +106,7 @@ export function CentersTab({
     itemsPerPage,
     setItemsPerPage,
   })
+  const allPageSelected = table.getIsAllPageRowsSelected()
   const pageCenters = table.getRowModel().rows.map((row) => row.original)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
@@ -458,6 +462,8 @@ export function CentersTab({
         count={selectedKeys.size}
         onClear={clearSelection}
         onExport={() => onDownloadSelection?.({ dataset: "centers", centerKeys: Array.from(selectedKeys) })}
+        matchingCount={allPageSelected && totalRows > selectedKeys.size ? totalRows : undefined}
+        onExportAll={onExportAll}
       />
     </TabsContent>
   )
