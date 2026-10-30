@@ -37,7 +37,7 @@ function CenterNameCell({ center }: { center: Center }) {
 
 const columnHelper = createColumnHelper<DataTableFeatures, Center>()
 
-// Column ids match TABLE_COLUMNS.centers and the server's TAB_SORT_COLUMNS keys.
+// Column ids match the server's TAB_SORT_COLUMNS keys (lib/dashboard/entity-columns.ts).
 export const centerColumns = columnHelper.columns([
   createSelectColumn<Center>(getCenterName),
   columnHelper.accessor((center) => center.center_name, {
@@ -45,7 +45,6 @@ export const centerColumns = columnHelper.columns([
     header: ({ column }) => <DataTableColumnHeader column={column} title="Centre Name" />,
     cell: ({ row }) => <CenterNameCell center={row.original} />,
     sortFn: "text",
-    enableHiding: false,
     meta: { className: "w-[260px]" },
   }),
   columnHelper.accessor((center) => formatCenterLocation(center.center_city, center.center_state), {

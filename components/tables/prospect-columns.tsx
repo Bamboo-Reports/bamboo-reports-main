@@ -49,14 +49,13 @@ function ProspectNameCell({ prospect }: { prospect: Prospect }) {
 
 const columnHelper = createColumnHelper<DataTableFeatures, Prospect>()
 
-// Column ids match TABLE_COLUMNS.prospects and the server's TAB_SORT_COLUMNS keys.
+// Column ids match the server's TAB_SORT_COLUMNS keys (lib/dashboard/entity-columns.ts).
 export const prospectColumns = columnHelper.columns([
   createSelectColumn<Prospect>((prospect) => getFullName(prospect) || "prospect"),
   columnHelper.display({
     id: "avatar",
     header: () => <span className="sr-only">Avatar</span>,
     cell: ({ row }) => <ProspectAvatar prospect={row.original} />,
-    enableHiding: false,
     meta: { className: "w-16" },
   }),
   columnHelper.accessor(getFullName, {
@@ -64,7 +63,6 @@ export const prospectColumns = columnHelper.columns([
     header: ({ column }) => <DataTableColumnHeader column={column} title="Name" />,
     cell: ({ row }) => <ProspectNameCell prospect={row.original} />,
     sortFn: "text",
-    enableHiding: false,
     meta: { className: "w-[220px]" },
   }),
   columnHelper.accessor(

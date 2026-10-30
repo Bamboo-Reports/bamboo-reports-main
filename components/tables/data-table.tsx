@@ -49,7 +49,6 @@ export function createSelectColumn<TData extends RowData>(getLabel: (item: TData
       />
     ),
     enableSorting: false,
-    enableHiding: false,
     meta: { className: "w-[44px]", stopRowClick: true },
   })
 }
@@ -99,7 +98,7 @@ export function DataTable<TData extends RowData>({
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableSkeletonRows lead={skeletonLead} columns={table.getVisibleLeafColumns().length} />
+              <TableSkeletonRows lead={skeletonLead} columns={table.getAllLeafColumns().length} />
             ) : rows.length ? (
               rows.map((row) => {
                 const item = row.original
@@ -118,7 +117,7 @@ export function DataTable<TData extends RowData>({
                     tabIndex={0}
                     aria-label={getRowLabel(item)}
                   >
-                    {row.getVisibleCells().map((cell) => {
+                    {row.getAllCells().map((cell) => {
                       const meta = cell.column.columnDef.meta
                       return (
                         <TableCell
@@ -145,7 +144,7 @@ export function DataTable<TData extends RowData>({
               })
             ) : (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={table.getVisibleLeafColumns().length} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={table.getAllLeafColumns().length} className="h-24 text-center text-muted-foreground">
                   No results.
                 </TableCell>
               </TableRow>

@@ -1,5 +1,4 @@
 import {
-  columnVisibilityFeature,
   createPaginatedRowModel,
   createSortedRowModel,
   rowPaginationFeature,
@@ -14,7 +13,6 @@ import {
 // cover client-side mode; in server mode (#249) the tables switch to manual
 // sorting and pagination and these are bypassed.
 export const dataTableFeatures = tableFeatures({
-  columnVisibilityFeature,
   rowPaginationFeature,
   rowSelectionFeature,
   rowSortingFeature,

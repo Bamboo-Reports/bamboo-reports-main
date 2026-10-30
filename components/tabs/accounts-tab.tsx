@@ -21,7 +21,6 @@ import { CentersMap } from "@/components/maps/centers-map"
 import { CentersChoroplethMap } from "@/components/maps/centers-choropleth-map"
 import { MapErrorBoundary } from "@/components/maps/map-error-boundary"
 import { ViewSwitcher } from "@/components/ui/view-switcher"
-import { TableColumnMenu } from "@/components/tables/table-column-menu"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { canAccessAccountsMapView } from "@/lib/config/dashboard-access"
@@ -97,7 +96,6 @@ export function AccountsTab({
     totalRows,
     selectedKeys: selectedNames,
     clearSelection,
-    columnPreferences: { columns, visibleColumnSet, setColumnVisible, resetColumns },
   } = useDataTable({
     dataset: "accounts",
     data: accounts,
@@ -343,14 +341,6 @@ export function AccountsTab({
             <div className="flex flex-wrap items-center gap-3">
               <CardTitle className="text-base">Accounts Data</CardTitle>
               <div className="ml-auto flex items-center gap-2">
-                {dataLayout === "table" && (
-                  <TableColumnMenu
-                    columns={columns}
-                    visibleColumnSet={visibleColumnSet}
-                    onToggleColumn={setColumnVisible}
-                    onReset={resetColumns}
-                  />
-                )}
                 <ViewSwitcher
                   value={dataLayout}
                   onValueChange={(value) => setDataLayout(value as "table" | "grid")}

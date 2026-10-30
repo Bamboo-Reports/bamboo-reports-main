@@ -61,7 +61,7 @@ function AccountNameCell({ account }: { account: Account }) {
 
 const columnHelper = createColumnHelper<DataTableFeatures, Account>()
 
-// Column ids match TABLE_COLUMNS.accounts and the server's TAB_SORT_COLUMNS keys.
+// Column ids match the server's TAB_SORT_COLUMNS keys (lib/dashboard/entity-columns.ts).
 export const accountColumns = columnHelper.columns([
   createSelectColumn<Account>(getAccountName),
   columnHelper.accessor((account) => account.account_global_legal_name, {
@@ -69,7 +69,6 @@ export const accountColumns = columnHelper.columns([
     header: ({ column }) => <DataTableColumnHeader column={column} title="Account Name" />,
     cell: ({ row }) => <AccountNameCell account={row.original} />,
     sortFn: "text",
-    enableHiding: false,
     meta: { className: "w-[280px]" },
   }),
   columnHelper.accessor((account) => account.account_hq_industry, {

@@ -5,7 +5,6 @@ import {
   functionalUpdate,
   useTable,
   type ColumnDef,
-  type ColumnVisibilityState,
   type PaginationState,
   type RowData,
   type RowSelectionState,
@@ -14,11 +13,11 @@ import {
 } from "@tanstack/react-table"
 import { dataTableFeatures, type DataTableFeatures } from "@/components/tables/data-table-features"
 import type { TabServerProps } from "@/components/tabs/accounts-tab"
-import { useTableColumnPreferences } from "@/hooks/use-table-column-preferences"
 import { useTableRowSelection } from "@/hooks/use-table-row-selection"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
-import type { TableDatasetKey } from "@/lib/dashboard/table-column-preferences"
+
+type TableDatasetKey = "accounts" | "centers" | "prospects"
 
 const ENTITY_BY_DATASET = {
   accounts: "account",
@@ -45,7 +44,7 @@ interface UseDataTableParams<TData extends RowData> {
 
 /**
  * Wires a dashboard tab's existing state (server sort callbacks, the lifted
- * page number, saved column preferences and the selection store) into a
+ * page number and the selection store) into a
  * TanStack table instance, so the tab only renders `table`.
  */
 export function useDataTable<TData extends RowData>({
@@ -63,8 +62,6 @@ export function useDataTable<TData extends RowData>({
   const manual = Boolean(server)
 
   const [sorting, setSorting] = useState<SortingState>([])
-  const columnPreferences = useTableColumnPreferences(dataset)
-  const { columns: columnOptions, visibleColumnSet, setColumnVisible } = columnPreferences
   const { selected, setSelected, clear } = useTableRowSelection({ entity, items: data, getKey: getRowKey })
 
   const pagination = useMemo<PaginationState>(
@@ -74,13 +71,6 @@ export function useDataTable<TData extends RowData>({
   const rowSelection = useMemo<RowSelectionState>(
     () => Object.fromEntries(Array.from(selected, (key) => [key, true])),
     [selected]
-  )
-  const columnVisibility = useMemo<ColumnVisibilityState>(
-    () =>
-      Object.fromEntries(
-        columnOptions.map((column) => [column.key, visibleColumnSet.has(column.key as never)])
-      ),
-    [columnOptions, visibleColumnSet]
   )
 
   const handleSortingChange = (updater: Updater<SortingState>) => {
@@ -115,13 +105,6 @@ export function useDataTable<TData extends RowData>({
     setSelected(removed, false, method)
   }
 
-  const handleColumnVisibilityChange = (updater: Updater<ColumnVisibilityState>) => {
-    const next = functionalUpdate(updater, columnVisibility)
-    for (const [key, visible] of Object.entries(next)) {
-      if (columnVisibility[key] !== visible) setColumnVisible(key as never, visible)
-    }
-  }
-
   const table = useTable({
     features: dataTableFeatures,
     data,
@@ -134,11 +117,10 @@ export function useDataTable<TData extends RowData>({
     manualPagination: manual,
     rowCount: server?.total,
     autoResetPageIndex: false,
-    state: { sorting, pagination, rowSelection, columnVisibility },
+    state: { sorting, pagination, rowSelection },
     onSortingChange: handleSortingChange,
     onPaginationChange: handlePaginationChange,
     onRowSelectionChange: handleRowSelectionChange,
-    onColumnVisibilityChange: handleColumnVisibilityChange,
   })
 
   return {
@@ -147,6 +129,5 @@ export function useDataTable<TData extends RowData>({
     totalRows: server ? server.total : data.length,
     selectedKeys: selected,
     clearSelection: clear,
-    columnPreferences,
   }
 }

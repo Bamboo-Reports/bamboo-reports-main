@@ -19,7 +19,6 @@ import { EmptyState } from "@/components/states/empty-state"
 import { ProspectDetailsDialog } from "@/components/dialogs/prospect-details-dialog"
 import { AccountDetailsDialog } from "@/components/dialogs/account-details-tabbed-dialog"
 import { ViewSwitcher } from "@/components/ui/view-switcher"
-import { TableColumnMenu } from "@/components/tables/table-column-menu"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { fetchAccountRelated } from "@/lib/dashboard/api-client"
@@ -82,7 +81,6 @@ export function ProspectsTab({
     totalRows,
     selectedKeys,
     clearSelection,
-    columnPreferences: { columns, visibleColumnSet, setColumnVisible, resetColumns },
   } = useDataTable({
     dataset: "prospects",
     data: prospects,
@@ -294,14 +292,6 @@ export function ProspectsTab({
              <div className="flex flex-wrap items-center gap-3">
                <CardTitle className="text-base">Prospects Data</CardTitle>
                <div className="ml-auto flex items-center gap-2">
-                 {dataLayout === "table" && (
-                   <TableColumnMenu
-                     columns={columns}
-                     visibleColumnSet={visibleColumnSet}
-                     onToggleColumn={setColumnVisible}
-                     onReset={resetColumns}
-                   />
-                 )}
                  <ViewSwitcher
                    value={dataLayout}
                    onValueChange={(value) => setDataLayout(value as "table" | "grid")}
