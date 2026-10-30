@@ -22,7 +22,7 @@ import {
   CenterFiltersSection,
   ProspectFiltersSection,
 } from '@/components/filters/filter-sections'
-import { countActiveFields, type FilterRangeBounds, type FilterSectionId } from '@/components/filters/filter-fields'
+import { countActiveFields, countActiveFilters, type FilterRangeBounds, type FilterSectionId } from '@/components/filters/filter-fields'
 import { ProfileMenu } from '@/components/layout/profile-menu'
 import { Button } from '@/components/ui/button'
 import { useCurrentProfile } from '@/hooks/use-current-profile'
@@ -36,8 +36,6 @@ const ACCOUNT_VISIBILITY_OPTIONS: Array<{ value: AccountVisibilityMode; label: s
   { value: "gcc", label: "GCCs" },
   { value: "nonGcc", label: "Non-GCCs" },
 ]
-
-const DEFAULT_VISIBILITY_MODE: AccountVisibilityMode = "gcc"
 
 const SECTIONS: Array<{ id: FilterSectionId; label: string; icon: React.ComponentType<{ className?: string }> }> = [
   { id: "accounts", label: "Accounts", icon: RiBuildingLine },
@@ -133,9 +131,7 @@ export function FiltersSidebar({
   const sectionCounts = Object.fromEntries(
     visibleSections.map(({ id }) => [id, isSectionEnabled(id) ? countActiveFields(id, pendingFilters, bounds) : 0])
   ) as Record<FilterSectionId, number>
-  const visibilityCounts =
-    isFilterEnabled("accountVisibilityMode") && (pendingFilters.accountVisibilityMode ?? DEFAULT_VISIBILITY_MODE) !== DEFAULT_VISIBILITY_MODE
-  const totalActiveFilters = Object.values(sectionCounts).reduce((sum, n) => sum + n, 0) + (visibilityCounts ? 1 : 0)
+  const totalActiveFilters = countActiveFilters(pendingFilters, bounds)
 
   const checkScroll = useCallback(() => {
     requestAnimationFrame(() => {
@@ -406,6 +402,7 @@ export function FiltersSidebar({
               totalActiveFilters={totalActiveFilters}
               openMenuSignal={savedMenuSignal}
               openAccountListsSignal={accountListsSignal}
+              countFilters={(saved) => countActiveFilters(saved, bounds)}
             />
           </div>
 

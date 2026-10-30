@@ -50,6 +50,8 @@ interface SavedFiltersManagerProps {
   openMenuSignal?: number
   /** Opens the account lists dialog whenever this number changes. */
   openAccountListsSignal?: number
+  /** How many filters a saved filter sets, counted the same way as the sidebar total. */
+  countFilters?: (filters: Filters) => number
 }
 
 const RELATIVE_TIME = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" })
@@ -71,6 +73,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
   totalActiveFilters,
   openMenuSignal = 0,
   openAccountListsSignal = 0,
+  countFilters = calculateActiveFilters,
 }: SavedFiltersManagerProps) {
   const {
     savedFilters,
@@ -289,7 +292,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
   const renderSavedItem = (filter: SavedFilter, owned: boolean) => {
     const applied = activeSavedFilter?.id === filter.id
     const updated = formatUpdated(filter.updated_at)
-    const count = calculateActiveFilters(filter.filters)
+    const count = countFilters(filter.filters)
     const meta = applied
       ? isModified ? "Applied · changed since saving" : "Applied"
       : [`${count} ${count === 1 ? "filter" : "filters"}`, owned ? updated : filter.owner_email ? `from ${filter.owner_email}` : "shared with you"].filter(Boolean).join(" · ")

@@ -35,7 +35,7 @@ export function parseRangeValue(text: string, unit: RangeUnit): number | null {
 }
 
 export function formatRangeSummary(value: [number, number], bounds: Bounds, includeNull: boolean, unit: RangeUnit) {
-  const narrowed = value[0] !== bounds.min || value[1] !== bounds.max
+  const narrowed = value[0] > bounds.min || value[1] < bounds.max
   const range = narrowed ? `${formatRangeValue(value[0], unit)} to ${formatRangeValue(value[1], unit)}` : null
   if (includeNull) return range ?? ""
   return range ? `${range} · known only` : "Known only"
