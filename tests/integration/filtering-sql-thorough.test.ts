@@ -9,7 +9,9 @@ import { buildAccountsQuery, buildCentersQuery, buildProspectsQuery } from "@/li
 
 loadEnv()
 const DATABASE_URL = process.env.DATABASE_URL
-const gated = DATABASE_URL ? describe : describe.skip
+// Opt-in only (RUN_REALDATA_TESTS=1): these pull large parts of the live
+// warehouse and would otherwise run on every local `npm test`.
+const gated = DATABASE_URL && process.env.RUN_REALDATA_TESTS === "1" ? describe : describe.skip
 const WIDE: [number, number] = [0, Number.MAX_SAFE_INTEGER]
 
 type Row = Record<string, unknown>
@@ -106,7 +108,9 @@ gated("filtering-sql thorough cross-attribute report", () => {
 
       const filters = createDefaultFilters(o)
       const engine = getFilteredData(accounts, centers, functions, [], prospects, tech, filters, {})
-      const countSql = async (q: { text: string; values: unknown[] }) => ((await sql.query(q.text, q.values)) as Row[]).length
+      // Count in the database: only the totals are compared, so do not transfer the rows.
+      const countSql = async (q: { text: string; values: unknown[] }) =>
+        ((await sql.query(`select count(*)::int as n from (${q.text}) t`, q.values)) as { n: number }[])[0].n
       const a = await countSql(buildAccountsQuery(filters, {}, { orderBy: null }))
       const c = await countSql(buildCentersQuery(filters, {}, { orderBy: null }))
       const p = await countSql(buildProspectsQuery(filters, {}, { orderBy: null, columns: "ctid::text as _rid" }))
