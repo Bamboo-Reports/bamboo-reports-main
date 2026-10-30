@@ -278,6 +278,7 @@ export function AccountsTab({
             />
             <PieChartCard
               title="Revenue Range"
+              order="range"
               data={accountChartData.revenueRangeData}
               countLabel="Total Accounts"
               showBigPercentage
@@ -287,6 +288,7 @@ export function AccountsTab({
             />
             <PieChartCard
               title="GCC Aggregate Headcount (India)"
+              order="range"
               data={accountChartData.employeesRangeData}
               countLabel="Total Accounts"
               showBigPercentage

@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/context-menu"
 import type { ChartData } from "@/lib/types"
 import type { Options, Point } from "highcharts"
+import { compareRangeLabels } from "@/lib/utils/range-order"
 
 export interface PieChartLabelDisplay {
   showCategoryLabels: boolean
@@ -59,6 +60,11 @@ interface PieChartCardProps {
   onLabelDisplayChange: (display: PieChartLabelDisplay) => void
   /** A newer filter state is loading; shown data (if any) is the previous state's. */
   loading?: boolean
+  /**
+   * "range" for bucket labels like "<50" or "1K - 5K": slices go in range
+   * order, shaded light to dark, instead of largest first.
+   */
+  order?: "size" | "range"
 }
 
 export const PieChartCard = memo(({
@@ -70,6 +76,7 @@ export const PieChartCard = memo(({
   labelDisplay,
   onLabelDisplayChange,
   loading = false,
+  order = "size",
 }: PieChartCardProps) => {
   const OTHERS_THRESHOLD_PERCENT = 5
   // Safety check: ensure data is an array
@@ -140,6 +147,18 @@ export const PieChartCard = memo(({
       }
     })
 
+    if (order === "range") {
+      // Still the largest buckets, shown in range order on a light-to-dark
+      // scale; the lightest shade stays reserved for "Others".
+      majorSegments.sort((a, b) => compareRangeLabels(a.name, b.name))
+      const darkest = 0
+      const lightest = PIE_CHART_COLORS.length - 2
+      majorSegments.forEach((segment, index) => {
+        const step = majorSegments.length > 1 ? index / (majorSegments.length - 1) : 1
+        segment.color = PIE_CHART_COLORS[Math.round(lightest - step * (lightest - darkest))]
+      })
+    }
+
     if (othersTotal > 0) {
       majorSegments.push({
         name: "Others",
@@ -149,7 +168,7 @@ export const PieChartCard = memo(({
     }
 
     return majorSegments
-  }, [safeData, dataKey, total])
+  }, [safeData, dataKey, total, order])
 
   const options = React.useMemo<Options>(() => {
     return {

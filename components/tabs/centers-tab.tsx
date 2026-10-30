@@ -289,6 +289,7 @@ export function CentersTab({
             />
             <PieChartCard
               title="Centre Headcount"
+              order="range"
               data={centerChartData.employeesRangeData}
               countLabel="Total Centres"
               showBigPercentage
