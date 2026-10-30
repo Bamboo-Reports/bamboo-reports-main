@@ -22,7 +22,8 @@ interface CompanyLogoProps {
 }
 
 const sizeMap = {
-  sm: { container: "h-8 w-8", icon: "h-4 w-4", img: 80 },
+  // Table rows: a slightly tighter corner than the 12px default reads better at 40px.
+  sm: { container: "h-10 w-10 rounded-[10px]", icon: "h-5 w-5", img: 80 },
   md: { container: "h-12 w-12", icon: "h-6 w-6", img: 100 },
   lg: { container: "h-16 w-16", icon: "h-8 w-8", img: 128 },
   xl: { container: "h-24 w-24", icon: "h-12 w-12", img: 150 },
@@ -91,7 +92,7 @@ export function CompanyLogo({
       aria-label={`${companyName} logo fallback`}
     >
       {fallbackMode === "monogram" ? (
-        <span className={cn("font-semibold text-primary", size === "sm" ? "text-xs" : size === "xl" ? "text-3xl" : "text-sm")}>
+        <span className={cn("font-semibold text-primary", size === "xl" ? "text-3xl" : "text-sm")}>
           {companyMonogram}
         </span>
       ) : (
