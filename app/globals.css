@@ -50,6 +50,9 @@
     --sidebar-accent-foreground: 214 45% 18%;
     --sidebar-border: 212 24% 86%;
     --sidebar-ring: 28 88% 53%;
+    /* Filter values: included (+) and excluded (−). */
+    --include: 142 64% 32%;
+    --exclude: 0 72% 46%;
   }
   .dark {
     --background: 0 0% 10%;
@@ -85,6 +88,8 @@
     --sidebar-accent-foreground: 0 0% 95%;
     --sidebar-border: 0 0% 24%;
     --sidebar-ring: 28 88% 60%;
+    --include: 142 55% 55%;
+    --exclude: 0 80% 66%;
   }
 }
 

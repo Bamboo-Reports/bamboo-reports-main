@@ -102,7 +102,7 @@ export function getDashboardTourSteps(options: { hasMapView: boolean; isSidebarC
     popover: {
       title: "Quick Actions",
       description:
-        "Refresh data, check notifications for recent changes, toggle dark mode, and manage your account.",
+        "Search, refresh data, and check notifications for recent changes. Your account, theme and sign out live at the bottom of the filters panel.",
       side: "bottom",
       align: "end",
     },

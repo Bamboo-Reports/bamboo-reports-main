@@ -1,8 +1,6 @@
 import { useState } from "react"
-import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { RiAddLine, RiCloseLine, RiSubtractLine } from "@remixicon/react"
+import { FilterChip } from "@/components/filters/filter-chip"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import {
@@ -32,14 +30,15 @@ export function TitleKeywordInput({
     if (e.key === "Enter" && inputValue.trim()) {
       e.preventDefault()
       const trimmedValue = inputValue.trim()
+      const mode: FilterValue["mode"] = e.shiftKey ? "exclude" : "include"
       if (!keywords.find((k) => k.value === trimmedValue)) {
-        const nextKeywords = [...keywords, { value: trimmedValue, mode: "include" } as FilterValue]
+        const nextKeywords = [...keywords, { value: trimmedValue, mode }]
         onChange(nextKeywords)
         captureEvent(ANALYTICS_EVENTS.FILTER_KEYWORD_CHANGED, {
           filter_key: sourceFilterKey,
           action: "add",
           keyword_value: trimmedValue,
-          mode: "include",
+          mode,
           selected_values: toTrackedFilterPlainValues(nextKeywords),
           selected_values_with_mode: toTrackedFilterValueArray(nextKeywords),
         })
@@ -98,54 +97,18 @@ export function TitleKeywordInput({
           })
         }}
         onKeyDown={handleKeyDown}
-        className="text-sm"
+        className="h-[34px] text-[13px]"
       />
       {keywords.length > 0 && (
-        <div className="flex flex-wrap gap-2 mt-2">
-          {keywords.map((keyword) => {
-            const isInclude = keyword.mode === "include"
-            return (
-              <Badge
+        <div className="flex flex-wrap gap-1.5">
+          {keywords.map((keyword) => (
+              <FilterChip
                 key={keyword.value}
-                variant="secondary"
-                className={cn(
-                  "flex items-center gap-1 pr-1",
-                  isInclude
-                    ? "bg-green-500/20 text-green-700 dark:bg-green-500/30 dark:text-green-300 border-green-500/50 hover:bg-green-500/25"
-                    : "bg-red-500/20 text-red-700 dark:bg-red-500/30 dark:text-red-300 border-red-500/50 hover:bg-red-500/25"
-                )}
-              >
-                <button
-                  onClick={() => toggleKeywordMode(keyword)}
-                  className={cn(
-                    "flex items-center justify-center w-4 h-4 rounded-sm",
-                    isInclude
-                      ? "bg-green-600/30 hover:bg-green-600/40"
-                      : "bg-red-600/30 hover:bg-red-600/40"
-                  )}
-                  title={isInclude ? "Click to exclude" : "Click to include"}
-                  type="button"
-                  aria-label={isInclude ? `Exclude ${keyword.value}` : `Include ${keyword.value}`}
-                >
-                  {isInclude ? (
-                    <RiAddLine className="h-3 w-3" />
-                  ) : (
-                    <RiSubtractLine className="h-3 w-3" />
-                  )}
-                </button>
-                <span className="text-xs">{keyword.value}</span>
-                <button
-                  onClick={() => removeKeyword(keyword)}
-                  className="ml-1 rounded-sm opacity-70 hover:opacity-100 hover:bg-accent/40 p-0.5 transition-colors duration-150"
-                  type="button"
-                  title="Remove"
-                  aria-label={`Remove ${keyword.value}`}
-                >
-                  <RiCloseLine className="h-3 w-3" />
-                </button>
-              </Badge>
-            )
-          })}
+                item={keyword}
+                onToggleMode={() => toggleKeywordMode(keyword)}
+                onRemove={() => removeKeyword(keyword)}
+              />
+          ))}
         </div>
       )}
     </div>

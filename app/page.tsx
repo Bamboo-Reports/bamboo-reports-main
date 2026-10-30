@@ -56,7 +56,6 @@ import {
   isSectionEnabled,
 } from "@/lib/config/dashboard-access"
 import { useProductTour } from "@/hooks/use-product-tour"
-import { formatRevenueInMillions } from "@/lib/utils/helpers"
 import type { SearchResult } from "@/lib/search"
 import { TAB_SORT_COLUMNS } from "@/lib/dashboard/entity-columns"
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "@/components/tables/data-table"
@@ -118,14 +117,8 @@ function DashboardContent(): React.JSX.Element | null {
     prospectChartData,
     resetFilters,
     handleLoadSavedFilters,
-    handleMinRevenueChange,
-    handleMaxRevenueChange,
     handleRevenueRangeChange,
-    handleMinYearsInIndiaChange,
-    handleMaxYearsInIndiaChange,
     handleYearsInIndiaRangeChange,
-    handleMinCenterIncYearChange,
-    handleMaxCenterIncYearChange,
     handleCenterIncYearRangeChange,
     getTotalActiveFilters,
   } = useDashboardFilters({
@@ -288,6 +281,8 @@ function DashboardContent(): React.JSX.Element | null {
   const [exportStartDatasets, setExportStartDatasets] = useState<ExportDatasetKey[] | undefined>(undefined)
   const [exportsDialogOpen, setExportsDialogOpen] = useState(false)
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false)
+  const handleOpenExports = useCallback(() => setExportsDialogOpen(true), [])
+  const handleOpenHistory = useCallback(() => setHistoryDialogOpen(true), [])
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const canExport = canExportData(userRole)
 
@@ -1338,7 +1333,7 @@ function DashboardContent(): React.JSX.Element | null {
       >
         Skip to main content
       </a>
-      <Header onRefresh={handleRefresh} refreshing={refreshing} onStartTour={startTour} onOpenSearch={handleSearchOpen} onOpenExports={() => setExportsDialogOpen(true)} onOpenHistory={() => setHistoryDialogOpen(true)} />
+      <Header onRefresh={handleRefresh} refreshing={refreshing} onOpenSearch={handleSearchOpen} />
       <ExportsDialog open={exportsDialogOpen} onOpenChange={setExportsDialogOpen} />
       <HistoryDialog
         open={historyDialogOpen}
@@ -1441,18 +1436,13 @@ function DashboardContent(): React.JSX.Element | null {
             canExport={canExport}
             handleGenerateReport={handleGenerateReport}
             isGeneratingReport={isGeneratingReport}
-            handleMinRevenueChange={handleMinRevenueChange}
-            handleMaxRevenueChange={handleMaxRevenueChange}
             handleRevenueRangeChange={handleRevenueRangeChange}
-            handleMinYearsInIndiaChange={handleMinYearsInIndiaChange}
-            handleMaxYearsInIndiaChange={handleMaxYearsInIndiaChange}
             handleYearsInIndiaRangeChange={handleYearsInIndiaRangeChange}
-            handleMinCenterIncYearChange={handleMinCenterIncYearChange}
-            handleMaxCenterIncYearChange={handleMaxCenterIncYearChange}
             handleCenterIncYearRangeChange={handleCenterIncYearRangeChange}
-            getTotalActiveFilters={getTotalActiveFilters}
             handleLoadSavedFilters={handleLoadSavedFilters}
-            formatRevenueInMillions={formatRevenueInMillions}
+            onStartTour={startTour}
+            onOpenExports={handleOpenExports}
+            onOpenHistory={handleOpenHistory}
           />
 
           <div className="flex-1 overflow-hidden flex flex-col">

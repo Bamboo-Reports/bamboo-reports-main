@@ -1,12 +1,11 @@
 "use client"
 
 import * as React from "react"
-import { RiAddLine, RiCloseLine, RiExpandUpDownLine, RiSubtractLine } from "@remixicon/react"
+import { RiAddLine, RiCloseLine, RiSubtractLine } from "@remixicon/react"
 import { cn } from "@/lib/utils"
-import { Button, buttonVariants } from "@/components/ui/button"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Badge } from "@/components/ui/badge"
+import { FilterChip } from "@/components/filters/filter-chip"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import {
@@ -25,143 +24,92 @@ interface EnhancedMultiSelectProps {
   trackingKey?: string
   className?: string
   isApplying?: boolean
+  /** Bands like "<50", "51 - 100", "1K - 5K": list them smallest to largest instead of by count. */
+  ordered?: boolean
 }
 
 const DEFAULT_VISIBLE_OPTIONS = 20
 const MAX_SEARCH_RESULTS = 100
 
-// Memoized Badge component with include/exclude toggle
-const EnhancedSelectBadge = React.memo(({
-  item,
-  onRemove,
-  onToggleMode
-}: {
-  item: FilterValue
-  onRemove: () => void
-  onToggleMode: () => void
-}) => {
-  const isInclude = item.mode === 'include'
+const UNIT: Record<string, number> = { k: 1e3, m: 1e6, mn: 1e6, b: 1e9, bn: 1e9 }
 
-  return (
-    <Badge
-      variant="secondary"
-      className={cn(
-        "mr-1 mb-1 flex min-w-0 max-w-full items-center gap-1 pr-1",
-        isInclude
-          ? "bg-green-500/20 text-green-700 dark:bg-green-500/30 dark:text-green-300 border-green-500/50 hover:bg-green-500/25"
-          : "bg-red-500/20 text-red-700 dark:bg-red-500/30 dark:text-red-300 border-red-500/50 hover:bg-red-500/25"
-      )}
-    >
-      <button
-        type="button"
-        onClick={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-          onToggleMode()
-        }}
-        className={cn(
-          "flex h-4 w-4 shrink-0 items-center justify-center rounded-sm",
-          isInclude
-            ? "bg-green-600/30 hover:bg-green-600/40"
-            : "bg-red-600/30 hover:bg-red-600/40"
-        )}
-        title={isInclude ? "Click to exclude" : "Click to include"}
-        aria-label={isInclude ? `Exclude ${item.value}` : `Include ${item.value}`}
-      >
-        {isInclude ? (
-          <RiAddLine className="h-3 w-3" />
-        ) : (
-          <RiSubtractLine className="h-3 w-3" />
-        )}
-      </button>
-      <span className="min-w-0 truncate text-xs" title={item.value}>
-        {item.value}
-      </span>
-      <button
-        type="button"
-        onClick={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-          onRemove()
-        }}
-        className="ml-1 shrink-0"
-        title={`Remove ${item.value}`}
-        aria-label={`Remove ${item.value}`}
-      >
-        <RiCloseLine className="h-3 w-3" />
-      </button>
-    </Badge>
-  )
-})
-EnhancedSelectBadge.displayName = "EnhancedSelectBadge"
+/** Sort key for a band label: "<50" sorts before "51 - 100", ">10K" after "5K - 10K". */
+export function bandSortKey(label: string) {
+  const match = label.toLowerCase().match(/(\d+(?:\.\d+)?)\s*(bn|mn|k|m|b)?/)
+  if (!match) return Number.POSITIVE_INFINITY
+  const amount = Number.parseFloat(match[1]) * (UNIT[match[2] ?? ""] ?? 1)
+  const trimmed = label.trim()
+  if (trimmed.startsWith("<")) return amount - 0.5
+  if (trimmed.startsWith(">")) return amount + 0.5
+  return amount
+}
 
-// Memoized Command Item
+// One option in the list. No checkbox: a value is off, included or excluded,
+// shown by the +/− mark and tint; the labelled buttons appear on hover.
 const EnhancedSelectItem = React.memo(({
   value,
+  count,
   disabled,
-  isSelected,
   filterValue,
   onSelect,
   onSelectInclude,
-  onSelectExclude
+  onSelectExclude,
+  onRemove,
 }: {
   value: string
+  count?: number
   disabled: boolean
-  isSelected: boolean
   filterValue?: FilterValue
   onSelect: () => void
   onSelectInclude: () => void
   onSelectExclude: () => void
+  onRemove: () => void
 }) => {
-  const isInclude = filterValue?.mode === 'include'
+  const mode = filterValue?.mode
+  const action = (label: string, handler: () => void, className: string, children: React.ReactNode, ariaLabel?: string) => (
+    <button
+      type="button"
+      onPointerDown={(e) => e.preventDefault()}
+      onClick={(e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        handler()
+      }}
+      className={cn("inline-flex h-[22px] items-center gap-0.5 rounded px-1.5 text-[11px] font-semibold", className)}
+      title={label}
+      aria-label={ariaLabel ?? `${label} ${value}`}
+    >
+      {children}
+    </button>
+  )
 
   return (
     <CommandItem
-      key={value}
       value={value}
       onSelect={onSelect}
       disabled={disabled}
       className={cn(
-        "cursor-pointer",
-        disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-accent/30",
-        isSelected && (isInclude
-          ? "bg-green-500/10 hover:bg-green-500/15"
-          : "bg-red-500/10 hover:bg-red-500/15")
+        "group gap-2 rounded-md py-1 pl-2 pr-1 text-[12.5px]",
+        mode === "include" && "bg-include/[0.08] data-[selected=true]:bg-include/[0.13]",
+        mode === "exclude" && "bg-exclude/[0.07] data-[selected=true]:bg-exclude/[0.11]"
       )}
     >
-      <div className="flex items-center justify-between flex-1">
-        <span className="flex-1">{value}</span>
-        <div className="flex gap-1 ml-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            className="hover:bg-green-500/15"
-            onClick={(e) => {
-              e.stopPropagation()
-              onSelectInclude()
-            }}
-            title="Include"
-            aria-label={`Include ${value}`}
-          >
-            <RiAddLine className="h-3 w-3 text-green-600" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            className="hover:bg-red-500/15"
-            onClick={(e) => {
-              e.stopPropagation()
-              onSelectExclude()
-            }}
-            title="Exclude"
-            aria-label={`Exclude ${value}`}
-          >
-            <RiSubtractLine className="h-3 w-3 text-red-600" />
-          </Button>
-        </div>
-      </div>
+      <span className={cn("grid h-4 w-4 shrink-0 place-items-center", mode === "include" ? "text-include" : "text-exclude")} aria-hidden="true">
+        {mode === "include" ? <RiAddLine className="h-3.5 w-3.5" /> : mode === "exclude" ? <RiSubtractLine className="h-3.5 w-3.5" /> : null}
+      </span>
+      <span className={cn("min-w-0 flex-1 truncate", mode === "exclude" && "text-exclude")}>{value}</span>
+      {typeof count === "number" && (
+        <span className="shrink-0 text-[11.5px] tabular-nums text-muted-foreground group-hover:hidden group-data-[selected=true]:hidden">
+          {count.toLocaleString()}
+        </span>
+      )}
+      {!disabled && (
+        <span className="hidden shrink-0 items-center gap-0.5 group-hover:flex group-data-[selected=true]:flex">
+          {mode !== "include" && action("Include", onSelectInclude, "bg-include/[0.12] text-include", <><RiAddLine className="h-3 w-3" />Include</>)}
+          {mode !== "exclude" && action("Exclude", onSelectExclude, "bg-exclude/10 text-exclude", <><RiSubtractLine className="h-3 w-3" />Exclude</>)}
+          {mode && action("Remove", onRemove, "w-[22px] justify-center bg-muted px-0 text-muted-foreground", <RiCloseLine className="h-3 w-3" />)}
+        </span>
+      )}
     </CommandItem>
   )
 })
@@ -175,6 +123,7 @@ export const EnhancedMultiSelect = React.memo(function EnhancedMultiSelect({
   trackingKey,
   className,
   isApplying = false,
+  ordered = false,
 }: EnhancedMultiSelectProps) {
   const [open, setOpen] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState("")
@@ -266,25 +215,8 @@ export const EnhancedMultiSelect = React.memo(function EnhancedMultiSelect({
           selected_values_with_mode: toTrackedFilterValueArray(nextSelected),
         })
       } else {
-        // If already selected and no mode provided, toggle mode
-        const currentMode = selected[existingIndex].mode
-        const nextMode = currentMode === 'include' ? 'exclude' : 'include'
-        const nextSelected: FilterValue[] = selected.map((i, idx) =>
-          idx === existingIndex
-            ? { ...i, mode: nextMode }
-            : i
-        )
-        onChange(
-          nextSelected
-        )
-        captureEvent(ANALYTICS_EVENTS.FILTER_OPTION_CLICKED, {
-          filter_key: sourceFilterKey,
-          option_value: value,
-          mode: nextMode,
-          action: "toggle_mode",
-          selected_values: toTrackedFilterPlainValues(nextSelected),
-          selected_values_with_mode: toTrackedFilterValueArray(nextSelected),
-        })
+        // Clicking a selected value (no mode given) removes it.
+        handleUnselect(selected[existingIndex])
       }
     } else {
       // Add with specified mode or default to include
@@ -300,18 +232,7 @@ export const EnhancedMultiSelect = React.memo(function EnhancedMultiSelect({
         selected_values_with_mode: toTrackedFilterValueArray(nextSelected),
       })
     }
-  }, [options, selected, onChange, sourceFilterKey])
-
-  const renderBadges = React.useMemo(() => {
-    return selected.map((item) => (
-      <EnhancedSelectBadge
-        key={item.value}
-        item={item}
-        onRemove={() => handleUnselect(item)}
-        onToggleMode={() => handleToggleMode(item)}
-      />
-    ))
-  }, [selected, handleUnselect, handleToggleMode])
+  }, [options, selected, onChange, sourceFilterKey, handleUnselect])
 
   const normalizedSearchQuery = searchQuery.trim().toLowerCase()
   const deferredSearchQuery = React.useDeferredValue(normalizedSearchQuery)
@@ -333,9 +254,15 @@ export const EnhancedMultiSelect = React.memo(function EnhancedMultiSelect({
       return matched
     }
 
-    const sorted = [...allOptions].sort((a, b) => b.count - a.count)
-    return sorted.slice(0, DEFAULT_VISIBLE_OPTIONS)
-  }, [options, deferredSearchQuery])
+    if (ordered) {
+      return [...allOptions].sort((a, b) => bandSortKey(a.value) - bandSortKey(b.value)).slice(0, DEFAULT_VISIBLE_OPTIONS)
+    }
+    const selectedValues = new Set(selected.map((item) => item.value))
+    const sorted = [...allOptions].sort(
+      (a, b) => Number(selectedValues.has(b.value)) - Number(selectedValues.has(a.value)) || b.count - a.count
+    )
+    return sorted.slice(0, Math.max(DEFAULT_VISIBLE_OPTIONS, selectedValues.size))
+  }, [options, deferredSearchQuery, ordered, selected])
 
   const hasMoreOptions = normalizedSearchQuery.length === 0 && options.length > DEFAULT_VISIBLE_OPTIONS
 
@@ -377,20 +304,17 @@ export const EnhancedMultiSelect = React.memo(function EnhancedMultiSelect({
         <EnhancedSelectItem
           key={value}
           value={value}
-          disabled={disabled}
-          isSelected={isSelected}
+          count={option.count}
+          disabled={disabled && !isSelected}
           filterValue={filterValue}
           onSelect={() => handleSelect(value)}
           onSelectInclude={() => handleSelect(value, 'include')}
           onSelectExclude={() => handleSelect(value, 'exclude')}
+          onRemove={() => filterValue && handleUnselect(filterValue)}
         />
       )
     })
-  }, [visibleOptions, selected, handleSelect])
-
-  // Count include vs exclude
-  const includeCount = selected.filter(s => s.mode === 'include').length
-  const excludeCount = selected.filter(s => s.mode === 'exclude').length
+  }, [visibleOptions, selected, handleSelect, handleUnselect])
 
   const prevIsApplying = React.useRef(isApplying)
 
@@ -403,81 +327,50 @@ export const EnhancedMultiSelect = React.memo(function EnhancedMultiSelect({
   }, [isApplying])
 
   return (
-    <div className={cn("flex flex-col gap-2", className)}>
-      <div className="flex items-center gap-2 w-full">
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger asChild>
-            <div
-              role="combobox"
-              tabIndex={0}
-              aria-controls={listId}
-              aria-expanded={open}
-              className={cn(
-                buttonVariants({ variant: "outline" }),
-                "h-auto min-h-10 flex-1 cursor-pointer justify-between bg-transparent py-2 hover:bg-accent/20 transition-colors duration-150"
-              )}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault()
-                  setOpen((currentOpen) => !currentOpen)
-                }
-              }}
-            >
-              <div className="flex min-w-0 flex-wrap items-center gap-1">
-                {selected.length === 0 && <span className="text-muted-foreground">{placeholder}</span>}
-                {/* Each value already shows as an include/exclude badge; the
-                    summary only helps once there are several of them. */}
-                {selected.length > 2 && (
-                  <div
-                    className="flex items-center gap-2 mr-2"
-                    title={[
-                      includeCount > 0 && `${includeCount} included`,
-                      excludeCount > 0 && `${excludeCount} excluded`,
-                    ].filter(Boolean).join(", ")}
-                  >
-                    {includeCount > 0 && (
-                      <span className="text-xs text-green-600 dark:text-green-400 font-medium">
-                        {includeCount} incl
-                      </span>
-                    )}
-                    {excludeCount > 0 && (
-                      <span className="text-xs text-red-600 dark:text-red-400 font-medium">
-                        {excludeCount} excl
-                      </span>
-                    )}
-                  </div>
-                )}
-                {renderBadges}
-              </div>
-              <RiExpandUpDownLine className={cn(
-                "h-4 w-4 shrink-0 opacity-50 ml-2",
-                open && "rotate-180"
-              )} />
-            </div>
-          </PopoverTrigger>
-          <PopoverContent className="w-[--radix-popover-trigger-width] min-w-[200px] p-0" align="start">
-            <Command>
-              <CommandInput
-                placeholder={hasMoreOptions ? `Search all ${options.length} options...` : "Search..."}
-                className="h-9"
-                value={searchQuery}
-                onValueChange={setSearchQuery}
-              />
-              {hasMoreOptions ? (
-                <p className="px-3 py-1.5 text-[11px] text-muted-foreground border-b">
-                  Showing first {DEFAULT_VISIBLE_OPTIONS} options. Use search to find more.
-                </p>
-              ) : null}
-              <CommandList id={listId} className="max-h-64">
-                <CommandEmpty>No item found.</CommandEmpty>
-                <CommandGroup>
-                  {renderOptions}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
-      </div>
+    <div className={cn("flex flex-wrap items-center gap-1.5", className)}>
+      {selected.map((item) => (
+        <FilterChip
+          key={item.value}
+          item={item}
+          onRemove={() => handleUnselect(item)}
+          onToggleMode={() => handleToggleMode(item)}
+        />
+      ))}
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            aria-controls={listId}
+            aria-expanded={open}
+            aria-haspopup="listbox"
+            className="inline-flex h-[26px] items-center gap-1 rounded-md border border-dashed border-border bg-background px-2 text-[12.5px] text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <RiAddLine className="h-3.5 w-3.5" />
+            {selected.length > 0 ? "Add" : placeholder}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-72 p-0" align="start" sideOffset={6}>
+          <Command shouldFilter={false}>
+            <CommandInput
+              placeholder={hasMoreOptions ? `Search all ${options.length.toLocaleString()} options` : "Search"}
+              className="h-9"
+              value={searchQuery}
+              onValueChange={setSearchQuery}
+            />
+            <CommandList id={listId} className="max-h-64 p-1">
+              <CommandEmpty>Nothing matches</CommandEmpty>
+              <CommandGroup className="p-0">
+                {renderOptions}
+              </CommandGroup>
+            </CommandList>
+            {hasMoreOptions ? (
+              <p className="border-t px-3 py-1.5 text-[11px] text-muted-foreground">
+                Showing the top {DEFAULT_VISIBLE_OPTIONS}. Search to find the rest.
+              </p>
+            ) : null}
+          </Command>
+        </PopoverContent>
+      </Popover>
     </div>
   )
 })
