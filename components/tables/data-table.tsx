@@ -121,7 +121,7 @@ export function DataTable<TData extends RowData>({
                       return (
                         <TableCell
                           key={cell.id}
-                          className={meta?.className}
+                          className={cn("py-3", meta?.className)}
                           onClick={meta?.stopRowClick ? (event) => event.stopPropagation() : undefined}
                         >
                           <table.FlexRender cell={cell} />

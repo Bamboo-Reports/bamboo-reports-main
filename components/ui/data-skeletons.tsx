@@ -29,7 +29,7 @@ export function TableSkeletonRows({ rows = 8, columns, lead = "logo" }: TableSke
       {Array.from({ length: rows }, (_, i) => (
         <TableRow key={`skeleton-${i}`}>
           {Array.from({ length: columns }, (_, j) => (
-            <TableCell key={j}>
+            <TableCell key={j} className="py-3">
               {j === 0 ? (
                 <Skeleton className="h-4 w-4 rounded-sm" />
               ) : j === nameColumn ? (
