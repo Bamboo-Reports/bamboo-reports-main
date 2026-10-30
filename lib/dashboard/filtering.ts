@@ -10,7 +10,7 @@ import type {
   AvailableOptions,
 } from "@/lib/types"
 import { parseRevenue } from "@/lib/utils/helpers"
-import { createValueMatcher, createKeywordMatcher, createAccountNameMatcher } from "@/lib/utils/filter-helpers"
+import { createValueMatcher, createKeywordMatcher, createAccountNameMatcher, hasAccountNameSearch } from "@/lib/utils/filter-helpers"
 
 type FilteringAccess = {
   accountsEnabled?: boolean
@@ -190,7 +190,7 @@ export function getFilteredData(
   const matchProspectEngaged = createValueMatcher(filters.prospectEngagedValues)
   const matchProspectCity = createValueMatcher(filters.prospectCityValues)
   const matchProspectTitle = createKeywordMatcher(filters.prospectTitleKeywords)
-  const hasExplicitAccountNameSearch = filters.accountGlobalLegalNameKeywords.length > 0 || filters.accountNameValues.length > 0
+  const hasExplicitAccountNameSearch = hasAccountNameSearch(filters.accountGlobalLegalNameKeywords, filters.accountNameValues)
 
   const hasAccountFilters =
     filters.accountHqRegionValues.length > 0 ||

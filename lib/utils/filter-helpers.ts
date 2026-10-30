@@ -110,6 +110,17 @@ export function createAccountNameMatcher(filterArray: FilterValue[]) {
   }
 }
 
+/**
+ * Whether the account name filters look for specific accounts. Only included
+ * names or keywords do: those skip the GCC visibility setting so a named
+ * account is found whichever group it is in. Excluded names only remove
+ * accounts, so the visibility setting still applies (GCCs minus a list, not
+ * every account minus it).
+ */
+export function hasAccountNameSearch(keywords: FilterValue[], names: FilterValue[]): boolean {
+  return keywords.some((v) => v.mode !== "exclude") || names.some((v) => v.mode !== "exclude")
+}
+
 export function createKeywordMatcher(filterArray: FilterValue[]) {
   if (filterArray.length === 0) {
     return () => true

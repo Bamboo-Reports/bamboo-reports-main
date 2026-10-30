@@ -200,6 +200,20 @@ describe("account name picks match whole names (#308)", () => {
     expect(js).toEqual(expected)
     expect(sql).toEqual(expected)
   })
+
+  it("excluding exact names keeps the GCC setting (GCCs minus the list, not every account)", async () => {
+    const baseline = await accountNamesBothEngines({ accountVisibilityMode: "gcc" })
+    const { js, sql } = await accountNamesBothEngines({
+      accountVisibilityMode: "gcc",
+      accountNameValues: [{ value: "Acme Corp", mode: "exclude" }],
+    })
+    const expected = baseline.js.filter((n) => n !== "Acme Corp")
+    expect(baseline.js).toContain("Acme Corp")
+    // Global Auto GmbH is not a GCC; ignoring the GCC setting would let it in.
+    expect(baseline.js).not.toContain("Global Auto GmbH")
+    expect(js).toEqual(expected)
+    expect(sql).toEqual(expected)
+  })
 })
 
 const inc = (...vs: string[]) => vs.map((value) => ({ value, mode: "include" as const }))
@@ -224,6 +238,8 @@ describe("filtering-sql parity with getFilteredData", () => {
     ["exact name include (visibility bypass)", { accountNameValues: inc("Global Auto GmbH", "Acme Corp") }],
     ["exact name is not a contains match", { accountNameValues: inc("Acme"), accountVisibilityMode: "all" }],
     ["exact name exclude", { accountNameValues: exc("Acme Corp"), accountVisibilityMode: "all" }],
+    ["exact name exclude, default GCC visibility", { accountNameValues: exc("Acme Corp") }],
+    ["exact name include + exclude (visibility bypass)", { accountNameValues: [...inc("Global Auto GmbH"), ...exc("Acme Corp")] }],
     ["center type include", { centerTypeValues: inc("RnD"), accountVisibilityMode: "all" }],
     ["center city + account country", { accountHqCountryValues: inc("United States"), centerCityValues: inc("New York") }],
     ["center inc year range", { centerIncYearRange: [2012, 2019], centerIncYearIncludeNull: false, accountVisibilityMode: "all" }],

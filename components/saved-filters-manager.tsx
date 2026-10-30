@@ -133,10 +133,13 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
   }, [currentFilters, filterName, saveFilter])
 
   // Adds the list to whatever is applied now (it does not reset other filters).
+  // Applying a list that is already in the filters switches its mode.
   const handleApplyAccountList = useCallback(
-    (list: AccountList) => {
+    (list: AccountList, mode: "include" | "exclude") => {
       const already = currentFilters.accountListValues.some((v) => v.value === list.id)
-      const selection = already ? currentFilters.accountListValues : [...currentFilters.accountListValues, { value: list.id, mode: "include" as const }]
+      const selection = already
+        ? currentFilters.accountListValues.map((v) => (v.value === list.id ? { ...v, mode } : v))
+        : [...currentFilters.accountListValues, { value: list.id, mode }]
       const lists = accountLists.some((l) => l.id === list.id) ? accountLists : [...accountLists, list]
       onLoadFilters(withAccountLists(currentFilters, selection, lists))
     },
