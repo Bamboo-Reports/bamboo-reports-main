@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { AccountAutocomplete } from "@/components/filters/account-autocomplete"
 import { fetchAccountAutocomplete } from "@/lib/dashboard/api-client"
+import { createQueryWrapper } from "../fixtures/query-client"
 
 vi.mock("@/lib/analytics/client", () => ({ captureEvent: () => {} }))
 vi.mock("@/lib/dashboard/api-client", () => ({ fetchAccountAutocomplete: vi.fn() }))
@@ -10,7 +11,9 @@ vi.mock("@/lib/dashboard/api-client", () => ({ fetchAccountAutocomplete: vi.fn()
 const fetchMock = vi.mocked(fetchAccountAutocomplete)
 
 function renderAutocomplete() {
-  render(<AccountAutocomplete accountNames={[]} selectedAccounts={[]} onChange={() => {}} serverSuggest />)
+  render(<AccountAutocomplete accountNames={[]} selectedAccounts={[]} onChange={() => {}} serverSuggest />, {
+    wrapper: createQueryWrapper(),
+  })
   return screen.getByRole("combobox")
 }
 
@@ -19,7 +22,12 @@ async function type(input: HTMLElement, value: string, waitMs: number) {
     fireEvent.change(input, { target: { value } })
   })
   await act(async () => {
-    vi.advanceTimersByTime(waitMs)
+    await vi.advanceTimersByTimeAsync(waitMs)
+  })
+  // The debounced query only starts once React has rendered, and TanStack
+  // Query delivers its result on a 0ms timer, so let that timer run too.
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(0)
   })
 }
 

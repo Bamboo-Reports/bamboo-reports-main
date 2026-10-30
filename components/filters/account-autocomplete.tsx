@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useMemo, useRef, useCallback, useId } from "react"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -16,7 +17,7 @@ import {
 } from "@/lib/analytics/tracking"
 import type { Alias, FilterValue } from "@/lib/types"
 import { buildAliasMap, findAliasMatch, type AliasMatch } from "@/lib/search/alias-utils"
-import { fetchAccountAutocomplete } from "@/lib/dashboard/api-client"
+import { accountAutocompleteQuery } from "@/lib/dashboard/queries"
 import { devError } from "@/lib/utils/dev-log"
 
 interface AccountAutocompleteProps {
@@ -76,46 +77,37 @@ export function AccountAutocomplete({
 
   const aliasMap = useMemo(() => buildAliasMap(aliases ?? []), [aliases])
 
-  // Server mode: suggestions come from the autocomplete endpoint.
-  const [serverSuggestions, setServerSuggestions] = useState<AccountSuggestion[]>([])
-  // The term whose lookup last finished. "Fetching" (true from keystroke until
-  // the lookup for it resolves, so the dropdown can say "Searching" instead of
-  // a premature "No accounts found") is derived from it rather than stored, so
-  // typing a character and deleting it within the debounce cannot stick (#288).
-  const [resolvedTerm, setResolvedTerm] = useState("")
-  const serverRequestRef = useRef(0)
-  const typedTerm = inputValue.toLowerCase().trim()
-  const isFetching = serverSuggest && typedTerm.length >= 2 && typedTerm !== resolvedTerm
+  // Server mode: suggestions come from the autocomplete endpoint for the
+  // debounced term. Previous suggestions stay up while the next term loads
+  // (keepPreviousData); a failed lookup shows none.
+  const serverTerm = debouncedValue.toLowerCase().trim()
+  const serverEnabled = serverSuggest && serverTerm.length >= 2
+  const serverQuery = useQuery({ ...accountAutocompleteQuery(serverTerm), enabled: serverEnabled, placeholderData: keepPreviousData })
+  const serverError = serverQuery.error
   useEffect(() => {
-    if (!serverSuggest) return
-    const term = debouncedValue.toLowerCase().trim()
-    const requestId = ++serverRequestRef.current
-    if (term.length < 2) {
-      setServerSuggestions([])
-      setResolvedTerm(term)
-      return
-    }
-    fetchAccountAutocomplete(term)
-      .then((res) => {
-        if (serverRequestRef.current !== requestId) return
-        setResolvedTerm(term)
-        setServerSuggestions(
-          res.suggestions.map((s) => ({
-            name: s.value,
-            matchedAlias: (s.matchedAlias as AliasMatch | null | undefined) ?? null,
-            visibility: s.visibility
-              ? { visibility: (s.visibility.visibility as "include" | "exclude" | null) ?? null, note: s.visibility.note }
-              : null,
-          }))
-        )
-      })
-      .catch((err) => {
-        if (serverRequestRef.current !== requestId) return
-        devError("account autocomplete failed:", err)
-        setServerSuggestions([])
-        setResolvedTerm(term)
-      })
-  }, [serverSuggest, debouncedValue])
+    if (serverError) devError("account autocomplete failed:", serverError)
+  }, [serverError])
+  // Placeholder data ignores `enabled`, so gate on it: short terms show nothing.
+  const serverData = serverEnabled ? serverQuery.data : undefined
+  const serverSuggestions = useMemo<AccountSuggestion[]>(
+    () =>
+      (serverData?.suggestions ?? []).map((s) => ({
+        name: s.value,
+        matchedAlias: (s.matchedAlias as AliasMatch | null | undefined) ?? null,
+        visibility: s.visibility
+          ? { visibility: (s.visibility.visibility as "include" | "exclude" | null) ?? null, note: s.visibility.note }
+          : null,
+      })),
+    [serverData]
+  )
+  // "Fetching" (true from keystroke until the lookup for it resolves, so the
+  // dropdown can say "Searching" instead of a premature "No accounts found")
+  // is derived from the debounced term and the query state rather than
+  // stored, so typing a character and deleting it within the debounce cannot
+  // stick (#288).
+  const typedTerm = inputValue.toLowerCase().trim()
+  const serverSettled = !serverEnabled || (!serverQuery.isPending && !serverQuery.isPlaceholderData)
+  const isFetching = serverSuggest && typedTerm.length >= 2 && (typedTerm !== serverTerm || !serverSettled)
 
   // Filter suggestions based on input with smart matching
   const clientSuggestions = useMemo<AccountSuggestion[]>(() => {
