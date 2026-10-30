@@ -24,7 +24,9 @@ import { MapErrorBoundary } from "@/components/maps/map-error-boundary"
 import { ViewSwitcher } from "@/components/ui/view-switcher"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
-import { fetchAccountRelated, type CityAggregate, type StateAggregate } from "@/lib/dashboard/api-client"
+import { type CityAggregate, type StateAggregate } from "@/lib/dashboard/api-client"
+import { accountRelatedQuery } from "@/lib/dashboard/queries"
+import { getQueryClient } from "@/lib/query-client"
 import type { TabServerProps } from "@/components/tabs/accounts-tab"
 import { GridSkeletonCards, MapUpdatingPill } from "@/components/ui/data-skeletons"
 import type { Account, Center, Function, Prospect, Service, Tech } from "@/lib/types"
@@ -176,7 +178,7 @@ export function CentersTab({
     if (server) {
       openRecord({
         label: "account",
-        load: () => fetchAccountRelated(accountName).then((res) => res.account),
+        load: () => getQueryClient().fetchQuery(accountRelatedQuery(accountName)).then((res) => res.account),
         onLoaded: openAccount,
         notFoundMessage: "This account could not be found.",
         errorMessage: "This account is not available right now.",

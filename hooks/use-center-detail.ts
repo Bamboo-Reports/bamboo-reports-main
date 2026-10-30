@@ -1,7 +1,8 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
-import { fetchCenterDetail, type CenterDetailResponse } from "@/lib/dashboard/api-client"
+import { useQuery } from "@tanstack/react-query"
+import type { CenterDetailResponse } from "@/lib/dashboard/api-client"
+import { centerDetailQuery } from "@/lib/dashboard/queries"
 
 interface CenterDetailState {
   data: CenterDetailResponse | null
@@ -12,33 +13,16 @@ interface CenterDetailState {
 
 /**
  * Loads a centre's services and tech for the centre details dialog. An empty
- * key means the data is not needed and clears the state. A failed request
- * ends loading and sets `error`, so the dialog can offer a retry instead of
- * skeletons that never resolve (#287). Mirrors useAccountRelated.
+ * key means the data is not needed. A failed request ends loading and sets
+ * `error`, so the dialog can offer a retry instead of skeletons that never
+ * resolve (#287). Mirrors useAccountRelated.
  */
 export function useCenterDetail(key: string): CenterDetailState {
-  const [data, setData] = useState<CenterDetailResponse | null>(null)
-  const [error, setError] = useState(false)
-  const [attempt, setAttempt] = useState(0)
-
-  useEffect(() => {
-    setData(null)
-    setError(false)
-    if (!key) return
-    let cancelled = false
-    fetchCenterDetail(key)
-      .then((res) => {
-        if (!cancelled) setData(res)
-      })
-      .catch(() => {
-        if (!cancelled) setError(true)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [key, attempt])
-
-  const retry = useCallback(() => setAttempt((n) => n + 1), [])
-
-  return { data, loading: !!key && data === null && !error, error, retry }
+  const query = useQuery({ ...centerDetailQuery(key), enabled: !!key })
+  return {
+    data: key ? (query.data ?? null) : null,
+    loading: !!key && query.isPending,
+    error: !!key && query.isError,
+    retry: () => void query.refetch(),
+  }
 }

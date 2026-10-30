@@ -1,10 +1,13 @@
 // @vitest-environment jsdom
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
-import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { cleanup, fireEvent, render as baseRender, screen } from "@testing-library/react"
 import type { Center, Prospect } from "@/lib/types"
 import { RecordHistoryProvider } from "@/contexts/record-history-context"
 import { ProspectDetailsDialog } from "@/components/dialogs/prospect-details-dialog"
 import { CenterDetailsDialog } from "@/components/dialogs/center-details-dialog"
+import { createQueryWrapper } from "../fixtures/query-client"
+
+const render = (ui: React.ReactElement) => baseRender(ui, { wrapper: createQueryWrapper() })
 
 vi.mock("@/lib/analytics/client", () => ({ captureEvent: () => {} }))
 
