@@ -42,10 +42,10 @@ describe("dashboard charts route", () => {
     expect(warehouseMocks.queryWarehouse).not.toHaveBeenCalled()
   })
 
-  it("applies top-10 slicing and city top-5 + Others", async () => {
+  it("keeps the top 10 (city: top 5) and sums the rest into Others", async () => {
     // City column: 7 distinct values with distinct counts -> top5 + Others.
     const city = Array.from({ length: 7 }, (_, i) => ({ name: `City${i}`, value: 70 - i * 10 }))
-    // A 12-value field -> sliced to 10.
+    // A 12-value field -> top 10 + Others.
     const big = Array.from({ length: 12 }, (_, i) => ({ name: `V${i}`, value: 120 - i }))
     // One union-all statement: each `<id> as facet ... from <entity> ... group by coalesce(<column>, '')`
     // branch gets its own rows; the city branch (id 6) gets the 7-city set.
@@ -62,11 +62,13 @@ describe("dashboard charts route", () => {
     const body = (await res.json()) as {
       account: { regionData: unknown[] }
       center: { cityData: { name: string; value: number }[] }
-      prospect: { departmentData: unknown[] }
+      prospect: { departmentData: { name: string; value: number }[] }
     }
-    // top-10 slice
-    expect(body.account.regionData).toHaveLength(10)
-    expect(body.prospect.departmentData).toHaveLength(10)
+    // top 10 + Others (sum of the remaining two: 110 + 109 = 219), so the
+    // buckets still add up to the full count
+    expect(body.account.regionData).toHaveLength(11)
+    expect(body.prospect.departmentData).toHaveLength(11)
+    expect(body.prospect.departmentData[10]).toEqual({ name: "Others", value: 219 })
     // city: top 5 + Others (sum of the remaining two: 20 + 10 = 30)
     expect(body.center.cityData).toHaveLength(6)
     expect(body.center.cityData[5]).toEqual({ name: "Others", value: 30 })

@@ -124,7 +124,8 @@ export const PieChartCard = memo(({
 
     mappedData.forEach((segment) => {
       const percent = (segment.y / total) * 100
-      if (percent < OTHERS_THRESHOLD_PERCENT) {
+      // The API already sends the long tail as "Others"; merge small slices into it.
+      if (percent < OTHERS_THRESHOLD_PERCENT || segment.name === "Others") {
         othersTotal += segment.y
       } else {
         majorSegments.push(segment)
