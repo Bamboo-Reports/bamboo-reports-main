@@ -6,23 +6,27 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   getUnreadCount,
   getUnreadSummaries,
-  getUnreadRecordSummaries,
   markAllAsRead as markAllAsReadAction,
   type NotificationSummary,
-  type RecordUpdateSummary,
 } from "@/app/actions/notifications"
 import { NOTIFICATIONS_ENABLED } from "@/lib/config/notifications"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 const REFRESH_INTERVAL_MS = 60_000
-const RECORD_SUMMARIES_PAGE_SIZE = 100
-const MAX_RECORD_SUMMARY_PAGES = 10
+
+const NOTIFICATIONS_KEY = ["notifications"] as const
+const UNREAD_COUNT_KEY = [...NOTIFICATIONS_KEY, "unread-count"] as const
+const SUMMARIES_KEY = [...NOTIFICATIONS_KEY, "summaries"] as const
+
+const EMPTY_SUMMARIES: NotificationSummary[] = []
 
 // ---------------------------------------------------------------------------
 // Types
@@ -31,10 +35,8 @@ const MAX_RECORD_SUMMARY_PAGES = 10
 interface NotificationState {
   unreadCount: number
   summaries: NotificationSummary[]
-  recordSummaries: Record<string, RecordUpdateSummary[]>
   loadingCount: boolean
   loadingSummaries: boolean
-  loadingRecords: Record<string, boolean>
   error: string | null
   hasSession: boolean
 }
@@ -42,7 +44,6 @@ interface NotificationState {
 interface NotificationActions {
   refreshAll: () => Promise<void>
   loadSummaries: () => Promise<void>
-  loadRecordSummaries: (tableName: string) => Promise<void>
   markAllAsRead: () => Promise<boolean>
 }
 
@@ -50,19 +51,24 @@ type NotificationContextValue = NotificationState & NotificationActions
 
 const NotificationContext = createContext<NotificationContextValue | null>(null)
 
+/** Unwraps a server action result, so a failure becomes the query's error. */
+function unwrap<T extends { success: boolean; error?: string }>(result: T, fallback: string): T {
+  if (!result.success) throw new Error(result.error ?? fallback)
+  return result
+}
+
 // ---------------------------------------------------------------------------
 // Provider
 // ---------------------------------------------------------------------------
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient()
   const [accessToken, setAccessToken] = useState<string | null>(null)
-  const [unreadCount, setUnreadCount] = useState(0)
-  const [summaries, setSummaries] = useState<NotificationSummary[]>([])
-  const [recordSummaries, setRecordSummaries] = useState<Record<string, RecordUpdateSummary[]>>({})
-  const [loadingCount, setLoadingCount] = useState(false)
-  const [loadingSummaries, setLoadingSummaries] = useState(false)
-  const [loadingRecords, setLoadingRecords] = useState<Record<string, boolean>>({})
-  const [error, setError] = useState<string | null>(null)
+  // Summaries load on demand (the bell dropdown opening), not on page load.
+  // The ref keeps loadSummaries stable, so the dropdown's load effect does
+  // not run again (and refetch) when the first open enables the query.
+  const [summariesWanted, setSummariesWanted] = useState(false)
+  const summariesWantedRef = useRef(false)
 
   // --- Auth state (single listener for the whole app) ---
   useEffect(() => {
@@ -81,10 +87,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       if (!isMounted) return
       setAccessToken(session?.access_token ?? null)
       if (!session?.access_token) {
-        setUnreadCount(0)
-        setSummaries([])
-        setRecordSummaries({})
-        setError(null)
+        // Signed out: drop the previous user's notifications.
+        summariesWantedRef.current = false
+        setSummariesWanted(false)
+        queryClient.removeQueries({ queryKey: NOTIFICATIONS_KEY })
       }
     })
 
@@ -92,159 +98,93 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       isMounted = false
       authListener.subscription.unsubscribe()
     }
-  }, [])
-
-  // --- Refresh unread count ---
-  const refreshUnreadCount = useCallback(async () => {
-    if (!NOTIFICATIONS_ENABLED || !accessToken) {
-      setUnreadCount(0)
-      return
-    }
-    setLoadingCount(true)
-    try {
-      const result = await getUnreadCount(accessToken)
-      if (!result.success) {
-        setError(result.error ?? "Failed to fetch unread count.")
-        return
-      }
-      setUnreadCount(result.unreadCount)
-      setError(null)
-    } finally {
-      setLoadingCount(false)
-    }
-  }, [accessToken])
-
-  // --- Load notification summaries (for the bell dropdown) ---
-  const loadSummaries = useCallback(async () => {
-    if (!NOTIFICATIONS_ENABLED || !accessToken) {
-      setSummaries([])
-      return
-    }
-    setLoadingSummaries(true)
-    try {
-      const result = await getUnreadSummaries({ accessToken })
-      if (!result.success) {
-        setError(result.error ?? "Failed to fetch summaries.")
-        return
-      }
-      setSummaries(result.data)
-      setError(null)
-    } finally {
-      setLoadingSummaries(false)
-    }
-  }, [accessToken])
-
-  // --- Load per-record summaries for a table (for recently-updated indicators) ---
-  const loadRecordSummaries = useCallback(
-    async (tableName: string) => {
-      if (!NOTIFICATIONS_ENABLED || !accessToken) {
-        setRecordSummaries((prev) => ({ ...prev, [tableName]: [] }))
-        return
-      }
-      setLoadingRecords((prev) => ({ ...prev, [tableName]: true }))
-      try {
-        const merged: RecordUpdateSummary[] = []
-        let cursor: { changedAt: string; recordKey: string } | null = null
-        for (let page = 0; page < MAX_RECORD_SUMMARY_PAGES; page++) {
-          const result = await getUnreadRecordSummaries({
-            accessToken,
-            tableName,
-            limit: RECORD_SUMMARIES_PAGE_SIZE,
-            cursorChangedAt: cursor?.changedAt ?? null,
-            cursorRecordKey: cursor?.recordKey ?? null,
-          })
-          if (!result.success) {
-            setError(result.error ?? "Failed to fetch record summaries.")
-            return
-          }
-          merged.push(...result.data)
-          cursor = result.nextCursor ?? null
-          if (!cursor) break
-        }
-        setRecordSummaries((prev) => ({ ...prev, [tableName]: merged }))
-        setError(null)
-      } finally {
-        setLoadingRecords((prev) => ({ ...prev, [tableName]: false }))
-      }
-    },
-    [accessToken]
-  )
-
-  // --- Refresh everything (count + all loaded record tables) ---
-  const refreshAll = useCallback(async () => {
-    await refreshUnreadCount()
-    const loadedTables = Object.keys(recordSummaries)
-    await Promise.all(loadedTables.map((t) => loadRecordSummaries(t)))
-  }, [refreshUnreadCount, recordSummaries, loadRecordSummaries])
-
-  // --- Mark all as read ---
-  const markAllAsRead = useCallback(async () => {
-    if (!NOTIFICATIONS_ENABLED || !accessToken) return false
-
-    const result = await markAllAsReadAction(accessToken)
-    if (!result.success) {
-      setError(result.error ?? "Failed to mark all as read.")
-      return false
-    }
-
-    setUnreadCount(0)
-    setSummaries([])
-    setRecordSummaries((prev) => {
-      const cleared: Record<string, RecordUpdateSummary[]> = {}
-      for (const key of Object.keys(prev)) {
-        cleared[key] = []
-      }
-      return cleared
-    })
-    setError(null)
-    return true
-  }, [accessToken])
-
-  // --- Initial load + polling ---
-  useEffect(() => {
-    if (!NOTIFICATIONS_ENABLED) return
-    void refreshUnreadCount()
-  }, [refreshUnreadCount])
-
-  useEffect(() => {
-    if (!NOTIFICATIONS_ENABLED || !accessToken) return
-    const intervalId = window.setInterval(() => {
-      void refreshAll()
-    }, REFRESH_INTERVAL_MS)
-    return () => window.clearInterval(intervalId)
-  }, [accessToken, refreshAll])
+  }, [queryClient])
 
   const hasSession = NOTIFICATIONS_ENABLED && Boolean(accessToken)
+
+  // --- Unread count: polled, and refreshed when the tab regains focus.
+  // Polling pauses while the tab is in the background. The token is read at
+  // fetch time rather than keyed, so its hourly rotation does not refetch.
+  const countQuery = useQuery({
+    queryKey: UNREAD_COUNT_KEY,
+    queryFn: async () => unwrap(await getUnreadCount(accessToken!), "Failed to fetch unread count.").unreadCount,
+    enabled: hasSession,
+    staleTime: 0,
+    refetchInterval: REFRESH_INTERVAL_MS,
+    refetchOnWindowFocus: true,
+  })
+
+  // --- Notification summaries (for the bell dropdown) ---
+  const summariesQuery = useQuery({
+    queryKey: SUMMARIES_KEY,
+    queryFn: async () => unwrap(await getUnreadSummaries({ accessToken: accessToken! }), "Failed to fetch summaries.").data,
+    enabled: hasSession && summariesWanted,
+    staleTime: 0,
+  })
+
+  // --- Mark all as read ---
+  const markAllMutation = useMutation({
+    mutationFn: async () => unwrap(await markAllAsReadAction(accessToken!), "Failed to mark all as read."),
+    onSuccess: () => {
+      queryClient.setQueryData(UNREAD_COUNT_KEY, 0)
+      queryClient.setQueryData(SUMMARIES_KEY, EMPTY_SUMMARIES)
+    },
+  })
+  const { mutateAsync: markAllAsync, reset: resetMarkAll } = markAllMutation
+  const { refetch: refetchCount } = countQuery
+  const { refetch: refetchSummaries } = summariesQuery
+
+  const refreshAll = useCallback(async () => {
+    if (!hasSession) return
+    await refetchCount()
+  }, [hasSession, refetchCount])
+
+  // Each dropdown open loads fresh summaries: the first enables the query,
+  // later ones refetch it. A stale "mark all as read" error is cleared too.
+  const loadSummaries = useCallback(async () => {
+    if (!hasSession) return
+    resetMarkAll()
+    if (!summariesWantedRef.current) {
+      summariesWantedRef.current = true
+      setSummariesWanted(true)
+      return
+    }
+    await refetchSummaries()
+  }, [hasSession, refetchSummaries, resetMarkAll])
+
+  const markAllAsRead = useCallback(async () => {
+    if (!hasSession) return false
+    try {
+      await markAllAsync()
+      return true
+    } catch {
+      return false
+    }
+  }, [hasSession, markAllAsync])
+
+  // The most recent failure, if any piece is currently failing.
+  const error = hasSession
+    ? (markAllMutation.error ?? summariesQuery.error ?? countQuery.error)?.message ?? null
+    : null
+
+  const unreadCount = hasSession ? (countQuery.data ?? 0) : 0
+  const summaries = hasSession ? (summariesQuery.data ?? EMPTY_SUMMARIES) : EMPTY_SUMMARIES
+  const loadingCount = hasSession && countQuery.isFetching
+  const loadingSummaries = hasSession && summariesQuery.isFetching
 
   const value = useMemo<NotificationContextValue>(
     () => ({
       unreadCount,
       summaries,
-      recordSummaries,
       loadingCount,
       loadingSummaries,
-      loadingRecords,
       error,
       hasSession,
       refreshAll,
       loadSummaries,
-      loadRecordSummaries,
       markAllAsRead,
     }),
-    [
-      unreadCount,
-      summaries,
-      recordSummaries,
-      loadingCount,
-      loadingSummaries,
-      loadingRecords,
-      error,
-      hasSession,
-      refreshAll,
-      loadSummaries,
-      loadRecordSummaries,
-      markAllAsRead,
-    ]
+    [unreadCount, summaries, loadingCount, loadingSummaries, error, hasSession, refreshAll, loadSummaries, markAllAsRead]
   )
 
   return (
