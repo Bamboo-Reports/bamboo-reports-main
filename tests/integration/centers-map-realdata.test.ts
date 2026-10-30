@@ -5,6 +5,7 @@ import type { Account, Center, Filters } from "@/lib/types"
 import { createDefaultFilters } from "@/lib/dashboard/defaults"
 import { getFilteredData } from "@/lib/dashboard/filtering"
 import { buildCentersMapQuery, splitCentersMapRows, type CityMapRow, type StateMapRow } from "@/lib/dashboard/centers-map"
+import { countsTowardHeadcount } from "@/lib/dashboard/headcount"
 
 // Loads DATABASE_URL from .env (vitest does not do this automatically).
 loadEnv()
@@ -24,7 +25,7 @@ function clientCityData(centers: Center[]) {
     if (existing) {
       existing.count += 1
       existing.accounts.add(c.account_global_legal_name)
-      existing.headcount += c.center_employees ?? 0
+      existing.headcount += (countsTowardHeadcount(c.center_type) ? (c.center_employees ?? 0) : 0)
     } else {
       cityMap.set(city, {
         country: c.center_country ?? "",
@@ -32,7 +33,7 @@ function clientCityData(centers: Center[]) {
         lng,
         count: 1,
         accounts: new Set([c.account_global_legal_name]),
-        headcount: c.center_employees ?? 0,
+        headcount: (countsTowardHeadcount(c.center_type) ? (c.center_employees ?? 0) : 0),
       })
     }
   }
@@ -50,7 +51,7 @@ function clientStateData(centers: Center[]) {
     const entry = byState.get(key) ?? { count: 0, accounts: new Set<string>(), headcount: 0 }
     entry.count += 1
     if (c.account_global_legal_name) entry.accounts.add(c.account_global_legal_name)
-    entry.headcount += c.center_employees ?? 0
+    entry.headcount += (countsTowardHeadcount(c.center_type) ? (c.center_employees ?? 0) : 0)
     byState.set(key, entry)
   }
   return byState

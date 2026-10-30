@@ -10,6 +10,7 @@ import { devError } from "@/lib/utils/dev-log"
 import type { Center } from "@/lib/types"
 import type { StateAggregate } from "@/lib/dashboard/api-client"
 import "maplibre-gl/dist/maplibre-gl.css"
+import { countsTowardHeadcount } from "@/lib/dashboard/headcount"
 
 interface CentersChoroplethMapProps {
   centers: Center[]
@@ -83,7 +84,8 @@ const buildStateAggregates = (centers: Center[]): StateAggregates => {
       accountsByState.set(key, accounts)
     }
 
-    const employees = center.center_employees ?? 0
+    // Same rule as the Headcount card: some centre types are left out.
+    const employees = countsTowardHeadcount(center.center_type) ? (center.center_employees ?? 0) : 0
     headcountByState.set(key, (headcountByState.get(key) || 0) + employees)
 
     if (center.center_country) {

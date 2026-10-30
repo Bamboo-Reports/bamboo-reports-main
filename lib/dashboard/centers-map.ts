@@ -1,4 +1,5 @@
 import type { Filters } from "@/lib/types"
+import { HEADCOUNT_SUM_SQL } from "@/lib/dashboard/headcount"
 import { buildEntityAggregateQuery, buildEntityUnionQuery, type AggregateBranch, type FilterAccess, type SqlQuery } from "@/lib/dashboard/filtering-sql"
 
 /**
@@ -32,7 +33,7 @@ export type StateMapRow = {
  * One row per city over the filtered centers that have coordinates.
  * Mirrors the client cityData: group by center_city; country and lat/lng come
  * from the first matching center in center_name order (the order the client
- * receives centers in); headcount sums center_employees.
+ * receives centers in); headcount follows the summary card rule (HEADCOUNT_SUM_SQL).
  */
 const CITY_BRANCH: AggregateBranch = {
   select: [
@@ -42,7 +43,7 @@ const CITY_BRANCH: AggregateBranch = {
     "((array_agg(lng order by center_name asc))[1])::float8 as lng",
     "count(*)::int as count",
     "count(distinct account_global_legal_name)::int as accounts_count",
-    "coalesce(sum(coalesce(center_employees, 0)), 0)::int as headcount",
+    `${HEADCOUNT_SUM_SQL} as headcount`,
   ].join(", "),
   where: "lat is not null and lng is not null and center_city is not null and center_city <> ''",
   groupBy: "center_city",
@@ -56,7 +57,7 @@ export function buildCityMapQuery(f: Filters, access: FilterAccess = {}): SqlQue
  * One row per (country ISO2, state) over the filtered centers. Mirrors the
  * client buildStateAggregates: keys are upper(trim(iso2)) and
  * lower(trim(state)), accounts count only non-empty account names, headcount
- * sums center_employees. country_name is a representative center_country for
+ * follows the summary card rule (HEADCOUNT_SUM_SQL). country_name is a representative center_country for
  * the group (the client keeps one name per ISO2 the same way).
  */
 const STATE_BRANCH: AggregateBranch = {
@@ -66,7 +67,7 @@ const STATE_BRANCH: AggregateBranch = {
     "max(center_country) as country_name",
     "count(*)::int as count",
     "(count(distinct account_global_legal_name) filter (where account_global_legal_name is not null and account_global_legal_name <> ''))::int as accounts_count",
-    "coalesce(sum(coalesce(center_employees, 0)), 0)::int as headcount",
+    `${HEADCOUNT_SUM_SQL} as headcount`,
   ].join(", "),
   where:
     "center_state is not null and trim(center_state) <> '' and center_country_iso2 is not null and trim(center_country_iso2) <> ''",

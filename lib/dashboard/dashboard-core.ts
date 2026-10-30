@@ -2,6 +2,7 @@ import "server-only"
 
 import { buildCentersQuery, buildEntityAggregateQuery, buildFacetCountsQuery, type AggregateEntity, type FilterAccess, type SqlQuery } from "@/lib/dashboard/filtering-sql"
 import { queryWarehouse } from "@/lib/db/warehouse"
+import { HEADCOUNT_SUM_SQL } from "@/lib/dashboard/headcount"
 import { dashboardCacheTtlMs, getOrCompute } from "@/lib/cache/memory"
 import type { ChartsResponse, FacetsResponse, SummaryResponse } from "@/lib/dashboard/api-client"
 import type { AvailableOptions, ChartData, FilterOption, FilterValue, Filters } from "@/lib/types"
@@ -117,8 +118,7 @@ export function computeFacets(filters: Filters, access: FilterAccess, opts: { by
 const CENTER_METRICS =
   "count(*)::int as centers, " +
   "sum(case when center_status = 'Upcoming' then 1 else 0 end)::int as upcoming, " +
-  "coalesce(sum(case when (center_type is null or lower(center_type) not in " +
-  "('manufacturing', 'sales & marketing', 'bpo', 'distribution')) then center_employees else 0 end), 0)::int as headcount"
+  `${HEADCOUNT_SUM_SQL} as headcount`
 
 const num = (rows: Record<string, unknown>[], key: string) => Number(rows[0]?.[key] ?? 0)
 
