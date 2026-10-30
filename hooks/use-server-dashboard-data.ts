@@ -6,8 +6,8 @@ import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { sanitizeFilters } from "@/lib/config/filters"
 import { createDefaultFilters } from "@/lib/dashboard/defaults"
+import { getQueryClient } from "@/lib/query-client"
 import {
-  clearAccountRelatedCache,
   fetchCentersMap,
   fetchDashboardCharts,
   fetchDashboardFacets,
@@ -70,7 +70,9 @@ const mapCache = new Map<string, CentersMapResponse>()
 const pageCache = new Map<string, EntityPage<Record<string, unknown>>>()
 
 export function clearClientDashboardCache(): void {
-  clearAccountRelatedCache()
+  // Record lookups (account, centre, engagements): open dialogs refetch now,
+  // the rest on their next open.
+  void getQueryClient().invalidateQueries()
   summaryCache.clear()
   facetsCache.clear()
   chartsCache.clear()

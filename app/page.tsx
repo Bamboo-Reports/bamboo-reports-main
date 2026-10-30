@@ -26,14 +26,14 @@ import { useAuthGuard } from "@/hooks/use-auth-guard"
 import { useDashboardFilters } from "@/hooks/use-dashboard-filters"
 import { useServerDashboardData, normalizeFiltersForServer } from "@/hooks/use-server-dashboard-data"
 import {
-  fetchAccountRelated,
-  fetchCenterDetail,
   fetchDashboardChartsFull,
   fetchDashboardSummary,
   fetchProspectById,
   type EntitySort,
   type FacetRanges,
 } from "@/lib/dashboard/api-client"
+import { accountRelatedQuery, centerDetailQuery } from "@/lib/dashboard/queries"
+import { getQueryClient } from "@/lib/query-client"
 import { useGlobalSearch } from "@/hooks/use-global-search"
 import { useRecordOpener } from "@/hooks/use-record-opener"
 import { RecordHistoryProvider } from "@/contexts/record-history-context"
@@ -1134,7 +1134,7 @@ function DashboardContent(): React.JSX.Element | null {
         }
         openRecord({
           label: "account",
-          load: () => fetchAccountRelated(item.id).then((res) => res.account),
+          load: () => getQueryClient().fetchQuery(accountRelatedQuery(item.id)).then((res) => res.account),
           onLoaded: (account) => {
             trackOpened()
             setSearchSelectedAccount(account)
@@ -1150,7 +1150,7 @@ function DashboardContent(): React.JSX.Element | null {
         }
         openRecord({
           label: "centre",
-          load: () => fetchCenterDetail(item.id).then((res) => res.center),
+          load: () => getQueryClient().fetchQuery(centerDetailQuery(item.id)).then((res) => res.center),
           onLoaded: (center) => {
             trackOpened()
             setSearchSelectedCenter(center)
@@ -1219,7 +1219,7 @@ function DashboardContent(): React.JSX.Element | null {
       // related_record_opened is captured by the dialog that owns the link
       openRecord({
         label: "account",
-        load: () => fetchAccountRelated(accountName).then((res) => res.account),
+        load: () => getQueryClient().fetchQuery(accountRelatedQuery(accountName)).then((res) => res.account),
         onLoaded: (account) => {
           if (parentEntity === "center") {
             setSearchCenterDialogOpen(false)

@@ -1,9 +1,10 @@
 "use client"
 
-import { useEffect, useMemo, useState, type ComponentType } from "react"
+import { useMemo, type ComponentType } from "react"
+import { useQuery } from "@tanstack/react-query"
 import { RiDownload2Line, RiFileChartLine, RiMegaphoneLine, RiRefreshLine, RiUserAddLine } from "@remixicon/react"
 import type { ProspectEngagement } from "@/lib/types"
-import { fetchProspectEngagements } from "@/lib/dashboard/api-client"
+import { prospectEngagementsQuery } from "@/lib/dashboard/queries"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import {
@@ -73,31 +74,15 @@ function todayUtc(): number {
  * one row. Loads from /api/prospects/[id]/engagements, already sorted.
  */
 export function ProspectEngagementTimeline({ psUniqueKey }: { psUniqueKey: string }) {
-  const [engagements, setEngagements] = useState<ProspectEngagement[] | null>(null)
-  const [failed, setFailed] = useState(false)
-  const [attempt, setAttempt] = useState(0)
-
-  useEffect(() => {
-    let cancelled = false
-    setEngagements(null)
-    setFailed(false)
-    fetchProspectEngagements(psUniqueKey)
-      .then((res) => {
-        if (!cancelled) setEngagements(res.engagements)
-      })
-      .catch(() => {
-        if (!cancelled) setFailed(true)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [psUniqueKey, attempt])
+  const query = useQuery(prospectEngagementsQuery(psUniqueKey))
+  const engagements = query.data?.engagements ?? null
+  const failed = query.isError
 
   const touchpoints = useMemo(() => (engagements ? toTouchpoints(engagements) : []), [engagements])
   const latest = touchpoints.length > 0 ? touchpoints[touchpoints.length - 1] : null
   const today = todayUtc()
   const lastActiveDays = latest ? daysBetween(latest.time, today) : null
-  const loading = engagements === null && !failed
+  const loading = query.isPending
 
   return (
     <section className="space-y-4" aria-busy={loading}>
@@ -128,7 +113,7 @@ export function ProspectEngagementTimeline({ psUniqueKey }: { psUniqueKey: strin
             <p className="text-sm text-muted-foreground">Could not load this prospect&apos;s campaign activity.</p>
             <Button type="button" variant="outline" size="sm" onClick={() => {
                 captureEvent(ANALYTICS_EVENTS.ENGAGEMENTS_RETRY_CLICKED)
-                setAttempt((n) => n + 1)
+                void query.refetch()
               }}>
               <RiRefreshLine aria-hidden />
               Try again
