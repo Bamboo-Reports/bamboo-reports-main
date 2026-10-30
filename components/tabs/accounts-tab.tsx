@@ -35,6 +35,8 @@ export interface TabServerProps {
   total: number
   loading?: boolean
   onSortChange: (key: string, direction: "asc" | "desc" | null) => void
+  /** Changes whenever the filters do; selected rows are cleared then. */
+  selectionResetKey?: string
 }
 
 interface AccountsTabProps {

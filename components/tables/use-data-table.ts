@@ -62,7 +62,14 @@ export function useDataTable<TData extends RowData>({
   const manual = Boolean(server)
 
   const [sorting, setSorting] = useState<SortingState>([])
-  const { selected, setSelected, clear } = useTableRowSelection({ entity, items: data, getKey: getRowKey })
+  // Server mode only holds the current page, so selections must not be pruned
+  // against it; they reset when the filters change instead.
+  const { selected, setSelected, clear } = useTableRowSelection({
+    entity,
+    items: server ? null : data,
+    getKey: getRowKey,
+    resetKey: server?.selectionResetKey,
+  })
 
   const pagination = useMemo<PaginationState>(
     () => ({ pageIndex: currentPage - 1, pageSize: itemsPerPage }),

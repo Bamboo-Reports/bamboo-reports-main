@@ -198,14 +198,18 @@ function DashboardContent(): React.JSX.Element | null {
       },
     []
   )
+  // Filters may be replaced with an equal object by the filter hook; reset pagination only on value changes.
+  const filtersPaginationResetKey = useMemo(() => JSON.stringify(filters), [filters])
+
   const accountsServerProps = useMemo(
     () =>
       ({
         total: serverData.entityPages.accounts?.total ?? 0,
         loading: serverData.entityPages.accounts === null || serverData.pending.accounts,
         onSortChange: makeSortHandler("accounts", setAccountsSort),
+        selectionResetKey: filtersPaginationResetKey,
       }),
-    [serverData.entityPages.accounts, serverData.pending.accounts, makeSortHandler]
+    [serverData.entityPages.accounts, serverData.pending.accounts, makeSortHandler, filtersPaginationResetKey]
   )
   const centersServerProps = useMemo(
     () =>
@@ -213,8 +217,9 @@ function DashboardContent(): React.JSX.Element | null {
         total: serverData.entityPages.centers?.total ?? 0,
         loading: serverData.entityPages.centers === null || serverData.pending.centers,
         onSortChange: makeSortHandler("centers", setCentersSort),
+        selectionResetKey: filtersPaginationResetKey,
       }),
-    [serverData.entityPages.centers, serverData.pending.centers, makeSortHandler]
+    [serverData.entityPages.centers, serverData.pending.centers, makeSortHandler, filtersPaginationResetKey]
   )
   const prospectsServerProps = useMemo(
     () =>
@@ -222,8 +227,9 @@ function DashboardContent(): React.JSX.Element | null {
         total: serverData.entityPages.prospects?.total ?? 0,
         loading: serverData.entityPages.prospects === null || serverData.pending.prospects,
         onSortChange: makeSortHandler("prospects", setProspectsSort),
+        selectionResetKey: filtersPaginationResetKey,
       }),
-    [serverData.entityPages.prospects, serverData.pending.prospects, makeSortHandler]
+    [serverData.entityPages.prospects, serverData.pending.prospects, makeSortHandler, filtersPaginationResetKey]
   )
   const serverMapData = useMemo(
     () =>
@@ -341,8 +347,6 @@ function DashboardContent(): React.JSX.Element | null {
     return prospectsPage
   }, [activeSection, accountsPage, centersPage, prospectsPage])
 
-  // Filters may be replaced with an equal object by the filter hook; reset pagination only on value changes.
-  const filtersPaginationResetKey = useMemo(() => JSON.stringify(filters), [filters])
 
   useEffect(() => {
     setAccountsPage(1)

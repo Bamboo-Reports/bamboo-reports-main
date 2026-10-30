@@ -5,14 +5,17 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 /**
  * Tracks a set of selected row keys. Selection survives paging/sorting and is
  * pruned automatically when a key disappears from `availableKeys` (e.g. after a
- * filter change). Pass a memoized `availableKeys` array to avoid extra work.
+ * filter change). Pass a memoized `availableKeys` array to avoid extra work, or
+ * null when only one page of rows is loaded and pruning would drop selections
+ * made on other pages.
  */
-export function useRowSelection(availableKeys: string[]) {
+export function useRowSelection(availableKeys: string[] | null) {
   const [selected, setSelected] = useState<Set<string>>(() => new Set())
 
-  const availableSet = useMemo(() => new Set(availableKeys), [availableKeys])
+  const availableSet = useMemo(() => (availableKeys ? new Set(availableKeys) : null), [availableKeys])
 
   useEffect(() => {
+    if (!availableSet) return
     setSelected((prev) => {
       if (prev.size === 0) return prev
       const next = new Set([...prev].filter((key) => availableSet.has(key)))

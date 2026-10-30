@@ -95,4 +95,35 @@ describe("useDataTable", () => {
     expect(hook.result.current.selectedKeys.size).toBe(0)
     expect(captured.events.at(-1)?.props).toMatchObject({ method: "all", action: "deselect", selected_count: 0 })
   })
+
+  it("keeps selections from other pages in server mode and clears them when the filters change", () => {
+    const page2: Row[] = [{ id: "c", name: "Charlie" }]
+    const onSortChange = vi.fn()
+    const hook = renderHook(
+      ({ data, selectionResetKey }: { data: Row[]; selectionResetKey: string }) =>
+        useDataTable({
+          dataset: "accounts",
+          data,
+          columns,
+          getRowKey,
+          server: { total: 120, onSortChange, selectionResetKey },
+          currentPage: 1,
+          setCurrentPage: vi.fn(),
+          itemsPerPage: 25,
+          setItemsPerPage: vi.fn(),
+        }),
+      { initialProps: { data: rows, selectionResetKey: "filters-1" } }
+    )
+
+    act(() => hook.result.current.table.getRow("a").toggleSelected(true))
+    hook.rerender({ data: page2, selectionResetKey: "filters-1" })
+    act(() => hook.result.current.table.getRow("c").toggleSelected(true))
+    expect([...hook.result.current.selectedKeys].sort()).toEqual(["a", "c"])
+    // Clearing the current page leaves the other page's selection alone.
+    act(() => hook.result.current.table.toggleAllPageRowsSelected(false))
+    expect([...hook.result.current.selectedKeys]).toEqual(["a"])
+
+    hook.rerender({ data: page2, selectionResetKey: "filters-2" })
+    expect(hook.result.current.selectedKeys.size).toBe(0)
+  })
 })
