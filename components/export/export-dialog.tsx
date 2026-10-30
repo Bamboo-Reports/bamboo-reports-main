@@ -59,6 +59,11 @@ interface ExportDialogProps {
   rowCounts?: Partial<Record<ExportDatasetKey, number>> | null
   /** When set, restricts the dialog to these datasets (e.g. a single-sheet selection export). */
   allowedDatasets?: ExportDatasetKey[]
+  /**
+   * When set, only these datasets start ticked; the others stay available to
+   * add. Used when the export is opened from one table.
+   */
+  initialDatasets?: ExportDatasetKey[]
   /** Compact single-dataset layout for selection exports (no dataset picker). */
   compact?: boolean
   /** Whether the dialog exports the whole (filtered) dataset or a row selection; analytics only. */
@@ -116,6 +121,7 @@ export function ExportDialog({
   filters,
   rowCounts,
   allowedDatasets,
+  initialDatasets,
   compact = false,
   exportScope = "all",
   onExportCompleted,
@@ -198,7 +204,8 @@ export function ExportDialog({
     }
     wasOpenRef.current = true
 
-    const allow = (key: ExportDatasetKey) => !allowedDatasets || allowedDatasets.includes(key)
+    const allow = (key: ExportDatasetKey) =>
+      (!allowedDatasets || allowedDatasets.includes(key)) && (!initialDatasets || initialDatasets.includes(key))
     const initialSelection = {
       accounts: allow("accounts") && isDatasetEnabled("accounts") && countOf("accounts") > 0,
       centers: allow("centers") && isDatasetEnabled("centers") && countOf("centers") > 0,
@@ -226,7 +233,7 @@ export function ExportDialog({
       selected_dataset_count: initiallySelectedDatasets.length,
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, data, rowCounts, isFiltered, allowedDatasets])
+  }, [open, data, rowCounts, isFiltered, allowedDatasets, initialDatasets])
 
   const totalSelected = useMemo(
     () => Object.values(selection).filter(Boolean).length,

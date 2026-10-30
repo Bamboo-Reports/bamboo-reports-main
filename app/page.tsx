@@ -284,6 +284,8 @@ function DashboardContent(): React.JSX.Element | null {
     | { dataset: "prospects"; prospectIds: string[] }
     | null
   >(null)
+  /** Sheets ticked when the full export opens; undefined ticks every sheet. */
+  const [exportStartDatasets, setExportStartDatasets] = useState<ExportDatasetKey[] | undefined>(undefined)
   const [exportsDialogOpen, setExportsDialogOpen] = useState(false)
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
@@ -776,14 +778,21 @@ function DashboardContent(): React.JSX.Element | null {
     }
   }, [])
 
-  const handleExportAll = useCallback(() => {
-    if (!canExport) {
-      return
-    }
-    cancelPendingScopeClear()
-    setExportScope(null)
-    setExportDialogOpen(true)
-  }, [canExport, cancelPendingScopeClear])
+  // The full (filtered) export. From a table it starts with only that
+  // table's sheet ticked; from the sidebar every sheet starts ticked.
+  const openFullExport = useCallback(
+    (startWith: ExportDatasetKey | null) => {
+      if (!canExport) {
+        return
+      }
+      cancelPendingScopeClear()
+      setExportScope(null)
+      setExportStartDatasets(startWith ? [startWith] : undefined)
+      setExportDialogOpen(true)
+    },
+    [canExport, cancelPendingScopeClear]
+  )
+  const handleExportAll = useCallback(() => openFullExport(null), [openFullExport])
 
   const handleDownloadSelection = useCallback(
     (
@@ -1409,6 +1418,7 @@ function DashboardContent(): React.JSX.Element | null {
             rowCounts={exportPayload.rowCounts}
             allowedDatasets={exportPayload.allowedDatasets}
             compact={Boolean(exportPayload.allowedDatasets)}
+            initialDatasets={exportScope ? undefined : exportStartDatasets}
             exportScope={exportScope ? "selection" : "all"}
             onExportCompleted={handleExportCompleted}
           />
@@ -1478,7 +1488,7 @@ function DashboardContent(): React.JSX.Element | null {
                       itemsPerPage={itemsPerPage}
                       setItemsPerPage={setItemsPerPage}
                       onDownloadSelection={canExport ? handleDownloadSelection : undefined}
-                      onExportAll={canExport ? handleExportAll : undefined}
+                      onExportAll={canExport ? openFullExport : undefined}
                     />
                   )}
 
@@ -1505,7 +1515,7 @@ function DashboardContent(): React.JSX.Element | null {
                       itemsPerPage={itemsPerPage}
                       setItemsPerPage={setItemsPerPage}
                       onDownloadSelection={canExport ? handleDownloadSelection : undefined}
-                      onExportAll={canExport ? handleExportAll : undefined}
+                      onExportAll={canExport ? openFullExport : undefined}
                     />
                   )}
 
@@ -1529,7 +1539,7 @@ function DashboardContent(): React.JSX.Element | null {
                       itemsPerPage={itemsPerPage}
                       setItemsPerPage={setItemsPerPage}
                       onDownloadSelection={canExport ? handleDownloadSelection : undefined}
-                      onExportAll={canExport ? handleExportAll : undefined}
+                      onExportAll={canExport ? openFullExport : undefined}
                     />
                   )}
                 </Tabs>

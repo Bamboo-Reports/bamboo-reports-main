@@ -47,8 +47,8 @@ interface ProspectsTabProps {
   itemsPerPage: number
   setItemsPerPage: (size: number) => void
   onDownloadSelection?: (scope: { dataset: "prospects"; prospectIds: string[] }) => void
-  /** Opens the full Export, which covers every row matching the filters. */
-  onExportAll?: () => void
+  /** Opens the full Export (every row matching the filters), starting with this table's sheet. */
+  onExportAll?: (dataset: "prospects") => void
   server?: TabServerProps | null
   chartsLoading?: boolean
 }
@@ -385,7 +385,7 @@ export function ProspectsTab({
         onClear={clearSelection}
         onExport={handleExportSelection}
         matchingCount={allPageSelected && totalRows > selectedKeys.size ? totalRows : undefined}
-        onExportAll={onExportAll}
+        onExportAll={onExportAll && (() => onExportAll("prospects"))}
       />
     </TabsContent>
   )

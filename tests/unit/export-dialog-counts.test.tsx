@@ -54,4 +54,25 @@ describe("ExportDialog row counts in server mode (#307)", () => {
       })
     )
   })
+
+  it("starts with only the given sheet ticked and keeps the others available", () => {
+    render(
+      <ExportDialog
+        open
+        onOpenChange={() => {}}
+        data={emptyData}
+        isFiltered
+        rowCounts={rowCounts}
+        filters={{}}
+        initialDatasets={["prospects"]}
+      />
+    )
+    const box = (key: string) => document.getElementById(`export-dataset-${key}`)!
+    expect(box("prospects").getAttribute("aria-checked")).toBe("true")
+    for (const key of ["accounts", "centers", "services"]) {
+      expect(box(key).getAttribute("aria-checked")).toBe("false")
+      expect(box(key).hasAttribute("disabled")).toBe(false)
+    }
+    expect(screen.getByText("1 selected")).toBeTruthy()
+  })
 })
