@@ -7,7 +7,7 @@ from dataclasses import dataclass
 import gspread
 
 from common import tui
-from common.google import safe_api_call
+from common.google import read_settled, safe_api_call
 from sheets import source
 from sheets.rules import INVISIBLE_CHARS_RE
 
@@ -75,7 +75,8 @@ class Workbook:
         except gspread.exceptions.WorksheetNotFound:
             self._missing.add(sheet)
             return False
-        all_data = safe_api_call(lambda: ws.get_all_values())
+        # Read again while formulas still say Loading..., saying so.
+        all_data = read_settled(lambda: ws.get_all_values(), f"tab '{tab}'")
         time.sleep(0.5)
         # Header lookup ignores case, surrounding spaces and invisible
         # characters, so a stray BOM in a header does not hide the column.
@@ -87,7 +88,9 @@ class Workbook:
         # cleaned value would replace the formula with static text. Many
         # columns are formulas (tech.account_global_legal_name, the range
         # columns in accounts and centers).
-        formula_data = safe_api_call(lambda: ws.get_all_values(value_render_option="FORMULA"))
+        formula_data = safe_api_call(
+            lambda: ws.get_all_values(value_render_option="FORMULA"), f"the formulas in tab '{tab}'"
+        )
         time.sleep(0.5)
         self.formula_text[sheet] = {
             (r, c): v
@@ -261,7 +264,11 @@ class Workbook:
             for sheet, cols in sorted(self.dropped_columns.items())
             for c in sorted(cols, reverse=True)
         ]
-        safe_api_call(lambda: self.spreadsheet.batch_update({"requests": requests}))
+        # Not idempotent: a timed-out delete may have run, and a retry would
+        # delete the next column too.
+        safe_api_call(
+            lambda: self.spreadsheet.batch_update({"requests": requests}), "deleting columns", idempotent=False
+        )
 
     def _write_cell_types(self) -> None:
         """Apply the chip and dropdown fixes with the Sheets batchUpdate API:
@@ -312,7 +319,7 @@ class Workbook:
                     start = prev = r
         for i in range(0, len(requests), 500):
             batch = requests[i : i + 500]
-            safe_api_call(lambda: self.spreadsheet.batch_update({"requests": batch}))
+            safe_api_call(lambda: self.spreadsheet.batch_update({"requests": batch}), "chip and dropdown fixes")
             time.sleep(0.5)
 
     def _write_sheet(self, sheet: str) -> int:
@@ -331,6 +338,6 @@ class Workbook:
         for i in range(0, len(dirty), WRITE_BATCH):
             batch = dirty[i : i + WRITE_BATCH]
             # RAW so the text is written back verbatim, not reparsed by Sheets.
-            safe_api_call(lambda: ws.update_cells(batch, value_input_option="RAW"))
+            safe_api_call(lambda: ws.update_cells(batch, value_input_option="RAW"), f"writing '{sheet}'")
             time.sleep(0.5)
         return len(dirty)

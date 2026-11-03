@@ -20,7 +20,7 @@ def step_chips(wb: Workbook) -> None:
     with tui.loading(len(wb.editable), "Reading cell metadata") as bar:
         for sheet in wb.editable:
             bar.start(f"Reading chips and dropdowns in '{sheet}'")
-            metas[sheet] = safe_api_call(lambda: cell_meta.fetch(wb.spreadsheet, sheet))
+            metas[sheet] = safe_api_call(lambda: cell_meta.fetch(wb.spreadsheet, sheet), f"chips in '{sheet}'")
             bar.done()
 
     # Chips first so the report leads with them: they are the few cells that

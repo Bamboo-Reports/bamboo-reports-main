@@ -9,7 +9,7 @@ from rich.prompt import Confirm
 
 from common import tui
 from common.env import require
-from common.google import get_gspread_client, safe_api_call
+from common.google import SheetNotSettled, get_gspread_client, safe_api_call
 from common.tui import console
 from sheets import source
 from sheets.rules import ALL_SHEETS
@@ -210,7 +210,7 @@ def main() -> None:
         console.print(f"[error][ERROR][/error] {exc}")
         sys.exit(1)
     with console.status("Connecting to Google Sheets ...", spinner_style="info"):
-        spreadsheet = safe_api_call(lambda: gc.open_by_key(active.spreadsheet_id))
+        spreadsheet = safe_api_call(lambda: gc.open_by_key(active.spreadsheet_id), "the spreadsheet")
 
     tui.header(
         "cleanup",
@@ -320,3 +320,7 @@ def run() -> None:
         console.print()
         console.print("[warning]Stopped. Nothing more will be written.[/warning]")
         sys.exit(130)
+    except SheetNotSettled as exc:
+        console.print()
+        console.print(f"[error][ERROR][/error] {exc}")
+        sys.exit(1)

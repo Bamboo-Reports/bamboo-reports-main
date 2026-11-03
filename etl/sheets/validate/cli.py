@@ -6,7 +6,7 @@ import gspread
 
 from common import tui
 from common.env import require
-from common.google import get_credentials, safe_api_call
+from common.google import SheetNotSettled, authorize, get_credentials, safe_api_call
 from common.tui import console
 from sheets import source
 from sheets.rules import ALL_SHEETS
@@ -153,11 +153,11 @@ def main() -> None:
         console.print(f"[error][ERROR][/error] {exc}")
         sys.exit(1)
     options.service_account_email = credentials.service_account_email
-    gc = gspread.authorize(credentials)
+    gc = authorize(credentials)
 
     try:
         with console.status("Connecting to Google Sheets ...", spinner_style="info"):
-            spreadsheet = safe_api_call(lambda: gc.open_by_key(active.spreadsheet_id))
+            spreadsheet = safe_api_call(lambda: gc.open_by_key(active.spreadsheet_id), "the spreadsheet")
     except gspread.exceptions.APIError as exc:
         console.print(
             f"[error][ERROR][/error] Could not open spreadsheet.\n"
@@ -219,3 +219,7 @@ def run() -> None:
         console.print()
         console.print("[warning]Stopped.[/warning]")
         sys.exit(130)
+    except SheetNotSettled as exc:
+        console.print()
+        console.print(f"[error][ERROR][/error] {exc}")
+        sys.exit(1)

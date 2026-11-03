@@ -6,7 +6,7 @@ import time
 import gspread
 
 from common import tui
-from common.google import safe_api_call
+from common.google import read_settled
 from common.tui import console
 from sheets import source
 
@@ -15,7 +15,8 @@ def get_worksheet_rows(
     worksheet: gspread.Worksheet,
 ) -> tuple[list[str], list[list[str]]]:
     """Fetch all data from a worksheet. Returns (headers, rows)."""
-    all_data = safe_api_call(lambda: worksheet.get_all_values())
+    # Read again while formulas still say Loading..., saying so.
+    all_data = read_settled(lambda: worksheet.get_all_values(), f"tab '{worksheet.title}'")
     if not all_data:
         return [], []
     headers = [str(h).strip().lower() for h in all_data[0]]
