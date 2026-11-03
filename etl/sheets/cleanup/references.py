@@ -79,6 +79,10 @@ def plan_key_renames(wb: Workbook) -> dict[str, str]:
 def step_references(wb: Workbook) -> None:
     for rule in VALIDATION_RULES:
         source, column = rule["source_sheet"], rule["column"]
+        # A sheet this source does not have (the data team sheet has no
+        # prospects) is expected, not worth a warning.
+        if not sheet_source.active.in_scope(source):
+            continue
         if wb.col(source, column) < 0:
             tui.line("warn", f"No '{column}' in '{source}', rule skipped.")
             continue

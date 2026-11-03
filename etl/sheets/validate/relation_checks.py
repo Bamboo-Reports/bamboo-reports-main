@@ -181,7 +181,14 @@ def check_references(cache: SheetCache) -> PhaseResult:
         parts.append(tui.plural(result.errors, "missing value"))
     if result.warnings:
         parts.append(tui.plural(result.warnings, "case mismatch", "case mismatches"))
-    result.detail = ", ".join(parts) or f"{len(VALIDATION_RULES)} rules, all match"
+    # Count only the rules that ran: one whose source sheet is excluded, or
+    # missing from this source, is skipped and not counted as matching.
+    ran = sum(
+        1
+        for rule in VALIDATION_RULES
+        if not is_excluded(rule["source_sheet"]) and any(not is_excluded(t) for t in rule["target_sheets"])
+    )
+    result.detail = ", ".join(parts) or f"{tui.plural(ran, 'rule')}, all match"
     return result
 
 
