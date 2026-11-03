@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sign-in pages</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css" rel="stylesheet" />
+<style>
+  /* Tokens copied from app/globals.css */
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 214 45% 15%;
+    --card: 0 0% 100%;
+    --primary: 204 100% 41%;
+    --primary-foreground: 0 0% 100%;
+    --muted: 210 25% 94%;
+    --muted-foreground: 215 20% 39%;
+    --border: 212 24% 86%;
+    --ring: 204 100% 41%;
+    --include: 142 64% 32%;
+    --exclude: 0 72% 46%;
+    --warn: 32 90% 40%;
+    --dialog-shadow: 0 30px 80px -30px rgba(15,30,50,.45), 0 2px 8px rgba(15,30,50,.08);
+  }
+  .dark {
+    --background: 0 0% 10%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 12%;
+    --primary: 204 92% 56%;
+    --primary-foreground: 0 0% 10%;
+    --muted: 0 0% 16%;
+    --muted-foreground: 0 0% 65%;
+    --border: 0 0% 24%;
+    --ring: 0 0% 83.1%;
+    --include: 142 55% 55%;
+    --exclude: 0 80% 66%;
+    --warn: 36 90% 60%;
+    --dialog-shadow: 0 30px 80px -30px rgba(0,0,0,.8);
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: light; }
+  html.dark { color-scheme: dark; }
+  body { margin: 0; font-family: "Inter", system-ui, sans-serif; background: hsl(var(--background)); color: hsl(var(--foreground)); -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; font-size: 13px; }
+  button, input { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+  ::selection { background: hsl(var(--primary) / .2); }
+
+  .page { max-width: 1100px; margin: 0 auto; padding: 32px 16px 80px; }
+  .top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+  .top h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .intro { margin: 0 0 16px; max-width: 82ch; line-height: 1.5; color: hsl(var(--muted-foreground)); }
+  .toggle { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 13px; font-weight: 500; }
+  .seg { display: inline-grid; grid-auto-flow: column; padding: 3px; border-radius: 9px; background: hsl(var(--muted) / .8); }
+  .seg button { height: 28px; padding: 0 12px; border: 0; border-radius: 6px; background: transparent; font-size: 12.5px; font-weight: 500; color: hsl(var(--muted-foreground)); white-space: nowrap; }
+  .seg button.on { background: hsl(var(--card)); color: hsl(var(--foreground)); box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 0 0 1px hsl(var(--border) / .6); }
+  .seg button .c { margin-left: 4px; font-size: 11.5px; color: hsl(var(--muted-foreground)); }
+  .bar2 { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; margin: 4px 0 12px; }
+  .bar2 > div { display: flex; align-items: center; gap: 8px; }
+  .ctl-label { font-size: 12px; font-weight: 500; color: hsl(var(--muted-foreground)); }
+  .variant-note { margin: 0 0 16px; padding-left: 12px; border-left: 2px solid hsl(var(--border)); max-width: 82ch; line-height: 1.5; color: hsl(var(--muted-foreground)); }
+  .variant-note b { color: hsl(var(--foreground)); font-weight: 600; }
+  .backdrop { padding: 24px 16px; border-radius: 16px; background: hsl(214 30% 12% / .08); }
+  .dark .backdrop { background: hsl(0 0% 0% / .35); }
+
+  /* ---------- shared ---------- */
+  .dlg { display: flex; flex-direction: column; height: 600px; margin: 0 auto; border-radius: 10px; border: 1px solid hsl(var(--border)); background: hsl(var(--background)); box-shadow: var(--dialog-shadow); overflow: hidden; }
+  .dlg.a { max-width: 920px; }
+  .dlg.b { max-width: 760px; }
+  .dh { flex: none; display: flex; align-items: center; gap: 10px; padding: 14px 16px 14px 20px; border-bottom: 1px solid hsl(var(--border)); }
+  .dh h2 { margin: 0; font-size: 16px; font-weight: 600; }
+  .dh .sub { font-size: 12.5px; color: hsl(var(--muted-foreground)); }
+  .dh .sp { flex: 1; }
+  .ib { display: grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 7px; background: transparent; color: hsl(var(--muted-foreground)); font-size: 16px; }
+  .ib:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
+  .ib.lg { font-size: 18px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 13px; font-weight: 500; white-space: nowrap; }
+  .btn:hover { border-color: hsl(var(--foreground) / .25); }
+  .btn i { font-size: 15px; }
+  .btn.primary { border-color: transparent; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+  .btn.sm { height: 28px; padding: 0 10px; font-size: 12.5px; }
+  .search { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; border-radius: 8px; border: 1px solid transparent; background: hsl(var(--muted) / .8); color: hsl(var(--muted-foreground)); }
+  .search:focus-within { border-color: hsl(var(--primary) / .6); box-shadow: 0 0 0 3px hsl(var(--primary) / .15); }
+  .search input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font-size: 13px; color: hsl(var(--foreground)); }
+  .search input::placeholder { color: hsl(var(--muted-foreground)); }
+  .chip { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px; border-radius: 6px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 12px; font-weight: 500; white-space: nowrap; }
+  .chip .k { color: hsl(var(--muted-foreground)); font-weight: 400; }
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .muted { color: hsl(var(--muted-foreground)); }
+  .grp { position: sticky; top: 0; z-index: 1; padding: 10px 10px 4px; background: inherit; font-size: 11.5px; font-weight: 600; color: hsl(var(--muted-foreground)); }
+  .state { display: grid; place-items: center; flex: 1; padding: 32px; text-align: center; }
+  .state i.big { font-size: 26px; color: hsl(var(--muted-foreground)); }
+  .state p { margin: 8px 0 0; max-width: 40ch; line-height: 1.5; color: hsl(var(--muted-foreground)); font-size: 12.5px; }
+  .state p b { display: block; margin-bottom: 2px; color: hsl(var(--foreground)); font-size: 13.5px; font-weight: 600; }
+  .state.err i.big { color: hsl(var(--exclude)); }
+  .sk { height: 10px; border-radius: 4px; background: hsl(var(--muted)); animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .5; } }
+  @media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
+
+  .stage-frame { overflow: hidden; border-radius: 14px; border: 1px solid hsl(var(--border)); box-shadow: var(--dialog-shadow); }
+  .pagebg { position: relative; min-height: 640px; display: flex; flex-direction: column; background: radial-gradient(circle at top right, hsl(var(--primary) / .14), transparent 36%), radial-gradient(circle at 0% 45%, hsl(28 90% 60% / .10), transparent 34%), hsl(var(--background)); }
+  .pagebg main { flex: 1; display: grid; place-items: center; padding: 40px 16px; }
+  .col { width: 100%; max-width: 400px; }
+  .brandl { display: inline-flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+  .brandl .mark { position: relative; display: grid; place-items: center; width: 40px; height: 40px; padding: 5px; border-radius: 12px; border: 1px solid hsl(var(--primary) / .2); background: hsl(var(--background)); }
+  .brandl .mark.dev { border-color: hsl(38 92% 50% / .5); }
+  .brandl .mark.dev::after { content: ""; position: absolute; right: -3px; top: -3px; width: 10px; height: 10px; border-radius: 999px; background: hsl(38 92% 50%); box-shadow: 0 0 0 2px hsl(var(--background)); }
+  .brandl b { font-size: 18px; font-weight: 700; }
+  .brandl b span { margin-left: 6px; font-weight: 500; color: hsl(32 92% 42%); }
+  .dark .brandl b span { color: hsl(38 92% 60%); }
+  .card2 { padding: 28px; border-radius: 14px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); box-shadow: 0 1px 2px rgba(15,30,50,.05); }
+  .card2 h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.015em; }
+  .card2 .desc { margin: 6px 0 0; font-size: 13.5px; line-height: 1.5; color: hsl(var(--muted-foreground)); }
+  .form { display: grid; gap: 16px; margin-top: 22px; }
+  .fld label, .fld .lr { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; font-size: 13px; font-weight: 500; }
+  .fld .lr a { font-size: 12.5px; font-weight: 500; color: hsl(var(--primary)); text-decoration: none; }
+  .inp { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border-radius: 9px; border: 1px solid hsl(var(--border)); background: hsl(var(--background)); font-size: 14px; }
+  .inp.focus { border-color: hsl(var(--primary) / .6); box-shadow: 0 0 0 3px hsl(var(--primary) / .15); }
+  .inp.bad { border-color: hsl(var(--exclude) / .6); }
+  .inp span { flex: 1; color: hsl(var(--foreground)); }
+  .inp span.ph { color: hsl(var(--muted-foreground)); }
+  .inp i { font-size: 17px; color: hsl(var(--muted-foreground)); }
+  .err { margin-top: 6px; font-size: 12.5px; color: hsl(var(--exclude)); }
+  .chk { display: flex; align-items: center; gap: 8px; font-size: 13px; color: hsl(var(--muted-foreground)); }
+  .chk .box { display: grid; place-items: center; width: 16px; height: 16px; border-radius: 4px; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); font-size: 12px; }
+  .primary-btn { display: flex; align-items: center; justify-content: center; gap: 8px; height: 42px; border: 0; border-radius: 9px; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); font-size: 14px; font-weight: 600; }
+  .note { display: flex; gap: 10px; padding: 11px 12px; border-radius: 10px; font-size: 13px; line-height: 1.45; }
+  .note i { flex: none; font-size: 17px; margin-top: 1px; }
+  .note.ok { background: hsl(var(--include) / .09); }
+  .note.ok i { color: hsl(var(--include)); }
+  .note.bad { background: hsl(var(--exclude) / .07); }
+  .note.bad i { color: hsl(var(--exclude)); }
+  .note b { display: block; font-weight: 600; }
+  .note a { color: hsl(var(--primary)); font-weight: 500; }
+  .rules { display: grid; gap: 5px; margin: -4px 0 0; padding: 0; list-style: none; font-size: 12.5px; color: hsl(var(--muted-foreground)); }
+  .rules li { display: flex; align-items: center; gap: 6px; }
+  .rules li i { font-size: 15px; }
+  .rules li.ok { color: hsl(var(--include)); }
+  .sent { text-align: center; padding: 6px 0 2px; }
+  .sent .ic { display: inline-grid; place-items: center; width: 48px; height: 48px; margin-bottom: 12px; border-radius: 999px; background: hsl(var(--primary) / .1); color: hsl(var(--primary)); font-size: 22px; }
+  .sent h1 { font-size: 20px; }
+  .sent .desc b { color: hsl(var(--foreground)); font-weight: 600; }
+  .sent .again { margin-top: 18px; font-size: 13px; color: hsl(var(--muted-foreground)); }
+  .sent .again a { color: hsl(var(--primary)); font-weight: 500; text-decoration: none; }
+  .under { margin-top: 18px; text-align: center; font-size: 13.5px; color: hsl(var(--muted-foreground)); }
+  .under a { color: hsl(var(--primary)); font-weight: 500; text-decoration: none; }
+  .foot { padding: 16px; text-align: center; font-size: 12px; color: hsl(var(--muted-foreground) / .8); }
+  .checking { display: flex; align-items: center; gap: 8px; margin-top: 22px; font-size: 13.5px; color: hsl(var(--muted-foreground)); }
+
+  /* B: split */
+  .split2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: 640px; }
+  .side2 { display: flex; flex-direction: column; justify-content: space-between; padding: 36px 40px; background: hsl(214 45% 15%); color: hsl(210 40% 96%); }
+  .dark .side2 { background: hsl(0 0% 7%); }
+  .side2 .brandl b { color: #fff; }
+  .side2 .brandl b span { color: hsl(38 92% 60%); }
+  .side2 .brandl .mark { background: #fff; }
+  .side2 h2 { margin: 0; max-width: 18ch; font-size: 30px; font-weight: 600; line-height: 1.2; letter-spacing: -0.02em; }
+  .side2 p { margin: 14px 0 0; max-width: 42ch; font-size: 14px; line-height: 1.6; color: hsl(210 30% 80%); }
+  .side2 ul { display: grid; gap: 12px; margin: 28px 0 0; padding: 0; list-style: none; font-size: 13.5px; color: hsl(210 30% 86%); }
+  .side2 ul li { display: flex; gap: 10px; align-items: flex-start; }
+  .side2 ul li i { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: hsl(0 0% 100% / .08); font-size: 15px; color: #fff; }
+  .side2 small { font-size: 12px; color: hsl(210 25% 70%); }
+  .form2 { display: grid; place-items: center; padding: 40px 24px; background: hsl(var(--background)); }
+  .form2 .col { max-width: 380px; }
+  .form2 .card2 { padding: 0; border: 0; background: none; box-shadow: none; }
+  @media (max-width: 800px) {
+    .split2 { grid-template-columns: 1fr; }
+    .side2 { padding: 24px; }
+    .side2 ul, .side2 p { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="top">
+    <h1>Sign-in pages</h1>
+    <button class="toggle" id="theme"><i class="ri-moon-line"></i><span>Dark</span></button>
+  </div>
+  <p class="intro">Options for sign in, forgot password and set a new password. There is no sign-up page: your administrator creates accounts. Both options keep today's fields and steps, show the Dev marker on the development site, put success and error messages above the form, turn "link sent" into a clear next step, and show the password rules as you type.</p>
+  <div class="bar2">
+    <div><span class="ctl-label">Option</span><div class="seg" id="variants"></div></div>
+  </div>
+  <div class="bar2">
+    <div><span class="ctl-label">Screen</span><div class="seg" id="screens" style="flex-wrap:wrap"></div></div>
+  </div>
+  <p class="variant-note" id="note"></p>
+  <div class="stage-frame"><div id="stage"></div></div>
+</div>
+<script>
+  const LOGO = `<svg width="100%" height="100%" viewBox="0 0 65 45" fill="none" xmlns="http://www.w3.org/2000/svg"> <path d="M47.4656 7.10152C50.5784 3.9887 55.6252 3.98871 58.7381 7.10152V7.10152C61.8509 10.2143 61.8509 15.2612 58.7381 18.374L43.4038 33.7082L32.1313 22.4358L47.4656 7.10152Z" fill="#FFAE71"/> <path d="M16.8235 37.9412C13.7264 41.0383 8.70492 41.0384 5.60778 37.9412V37.9412C2.51065 34.8441 2.51065 29.8226 5.60778 26.7255L20.9704 11.3629L32.1861 22.5786L16.8235 37.9412Z" fill="#6EC4EA"/> <path d="M43.3475 11.1967C41.8631 9.72636 40.1036 8.56279 38.1695 7.77242C36.2355 6.98206 34.1646 6.58038 32.0753 6.59031C29.986 6.60025 27.9191 7.02161 25.9926 7.83034C24.0662 8.63907 22.3178 9.81933 20.8475 11.3037C19.3771 12.7881 18.2136 14.5476 17.4232 16.4817C16.6328 18.4158 16.2312 20.4866 16.2411 22.5759C16.251 24.6652 16.6724 26.7321 17.4811 28.6586C18.2899 30.5851 19.4701 32.3334 20.9545 33.8037L32.151 22.5002L43.3475 11.1967Z" fill="#3AACEE"/> <path d="M20.9545 33.8037C23.9524 36.7732 28.0071 38.4302 32.2267 38.4101C36.4462 38.3901 40.485 36.6946 43.4545 33.6967C46.424 30.6988 48.081 26.6441 48.0609 22.4245C48.0408 18.205 46.3454 14.1662 43.3475 11.1967L32.151 22.5002L20.9545 33.8037Z" fill="#F17C1D"/> </svg> `;
+  const $ = (s) => document.querySelector(s);
+  const VARIANTS = [
+    { id: "a", label: "A. Centred card", note: "<b>Centred card.</b> Today's layout, tidied: the brand with its Dev marker, one card, messages at the top of the card, and the line under the card for the way back. Quiet and familiar." },
+    { id: "b", label: "B. Split page", note: "<b>Split page.</b> The form on the right, and a dark panel on the left that says what Bamboo Reports is for and that accounts come from your administrator. Feels more like a product front door; on phones the panel shrinks to the brand." },
+  ];
+  const SCREENS = [["signin", "Sign in"], ["error", "Wrong password"], ["updated", "Password updated"], ["forgot", "Forgot password"], ["sent", "Link sent"], ["newpw", "New password"], ["expired", "Link expired"]];
+  const state = { v: "a", s: "signin" };
+  const brand = (dark) => `<span class="brandl"><span class="mark dev">${LOGO}</span><b>Bamboo Reports<span>Dev</span></b></span>`;
+  const field = (label, value, opts = {}) => `<div class="fld">${opts.link ? `<div class="lr"><span>${label}</span><a href="#">${opts.link}</a></div>` : `<label>${label}</label>`}<div class="inp ${opts.cls || ""}"><span class="${value ? "" : "ph"}">${value || opts.ph || ""}</span>${opts.eye ? '<i class="ri-eye-line"></i>' : ""}</div>${opts.err ? `<div class="err">${opts.err}</div>` : ""}</div>`;
+
+  function content() {
+    const s = state.s;
+    if (s === "signin" || s === "error" || s === "updated") {
+      const msg = s === "error" ? `<div class="note bad"><i class="ri-error-warning-line"></i><div><b>That email and password don't match</b>Check both and try again, or reset your password.</div></div>`
+        : s === "updated" ? `<div class="note ok"><i class="ri-checkbox-circle-line"></i><div><b>Password updated</b>Sign in with your new password.</div></div>` : "";
+      return { title: "Sign in", desc: "Use the email your administrator set up for you.", body: `<div class="form">${msg}${field("Email", "asha.menon@researchnxt.com", { cls: s === "signin" ? "focus" : "" })}${field("Password", "••••••••••", { link: "Forgot password?", eye: true, cls: s === "error" ? "bad" : "" })}<div class="chk"><span class="box"><i class="ri-check-line"></i></span>Keep me signed in on this device</div><button class="primary-btn">Sign in</button></div>`, under: `Need an account? Ask your administrator.` };
+    }
+    if (s === "forgot") return { title: "Reset your password", desc: "Enter your email and we'll send you a link to set a new password.", body: `<div class="form">${field("Email", "", { cls: "focus", ph: "you@company.com" })}<button class="primary-btn">Send reset link</button></div>`, under: `Remembered it? <a href="#">Back to sign in</a>` };
+    if (s === "sent") return { sent: true, body: `<div class="sent"><span class="ic"><i class="ri-mail-send-line"></i></span><h1>Check your email</h1><p class="desc">If an account exists for <b>asha.menon@researchnxt.com</b>, a link to set a new password is on its way. It can take a few minutes; check spam too.</p><div class="again">Didn't get it? <a href="#">Send it again</a> or <a href="#">use a different email</a></div></div>`, under: `<a href="#">Back to sign in</a>` };
+    if (s === "newpw") return { title: "Set a new password", desc: "Choose a new password for asha.menon@researchnxt.com.", body: `<div class="form">${field("New password", "••••••••••", { eye: true, cls: "focus" })}${field("Confirm new password", "•••••••", { eye: true })}<ul class="rules"><li class="ok"><i class="ri-checkbox-circle-fill"></i>At least 8 characters</li><li><i class="ri-checkbox-blank-circle-line"></i>Both passwords match</li></ul><button class="primary-btn">Update password</button></div>`, under: `Back to <a href="#">sign in</a>` };
+    return { title: "This link has expired", desc: "Reset links work once and expire after a short time.", body: `<div class="form"><div class="note bad"><i class="ri-time-line"></i><div><b>Request a new link</b>We'll email you a fresh one; it replaces this one.</div></div><button class="primary-btn">Send a new link</button></div>`, under: `Back to <a href="#">sign in</a>` };
+  }
+
+  function renderA() {
+    const c = content();
+    const card = c.sent ? `<div class="card2">${c.body}</div>` : `<div class="card2"><h1>${c.title}</h1><p class="desc">${c.desc}</p>${c.body}</div>`;
+    return `<div class="pagebg"><main><div class="col">${brand()}${card}<div class="under">${c.under}</div></div></main><div class="foot">A Research NXT product</div></div>`;
+  }
+  function renderB() {
+    const c = content();
+    const card = c.sent ? `<div class="card2">${c.body}</div>` : `<div class="card2"><h1>${c.title}</h1><p class="desc">${c.desc}</p>${c.body}</div>`;
+    return `<div class="split2"><div class="side2">${brand(true)}<div><h2>India GCC intelligence, in one place</h2><p>Accounts, their India centres and the people who run them, refreshed with every data update.</p><ul><li><i class="ri-building-line"></i><span>Accounts with HQ, revenue and India footprint</span></li><li><i class="ri-briefcase-line"></i><span>Centres by city, type, headcount and services</span></li><li><i class="ri-group-line"></i><span>Decision makers by department and level</span></li></ul></div><small>A Research NXT product</small></div><div class="form2"><div class="col">${card}<div class="under">${c.under}</div></div></div></div>`;
+  }
+  function render() {
+    $("#variants").innerHTML = VARIANTS.map((x) => `<button class="${state.v === x.id ? "on" : ""}" data-v="${x.id}">${x.label}</button>`).join("");
+    $("#screens").innerHTML = SCREENS.map(([id, l]) => `<button class="${state.s === id ? "on" : ""}" data-s="${id}">${l}</button>`).join("");
+    $("#note").innerHTML = VARIANTS.find((x) => x.id === state.v).note;
+    $("#stage").innerHTML = state.v === "a" ? renderA() : renderB();
+  }
+  document.addEventListener("click", (e) => {
+    const t = (s) => e.target.closest(s);
+    if (t("#theme")) { const dark = document.documentElement.classList.toggle("dark"); $("#theme").innerHTML = dark ? '<i class="ri-sun-line"></i><span>Light</span>' : '<i class="ri-moon-line"></i><span>Dark</span>'; return; }
+    if (t("[data-v]")) { state.v = t("[data-v]").dataset.v; render(); return; }
+    if (t("[data-s]")) { state.s = t("[data-s]").dataset.s; render(); }
+  });
+  render();
+</script>
+</body>
+</html>
