@@ -1,33 +1,36 @@
 "use client"
 
 import React, { useEffect, useMemo, useRef, useState } from "react"
+import { functionalUpdate, useTable, type PaginationState, type SortingState, type Updater } from "@tanstack/react-table"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { RiCheckLine, RiEqualizerLine, RiExternalLinkLine, RiFileCopyLine, RiLinkedinBoxLine, RiMailLine } from "@remixicon/react"
+import { RiArrowRightUpLine, RiCheckLine, RiCloseLine, RiFileCopyLine, RiLinkedinBoxLine, RiMailLine, RiSearchLine } from "@remixicon/react"
 import { formatProspectLocation } from "@/lib/utils/helpers"
 import type { Prospect } from "@/lib/types"
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { DialogBreadcrumb, type DialogBreadcrumbItem } from "@/components/ui/dialog-breadcrumb"
 import { ProspectGridCard } from "@/components/cards/prospect-grid-card"
-import { PaginationControls } from "@/components/ui/pagination-controls"
 import { useAccountRelated } from "@/hooks/use-account-related"
 import { RelatedLoadError } from "./related-load-error"
 import { Skeleton } from "@/components/ui/skeleton"
-import { GridSkeletonCards } from "@/components/ui/data-skeletons"
-import { EngagedBadge } from "@/components/ui/engaged-badge"
 import { ProspectEngagementTimeline } from "@/components/dialogs/prospect-engagement-timeline"
 import { isEngagedProspect } from "@/lib/dashboard/engagements"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { useRecordHistory } from "@/contexts/record-history-context"
 import { prospectHistoryItem } from "@/lib/dashboard/record-history"
+import { ensureAbsoluteUrl } from "@/lib/utils"
+import { DataLayoutSwitcher, DataTable, DataTablePagination } from "@/components/tables/data-table"
+import { dataTableFeatures } from "@/components/tables/data-table-features"
+import { ProspectRowMenu } from "@/components/tables/prospect-columns"
+import { RECORD_LIST_LAYOUT_STORAGE_KEY, useDataLayoutPreference } from "@/hooks/use-data-layout-preference"
+import { FactGroup, FilterMenu, sortByCount, toggleInSet } from "./account-details-parts"
+import { accountProspectColumns, prospectFullName } from "./account-related-columns"
 
 interface ProspectDetailsDialogProps {
   prospect: Prospect | null
@@ -39,80 +42,22 @@ interface ProspectDetailsDialogProps {
   fetchRelated?: boolean
 }
 
-function MetaRow({ label, value }: { label: string; value: string | number | null | undefined }) {
-  if (value === null || value === undefined) return null
-  const str = typeof value === "number" ? value.toString() : value
-  if (str.trim() === "") return null
+/** Same sizes as the account window's lists. */
+const RECORD_PAGE_SIZES = [12, 24, 48, 96] as const
+
+function Section({ title, meta, children }: { title: string; meta?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-4 py-1.5 text-sm border-b border-border/30 last:border-b-0">
-      <span className="text-muted-foreground shrink-0">{label}</span>
-      <span className="font-medium text-right break-words">{str}</span>
-    </div>
+    <section className="mt-7 first:mt-0">
+      <h3 className="mb-2.5 flex items-baseline gap-1.5 text-[14px] font-semibold">
+        {title}
+        {meta !== undefined && <span className="text-[12px] font-normal text-muted-foreground">{meta}</span>}
+      </h3>
+      {children}
+    </section>
   )
 }
 
-function SectionHeader({ title }: { title: string }) {
-  return (
-    <div className="border-b border-border/40 pb-2">
-      <h3 className="text-base font-semibold tracking-tight">{title}</h3>
-    </div>
-  )
-}
-
-function QuickFilterGroup({
-  label,
-  filterKey,
-  options,
-  selected,
-  onToggle,
-  onClear,
-}: {
-  label: string
-  filterKey: string
-  options: Array<{ name: string; count: number }>
-  selected: Set<string>
-  onToggle: (value: string) => void
-  onClear: () => void
-}) {
-  if (options.length === 0) return null
-  const trackFilterChange = (action: "toggle" | "clear") =>
-    captureEvent(ANALYTICS_EVENTS.RECORD_DIALOG_FILTER_CHANGED, { entity: "prospect", filter_key: filterKey, action })
-  const totalCount = options.reduce((s, o) => s + o.count, 0)
-  return (
-    <div className="flex items-center gap-2 flex-wrap">
-      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide shrink-0">{label}</span>
-      <button
-        type="button"
-        onClick={() => {
-          trackFilterChange("clear")
-          onClear()
-        }}
-        className={`text-xs px-2.5 py-1 rounded-full border transition-colors inline-flex items-center gap-1.5 ${selected.size === 0 ? "bg-primary text-primary-foreground border-primary" : "bg-background/40 text-muted-foreground border-border/60 hover:bg-background/60"}`}
-      >
-        All
-        <span className={`text-[10px] tabular-nums ${selected.size === 0 ? "text-primary-foreground/70" : "text-muted-foreground/70"}`}>{totalCount}</span>
-      </button>
-      {options.map((opt) => {
-        const active = selected.has(opt.name)
-        return (
-          <button
-            key={opt.name}
-            type="button"
-            onClick={() => {
-              trackFilterChange("toggle")
-              onToggle(opt.name)
-            }}
-            className={`text-xs px-2.5 py-1 rounded-full border transition-colors inline-flex items-center gap-1.5 ${active ? "bg-primary text-primary-foreground border-primary" : "bg-background/40 text-foreground border-border/60 hover:bg-background/60"}`}
-          >
-            {opt.name}
-            <span className={`text-[10px] tabular-nums ${active ? "text-primary-foreground/70" : "text-muted-foreground/70"}`}>{opt.count}</span>
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
+/** A prospect: their activity and colleagues on the left, contact, role and location on the right. */
 export function ProspectDetailsDialog({
   prospect,
   allProspects: allProspectsProp,
@@ -123,25 +68,32 @@ export function ProspectDetailsDialog({
 }: ProspectDetailsDialogProps) {
   const copy = useCopyToClipboard()
   const [copied, setCopied] = useState(false)
-  const scrollRef = useRef<HTMLDivElement>(null)
+  const bodyRef = useRef<HTMLDivElement>(null)
   const [current, setCurrent] = useState<Prospect | null>(prospect)
+  const [contactQuery, setContactQuery] = useState("")
   const [headTypeFilter, setHeadTypeFilter] = useState<Set<string>>(new Set())
   const [deptFilter, setDeptFilter] = useState<Set<string>>(new Set())
   const [levelFilter, setLevelFilter] = useState<Set<string>>(new Set())
-  const [contactsPage, setContactsPage] = useState(1)
-  const CONTACTS_PER_PAGE = 6
+  const [sorting, setSorting] = useState<SortingState>([{ id: "name", desc: false }])
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: RECORD_PAGE_SIZES[0] })
+  const [listLayout, setListLayout] = useDataLayoutPreference(RECORD_LIST_LAYOUT_STORAGE_KEY)
 
-  useEffect(() => {
-    setCurrent(prospect)
+  const resetContacts = () => {
+    setContactQuery("")
     setHeadTypeFilter(new Set())
     setDeptFilter(new Set())
     setLevelFilter(new Set())
-    setContactsPage(1)
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }))
+  }
+
+  useEffect(() => {
+    setCurrent(prospect)
+    resetContacts()
   }, [prospect])
 
   const p = current
 
-  // Records the shown prospect, including contacts switched to from More Contacts (#310).
+  // Records the shown prospect, including contacts switched to from More contacts (#310).
   const recordOpened = useRecordHistory()
   useEffect(() => {
     if (open && current) recordOpened(prospectHistoryItem(current))
@@ -150,7 +102,6 @@ export function ProspectDetailsDialog({
   const relatedAccount = fetchRelated && open ? (p?.account_global_legal_name ?? "") : ""
   const { data: related, loading: relatedFetching, error: relatedError, retry: retryRelated } = useAccountRelated(relatedAccount)
   const relatedProspects = related?.prospects ?? null
-
   const relatedLoading = fetchRelated && open && !!p && relatedFetching
   const allProspects = useMemo(() => (fetchRelated ? (relatedProspects ?? []) : allProspectsProp), [fetchRelated, relatedProspects, allProspectsProp])
 
@@ -162,347 +113,304 @@ export function ProspectDetailsDialog({
               other.account_global_legal_name === p.account_global_legal_name &&
               (p.ps_unique_key
                 ? other.ps_unique_key !== p.ps_unique_key
-                : other.prospect_first_name !== p.prospect_first_name ||
-                  other.prospect_last_name !== p.prospect_last_name),
+                : other.prospect_first_name !== p.prospect_first_name || other.prospect_last_name !== p.prospect_last_name)
           )
         : [],
-    [p, allProspects],
+    [p, allProspects]
   )
 
-  const sortByCount = (items: string[]): Array<{ name: string; count: number }> => {
-    const counts = new Map<string, number>()
-    for (const v of items) {
-      if (!v) continue
-      counts.set(v, (counts.get(v) ?? 0) + 1)
-    }
-    return Array.from(counts.entries())
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-      .map(([name, count]) => ({ name, count }))
-  }
-
-  // Cascading filters: each filter's options are derived from contacts that already
-  // pass the *other two* filters, so counts and pills stay accurate.
+  // Cascading filters: each list shows the values left once the other two filters apply.
+  const matches = (c: Prospect, skip: "head" | "dept" | "level" | null) =>
+    (skip === "head" || headTypeFilter.size === 0 || headTypeFilter.has((c.head_type ?? "").trim())) &&
+    (skip === "dept" || deptFilter.size === 0 || deptFilter.has((c.prospect_department ?? "").trim())) &&
+    (skip === "level" || levelFilter.size === 0 || levelFilter.has((c.prospect_level ?? "").trim()))
   const headTypeOptions = useMemo(
-    () =>
-      sortByCount(
-        companyContacts
-          .filter(
-            (c) =>
-              (deptFilter.size === 0 || deptFilter.has((c.prospect_department ?? "").trim())) &&
-              (levelFilter.size === 0 || levelFilter.has((c.prospect_level ?? "").trim())),
-          )
-          .map((c) => (c.head_type ?? "").trim())
-          .filter(Boolean),
-      ),
-    [companyContacts, deptFilter, levelFilter],
+    () => sortByCount(companyContacts.filter((c) => matches(c, "head")).map((c) => (c.head_type ?? "").trim())),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [companyContacts, deptFilter, levelFilter]
   )
   const deptOptions = useMemo(
-    () =>
-      sortByCount(
-        companyContacts
-          .filter(
-            (c) =>
-              (headTypeFilter.size === 0 || headTypeFilter.has((c.head_type ?? "").trim())) &&
-              (levelFilter.size === 0 || levelFilter.has((c.prospect_level ?? "").trim())),
-          )
-          .map((c) => (c.prospect_department ?? "").trim())
-          .filter(Boolean),
-      ),
-    [companyContacts, headTypeFilter, levelFilter],
+    () => sortByCount(companyContacts.filter((c) => matches(c, "dept")).map((c) => (c.prospect_department ?? "").trim())),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [companyContacts, headTypeFilter, levelFilter]
   )
   const levelOptions = useMemo(
-    () =>
-      sortByCount(
-        companyContacts
-          .filter(
-            (c) =>
-              (headTypeFilter.size === 0 || headTypeFilter.has((c.head_type ?? "").trim())) &&
-              (deptFilter.size === 0 || deptFilter.has((c.prospect_department ?? "").trim())),
-          )
-          .map((c) => (c.prospect_level ?? "").trim())
-          .filter(Boolean),
-      ),
-    [companyContacts, headTypeFilter, deptFilter],
+    () => sortByCount(companyContacts.filter((c) => matches(c, "level")).map((c) => (c.prospect_level ?? "").trim())),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [companyContacts, headTypeFilter, deptFilter]
   )
-
   const filteredContacts = useMemo(() => {
-    const result = companyContacts.filter((c) => {
-      if (headTypeFilter.size > 0 && !headTypeFilter.has((c.head_type ?? "").trim())) return false
-      if (deptFilter.size > 0 && !deptFilter.has((c.prospect_department ?? "").trim())) return false
-      if (levelFilter.size > 0 && !levelFilter.has((c.prospect_level ?? "").trim())) return false
-      return true
-    })
-    return result
-  }, [companyContacts, headTypeFilter, deptFilter, levelFilter])
+    const q = contactQuery.trim().toLowerCase()
+    return companyContacts.filter(
+      (c) =>
+        matches(c, null) &&
+        (!q || [prospectFullName(c), c.prospect_title, c.prospect_department, c.prospect_city].some((v) => (v ?? "").toLowerCase().includes(q)))
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyContacts, contactQuery, headTypeFilter, deptFilter, levelFilter])
 
-  // Reset to page 1 whenever filters change
-  useEffect(() => {
-    setContactsPage(1)
-  }, [headTypeFilter, deptFilter, levelFilter])
+  useEffect(() => setPagination((prev) => ({ ...prev, pageIndex: 0 })), [contactQuery, headTypeFilter, deptFilter, levelFilter])
 
-  const pagedContacts = useMemo(
-    () => filteredContacts.slice((contactsPage - 1) * CONTACTS_PER_PAGE, contactsPage * CONTACTS_PER_PAGE),
-    [filteredContacts, contactsPage, CONTACTS_PER_PAGE],
-  )
+  const contactTable = useTable({
+    features: dataTableFeatures,
+    data: filteredContacts,
+    columns: accountProspectColumns,
+    getRowId: (contact, index) => `${contact.ps_unique_key ?? "contact"}-${index}`,
+    enableMultiSort: false,
+    sortDescFirst: false,
+    autoResetPageIndex: false,
+    state: { sorting, pagination },
+    onSortingChange: (updater: Updater<SortingState>) => {
+      const next = functionalUpdate(updater, sorting)
+      captureEvent(ANALYTICS_EVENTS.SORT_CHANGED, {
+        entity: "prospect",
+        sort_key: next[0]?.id ?? sorting[0]?.id ?? "none",
+        sort_direction: next[0] ? (next[0].desc ? "desc" : "asc") : "none",
+      })
+      setSorting(next)
+      setPagination((prev) => ({ ...prev, pageIndex: 0 }))
+    },
+    onPaginationChange: (updater: Updater<PaginationState>) => {
+      const next = functionalUpdate(updater, pagination)
+      if (next.pageIndex !== pagination.pageIndex) {
+        captureEvent(ANALYTICS_EVENTS.RECORD_DIALOG_PAGE_CHANGED, { entity: "prospect", list: "contacts", page: next.pageIndex + 1 })
+      }
+      setPagination(next.pageSize !== pagination.pageSize ? { ...next, pageIndex: 0 } : next)
+    },
+  })
+
+  const filterHandlers = (filterKey: string, setter: React.Dispatch<React.SetStateAction<Set<string>>>) => ({
+    onToggle: (value: string) => {
+      captureEvent(ANALYTICS_EVENTS.RECORD_DIALOG_FILTER_CHANGED, { entity: "prospect", filter_key: filterKey, action: "toggle" })
+      toggleInSet(setter, value)
+    },
+    onClear: () => {
+      captureEvent(ANALYTICS_EVENTS.RECORD_DIALOG_FILTER_CHANGED, { entity: "prospect", filter_key: filterKey, action: "clear" })
+      setter(new Set())
+    },
+  })
+
+  /** Shows another contact in this same window, back at the top. */
+  const openContact = (contact: Prospect) => {
+    captureEvent(ANALYTICS_EVENTS.RELATED_RECORD_OPENED, { parent_entity: "prospect", entity: "prospect" })
+    setCurrent(contact)
+    resetContacts()
+    bodyRef.current?.scrollTo({ top: 0, behavior: "smooth" })
+  }
 
   if (!p) return null
 
-  const fullName = p.prospect_full_name || [p.prospect_first_name, p.prospect_last_name].filter(Boolean).join(" ").trim()
-  const initials = [p.prospect_first_name?.[0], p.prospect_last_name?.[0]].filter(Boolean).join("")
+  const fullName = prospectFullName(p).trim()
+  const initials = fullName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("")
   const location = formatProspectLocation(p.prospect_city, p.prospect_state)
-
-  const toggleInSet = (setter: React.Dispatch<React.SetStateAction<Set<string>>>, value: string) => {
-    setter((prev) => {
-      const next = new Set(prev)
-      if (next.has(value)) next.delete(value)
-      else next.add(value)
-      return next
-    })
-  }
+  const showCountry = p.prospect_country?.trim().toUpperCase() !== "TBA" && location !== "India"
+  const engaged = isEngagedProspect(p)
+  const headType = p.head_type?.trim()
+  const showHeadType = Boolean(headType && headType.toLowerCase() !== "others")
 
   const breadcrumbItems: DialogBreadcrumbItem[] = [
-    ...(p.account_global_legal_name
-      ? [{ label: p.account_global_legal_name, onClick: () => onOpenChange(false) }]
-      : []),
+    ...(p.account_global_legal_name ? [{ label: p.account_global_legal_name, onClick: () => onOpenChange(false) }] : []),
     { label: "Prospects", onClick: () => onOpenChange(false) },
     { label: fullName || "Prospect" },
   ]
 
-  const hasLeftContent = !!(p.prospect_title || p.prospect_email)
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="flex h-[calc(100dvh-3rem)] max-h-none w-[calc(100vw-3rem)] max-w-[1480px] grid-cols-[minmax(0,1fr)] flex-col gap-0 overflow-hidden p-0 [&>button.absolute]:hidden">
+        <DialogDescription className="sr-only">
+          Prospect profile: campaign activity, other contacts at the account, contact details, role and location.
+        </DialogDescription>
+
+        <div className="shrink-0 border-b px-6 pb-4 pt-5">
           <DialogBreadcrumb items={breadcrumbItems} />
-          <DialogDescription className="sr-only">
-            Prospect profile details, contact information, account linkage, and related contacts.
-          </DialogDescription>
-          <DialogTitle className="flex items-center gap-3 text-2xl font-bold">
-            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-              <span className="text-lg font-bold text-primary">{initials}</span>
-            </div>
-            <div className="flex flex-1 min-w-0 items-start justify-between gap-4">
-              <div className="min-w-0">
-                <span className="block leading-tight">{fullName}</span>
-                {p.account_global_legal_name ? (
-                  <p className="mt-1 text-sm font-normal text-muted-foreground">
-                    {p.account_global_legal_name}
-                    {onAccountOpen ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          captureEvent(ANALYTICS_EVENTS.RELATED_RECORD_OPENED, { parent_entity: "prospect", entity: "account" })
-                          onAccountOpen(p.account_global_legal_name)
-                        }}
-                        className="ml-1.5 inline-flex h-5 w-5 translate-y-0.5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                        aria-label={`Open account details for ${p.account_global_legal_name}`}
-                        title={`Open account details for ${p.account_global_legal_name}`}
-                      >
-                        <RiExternalLinkLine className="h-3.5 w-3.5" />
-                      </button>
-                    ) : null}
-                  </p>
-                ) : null}
+          <div className="mt-2.5 flex items-start gap-3.5">
+            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-primary/10 text-base font-bold text-primary">{initials || "?"}</div>
+            <div className="min-w-0 flex-1">
+              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                <DialogTitle className="min-w-0 truncate text-[21px] font-semibold tracking-[-0.015em]">{fullName || "Prospect"}</DialogTitle>
+                {engaged && (
+                  <span className="rounded-[5px] bg-include/[0.12] px-1.5 text-[11.5px] font-semibold leading-5 text-include">Engaged</span>
+                )}
+                {showHeadType && (
+                  <span className="rounded-[5px] bg-muted px-1.5 text-[11.5px] font-semibold leading-5 text-muted-foreground">{headType}</span>
+                )}
               </div>
-              <div className="flex items-center gap-2 shrink-0 mt-1">
-                {p.prospect_email ? (
+              <p className="mt-0.5 text-[13px] text-muted-foreground">
+                {p.prospect_title}
+                {p.prospect_title && p.account_global_legal_name && " at "}
+                {p.account_global_legal_name &&
+                  (onAccountOpen ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        captureEvent(ANALYTICS_EVENTS.RELATED_RECORD_OPENED, { parent_entity: "prospect", entity: "account" })
+                        onAccountOpen(p.account_global_legal_name)
+                      }}
+                      className="inline-flex items-center gap-0.5 font-medium text-primary hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      title={`Open ${p.account_global_legal_name}`}
+                    >
+                      {p.account_global_legal_name}
+                      <RiArrowRightUpLine className="h-3.5 w-3.5" />
+                    </button>
+                  ) : (
+                    p.account_global_legal_name
+                  ))}
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-0.5">
+              {p.prospect_email && (
+                <Button asChild variant="ghost" size="icon-sm" title={`Email ${p.prospect_email}`}>
                   <a
                     href={`mailto:${p.prospect_email}`}
-                    onClick={() => captureEvent(ANALYTICS_EVENTS.CONTACT_EMAIL_CLICKED, { entity: "prospect" })}
-                    className="text-muted-foreground hover:text-primary transition-colors"
-                    title={p.prospect_email}
                     aria-label="Send email"
+                    onClick={() => captureEvent(ANALYTICS_EVENTS.CONTACT_EMAIL_CLICKED, { entity: "prospect" })}
                   >
-                    <RiMailLine className="h-4 w-4" />
+                    <RiMailLine />
                   </a>
-                ) : null}
-                {p.prospect_linkedin_url ? (
+                </Button>
+              )}
+              {p.prospect_linkedin_url && (
+                <Button asChild variant="ghost" size="icon-sm" title="LinkedIn">
                   <a
-                    href={p.prospect_linkedin_url.startsWith("http") ? p.prospect_linkedin_url : `https://${p.prospect_linkedin_url}`}
+                    href={ensureAbsoluteUrl(p.prospect_linkedin_url)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-[#0A66C2] transition-colors"
-                    title="View LinkedIn"
-                    onClick={() =>
-                      captureEvent(ANALYTICS_EVENTS.OUTBOUND_LINK_CLICKED, { entity: "prospect", link_type: "linkedin" })
-                    }
                     aria-label="View LinkedIn profile"
+                    onClick={() => captureEvent(ANALYTICS_EVENTS.OUTBOUND_LINK_CLICKED, { entity: "prospect", link_type: "linkedin" })}
                   >
-                    <RiLinkedinBoxLine className="h-4 w-4" />
+                    <RiLinkedinBoxLine />
                   </a>
-                ) : null}
-                {p.head_type === "GCC Head" ? (
-                  <Badge className="font-normal border-transparent bg-blue-100 text-blue-700 hover:bg-blue-100/80 dark:bg-blue-500/15 dark:text-blue-300">
-                    GCC Head
-                  </Badge>
-                ) : null}
-                {p.head_type === "HR Head" ? (
-                  <Badge className="font-normal border-transparent bg-orange-100 text-orange-700 hover:bg-orange-100/80 dark:bg-orange-500/15 dark:text-orange-300">
-                    HR Head
-                  </Badge>
-                ) : null}
-                {isEngagedProspect(p) ? <EngagedBadge /> : null}
-              </div>
+                </Button>
+              )}
+              <Button variant="ghost" size="icon-sm" onClick={() => onOpenChange(false)} aria-label="Close">
+                <RiCloseLine />
+              </Button>
             </div>
-          </DialogTitle>
-        </DialogHeader>
+          </div>
+        </div>
 
-        <div ref={scrollRef} className="mt-6 space-y-8">
-          <section className="rounded-xl border border-border/60 bg-background/40 p-5 backdrop-blur-sm lg:p-6 dark:border-white/10 dark:bg-white/5">
-            <div className={`grid grid-cols-1 gap-6 ${hasLeftContent ? "lg:grid-cols-3" : ""}`}>
-              {hasLeftContent ? (
-                <div className="space-y-5 lg:col-span-2">
-                  {p.prospect_title ? (
-                    <div>
-                      <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        Job Title
-                      </p>
-                      <p className="text-sm leading-relaxed text-foreground/90">{p.prospect_title}</p>
-                    </div>
-                  ) : null}
-                  {p.prospect_email ? (
-                    <div>
-                      <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
-                        <RiMailLine className="h-3.5 w-3.5" />
-                        Email
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-foreground/90 break-all">{p.prospect_email}</span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-xs"
-                          onClick={() => {
-                            captureEvent(ANALYTICS_EVENTS.CONTACT_EMAIL_COPIED, { entity: "prospect" })
-                            copy(p.prospect_email!, "Email")
-                            setCopied(true)
-                            setTimeout(() => setCopied(false), 1500)
-                          }}
-                          className="shrink-0 text-muted-foreground"
-                          title={copied ? "Copied!" : "Copy email"}
-                          aria-label="Copy email"
-                        >
-                          {copied
-                            ? <RiCheckLine className="h-3.5 w-3.5 text-green-500 animate-scale-in" />
-                            : <RiFileCopyLine className="h-3.5 w-3.5" />}
-                        </Button>
-                      </div>
-                    </div>
-                  ) : null}
+        <div ref={bodyRef} className="min-h-0 flex-1 overflow-y-auto">
+          <div className="grid min-h-full lg:grid-cols-[minmax(0,1fr)_360px]">
+            <div className="min-w-0 px-6 py-5">
+              {open && engaged && p.ps_unique_key ? (
+                <div className="mb-7">
+                  <ProspectEngagementTimeline psUniqueKey={p.ps_unique_key} />
                 </div>
               ) : null}
-              <div className={hasLeftContent ? "lg:border-l lg:border-border/50 lg:pl-6" : ""}>
-                <MetaRow label="Department" value={p.prospect_department} />
-                <MetaRow label="Level" value={p.prospect_level} />
-                <MetaRow label="In Company Since" value={p.prospect_in_company_year} />
-                <MetaRow label="Current Role Since" value={p.prospect_current_year} />
-                <MetaRow label="Centre" value={p.center_name} />
-                <MetaRow label="Location" value={location} />
-                <MetaRow label="Country" value={p.prospect_country?.trim().toUpperCase() === "TBA" || location === "India" ? null : p.prospect_country} />
-              </div>
-            </div>
-          </section>
 
-          {open && isEngagedProspect(p) && p.ps_unique_key ? (
-            <ProspectEngagementTimeline psUniqueKey={p.ps_unique_key} />
-          ) : null}
-
-          {relatedError && (
-            <section className="space-y-4">
-              <SectionHeader title={`More Contacts From ${p.account_global_legal_name}`} />
-              <RelatedLoadError message="Other contacts at this company could not load." onRetry={retryRelated} />
-            </section>
-          )}
-          {relatedLoading && (
-            <section className="space-y-4">
-              <SectionHeader title={`More Contacts From ${p.account_global_legal_name}`} />
-              <div className="space-y-2">
-                {[0, 1, 2].map((row) => (
-                  <div key={row} className="flex items-center gap-2">
-                    <Skeleton className="h-3 w-16" />
-                    <Skeleton className="h-6 w-20 rounded-full" />
-                    <Skeleton className="h-6 w-24 rounded-full" />
-                    <Skeleton className="h-6 w-16 rounded-full" />
-                  </div>
-                ))}
-              </div>
-              <div className="rounded-xl border border-border/60 bg-background/40 backdrop-blur-sm dark:border-white/10 dark:bg-white/5 overflow-hidden">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 p-4">
-                  <GridSkeletonCards cards={3} statRows={3} avatar />
-                </div>
-              </div>
-            </section>
-          )}
-          {!relatedLoading && companyContacts.length > 0 ? (
-            <section className="space-y-4">
-              <SectionHeader title={`More Contacts From ${p.account_global_legal_name}`} />
-              <div className="space-y-2">
-                <QuickFilterGroup
-                  label="Head Type"
-                  filterKey="prospect_head_type"
-                  options={headTypeOptions}
-                  selected={headTypeFilter}
-                  onToggle={(v) => toggleInSet(setHeadTypeFilter, v)}
-                  onClear={() => setHeadTypeFilter(new Set())}
-                />
-                <QuickFilterGroup
-                  label="Department"
-                  filterKey="prospect_department"
-                  options={deptOptions}
-                  selected={deptFilter}
-                  onToggle={(v) => toggleInSet(setDeptFilter, v)}
-                  onClear={() => setDeptFilter(new Set())}
-                />
-                <QuickFilterGroup
-                  label="Level"
-                  filterKey="prospect_level"
-                  options={levelOptions}
-                  selected={levelFilter}
-                  onToggle={(v) => toggleInSet(setLevelFilter, v)}
-                  onClear={() => setLevelFilter(new Set())}
-                />
-              </div>
-              {filteredContacts.length > 0 ? (
-                <div className="rounded-xl border border-border/60 bg-background/40 backdrop-blur-sm dark:border-white/10 dark:bg-white/5 overflow-hidden">
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 p-4">
-                    {pagedContacts.map((contact, idx) => (
-                      <ProspectGridCard
-                        key={`${contact.prospect_first_name}-${contact.prospect_last_name}-${(contactsPage - 1) * CONTACTS_PER_PAGE + idx}`}
-                        prospect={contact}
-                        onClick={() => {
-                          captureEvent(ANALYTICS_EVENTS.RELATED_RECORD_OPENED, { parent_entity: "prospect", entity: "prospect" })
-                          setCurrent(contact)
-                          setHeadTypeFilter(new Set())
-                          setDeptFilter(new Set())
-                          setLevelFilter(new Set())
-                          setContactsPage(1)
-                          scrollRef.current?.closest('[role="dialog"]')?.scrollTo({ top: 0, behavior: "smooth" })
-                        }}
-                      />
-                    ))}
-                  </div>
-                  <PaginationControls
-                    currentPage={contactsPage}
-                    totalItems={filteredContacts.length}
-                    itemsPerPage={CONTACTS_PER_PAGE}
-                    onPageChange={(update) => {
-                      const page = typeof update === "function" ? update(contactsPage) : update
-                      captureEvent(ANALYTICS_EVENTS.RECORD_DIALOG_PAGE_CHANGED, { entity: "prospect", list: "contacts", page })
-                      setContactsPage(page)
-                    }}
-                    dataLength={filteredContacts.length}
-                  />
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 bg-background/40 py-10 text-center backdrop-blur-sm dark:bg-white/5 dark:border-white/10 animate-fade-in">
-                  <RiEqualizerLine className="mb-2 h-7 w-7 text-muted-foreground/50" />
-                  <p className="text-sm font-medium text-foreground">No matching contacts</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">Adjust the department or level filters above.</p>
-                </div>
+              {p.account_global_legal_name && (
+                <Section title={`More contacts at ${p.account_global_legal_name}`} meta={!relatedLoading && !relatedError ? companyContacts.length.toLocaleString("en-US") : undefined}>
+                  {relatedError ? (
+                    <RelatedLoadError message="Other contacts at this company could not load." onRetry={retryRelated} />
+                  ) : relatedLoading ? (
+                    <Skeleton className="h-[320px] w-full rounded-[10px]" />
+                  ) : companyContacts.length === 0 ? (
+                    <p className="text-[13px] text-muted-foreground">No other contacts at this account.</p>
+                  ) : (
+                    <>
+                      <div className="mb-2.5 flex flex-wrap items-center gap-2">
+                        <label className="flex h-8 w-64 items-center gap-2 rounded-lg border border-transparent bg-muted/80 px-2.5 text-muted-foreground focus-within:border-primary/60 focus-within:ring-[3px] focus-within:ring-primary/15">
+                          <RiSearchLine className="h-4 w-4 shrink-0" />
+                          <input
+                            value={contactQuery}
+                            onChange={(event) => setContactQuery(event.target.value)}
+                            placeholder={`Search ${companyContacts.length.toLocaleString("en-US")} contacts`}
+                            aria-label="Search contacts"
+                            className="min-w-0 flex-1 bg-transparent text-[13px] text-foreground placeholder:text-muted-foreground focus:outline-none"
+                          />
+                        </label>
+                        <FilterMenu label="Department" options={deptOptions} selected={deptFilter} {...filterHandlers("prospect_department", setDeptFilter)} />
+                        <FilterMenu label="Level" options={levelOptions} selected={levelFilter} {...filterHandlers("prospect_level", setLevelFilter)} />
+                        <FilterMenu label="Head type" options={headTypeOptions} selected={headTypeFilter} {...filterHandlers("prospect_head_type", setHeadTypeFilter)} />
+                      </div>
+                      <div className="flex flex-col overflow-hidden rounded-[10px] border bg-card">
+                        {listLayout === "table" ? (
+                          <DataTable
+                            key="table"
+                            table={contactTable}
+                            onRowOpen={openContact}
+                            getRowLabel={(contact) => `Show ${prospectFullName(contact) || "this contact"}`}
+                            renderRowMenu={(contact) => <ProspectRowMenu prospect={contact} onOpen={openContact} />}
+                          />
+                        ) : filteredContacts.length > 0 ? (
+                          <div key="grid" className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 xl:grid-cols-3">
+                            {contactTable.getRowModel().rows.map((row) => (
+                              <ProspectGridCard key={row.id} prospect={row.original} onClick={() => openContact(row.original)} />
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="px-6 py-10 text-center text-[13px] text-muted-foreground">No contacts match these filters.</p>
+                        )}
+                        <DataTablePagination
+                          table={contactTable}
+                          totalRows={filteredContacts.length}
+                          pageSizeOptions={RECORD_PAGE_SIZES}
+                          leading={<DataLayoutSwitcher value={listLayout} onValueChange={setListLayout} />}
+                        />
+                      </div>
+                    </>
+                  )}
+                </Section>
               )}
-            </section>
-          ) : null}
+            </div>
+
+            <aside className="border-t bg-[color-mix(in_srgb,hsl(var(--muted))_30%,hsl(var(--background)))] px-5 py-5 lg:border-l lg:border-t-0">
+              {/* Stays in view while the left side scrolls; leaves out what the header already shows. */}
+              <div className="lg:sticky lg:top-5">
+                <FactGroup
+                  title="Contact"
+                  rows={[
+                    [
+                      "Email",
+                      p.prospect_email ? (
+                        <span className="inline-flex max-w-full items-center gap-1">
+                          <span className="break-all">{p.prospect_email}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-xs"
+                            onClick={() => {
+                              captureEvent(ANALYTICS_EVENTS.CONTACT_EMAIL_COPIED, { entity: "prospect" })
+                              copy(p.prospect_email!, "Email")
+                              setCopied(true)
+                              setTimeout(() => setCopied(false), 1500)
+                            }}
+                            className="shrink-0 text-muted-foreground"
+                            title={copied ? "Copied" : "Copy email"}
+                            aria-label="Copy email"
+                          >
+                            {copied ? <RiCheckLine className="h-3.5 w-3.5 text-include" /> : <RiFileCopyLine className="h-3.5 w-3.5" />}
+                          </Button>
+                        </span>
+                      ) : null,
+                    ],
+                  ]}
+                />
+                <FactGroup
+                  title="Role"
+                  rows={[
+                    ["Department", p.prospect_department],
+                    ["Level", p.prospect_level],
+                    ["In company since", p.prospect_in_company_year],
+                    ["Current role since", p.prospect_current_year],
+                  ]}
+                />
+                <FactGroup
+                  title="Location"
+                  rows={[
+                    ["Centre", p.center_name],
+                    ["City", location],
+                    ["Country", showCountry ? p.prospect_country : null],
+                  ]}
+                />
+              </div>
+            </aside>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

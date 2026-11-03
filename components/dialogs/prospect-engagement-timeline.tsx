@@ -85,18 +85,18 @@ export function ProspectEngagementTimeline({ psUniqueKey }: { psUniqueKey: strin
   const loading = query.isPending
 
   return (
-    <section className="space-y-4" aria-busy={loading}>
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-border/40 pb-2">
-        <h3 className="text-base font-semibold tracking-tight">Bamboo Reports Activity</h3>
+    <section aria-busy={loading}>
+      <div className="mb-2.5 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <h3 className="text-[14px] font-semibold">Bamboo Reports activity</h3>
         {touchpoints.length > 0 ? (
-          <p className="text-xs text-muted-foreground tabular-nums">
+          <p className="text-[12px] text-muted-foreground tabular-nums">
             {touchpoints.length > 1 ? `${touchpoints.length} touchpoints · ` : ""}
             {lastActiveDays !== null ? `Last active ${formatDaysAgo(lastActiveDays)}` : `Last active ${latest!.dateLabel}`}
           </p>
         ) : null}
       </div>
 
-      <div className="rounded-xl border border-border/60 bg-background/40 p-5 backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
+      <div className="rounded-[10px] border bg-card p-4">
         {loading ? (
           <div className="flex items-center">
             <span className="flex w-[5.5rem] shrink-0 justify-end">

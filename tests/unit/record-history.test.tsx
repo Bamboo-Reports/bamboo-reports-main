@@ -50,8 +50,8 @@ describe("detail dialogs record what they show in History (#310)", () => {
     )
     expect(recordOpened).toHaveBeenLastCalledWith(expect.objectContaining({ type: "prospect", id: "p1", title: "Asha Rao" }))
 
-    // The only contact card left in More Contacts is Ben's.
-    fireEvent.click(screen.getByRole("button", { name: /View Details/ }))
+    // The only contact left in More contacts is Ben's row.
+    fireEvent.click(screen.getByLabelText("Show Ben Iyer"))
     expect(recordOpened).toHaveBeenLastCalledWith(expect.objectContaining({ type: "prospect", id: "p2", title: "Ben Iyer" }))
   })
 
