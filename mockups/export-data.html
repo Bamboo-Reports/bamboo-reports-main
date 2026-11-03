@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Export data</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css" rel="stylesheet" />
+<style>
+  /* Tokens copied from app/globals.css */
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 214 45% 15%;
+    --card: 0 0% 100%;
+    --primary: 204 100% 41%;
+    --primary-foreground: 0 0% 100%;
+    --muted: 210 25% 94%;
+    --muted-foreground: 215 20% 39%;
+    --border: 212 24% 86%;
+    --ring: 204 100% 41%;
+    --include: 142 64% 32%;
+    --exclude: 0 72% 46%;
+    --warn: 32 90% 40%;
+    --dialog-shadow: 0 30px 80px -30px rgba(15,30,50,.45), 0 2px 8px rgba(15,30,50,.08);
+  }
+  .dark {
+    --background: 0 0% 10%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 12%;
+    --primary: 204 92% 56%;
+    --primary-foreground: 0 0% 10%;
+    --muted: 0 0% 16%;
+    --muted-foreground: 0 0% 65%;
+    --border: 0 0% 24%;
+    --ring: 0 0% 83.1%;
+    --include: 142 55% 55%;
+    --exclude: 0 80% 66%;
+    --warn: 36 90% 60%;
+    --dialog-shadow: 0 30px 80px -30px rgba(0,0,0,.8);
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: light; }
+  html.dark { color-scheme: dark; }
+  body { margin: 0; font-family: "Inter", system-ui, sans-serif; background: hsl(var(--background)); color: hsl(var(--foreground)); -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; font-size: 13px; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  :focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+  ::selection { background: hsl(var(--primary) / .2); }
+
+  .page { max-width: 1100px; margin: 0 auto; padding: 32px 16px 80px; }
+  .top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+  .top h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .intro { margin: 0 0 16px; max-width: 80ch; line-height: 1.5; color: hsl(var(--muted-foreground)); }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .ctl-label { font-size: 12px; font-weight: 500; color: hsl(var(--muted-foreground)); }
+  .toggle { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 13px; font-weight: 500; }
+  .seg { display: inline-grid; grid-auto-flow: column; padding: 3px; border-radius: 9px; background: hsl(var(--muted) / .8); }
+  .seg button { height: 28px; padding: 0 12px; border: 0; border-radius: 6px; background: transparent; font-size: 12.5px; font-weight: 500; color: hsl(var(--muted-foreground)); white-space: nowrap; }
+  .seg button.on { background: hsl(var(--card)); color: hsl(var(--foreground)); box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 0 0 1px hsl(var(--border) / .6); }
+  .bar2 { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; margin: 4px 0 12px; }
+  .bar2 > div { display: flex; align-items: center; gap: 8px; }
+  .variant-note { margin: 0 0 16px; padding-left: 12px; border-left: 2px solid hsl(var(--border)); max-width: 80ch; line-height: 1.5; color: hsl(var(--muted-foreground)); }
+  .variant-note b { color: hsl(var(--foreground)); font-weight: 600; }
+  .backdrop { display: grid; place-items: center; min-height: 520px; padding: 28px 16px; border-radius: 16px; background: hsl(214 30% 12% / .08); }
+  .dark .backdrop { background: hsl(0 0% 0% / .35); }
+
+  /* ---------- dialog ---------- */
+  .dlg { width: 100%; border-radius: 10px; border: 1px solid hsl(var(--border)); background: hsl(var(--background)); box-shadow: var(--dialog-shadow); overflow: hidden; }
+  .dlg.a { max-width: 560px; }
+  .dlg.b { max-width: 820px; }
+  .dlg.sel { max-width: 440px; }
+  .dh { display: flex; align-items: flex-start; gap: 12px; padding: 18px 20px 14px; }
+  .dh .t { flex: 1; min-width: 0; }
+  .dh h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+  .dh p { margin: 4px 0 0; font-size: 12.5px; line-height: 1.45; color: hsl(var(--muted-foreground)); }
+  .ib { display: grid; place-items: center; width: 30px; height: 30px; margin: -4px -6px 0 0; border: 0; border-radius: 7px; background: transparent; color: hsl(var(--muted-foreground)); font-size: 18px; }
+  .ib:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
+
+  /* scope line: what the export covers */
+  .scope { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
+  .chip { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px; border-radius: 6px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 12px; font-weight: 500; white-space: nowrap; }
+  .chip .k { color: hsl(var(--muted-foreground)); font-weight: 400; }
+  .chip.more { border-style: dashed; color: hsl(var(--muted-foreground)); }
+  .chip.all { border-color: transparent; background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); }
+
+  /* dataset rows */
+  .sets { border-top: 1px solid hsl(var(--border)); }
+  .setsh { display: flex; align-items: center; justify-content: space-between; padding: 10px 20px 4px; font-size: 12px; color: hsl(var(--muted-foreground)); }
+  .link { border: 0; background: none; padding: 0; color: hsl(var(--primary)); font-size: 12px; font-weight: 500; }
+  .link:hover { text-decoration: underline; text-underline-offset: 2px; }
+  .link:disabled { color: hsl(var(--muted-foreground)); cursor: default; text-decoration: none; }
+  .rows { padding: 2px 8px 10px; }
+  .row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border: 0; border-radius: 8px; background: transparent; text-align: left; }
+  .row:hover:not(:disabled) { background: hsl(var(--muted) / .6); }
+  .row:disabled { cursor: default; }
+  .row .who { flex: 1; min-width: 0; }
+  .row .nm { display: flex; align-items: center; gap: 7px; font-weight: 500; }
+  .row .nm i { font-size: 15px; color: hsl(var(--muted-foreground)); }
+  .row .ds { margin-top: 2px; font-size: 12px; color: hsl(var(--muted-foreground)); }
+  .row .n { font-weight: 500; white-space: nowrap; }
+  .row .n small { font-weight: 400; color: hsl(var(--muted-foreground)); }
+  .row.off .nm, .row.off .n { color: hsl(var(--muted-foreground)); }
+  .row.locked { opacity: .55; }
+  .row .lock { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 500; color: hsl(var(--muted-foreground)); white-space: nowrap; }
+  .cb { flex: none; display: grid; place-items: center; width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid hsl(var(--muted-foreground) / .6); background: hsl(var(--card)); color: hsl(var(--primary-foreground)); font-size: 12px; }
+  .cb.on { border-color: hsl(var(--primary)); background: hsl(var(--primary)); }
+  .cb.dis { border-color: hsl(var(--border)); background: hsl(var(--muted)); }
+
+  /* footer */
+  .df { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-top: 1px solid hsl(var(--border)); }
+  .df .sum { flex: 1; min-width: 0; font-size: 12.5px; color: hsl(var(--muted-foreground)); }
+  .df .sum b { font-weight: 600; color: hsl(var(--foreground)); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 34px; padding: 0 14px; border-radius: 8px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 13px; font-weight: 500; white-space: nowrap; }
+  .btn:hover { border-color: hsl(var(--foreground) / .25); }
+  .btn i { font-size: 15px; }
+  .btn.primary { border-color: transparent; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+  .btn.primary:hover { filter: brightness(1.05); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn.ghost { border-color: transparent; background: transparent; }
+  .btn.ghost:hover { background: hsl(var(--muted)); }
+
+  /* progress + result, in the footer */
+  .prog { flex: 1; min-width: 0; }
+  .prog .l { display: flex; justify-content: space-between; font-size: 12.5px; }
+  .prog .l span:last-child { color: hsl(var(--muted-foreground)); }
+  .track { height: 4px; margin-top: 8px; border-radius: 999px; background: hsl(var(--muted)); overflow: hidden; }
+  .fill { height: 100%; border-radius: 999px; background: hsl(var(--primary)); transition: width .2s ease-out; }
+  .done { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; }
+  .done > i { flex: none; font-size: 20px; color: hsl(var(--include)); }
+  .done .f { min-width: 0; }
+  .done .f div:first-child { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .done .f div:last-child { font-size: 12px; color: hsl(var(--muted-foreground)); }
+  .fail { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; font-size: 12.5px; }
+  .fail > i { flex: none; font-size: 18px; color: hsl(var(--exclude)); }
+  .fail b { display: block; font-weight: 600; }
+  .fail span { color: hsl(var(--muted-foreground)); }
+
+  /* ---------- B: file preview ---------- */
+  .split { display: grid; grid-template-columns: minmax(0, 1fr) 300px; border-top: 1px solid hsl(var(--border)); }
+  .split .sets { border-top: 0; }
+  .file { padding: 16px 18px; border-left: 1px solid hsl(var(--border)); background: hsl(var(--muted) / .3); }
+  .file h3 { margin: 0 0 12px; font-size: 12px; font-weight: 500; color: hsl(var(--muted-foreground)); }
+  .fname { display: flex; align-items: center; gap: 10px; }
+  .fname .ico { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 8px; background: hsl(var(--include) / .12); color: hsl(var(--include)); font-size: 18px; }
+  .fname .x { min-width: 0; }
+  .fname .x div:first-child { font-weight: 500; overflow-wrap: anywhere; }
+  .fname .x div:last-child { font-size: 12px; color: hsl(var(--muted-foreground)); }
+  .sheets { margin-top: 12px; }
+  .sheets div { display: flex; justify-content: space-between; padding: 6px 0; font-size: 12.5px; border-bottom: 1px solid hsl(var(--border) / .6); }
+  .sheets div span:last-child { font-weight: 500; }
+  .sheets div.total { border-bottom: 0; font-weight: 600; }
+  .sheets .none { color: hsl(var(--muted-foreground)); justify-content: flex-start; }
+  .note { display: flex; gap: 6px; margin-top: 14px; font-size: 12px; line-height: 1.45; color: hsl(var(--muted-foreground)); }
+  .note i { font-size: 14px; margin-top: 1px; }
+  .filt { margin-top: 14px; }
+  .filt h4 { margin: 0 0 6px; font-size: 12px; font-weight: 500; color: hsl(var(--muted-foreground)); }
+  .filt .scope { margin-top: 0; }
+
+  @media (max-width: 760px) {
+    .split { grid-template-columns: 1fr; }
+    .file { border-left: 0; border-top: 1px solid hsl(var(--border)); }
+    .df { flex-wrap: wrap; }
+    .df .sum, .prog, .done, .fail { flex-basis: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="top">
+    <h1>Export data</h1>
+    <button class="toggle" id="theme"><i class="ri-moon-line"></i><span>Dark</span></button>
+  </div>
+  <p class="intro">Options for the window the Export button opens. The file is one Excel workbook with a sheet per dataset, and every export is kept under My exports. Both options drop the separate summary tiles, which repeated the row counts already on each dataset, and say which filters the export follows.</p>
+  <div class="bar2">
+    <div><span class="ctl-label">Option</span><div class="seg" id="variants"></div></div>
+    <div><span class="ctl-label">State</span><div class="seg" id="states"></div></div>
+  </div>
+  <p class="variant-note" id="note"></p>
+  <div class="backdrop"><div id="stage" style="width:100%;display:grid;place-items:center"></div></div>
+</div>
+
+<script>
+  const SETS = [
+    { key: "accounts", label: "Accounts", icon: "ri-building-line", desc: "Legal names, HQ details, revenue ranges", n: 268 },
+    { key: "centers", label: "Centres", icon: "ri-briefcase-line", desc: "Locations, type, employees, status", n: 452 },
+    { key: "services", label: "Services", icon: "ri-sparkling-line", desc: "Service lines, focus, software stack", n: 448 },
+    { key: "prospects", label: "Prospects", icon: "ri-group-line", desc: "Decision makers, titles, departments", n: 2024 },
+  ];
+  const FILTERS = [["Accounts to show", "Non-GCCs"], ["Industry", "Technology"], ["City", "Bengaluru, Pune"]];
+  const VARIANTS = [
+    { id: "a", label: "A. List", note: "<b>List.</b> One flat list: tick the datasets you want, each with its row count. The header says which filters the export follows, and the footer sums it up before you click Export. Progress and the finished file appear in the footer, so the window does not jump around." },
+    { id: "b", label: "B. File preview", note: "<b>File preview.</b> Same list on the left, with the file you will get on the right: its name, the sheets it will contain with their row counts, and the filters it follows. Good if people are unsure what the download will look like." },
+  ];
+  const STATES = [
+    { id: "choose", label: "Choose" },
+    { id: "exporting", label: "Exporting" },
+    { id: "ready", label: "Ready" },
+    { id: "failed", label: "Failed" },
+    { id: "locked", label: "Not in plan" },
+    { id: "selection", label: "Selected rows" },
+  ];
+  const state = { variant: "a", st: "choose", on: { accounts: true, centers: true, services: true, prospects: true }, pct: 64 };
+  const $ = (s) => document.querySelector(s);
+  const fmt = (n) => n.toLocaleString();
+  const plural = (n, w) => `${fmt(n)} ${w}${n === 1 ? "" : "s"}`;
+  const locked = (k) => state.st === "locked" && k === "prospects";
+  const picked = () => SETS.filter((s) => state.on[s.key] && !locked(s.key));
+  const rows = () => picked().reduce((t, s) => t + s.n, 0);
+  const busy = () => state.st === "exporting" || state.st === "ready";
+
+  function scope() {
+    const chips = FILTERS.slice(0, 2).map(([k, v]) => `<span class="chip"><span class="k">${k}</span>${v}</span>`).join("");
+    return `<div class="scope">${chips}<span class="chip more">+${FILTERS.length - 2} more</span></div>`;
+  }
+
+  function list() {
+    const allOn = SETS.every((s) => locked(s.key) || state.on[s.key]);
+    return `<div class="sets">
+      <div class="setsh"><span>Sheets in the file</span><button class="link" data-all ${busy() ? "disabled" : ""}>${allOn ? "Clear" : "Select all"}</button></div>
+      <div class="rows">${SETS.map((s) => {
+        const lk = locked(s.key), on = state.on[s.key] && !lk;
+        return `<button class="row ${on ? "" : "off"} ${lk ? "locked" : ""}" data-set="${s.key}" ${lk || busy() ? "disabled" : ""} aria-pressed="${on}">
+          <span class="cb ${on ? "on" : ""} ${lk ? "dis" : ""}">${on ? '<i class="ri-check-line"></i>' : ""}</span>
+          <span class="who"><span class="nm"><i class="${s.icon}"></i>${s.label}</span><div class="ds">${lk ? "Not included in your plan. Contact your admin to add it." : s.desc}</div></span>
+          ${lk ? '<span class="lock"><i class="ri-lock-line"></i>Not in plan</span>' : `<span class="n">${fmt(s.n)} <small>rows</small></span>`}
+        </button>`;
+      }).join("")}</div>
+    </div>`;
+  }
+
+  function footer() {
+    const p = picked();
+    if (state.st === "exporting") {
+      const stage = state.pct < 25 ? "Fetching data" : state.pct < 70 ? "Building the spreadsheet" : "Saving the file";
+      return `<div class="df"><div class="prog"><div class="l"><span>${stage}</span><span>${Math.round(state.pct)}%</span></div><div class="track"><div class="fill" style="width:${state.pct}%"></div></div></div><button class="btn" disabled>Cancel</button></div>`;
+    }
+    if (state.st === "ready") {
+      return `<div class="df"><div class="done"><i class="ri-checkbox-circle-fill"></i><div class="f"><div>dashboard-export-2026-11-03-1642.xlsx</div><div>${plural(rows(), "row")} · ${plural(p.length, "sheet")}</div></div></div><button class="btn ghost" data-st="choose">Export again</button><button class="btn primary"><i class="ri-download-line"></i>Download</button></div>`;
+    }
+    if (state.st === "failed") {
+      return `<div class="df"><div class="fail"><i class="ri-error-warning-fill"></i><div><b>The export did not finish</b><span>The server took too long. Your choices are kept, so you can try again.</span></div></div><button class="btn" data-close>Cancel</button><button class="btn primary" data-st="exporting">Try again</button></div>`;
+    }
+    const none = p.length === 0;
+    return `<div class="df"><div class="sum">${none ? "Pick at least one dataset." : `<b>${plural(rows(), "row")}</b> in ${plural(p.length, "sheet")} · Excel file`}</div><button class="btn" data-close>Cancel</button><button class="btn primary" data-st="exporting" ${none ? "disabled" : ""}><i class="ri-download-line"></i>Export</button></div>`;
+  }
+
+  function header(withScope) {
+    return `<div class="dh"><div class="t"><h2>Export data</h2><p>Exports the filtered data across all pages, not just the rows on screen.</p>${withScope ? scope() : ""}</div><button class="ib" aria-label="Close" data-close><i class="ri-close-line"></i></button></div>`;
+  }
+
+  function renderA() { return `<div class="dlg a">${header(true)}${list()}${footer()}</div>`; }
+
+  function renderB() {
+    const p = picked();
+    const sheets = p.length ? p.map((s) => `<div><span>${s.label}</span><span>${fmt(s.n)}</span></div>`).join("") + `<div class="total"><span>Total</span><span>${fmt(rows())}</span></div>` : `<div class="none">No sheets yet. Tick a dataset.</div>`;
+    const file = `<aside class="file">
+      <h3>Your file</h3>
+      <div class="fname"><span class="ico"><i class="ri-file-excel-2-line"></i></span><div class="x"><div>dashboard-export-2026-11-03.xlsx</div><div>Excel workbook</div></div></div>
+      <div class="sheets">${sheets}</div>
+      <div class="filt"><h4>Follows these filters</h4><div class="scope">${FILTERS.map(([k, v]) => `<span class="chip"><span class="k">${k}</span>${v}</span>`).join("")}</div></div>
+      <div class="note"><i class="ri-history-line"></i>Kept under My exports, so you can download it again later.</div>
+    </aside>`;
+    return `<div class="dlg b">${header(false)}<div class="split">${list()}${file}</div>${footer()}</div>`;
+  }
+
+  function renderSelection() {
+    const busyNow = state.st === "exporting";
+    return `<div class="dlg sel">
+      <div class="dh"><div class="t"><h2>Export 12 accounts</h2><p>Only the rows you selected in the Accounts table.</p></div><button class="ib" aria-label="Close" data-close><i class="ri-close-line"></i></button></div>
+      ${busyNow ? footer() : `<div class="df"><div class="sum"><b>12 rows</b> · Excel file</div><button class="btn" data-close>Cancel</button><button class="btn primary" data-sel-go><i class="ri-download-line"></i>Export</button></div>`}
+    </div>`;
+  }
+
+  let timer = null;
+  function runProgress() {
+    clearInterval(timer);
+    state.pct = 4;
+    timer = setInterval(() => {
+      if (state.st !== "exporting") return clearInterval(timer);
+      state.pct = Math.min(100, state.pct + 3 + Math.random() * 5);
+      if (state.pct >= 100) { clearInterval(timer); state.st = state.sel ? "ready" : "ready"; renderAll(); return; }
+      renderStage();
+    }, 180);
+  }
+
+  function renderStage() {
+    let html;
+    if (state.st === "selection" || state.sel) html = state.st === "ready" ? `<div class="dlg sel"><div class="dh"><div class="t"><h2>Export 12 accounts</h2><p>Only the rows you selected in the Accounts table.</p></div><button class="ib" aria-label="Close" data-close><i class="ri-close-line"></i></button></div>${footerSelReady()}</div>` : renderSelection();
+    else html = state.variant === "a" ? renderA() : renderB();
+    $("#stage").innerHTML = html;
+  }
+  function footerSelReady() { return `<div class="df"><div class="done"><i class="ri-checkbox-circle-fill"></i><div class="f"><div>dashboard-export-2026-11-03-1642.xlsx</div><div>12 rows · 1 sheet</div></div></div><button class="btn primary"><i class="ri-download-line"></i>Download</button></div>`; }
+
+  function renderAll() {
+    $("#variants").innerHTML = VARIANTS.map((v) => `<button class="${v.id === state.variant ? "on" : ""}" data-variant="${v.id}">${v.label}</button>`).join("");
+    const shownState = state.sel ? "selection" : state.st;
+    $("#states").innerHTML = STATES.map((s) => `<button class="${s.id === shownState ? "on" : ""}" data-state="${s.id}">${s.label}</button>`).join("");
+    $("#note").innerHTML = VARIANTS.find((v) => v.id === state.variant).note;
+    renderStage();
+  }
+
+  document.addEventListener("click", (e) => {
+    const t = (s) => e.target.closest(s);
+    if (t("#theme")) {
+      const dark = document.documentElement.classList.toggle("dark");
+      $("#theme").innerHTML = dark ? '<i class="ri-sun-line"></i><span>Light</span>' : '<i class="ri-moon-line"></i><span>Dark</span>';
+      return;
+    }
+    if (t("[data-variant]")) { state.variant = t("[data-variant]").dataset.variant; renderAll(); return; }
+    if (t("[data-state]")) {
+      const s = t("[data-state]").dataset.state;
+      state.sel = s === "selection";
+      state.st = state.sel ? "selection" : s;
+      if (s === "exporting") runProgress(); else { clearInterval(timer); state.pct = 64; }
+      if (s === "exporting") state.pct = 64;
+      renderAll(); return;
+    }
+    if (t("[data-set]")) { const k = t("[data-set]").dataset.set; state.on[k] = !state.on[k]; renderStage(); return; }
+    if (t("[data-all]")) { const allOn = SETS.every((s) => locked(s.key) || state.on[s.key]); SETS.forEach((s) => (state.on[s.key] = !allOn)); renderStage(); return; }
+    if (t("[data-sel-go]")) { state.st = "exporting"; runProgress(); renderAll(); return; }
+    if (t("[data-st]")) { state.st = t("[data-st]").dataset.st; if (state.st === "exporting") runProgress(); renderAll(); return; }
+    if (t("[data-close]")) { /* closing does nothing in the mockup */ }
+  });
+
+  renderAll();
+</script>
+</body>
+</html>
