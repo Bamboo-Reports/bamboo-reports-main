@@ -321,7 +321,9 @@ ALL_RULES = {
         "center_country": {
             "Can Be Nullable": "No",
             "Can Have URL": "No",
-            "Description": "should be a valid country india",
+            # Every center is in India (center_country_iso2 must be IN), so one
+            # exact spelling: cleanup turns "india" into "India".
+            "Description": "should contain||India",
         },
         "center_country_iso2": {
             "Can Be Nullable": "No",
