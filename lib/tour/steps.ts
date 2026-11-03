@@ -102,7 +102,7 @@ export function getDashboardTourSteps(options: { hasMapView: boolean; isSidebarC
     popover: {
       title: "Quick Actions",
       description:
-        "Search, refresh data, and check notifications for recent changes. Your account, theme and sign out live at the bottom of the filters panel.",
+        "Search, refresh data, and open Updates (the bell) for recent changes. Your account, theme and sign out live at the bottom of the filters panel.",
       side: "bottom",
       align: "end",
     },

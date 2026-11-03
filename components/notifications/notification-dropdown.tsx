@@ -2,7 +2,7 @@
 
 import { Skeleton } from "@/components/ui/skeleton"
 import { useEffect, useState } from "react"
-import { RiAddCircleLine, RiCheckDoubleLine, RiInboxLine, RiNotification3Line, RiPencilLine } from "@remixicon/react"
+import { RiBriefcaseLine, RiBuildingLine, RiCheckDoubleLine, RiFileList2Line, RiGroupLine, RiNotification3Line } from "@remixicon/react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -13,11 +13,25 @@ import { useNotifications } from "@/hooks/use-notifications"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import {
-  formatSummaryTitle,
+  formatTableLabel,
   formatRelativeEventDate,
   formatAbsoluteEventDate,
 } from "@/lib/notifications/formatters"
 
+const TABLE_ICONS: Record<string, typeof RiBuildingLine> = {
+  accounts: RiBuildingLine,
+  centers: RiBriefcaseLine,
+  prospects: RiGroupLine,
+}
+
+/** "17 new centres", "98 centres updated". */
+function itemTitle(summary: { table_name: string; change_type: "added" | "updated"; record_count: number }): string {
+  const label = formatTableLabel(summary.table_name, summary.record_count).toLowerCase()
+  const count = summary.record_count.toLocaleString()
+  return summary.change_type === "added" ? `${count} new ${label}` : `${count} ${label} updated`
+}
+
+/** Updates from data imports: new and changed records, unread until you mark them read. */
 export function NotificationDropdown() {
   const {
     notificationSummaries,
@@ -48,6 +62,8 @@ export function NotificationDropdown() {
     await markAllAsRead()
   }
 
+  const showList = !isLoading && !error && notificationSummaries.length > 0
+
   return (
     <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>
@@ -55,140 +71,103 @@ export function NotificationDropdown() {
           variant="ghost"
           size="icon-sm"
           className="relative"
-          title="Notifications"
-          aria-label="Open notifications"
+          title="Updates"
+          aria-label={unreadCount > 0 ? `Open updates, ${unreadCount} unread` : "Open updates"}
         >
-          <RiNotification3Line className={`h-4 w-4 transition-colors ${unreadCount > 0 ? "text-amber-500" : ""}`} />
+          <RiNotification3Line className="h-4 w-4" />
           {unreadCount > 0 ? (
-            <span className="absolute right-0.5 top-0.5 h-2 w-2 rounded-full bg-amber-500" />
+            <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-primary ring-2 ring-background" />
           ) : null}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[360px] p-0 overflow-hidden">
-        {/* Header with gradient. matches profile dropdown style */}
-        <div className="border-b border-border/60 bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-background px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/15">
-                <RiNotification3Line className="h-3.5 w-3.5 text-amber-700 dark:text-amber-300" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-foreground">Activity</p>
-                <p className="text-[11px] text-muted-foreground">
-                  {isLoading ? "Checking..." : totalRecords > 0 ? `${totalRecords} record${totalRecords === 1 ? "" : "s"} changed` : "All caught up"}
-                </p>
-              </div>
-            </div>
-            {totalRecords > 0 ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="xs"
-                className="text-muted-foreground"
-                onClick={handleMarkAllRead}
-              >
-                <RiCheckDoubleLine className="h-3 w-3" />
-                Clear all
-              </Button>
-            ) : null}
-          </div>
+      <DropdownMenuContent align="end" className="w-[380px] overflow-hidden p-0">
+        <div className="flex items-center gap-2.5 border-b px-3.5 py-3">
+          <p className="text-sm font-semibold text-foreground">Updates</p>
+          {showList && (
+            <span className="text-[12px] text-muted-foreground">
+              {totalRecords.toLocaleString()} record{totalRecords === 1 ? "" : "s"} changed
+            </span>
+          )}
+          <span className="flex-1" />
+          {showList ? (
+            <button
+              type="button"
+              onClick={handleMarkAllRead}
+              className="text-[12.5px] font-medium text-primary hover:underline hover:underline-offset-2"
+            >
+              Mark all as read
+            </button>
+          ) : null}
         </div>
 
-        {/* Body */}
-        <div className="p-2">
-          {/* Error */}
+        <div className="max-h-[420px] overflow-y-auto p-1">
           {!isLoading && error ? (
-            <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-xs text-destructive">
-              {error}
-            </div>
+            <p className="m-2 rounded-lg bg-exclude/[0.06] px-3 py-2.5 text-[12.5px] text-exclude" role="alert">
+              Could not load updates. {error}
+            </p>
           ) : null}
 
-          {/* Empty state */}
           {!isLoading && !error && notificationSummaries.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-6 text-center">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted/50">
-                <RiInboxLine className="h-5 w-5 text-muted-foreground/60" />
-              </div>
-              <div>
-                <p className="text-xs font-medium text-muted-foreground">No new activity</p>
-                <p className="mt-0.5 text-[11px] text-muted-foreground/60">
-                  Changes from data imports will appear here.
-                </p>
-              </div>
+            <div className="px-5 py-8 text-center">
+              <RiCheckDoubleLine className="mx-auto h-5 w-5 text-muted-foreground" />
+              <p className="mt-1.5 text-[13px] font-semibold">You&apos;re up to date</p>
+              <p className="mt-0.5 text-[12.5px] text-muted-foreground">
+                New and changed accounts, centres and prospects from data updates appear here.
+              </p>
             </div>
           ) : null}
 
-          {/* Loading skeleton: mirrors the notification item layout below. */}
+          {/* Loading skeleton: mirrors the rows below. */}
           {isLoading ? (
-            <div className="space-y-1.5">
+            <div>
               {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-start gap-3 rounded-lg border border-border/40 px-3 py-2.5">
-                  <Skeleton className="mt-0.5 h-7 w-7 shrink-0 rounded-md" />
+                <div key={i} className="flex items-start gap-2.5 px-2.5 py-2.5">
+                  <Skeleton className="h-7 w-7 shrink-0 rounded-[7px]" />
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <Skeleton className="h-3.5 w-2/3" />
-                      <Skeleton className="h-2.5 w-10" />
-                    </div>
-                    <Skeleton className="mt-1.5 h-3 w-1/2" />
+                    <Skeleton className="h-3.5 w-1/2" />
+                    <Skeleton className="mt-2 h-3 w-4/5" />
                   </div>
                 </div>
               ))}
             </div>
           ) : null}
 
-          {/* Notification items */}
-          {!isLoading && !error && notificationSummaries.length > 0 ? (
-            <div className="space-y-1.5">
-              {notificationSummaries.map((summary) => {
+          {showList
+            ? notificationSummaries.map((summary) => {
                 const isAdded = summary.change_type === "added"
+                const Icon = TABLE_ICONS[summary.table_name.trim().toLowerCase()] ?? RiFileList2Line
+                const more = summary.record_count - summary.record_labels.length
                 return (
-                  <div
-                    key={`${summary.table_name}:${summary.change_type}`}
-                    className={`group flex items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors ${
-                      isAdded
-                        ? "border-emerald-500/15 bg-emerald-500/[0.03] hover:bg-emerald-500/[0.07]"
-                        : "border-sky-500/15 bg-sky-500/[0.03] hover:bg-sky-500/[0.07]"
-                    }`}
-                  >
-                    <div
-                      className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${
-                        isAdded
-                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                          : "bg-sky-500/10 text-sky-600 dark:text-sky-400"
-                      }`}
-                    >
-                      {isAdded ? (
-                        <RiAddCircleLine className="h-3.5 w-3.5" />
-                      ) : (
-                        <RiPencilLine className="h-3 w-3" />
-                      )}
-                    </div>
+                  <div key={`${summary.table_name}:${summary.change_type}`} className="flex items-start gap-2.5 rounded-lg px-2.5 py-2.5">
+                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-[7px] border text-muted-foreground">
+                      <Icon className="h-3.5 w-3.5" />
+                    </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline justify-between gap-2">
-                        <p className="text-[13px] font-medium text-foreground">
-                          {formatSummaryTitle(summary)}
+                        <p className="flex items-center gap-1.5 text-[13px] font-medium text-foreground">
+                          {itemTitle(summary)}
+                          {isAdded && (
+                            <span className="rounded-[5px] bg-include/[0.12] px-1.5 text-[11px] font-semibold leading-[18px] text-include">New</span>
+                          )}
                         </p>
                         <p
-                          className="shrink-0 text-[10px] text-muted-foreground/70"
+                          className="shrink-0 text-[11.5px] text-muted-foreground"
                           title={formatAbsoluteEventDate(summary.latest_changed_at)}
                         >
                           {formatRelativeEventDate(summary.latest_changed_at)}
                         </p>
                       </div>
                       {summary.record_labels.length > 0 ? (
-                        <p className="mt-0.5 truncate text-[11px] leading-relaxed text-muted-foreground">
+                        <p className="mt-0.5 truncate text-[12px] text-muted-foreground" title={summary.record_labels.join(", ")}>
                           {summary.record_labels.join(", ")}
-                          {summary.record_count > summary.record_labels.length
-                            ? ` +${summary.record_count - summary.record_labels.length} more`
-                            : ""}
+                          {more > 0 ? ` and ${more.toLocaleString()} more` : ""}
                         </p>
                       ) : null}
                     </div>
                   </div>
                 )
-              })}
-            </div>
-          ) : null}
+              })
+            : null}
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
