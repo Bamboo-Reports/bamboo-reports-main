@@ -70,7 +70,16 @@ export function useRecentItems() {
     saveToStorage(STORAGE_KEY, [])
   }, [])
 
-  /** Puts back a list removed by clearRecentItems (the History "Undo", #311). */
+  /** Removes one record from History. */
+  const removeRecentItem = useCallback((type: SearchResultType, id: string) => {
+    setRecentItems((prev) => {
+      const next = prev.filter((r) => !(r.type === type && r.id === id))
+      saveToStorage(STORAGE_KEY, next)
+      return next
+    })
+  }, [])
+
+  /** Puts back a list removed by clearRecentItems or removeRecentItem (the History "Undo", #311). */
   const restoreRecentItems = useCallback((items: RecentItem[]) => {
     setRecentItems(items)
     saveToStorage(STORAGE_KEY, items)
@@ -87,6 +96,7 @@ export function useRecentItems() {
     addRecentItem,
     addRecentSearch,
     clearRecentItems,
+    removeRecentItem,
     restoreRecentItems,
     clearRecentSearches,
   }
