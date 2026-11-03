@@ -62,3 +62,22 @@ def test_columns_are_copied_filled_kept_constant_or_left_blank(data_team):
 def test_skipped_columns_stay_blank_even_when_mapped(data_team):
     plan = plan_columns("centers", ["uuid", "cn_unique_key"], [["CN2", "k"]], [["CN2", "k"]], skip={"cn_unique_key"})
     assert plan.kinds["cn_unique_key"] == "blank"
+
+
+def test_keys_are_built_like_the_countif_formula(data_team):
+    parts = ["account_global_legal_name", "center_name", "center_type", "center_focus", "center_city"]
+    headers = ["uuid", "cn_unique_key", *parts]
+    old = [["CN2", "old", "3M Co.", "3M India Ltd.", "R&D", "Both", "Pune"]]
+    plan = plan_columns("centers", headers, old, old, skip=set(), keys={"cn_unique_key": parts})
+    assert plan.kinds["cn_unique_key"] == "key"
+    src = [
+        ["CN2", "", "3M Co.", "3M India Ltd.", "R&D", "Both", "Pune"],
+        ["CN3", "", "3M Co.", "3M India Ltd.", "R&D", "Both", "Pune"],
+        ["CN4", "", "3M Co.", "3M India Ltd.", "IT", "Both", "Pune"],
+    ]
+    rows = build_rows(plan, headers, src)
+    assert [r[1] for r in rows] == [
+        "3M Co.3M India Ltd.R&DBothPune1",
+        "3M Co.3M India Ltd.R&DBothPune2",
+        "3M Co.3M India Ltd.ITBothPune1",
+    ]

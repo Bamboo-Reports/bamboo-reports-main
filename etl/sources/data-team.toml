@@ -33,9 +33,15 @@ title = "Data team sheet"
 spreadsheet_env = "DATA_TEAM_SPREADSHEET_ID"
 
 # etl/sync.sh --source data-team replaces the main sheet's rows with these
-# tabs. Our columns listed here are left blank, to be filled by hand.
+# tabs. Our columns listed in skip are left blank, to be filled by hand.
 [sync]
-skip = ["cn_unique_key"]
+skip = []
+
+# Built by sync, in every sheet that has the column: the parts joined with
+# nothing between them, then a running number per repeat in row order, like
+# the data team's =C2&COUNTIF($C$2:C2, C2). "3M Co.3M India Ltd.R&DBothPune1".
+[sync.keys.cn_unique_key]
+parts = ["account_global_legal_name", "center_name", "center_type", "center_focus", "center_city"]
 
 # -- accounts ------------------------------------------------------------------
 [accounts]

@@ -16,8 +16,12 @@ Every column of the main sheet gets one of four treatments:
             the formula in row 2 is filled down to every row.
   constant  one value on every row of our sheet (account_source,
             center_country_iso2): that value on every row.
-  blank     anything else (lat, lng, and the profile's sync.skip columns
-            such as cn_unique_key): left empty, to be filled by hand.
+  key       built from other columns of the new row ([sync.keys] in the
+            profile): cn_unique_key is account + center + type + focus +
+            city, then a running number per repeat in row order, exactly
+            like the data team's COUNTIF formula.
+  blank     anything else (lat, lng, and the profile's sync.skip columns):
+            left empty, to be filled by hand.
 
 The rows come in the source's order. Rows are not matched one by one: the
 main sheet's rows are replaced as a whole, so nothing of the old rows
@@ -78,13 +82,16 @@ class Plan:
     formulas: dict[str, str] = field(default_factory=dict)  # column -> row 2 formula
     numeric: set[str] = field(default_factory=set)
     dates: set[str] = field(default_factory=set)
+    key_parts: dict[str, list[str]] = field(default_factory=dict)  # column -> parts
 
 
 def is_formula(value) -> bool:
     return isinstance(value, str) and value.startswith("=")
 
 
-def plan_columns(sheet: str, headers: list[str], values: list[list], formulas: list[list], skip: set[str]) -> Plan:
+def plan_columns(
+    sheet: str, headers: list[str], values: list[list], formulas: list[list], skip: set[str], keys: dict | None = None
+) -> Plan:
     """Decide each of our columns' treatment. values are our sheet's
     unformatted data rows, formulas the same rows rendered as formulas."""
     plan = Plan(headers=headers)
@@ -95,6 +102,9 @@ def plan_columns(sheet: str, headers: list[str], values: list[list], formulas: l
         formula_cells = [r[c] for r in formulas if c < len(r) and is_formula(r[c])]
         if column in skip or not column:
             plan.kinds[column] = "blank"
+        elif keys and column in keys and all(p in headers for p in keys[column]):
+            plan.kinds[column] = "key"
+            plan.key_parts[column] = keys[column]
         elif rows and len(formula_cells) == rows:
             plan.kinds[column] = "formula"
             plan.formulas[column] = formulas[0][c]
@@ -157,7 +167,28 @@ def build_rows(plan: Plan, src_headers: list[str], src_rows: list[list]) -> list
             else:
                 new.append("")
         out.append(new)
+    fill_keys(plan, out)
     return out
+
+
+def part_text(value) -> str:
+    """A part as the sheet's & joins it: 2000, not 2000.0."""
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    return str(value)
+
+
+def fill_keys(plan: Plan, rows: list[list]) -> None:
+    """Each key column: its parts joined, then 1, 2, ... per repeat in row
+    order, like =C2&COUNTIF($C$2:C2, C2)."""
+    for column, parts in plan.key_parts.items():
+        c = plan.headers.index(column)
+        idx = [plan.headers.index(p) for p in parts]
+        seen: Counter = Counter()
+        for row in rows:
+            base = "".join(part_text(row[i]) for i in idx)
+            seen[base] += 1
+            row[c] = f"{base}{seen[base]}"
 
 
 def same(a, b) -> bool:
@@ -246,9 +277,10 @@ def report(job: SheetJob, show: int) -> None:
         "copy": "copied from their sheet",
         "formula": "formula filled down",
         "constant": "same value on every row",
+        "key": "built from other columns",
         "blank": "left blank, fill by hand",
     }
-    for kind in ("copy", "formula", "constant", "blank"):
+    for kind in ("copy", "key", "formula", "constant", "blank"):
         cols = by_kind.get(kind, [])
         if not cols:
             continue
@@ -429,7 +461,7 @@ def main() -> None:
             bar.start(f"Reading our '{sheet}'")
             ws, headers, old_rows, old_formulas = read_target(ours, sheet)
             bar.done()
-            plan = plan_columns(sheet, headers, old_rows, old_formulas, skip)
+            plan = plan_columns(sheet, headers, old_rows, old_formulas, skip, active.sync_keys)
             jobs.append(SheetJob(sheet, tab, src_headers, src_rows, ws, plan, old_rows, build_rows(plan, src_headers, src_rows)))
 
     for job in jobs:

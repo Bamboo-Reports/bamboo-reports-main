@@ -61,6 +61,9 @@ class Source:
     sheets: dict[str, SheetMap] | None = None
     # Our columns sheets.sync leaves blank, to be filled by hand.
     sync_skip: list[str] = field(default_factory=list)
+    # Our columns sheets.sync builds: column -> the columns joined, then a
+    # running number per repeat (cn_unique_key).
+    sync_keys: dict[str, list[str]] = field(default_factory=dict)
 
     @property
     def is_main(self) -> bool:
@@ -207,6 +210,10 @@ def load(name: str) -> Source:
         spreadsheet_env=env_name,
         sheets=sheets,
         sync_skip=[str(c) for c in data.get("sync", {}).get("skip", [])],
+        sync_keys={
+            str(column): [str(p) for p in spec.get("parts", [])]
+            for column, spec in data.get("sync", {}).get("keys", {}).items()
+        },
     )
 
 
