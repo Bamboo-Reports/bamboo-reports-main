@@ -273,6 +273,8 @@ Typical order: `etl/cleanup.sh`, then `etl/cleanup.sh --apply`, then `etl/valida
 
 ### Weekly prod run
 
+The step-by-step version, including sharing the new sheet and what to do when something fails, is [Weekly Data Team Run](weekly-data-team-run.md).
+
 - The weekly flow starts from the data team's sheet and ends in prod:
 
   ```bash
@@ -291,6 +293,8 @@ Typical order: `etl/cleanup.sh`, then `etl/cleanup.sh --apply`, then `etl/valida
 ---
 
 ## 8. The data team's sheet: profiles and sync
+
+The weekly steps are in [Weekly Data Team Run](weekly-data-team-run.md); this section is how the pieces work.
 
 The data team keeps the research in their own spreadsheet ("CM/SM-Centers Master"). Its `BR`, `CM` and `SM` tabs are our `accounts`, `centers` and `services`, with their own headers ("HQ City", "Center Foucs", "Primary Serivces Foucs"). It used to be copied into the main sheet by hand; now the sheet tools check it and `etl/sync.sh` copies it.
 

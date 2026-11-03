@@ -375,6 +375,7 @@ The `documentation/` folder covers each subsystem in detail:
 | [Schema Guide](documentation/backend/schema-migration-guide.md) | The data model, column definitions and migration history |
 | [Table Relationships](documentation/backend/table-relationships.md) | Table hierarchy, primary keys, foreign keys and ETL import order |
 | [ETL Pipeline](documentation/backend/etl-pipeline.md) | The import process: source data, diffing, audit trail and how to extend it |
+| [Weekly Data Team Run](documentation/backend/weekly-data-team-run.md) | Step by step, from the data team's new sheet each week to the production dashboard |
 | [Developer Workflow](documentation/developer-workflow.md) | Common tasks, coding standards and troubleshooting |
 | [Testing Guide](documentation/testing-guide.md) | Vitest setup, mocking patterns and how to add a test |
 | [Server-Mode Dashboard](documentation/backend/server-dashboard-mode.md) | The server-backed data path from #249: endpoints, SQL filter translation and rollout state |
