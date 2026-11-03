@@ -41,6 +41,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 
 import gspread
+import requests
 from gspread.utils import rowcol_to_a1
 from rich.prompt import Confirm
 
@@ -295,7 +296,9 @@ def write(spreadsheet: gspread.Spreadsheet, job: SheetJob) -> None:
 
     # 1. Room for every row; new rows take row 2's formats (dates, numbers).
     if ws.row_count < last_row:
-        safe_api_call(lambda: ws.add_rows(last_row - ws.row_count), f"adding rows to '{job.sheet}'", idempotent=False)
+        # resize() sets an exact row count, so a retry after a timeout that
+        # did go through changes nothing.
+        safe_api_call(lambda: ws.resize(rows=last_row), f"adding rows to '{job.sheet}'")
     requests = []
     if last_row > old_last:
         requests.append(_copy(ws.id, width, old_last + 1, last_row, 0, width, "PASTE_FORMAT"))
@@ -493,6 +496,18 @@ def run() -> None:
         sys.exit(130)
     except SheetNotSettled as exc:
         console.print(f"[error][ERROR][/error] {exc}")
+        sys.exit(1)
+    except (requests.exceptions.Timeout, requests.exceptions.ConnectionError, gspread.exceptions.APIError) as exc:
+        console.print()
+        console.print(
+            "[error][ERROR][/error] Google Sheets stopped answering after every retry "
+            f"({type(exc).__name__}). The sheet is most likely still recalculating."
+        )
+        console.print(
+            "        The backup was made before any write. Sheets already written are complete;\n"
+            "        run the same command again once the sheet is responsive (it replaces the rows\n"
+            "        again, so a repeat is safe), or with --sheets for only the ones left."
+        )
         sys.exit(1)
 
 
