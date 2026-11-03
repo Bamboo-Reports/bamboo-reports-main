@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Environment tag</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css" rel="stylesheet" />
+<style>
+  /* Tokens copied from app/globals.css */
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 214 45% 15%;
+    --card: 0 0% 100%;
+    --primary: 204 100% 41%;
+    --primary-foreground: 0 0% 100%;
+    --muted: 210 25% 94%;
+    --muted-foreground: 215 20% 39%;
+    --border: 212 24% 86%;
+    --ring: 204 100% 41%;
+    --include: 142 64% 32%;
+    --exclude: 0 72% 46%;
+    --warn: 32 90% 40%;
+    --dialog-shadow: 0 30px 80px -30px rgba(15,30,50,.45), 0 2px 8px rgba(15,30,50,.08);
+  }
+  .dark {
+    --background: 0 0% 10%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 12%;
+    --primary: 204 92% 56%;
+    --primary-foreground: 0 0% 10%;
+    --muted: 0 0% 16%;
+    --muted-foreground: 0 0% 65%;
+    --border: 0 0% 24%;
+    --ring: 0 0% 83.1%;
+    --include: 142 55% 55%;
+    --exclude: 0 80% 66%;
+    --warn: 36 90% 60%;
+    --dialog-shadow: 0 30px 80px -30px rgba(0,0,0,.8);
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: light; }
+  html.dark { color-scheme: dark; }
+  body { margin: 0; font-family: "Inter", system-ui, sans-serif; background: hsl(var(--background)); color: hsl(var(--foreground)); -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; font-size: 13px; }
+  button, input { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+  ::selection { background: hsl(var(--primary) / .2); }
+
+  .page { max-width: 1100px; margin: 0 auto; padding: 32px 16px 80px; }
+  .top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+  .top h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .intro { margin: 0 0 16px; max-width: 82ch; line-height: 1.5; color: hsl(var(--muted-foreground)); }
+  .toggle { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 13px; font-weight: 500; }
+  .seg { display: inline-grid; grid-auto-flow: column; padding: 3px; border-radius: 9px; background: hsl(var(--muted) / .8); }
+  .seg button { height: 28px; padding: 0 12px; border: 0; border-radius: 6px; background: transparent; font-size: 12.5px; font-weight: 500; color: hsl(var(--muted-foreground)); white-space: nowrap; }
+  .seg button.on { background: hsl(var(--card)); color: hsl(var(--foreground)); box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 0 0 1px hsl(var(--border) / .6); }
+  .seg button .c { margin-left: 4px; font-size: 11.5px; color: hsl(var(--muted-foreground)); }
+  .bar2 { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; margin: 4px 0 12px; }
+  .bar2 > div { display: flex; align-items: center; gap: 8px; }
+  .ctl-label { font-size: 12px; font-weight: 500; color: hsl(var(--muted-foreground)); }
+  .variant-note { margin: 0 0 16px; padding-left: 12px; border-left: 2px solid hsl(var(--border)); max-width: 82ch; line-height: 1.5; color: hsl(var(--muted-foreground)); }
+  .variant-note b { color: hsl(var(--foreground)); font-weight: 600; }
+  .backdrop { padding: 24px 16px; border-radius: 16px; background: hsl(214 30% 12% / .08); }
+  .dark .backdrop { background: hsl(0 0% 0% / .35); }
+
+  /* ---------- shared ---------- */
+  .dlg { display: flex; flex-direction: column; height: 600px; margin: 0 auto; border-radius: 10px; border: 1px solid hsl(var(--border)); background: hsl(var(--background)); box-shadow: var(--dialog-shadow); overflow: hidden; }
+  .dlg.a { max-width: 920px; }
+  .dlg.b { max-width: 760px; }
+  .dh { flex: none; display: flex; align-items: center; gap: 10px; padding: 14px 16px 14px 20px; border-bottom: 1px solid hsl(var(--border)); }
+  .dh h2 { margin: 0; font-size: 16px; font-weight: 600; }
+  .dh .sub { font-size: 12.5px; color: hsl(var(--muted-foreground)); }
+  .dh .sp { flex: 1; }
+  .ib { display: grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 7px; background: transparent; color: hsl(var(--muted-foreground)); font-size: 16px; }
+  .ib:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
+  .ib.lg { font-size: 18px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 13px; font-weight: 500; white-space: nowrap; }
+  .btn:hover { border-color: hsl(var(--foreground) / .25); }
+  .btn i { font-size: 15px; }
+  .btn.primary { border-color: transparent; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+  .btn.sm { height: 28px; padding: 0 10px; font-size: 12.5px; }
+  .search { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; border-radius: 8px; border: 1px solid transparent; background: hsl(var(--muted) / .8); color: hsl(var(--muted-foreground)); }
+  .search:focus-within { border-color: hsl(var(--primary) / .6); box-shadow: 0 0 0 3px hsl(var(--primary) / .15); }
+  .search input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font-size: 13px; color: hsl(var(--foreground)); }
+  .search input::placeholder { color: hsl(var(--muted-foreground)); }
+  .chip { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px; border-radius: 6px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 12px; font-weight: 500; white-space: nowrap; }
+  .chip .k { color: hsl(var(--muted-foreground)); font-weight: 400; }
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .muted { color: hsl(var(--muted-foreground)); }
+  .grp { position: sticky; top: 0; z-index: 1; padding: 10px 10px 4px; background: inherit; font-size: 11.5px; font-weight: 600; color: hsl(var(--muted-foreground)); }
+  .state { display: grid; place-items: center; flex: 1; padding: 32px; text-align: center; }
+  .state i.big { font-size: 26px; color: hsl(var(--muted-foreground)); }
+  .state p { margin: 8px 0 0; max-width: 40ch; line-height: 1.5; color: hsl(var(--muted-foreground)); font-size: 12.5px; }
+  .state p b { display: block; margin-bottom: 2px; color: hsl(var(--foreground)); font-size: 13.5px; font-weight: 600; }
+  .state.err i.big { color: hsl(var(--exclude)); }
+  .sk { height: 10px; border-radius: 4px; background: hsl(var(--muted)); animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .5; } }
+  @media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
+
+  :root { --dev: 262 60% 52%; --amber: 32 92% 38%; }
+  .dark { --dev: 262 80% 74%; --amber: 38 92% 60%; }
+  .opt { margin-bottom: 22px; }
+  .opt h2 { display: flex; align-items: baseline; gap: 10px; margin: 0 0 4px; font-size: 15px; font-weight: 600; }
+  .opt h2 .pick { font-size: 12px; font-weight: 600; color: hsl(var(--primary)); }
+  .opt p { margin: 0 0 10px; max-width: 80ch; line-height: 1.5; color: hsl(var(--muted-foreground)); }
+  .frame { position: relative; overflow: hidden; border-radius: 12px; border: 1px solid hsl(var(--border)); background: hsl(var(--background)); }
+  .hdr { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 24px; border-bottom: 1px solid hsl(var(--border)); background: hsl(var(--background)); }
+  .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .logo { flex: none; display: grid; place-items: center; width: 40px; height: 40px; padding: 5px; border-radius: 12px; border: 1px solid hsl(var(--primary) / .2); background: hsl(var(--background)); }
+  .name { font-size: 18px; font-weight: 700; white-space: nowrap; }
+  .tools { display: flex; align-items: center; gap: 8px; }
+  .sbox { display: inline-flex; align-items: center; gap: 8px; width: 220px; height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid hsl(var(--border) / .6); background: hsl(var(--muted) / .3); color: hsl(var(--muted-foreground)); font-size: 12px; }
+  .ibtn { display: grid; place-items: center; width: 32px; height: 32px; color: hsl(var(--muted-foreground)); font-size: 16px; }
+  .body { height: 70px; padding: 16px 24px; display: flex; gap: 12px; }
+  .body div { flex: 1; border-radius: 10px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); }
+
+  /* today */
+  .t-today { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 6px; border: 1px solid hsl(32 92% 50% / .25); background: hsl(32 92% 50% / .08); }
+  .t-today i { font-size: 12px; color: hsl(var(--amber)); }
+  .t-today span { font-family: ui-monospace, Menlo, monospace; font-size: 10px; font-weight: 700; letter-spacing: .15em; color: hsl(var(--amber)); }
+
+  /* A: plain pill */
+  .t-a { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; border-radius: 999px; background: hsl(var(--dev) / .1); color: hsl(var(--dev)); font-size: 12px; font-weight: 600; white-space: nowrap; cursor: default; }
+  .t-a::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
+
+  /* B: subline under the name */
+  .stack { display: flex; flex-direction: column; line-height: 1.2; }
+  .stack .name { font-size: 17px; }
+  .t-b { display: inline-flex; align-items: center; gap: 5px; margin-top: 2px; font-size: 12px; font-weight: 500; color: hsl(var(--dev)); }
+  .t-b i { font-size: 13px; }
+
+  /* C: top strip + tag */
+  .strip { height: 3px; background: hsl(var(--dev)); }
+  .t-c { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 6px; border: 1px solid hsl(var(--dev) / .35); color: hsl(var(--dev)); font-size: 12px; font-weight: 600; white-space: nowrap; }
+
+  /* D: logo corner */
+  .logo.d { position: relative; border-color: hsl(var(--dev) / .5); }
+  .logo.d::after { content: ""; position: absolute; right: -3px; top: -3px; width: 10px; height: 10px; border-radius: 999px; background: hsl(var(--dev)); box-shadow: 0 0 0 2px hsl(var(--background)); }
+  .t-d { font-size: 18px; font-weight: 500; color: hsl(var(--dev)); white-space: nowrap; }
+
+  .tip { position: absolute; left: 150px; top: 54px; z-index: 2; width: 270px; padding: 10px 12px; border-radius: 8px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); box-shadow: 0 12px 30px -12px rgba(0,0,0,.3); font-size: 12px; line-height: 1.45; }
+  .tip b { display: block; margin-bottom: 2px; font-size: 12.5px; }
+  .tip .muted { color: hsl(var(--muted-foreground)); }
+  .tabbar { display: flex; gap: 2px; padding: 6px 8px 0; background: hsl(var(--muted)); }
+  .tabbar span { display: inline-flex; align-items: center; gap: 6px; max-width: 220px; padding: 6px 12px; border-radius: 8px 8px 0 0; font-size: 12px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: hsl(var(--muted-foreground)); }
+  .tabbar span.on { background: hsl(var(--background)); color: hsl(var(--foreground)); }
+  .tabbar .fav { width: 14px; height: 14px; flex: none; }
+  .colorrow { display: flex; gap: 8px; align-items: center; margin: 0 0 18px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="top">
+    <h1>Environment tag</h1>
+    <button class="toggle" id="theme"><i class="ri-moon-line"></i><span>Dark</span></button>
+  </div>
+  <p class="intro">Options for the tag beside Bamboo Reports that shows you are on the development site, not the live one. Today it is a tiny monospace "DEV" with a terminal icon, in amber that sits close to the logo's orange. Each option below says what the tag means in plain words, explains itself on hover, and uses a colour the rest of the app does not use, so it never reads as a warning or a status. Hover a tag to see its tooltip.</p>
+  <div class="colorrow"><span class="ctl-label">Tag colour</span><div class="seg" id="colors"></div></div>
+  <div id="opts"></div>
+</div>
+<script>
+  const LOGO = `<svg width="100%" height="100%" viewBox="0 0 65 45" fill="none" xmlns="http://www.w3.org/2000/svg"> <path d="M47.4656 7.10152C50.5784 3.9887 55.6252 3.98871 58.7381 7.10152V7.10152C61.8509 10.2143 61.8509 15.2612 58.7381 18.374L43.4038 33.7082L32.1313 22.4358L47.4656 7.10152Z" fill="#FFAE71"/> <path d="M16.8235 37.9412C13.7264 41.0383 8.70492 41.0384 5.60778 37.9412V37.9412C2.51065 34.8441 2.51065 29.8226 5.60778 26.7255L20.9704 11.3629L32.1861 22.5786L16.8235 37.9412Z" fill="#6EC4EA"/> <path d="M43.3475 11.1967C41.8631 9.72636 40.1036 8.56279 38.1695 7.77242C36.2355 6.98206 34.1646 6.58038 32.0753 6.59031C29.986 6.60025 27.9191 7.02161 25.9926 7.83034C24.0662 8.63907 22.3178 9.81933 20.8475 11.3037C19.3771 12.7881 18.2136 14.5476 17.4232 16.4817C16.6328 18.4158 16.2312 20.4866 16.2411 22.5759C16.251 24.6652 16.6724 26.7321 17.4811 28.6586C18.2899 30.5851 19.4701 32.3334 20.9545 33.8037L32.151 22.5002L43.3475 11.1967Z" fill="#3AACEE"/> <path d="M20.9545 33.8037C23.9524 36.7732 28.0071 38.4302 32.2267 38.4101C36.4462 38.3901 40.485 36.6946 43.4545 33.6967C46.424 30.6988 48.081 26.6441 48.0609 22.4245C48.0408 18.205 46.3454 14.1662 43.3475 11.1967L32.151 22.5002L20.9545 33.8037Z" fill="#F17C1D"/> </svg> `;
+  const COLORS = { violet: ["262 60% 52%", "262 80% 74%"], teal: ["178 70% 30%", "174 60% 55%"], amber: ["32 92% 38%", "38 92% 60%"] };
+  const state = { color: "violet", tip: null };
+  const $ = (s) => document.querySelector(s);
+  const tools = `<div class="tools"><span class="sbox"><i class="ri-search-line"></i>Search</span><span class="ibtn"><i class="ri-refresh-line"></i></span><span class="ibtn"><i class="ri-notification-3-line"></i></span></div>`;
+  const body = `<div class="body"><div></div><div></div><div></div><div></div><div></div></div>`;
+  const tipHtml = `<div class="tip"><b>Development site</b><span class="muted">For testing changes before they go live. Data and accounts here may differ from the live Bamboo Reports.</span></div>`;
+  const logo = (cls = "") => `<span class="logo ${cls}">${LOGO}</span>`;
+  const OPTS = [
+    { id: "today", title: "Today", pick: "", note: "Monospace capitals with a terminal icon. Small, and in amber close to the logo's orange.",
+      html: () => `<div class="hdr"><div class="brand">${logo()}<span class="name">Bamboo Reports</span><span class="t-today"><i class="ri-terminal-box-line"></i><span>DEV</span></span></div>${tools}</div>` },
+    { id: "a", title: "A. Plain pill", pick: "My pick", note: "\"Dev\" in sentence case on a soft pill with a dot, in the normal app font. Quiet, readable at a glance, and clearly a label rather than a button.",
+      html: () => `<div class="hdr"><div class="brand">${logo()}<span class="name">Bamboo Reports</span><span class="t-a" data-tip>Dev</span></div>${tools}</div>` },
+    { id: "b", title: "B. Line under the name", pick: "", note: "\"Development site\" written out under the product name. Says exactly what it means and needs no tooltip, at the cost of a slightly taller brand block.",
+      html: () => `<div class="hdr"><div class="brand">${logo()}<div class="stack"><span class="name">Bamboo Reports</span><span class="t-b" data-tip><i class="ri-flask-line"></i>Development site</span></div></div>${tools}</div>` },
+    { id: "c", title: "C. Band across the top", pick: "", note: "A thin coloured band along the very top of every page, plus a small \"Dev\" tag. Impossible to miss, including in screenshots shared in chat, so nobody mistakes a dev screenshot for the live app.",
+      html: () => `<div class="strip"></div><div class="hdr"><div class="brand">${logo()}<span class="name">Bamboo Reports</span><span class="t-c" data-tip>Dev</span></div>${tools}</div>` },
+    { id: "d", title: "D. Part of the name", pick: "", note: "\"Dev\" set as part of the product name in a lighter weight, with a dot on the logo. The most integrated look, but the easiest to overlook.",
+      html: () => `<div class="hdr"><div class="brand">${logo("d")}<span class="name">Bamboo Reports <span class="t-d" data-tip>Dev</span></span></div>${tools}</div>` },
+  ];
+  function render() {
+    const [l, d] = COLORS[state.color];
+    document.documentElement.style.setProperty("--dev", document.documentElement.classList.contains("dark") ? d : l);
+    $("#colors").innerHTML = Object.keys(COLORS).map((c) => `<button class="${state.color === c ? "on" : ""}" data-color="${c}">${c[0].toUpperCase() + c.slice(1)}</button>`).join("");
+    $("#opts").innerHTML = OPTS.map((o) => `<div class="opt"><h2>${o.title}${o.pick ? `<span class="pick">${o.pick}</span>` : ""}</h2><p>${o.note}</p><div class="frame" data-opt="${o.id}">${o.html()}${state.tip === o.id ? tipHtml : ""}${body}</div></div>`).join("")
+      + `<div class="opt"><h2>Also: the browser tab</h2><p>With any option, the tab title can start with "Dev" so dev and live tabs are easy to tell apart when both are open.</p><div class="frame"><div class="tabbar"><span class="on"><span class="fav">${LOGO}</span>Dev · Bamboo Reports</span><span><span class="fav">${LOGO}</span>Bamboo Reports - A Research NXT Product</span></div>${body}</div></div>`;
+  }
+  document.addEventListener("click", (e) => {
+    const t = (s) => e.target.closest(s);
+    if (t("#theme")) { const dark = document.documentElement.classList.toggle("dark"); $("#theme").innerHTML = dark ? '<i class="ri-sun-line"></i><span>Light</span>' : '<i class="ri-moon-line"></i><span>Dark</span>'; render(); return; }
+    if (t("[data-color]")) { state.color = t("[data-color]").dataset.color; render(); }
+  });
+  document.addEventListener("mouseover", (e) => {
+    const tag = e.target.closest?.("[data-tip]");
+    const id = tag ? tag.closest("[data-opt]").dataset.opt : null;
+    if (id !== state.tip) { state.tip = id; render(); }
+  });
+  render();
+</script>
+</body>
+</html>

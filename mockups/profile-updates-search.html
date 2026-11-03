@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Profile, updates, search</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css" rel="stylesheet" />
+<style>
+  /* Tokens copied from app/globals.css */
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 214 45% 15%;
+    --card: 0 0% 100%;
+    --primary: 204 100% 41%;
+    --primary-foreground: 0 0% 100%;
+    --muted: 210 25% 94%;
+    --muted-foreground: 215 20% 39%;
+    --border: 212 24% 86%;
+    --ring: 204 100% 41%;
+    --include: 142 64% 32%;
+    --exclude: 0 72% 46%;
+    --warn: 32 90% 40%;
+    --dialog-shadow: 0 30px 80px -30px rgba(15,30,50,.45), 0 2px 8px rgba(15,30,50,.08);
+  }
+  .dark {
+    --background: 0 0% 10%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 12%;
+    --primary: 204 92% 56%;
+    --primary-foreground: 0 0% 10%;
+    --muted: 0 0% 16%;
+    --muted-foreground: 0 0% 65%;
+    --border: 0 0% 24%;
+    --ring: 0 0% 83.1%;
+    --include: 142 55% 55%;
+    --exclude: 0 80% 66%;
+    --warn: 36 90% 60%;
+    --dialog-shadow: 0 30px 80px -30px rgba(0,0,0,.8);
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: light; }
+  html.dark { color-scheme: dark; }
+  body { margin: 0; font-family: "Inter", system-ui, sans-serif; background: hsl(var(--background)); color: hsl(var(--foreground)); -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; font-size: 13px; }
+  button, input { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+  ::selection { background: hsl(var(--primary) / .2); }
+
+  .page { max-width: 1100px; margin: 0 auto; padding: 32px 16px 80px; }
+  .top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+  .top h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .intro { margin: 0 0 16px; max-width: 82ch; line-height: 1.5; color: hsl(var(--muted-foreground)); }
+  .toggle { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 13px; font-weight: 500; }
+  .seg { display: inline-grid; grid-auto-flow: column; padding: 3px; border-radius: 9px; background: hsl(var(--muted) / .8); }
+  .seg button { height: 28px; padding: 0 12px; border: 0; border-radius: 6px; background: transparent; font-size: 12.5px; font-weight: 500; color: hsl(var(--muted-foreground)); white-space: nowrap; }
+  .seg button.on { background: hsl(var(--card)); color: hsl(var(--foreground)); box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 0 0 1px hsl(var(--border) / .6); }
+  .seg button .c { margin-left: 4px; font-size: 11.5px; color: hsl(var(--muted-foreground)); }
+  .bar2 { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; margin: 4px 0 12px; }
+  .bar2 > div { display: flex; align-items: center; gap: 8px; }
+  .ctl-label { font-size: 12px; font-weight: 500; color: hsl(var(--muted-foreground)); }
+  .variant-note { margin: 0 0 16px; padding-left: 12px; border-left: 2px solid hsl(var(--border)); max-width: 82ch; line-height: 1.5; color: hsl(var(--muted-foreground)); }
+  .variant-note b { color: hsl(var(--foreground)); font-weight: 600; }
+  .backdrop { padding: 24px 16px; border-radius: 16px; background: hsl(214 30% 12% / .08); }
+  .dark .backdrop { background: hsl(0 0% 0% / .35); }
+
+  /* ---------- shared ---------- */
+  .dlg { display: flex; flex-direction: column; height: 600px; margin: 0 auto; border-radius: 10px; border: 1px solid hsl(var(--border)); background: hsl(var(--background)); box-shadow: var(--dialog-shadow); overflow: hidden; }
+  .dlg.a { max-width: 920px; }
+  .dlg.b { max-width: 760px; }
+  .dh { flex: none; display: flex; align-items: center; gap: 10px; padding: 14px 16px 14px 20px; border-bottom: 1px solid hsl(var(--border)); }
+  .dh h2 { margin: 0; font-size: 16px; font-weight: 600; }
+  .dh .sub { font-size: 12.5px; color: hsl(var(--muted-foreground)); }
+  .dh .sp { flex: 1; }
+  .ib { display: grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 7px; background: transparent; color: hsl(var(--muted-foreground)); font-size: 16px; }
+  .ib:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
+  .ib.lg { font-size: 18px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 13px; font-weight: 500; white-space: nowrap; }
+  .btn:hover { border-color: hsl(var(--foreground) / .25); }
+  .btn i { font-size: 15px; }
+  .btn.primary { border-color: transparent; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+  .btn.sm { height: 28px; padding: 0 10px; font-size: 12.5px; }
+  .search { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; border-radius: 8px; border: 1px solid transparent; background: hsl(var(--muted) / .8); color: hsl(var(--muted-foreground)); }
+  .search:focus-within { border-color: hsl(var(--primary) / .6); box-shadow: 0 0 0 3px hsl(var(--primary) / .15); }
+  .search input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font-size: 13px; color: hsl(var(--foreground)); }
+  .search input::placeholder { color: hsl(var(--muted-foreground)); }
+  .chip { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px; border-radius: 6px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 12px; font-weight: 500; white-space: nowrap; }
+  .chip .k { color: hsl(var(--muted-foreground)); font-weight: 400; }
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .muted { color: hsl(var(--muted-foreground)); }
+  .grp { position: sticky; top: 0; z-index: 1; padding: 10px 10px 4px; background: inherit; font-size: 11.5px; font-weight: 600; color: hsl(var(--muted-foreground)); }
+  .state { display: grid; place-items: center; flex: 1; padding: 32px; text-align: center; }
+  .state i.big { font-size: 26px; color: hsl(var(--muted-foreground)); }
+  .state p { margin: 8px 0 0; max-width: 40ch; line-height: 1.5; color: hsl(var(--muted-foreground)); font-size: 12.5px; }
+  .state p b { display: block; margin-bottom: 2px; color: hsl(var(--foreground)); font-size: 13.5px; font-weight: 600; }
+  .state.err i.big { color: hsl(var(--exclude)); }
+  .sk { height: 10px; border-radius: 4px; background: hsl(var(--muted)); animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .5; } }
+  @media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
+
+  .screens { display: flex; gap: 8px; margin: 4px 0 14px; }
+  .screens button { height: 34px; padding: 0 14px; border-radius: 8px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-weight: 500; }
+  .screens button.on { border-color: hsl(var(--primary) / .5); background: hsl(var(--primary) / .1); color: hsl(var(--primary)); }
+  .stagewrap { display: grid; place-items: start center; min-height: 560px; }
+
+  /* menu / popover shell */
+  .pop { width: 100%; border-radius: 10px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); box-shadow: 0 18px 50px -20px rgba(15,30,50,.35), 0 2px 6px rgba(15,30,50,.06); overflow: hidden; }
+  .dark .pop { box-shadow: 0 18px 50px -20px rgba(0,0,0,.8); }
+  .rule { height: 1px; background: hsl(var(--border)); }
+  .mi { display: flex; align-items: center; gap: 10px; width: 100%; height: 34px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent; text-align: left; font-size: 13px; }
+  .mi:hover { background: hsl(var(--muted) / .8); }
+  .mi i { font-size: 16px; color: hsl(var(--muted-foreground)); }
+  .mi .kbd { margin-left: auto; font-size: 11.5px; color: hsl(var(--muted-foreground)); }
+  .mi.out:hover { color: hsl(var(--exclude)); background: hsl(var(--exclude) / .07); }
+  .mi.out:hover i { color: hsl(var(--exclude)); }
+  .grp-p { padding: 4px; }
+  .lbl { padding: 10px 14px 6px; font-size: 12px; font-weight: 500; color: hsl(var(--muted-foreground)); }
+  .avatar { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 999px; background: hsl(var(--muted)); font-size: 13px; font-weight: 600; }
+  .avatar.lg { width: 48px; height: 48px; font-size: 16px; }
+  .me { display: flex; align-items: center; gap: 12px; padding: 14px; }
+  .me .n { font-weight: 600; }
+  .me .e { font-size: 12px; color: hsl(var(--muted-foreground)); overflow: hidden; text-overflow: ellipsis; }
+  .role { display: inline-flex; align-items: center; height: 18px; padding: 0 6px; margin-left: 6px; border-radius: 5px; background: hsl(var(--primary) / .1); color: hsl(var(--primary)); font-size: 11px; font-weight: 600; vertical-align: 1px; }
+  .seg3 { display: grid; grid-template-columns: repeat(3, 1fr); margin: 0 14px; }
+  .seg3 button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+  .hint { padding: 6px 14px 10px; font-size: 11.5px; color: hsl(var(--muted-foreground)); }
+  .prefrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 14px; }
+  .prefrow > span { font-size: 12.5px; }
+  .prefrow .seg { flex: none; }
+  .prefrow .seg button { height: 26px; padding: 0 9px; font-size: 12px; }
+
+  /* account window (profile B) */
+  .acct { display: grid; grid-template-columns: 200px minmax(0, 1fr); height: 460px; }
+  .acct nav { padding: 10px 8px; border-right: 1px solid hsl(var(--border)); background: color-mix(in srgb, hsl(var(--muted)) 30%, hsl(var(--background))); }
+  .acct nav button { display: flex; align-items: center; gap: 9px; width: 100%; height: 34px; padding: 0 10px; border: 0; border-radius: 7px; background: transparent; font-size: 13px; text-align: left; }
+  .acct nav button i { font-size: 15px; color: hsl(var(--muted-foreground)); }
+  .acct nav button.on { background: hsl(var(--primary) / .12); color: hsl(var(--primary)); font-weight: 500; }
+  .acct nav button.on i { color: hsl(var(--primary)); }
+  .acct section { padding: 20px 24px; overflow-y: auto; }
+  .acct h3 { margin: 0 0 14px; font-size: 15px; font-weight: 600; }
+  .field { display: grid; grid-template-columns: 140px minmax(0, 1fr); align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid hsl(var(--border) / .7); font-size: 13px; }
+  .field > span:first-child { color: hsl(var(--muted-foreground)); }
+  .field .seg button { display: inline-flex; align-items: center; gap: 5px; height: 28px; }
+  .field small { display: block; margin-top: 4px; font-size: 11.5px; color: hsl(var(--muted-foreground)); }
+
+  /* notifications */
+  .nh { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid hsl(var(--border)); }
+  .nh h3 { margin: 0; font-size: 14px; font-weight: 600; }
+  .nh .sub { font-size: 12px; color: hsl(var(--muted-foreground)); }
+  .nh .sp { flex: 1; }
+  .link { border: 0; background: none; padding: 0; color: hsl(var(--primary)); font-size: 12.5px; font-weight: 500; }
+  .link:hover { text-decoration: underline; text-underline-offset: 2px; }
+  .nb { max-height: 420px; overflow-y: auto; padding: 4px; }
+  .nrow { display: flex; gap: 10px; padding: 10px; border-radius: 8px; }
+  .nrow:hover { background: hsl(var(--muted) / .6); }
+  .ndot { flex: none; width: 8px; height: 8px; margin-top: 6px; border-radius: 999px; background: hsl(var(--primary)); }
+  .ndot.read { background: transparent; }
+  .nrow .ic { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 7px; border: 1px solid hsl(var(--border)); color: hsl(var(--muted-foreground)); font-size: 14px; }
+  .nrow .tx { flex: 1; min-width: 0; }
+  .nrow .t { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 500; }
+  .nrow .t span:last-child { flex: none; font-size: 11.5px; font-weight: 400; color: hsl(var(--muted-foreground)); }
+  .nrow .s { margin-top: 2px; font-size: 12px; color: hsl(var(--muted-foreground)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tag { display: inline-flex; align-items: center; height: 18px; padding: 0 6px; border-radius: 5px; font-size: 11px; font-weight: 600; }
+  .tag.new { background: hsl(var(--include) / .12); color: hsl(var(--include)); }
+  .tag.upd { background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); }
+  .run { padding: 12px 14px; }
+  .run h4 { margin: 0 0 2px; font-size: 13px; font-weight: 600; }
+  .run .when { font-size: 12px; color: hsl(var(--muted-foreground)); }
+  .tbl { width: 100%; margin-top: 10px; border-collapse: collapse; font-size: 13px; }
+  .tbl th { padding: 0 0 6px; text-align: right; font-size: 12px; font-weight: 500; color: hsl(var(--muted-foreground)); }
+  .tbl th:first-child { text-align: left; }
+  .tbl td { height: 36px; border-top: 1px solid hsl(var(--border) / .7); text-align: right; }
+  .tbl td:first-child { text-align: left; }
+  .tbl td .z { color: hsl(var(--muted-foreground)); }
+  .tbl td.add { color: hsl(var(--include)); font-weight: 600; }
+  .tbl td.up { font-weight: 500; }
+  .tbl tr.x td { border-top: 0; height: auto; padding: 0 0 10px; text-align: left; font-size: 12px; color: hsl(var(--muted-foreground)); line-height: 1.5; }
+  .tbl tr.hasx td:first-child button { border: 0; background: none; padding: 0; display: inline-flex; align-items: center; gap: 4px; }
+  .tbl tr.hasx td:first-child i { color: hsl(var(--muted-foreground)); transition: transform .15s; }
+  .tbl tr.hasx.open td:first-child i { transform: rotate(90deg); }
+  .older { padding: 10px 14px 12px; border-top: 1px solid hsl(var(--border)); font-size: 12.5px; color: hsl(var(--muted-foreground)); }
+  .nempty { padding: 32px 20px; text-align: center; }
+  .nempty i { font-size: 22px; color: hsl(var(--muted-foreground)); }
+  .nempty p { margin: 6px 0 0; font-size: 12.5px; color: hsl(var(--muted-foreground)); }
+  .nempty p b { display: block; color: hsl(var(--foreground)); font-size: 13px; }
+
+  /* search */
+  .sq { display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 14px; border-bottom: 1px solid hsl(var(--border)); }
+  .sq i { font-size: 17px; color: hsl(var(--muted-foreground)); }
+  .sq input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font-size: 15px; }
+  .sq kbd, .sfoot kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 5px; border: 1px solid hsl(var(--border)); background: hsl(var(--muted) / .6); font: 500 11px/1 Inter, sans-serif; color: hsl(var(--muted-foreground)); }
+  .stypes { display: flex; gap: 6px; padding: 10px 14px 4px; }
+  .stypes button { display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 10px; border-radius: 999px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 12.5px; font-weight: 500; color: hsl(var(--muted-foreground)); }
+  .stypes button b { font-weight: 600; color: hsl(var(--foreground)); }
+  .stypes button.on { border-color: hsl(var(--primary) / .5); background: hsl(var(--primary) / .1); color: hsl(var(--primary)); }
+  .stypes button.on b { color: hsl(var(--primary)); }
+  .sl { max-height: 420px; overflow-y: auto; padding: 4px 6px 8px; }
+  .sg { padding: 10px 10px 4px; font-size: 12px; font-weight: 500; color: hsl(var(--muted-foreground)); display: flex; justify-content: space-between; }
+  .si { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 0; border-radius: 7px; background: transparent; text-align: left; }
+  .si.act { background: hsl(var(--primary) / .1); }
+  .si.act .t { color: hsl(var(--primary)); }
+  .si .ic { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 7px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); color: hsl(var(--muted-foreground)); font-size: 14px; }
+  .si .tx { flex: 1; min-width: 0; }
+  .si .t { font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .si .t mark { background: none; color: inherit; font-weight: 700; }
+  .si .s { margin-top: 1px; font-size: 12px; color: hsl(var(--muted-foreground)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .si .side { flex: none; font-size: 12px; color: hsl(var(--muted-foreground)); }
+  .si .flag { margin-left: 6px; font-size: 11px; font-weight: 600; color: hsl(var(--warn)); }
+  .si.more { color: hsl(var(--primary)); font-size: 12.5px; font-weight: 500; padding: 6px 10px; }
+  .si.more i { font-size: 14px; }
+  .sfoot { display: flex; align-items: center; gap: 14px; padding: 8px 14px; border-top: 1px solid hsl(var(--border)); font-size: 12px; color: hsl(var(--muted-foreground)); }
+  .sfoot span { display: inline-flex; align-items: center; gap: 5px; }
+  .ssplit { display: grid; grid-template-columns: minmax(0, 1fr) 300px; }
+  .ssplit .sl { border-right: 1px solid hsl(var(--border)); }
+  .prev { padding: 16px; }
+  .prev .ty { display: flex; align-items: center; gap: 6px; font-size: 12px; color: hsl(var(--muted-foreground)); }
+  .prev h4 { margin: 4px 0 2px; font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+  .prev .s { font-size: 12.5px; color: hsl(var(--muted-foreground)); }
+  .prev dl { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 7px 10px; margin: 14px 0 0; font-size: 12.5px; }
+  .prev dt { color: hsl(var(--muted-foreground)); }
+  .prev dd { margin: 0; }
+  .prev .btn { margin-top: 16px; }
+  .rs { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 10px 6px; }
+  .rs button { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 9px; border-radius: 999px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 12px; }
+  .rs button i { font-size: 13px; color: hsl(var(--muted-foreground)); }
+
+  @media (max-width: 760px) {
+    .acct { grid-template-columns: 1fr; height: auto; }
+    .acct nav { display: flex; border-right: 0; border-bottom: 1px solid hsl(var(--border)); }
+    .ssplit { grid-template-columns: 1fr; }
+    .prev { display: none; }
+    .field { grid-template-columns: 1fr; gap: 6px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="top">
+    <h1>Profile, updates and search</h1>
+    <button class="toggle" id="theme"><i class="ri-moon-line"></i><span>Dark</span></button>
+  </div>
+  <p class="intro">Options for three small screens: the profile menu at the bottom of the filters panel, the notifications bell, and search in the header. Each keeps what it does today and follows the flat style used in the rebuilt windows: plain rows, blue for the selected item, colour only where it carries meaning.</p>
+  <div class="screens" id="screens"></div>
+  <div class="bar2">
+    <div><span class="ctl-label">Option</span><div class="seg" id="variants"></div></div>
+    <div><span class="ctl-label">State</span><div class="seg" id="states"></div></div>
+  </div>
+  <p class="variant-note" id="note"></p>
+  <div class="backdrop"><div class="stagewrap" id="stage"></div></div>
+</div>
+
+<script>
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const segBtns = (opts, cur, key) => opts.map(([v, l, ic]) => `<button class="${cur === v ? "on" : ""}" data-${key}="${v}">${ic ? `<i class="${ic}"></i>` : ""}${l}</button>`).join("");
+
+  /* ---------------- data ---------------- */
+  const ME = { name: "Asha Menon", email: "asha.menon@researchnxt.com", initials: "AM", role: "Admin", phone: "+91 98200 41234", last: "30 Oct, 09:42" };
+  const UPDATES = [
+    { id: "u1", kind: "upd", table: "Prospects", n: 3, names: ["Thomas Vengal", "Nagaraj Bhat", "Jai Ganesh"], when: "2 hours ago", icon: "ri-group-line" },
+    { id: "u2", kind: "new", table: "Centres", n: 17, names: ["Truist Financial Corp.", "Thyssenkrupp Automotive Body Solutions", "Zoetis India Ltd."], when: "2 hours ago", icon: "ri-briefcase-line" },
+    { id: "u3", kind: "upd", table: "Centres", n: 98, names: ["Zoetis India Ltd.", "YKK India Pvt. Ltd.", "Wells Fargo International"], when: "2 hours ago", icon: "ri-briefcase-line" },
+    { id: "u4", kind: "new", table: "Accounts", n: 7, names: ["Truist Financial Corp.", "O'Reilly Automotive, Inc.", "LIXIL Corporation"], when: "2 hours ago", icon: "ri-building-line" },
+    { id: "u5", kind: "upd", table: "Accounts", n: 39, names: ["Embraer S.A.", "S&W Partners Group Ltd.", "ASML Holding N.V."], when: "2 hours ago", icon: "ri-building-line" },
+  ];
+  const RESULTS = {
+    account: [
+      { title: "Accenture plc", sub: "Corporate Services · Ireland", side: "34 centres", data: [["Industry", "Corporate Services"], ["HQ", "Dublin, Ireland"], ["Revenue", "$50B+"], ["India headcount", "10K+"], ["In India since", "1987"]] },
+      { title: "MindCurv GmbH (Acquired by Accenture plc)", sub: "Corporate Services · Germany", side: "1 centre", flag: "Non-GCC", data: [["Industry", "Corporate Services"], ["HQ", "Munich, Germany"], ["Revenue", "$100M - $250M"], ["India headcount", "<50"], ["In India since", "2021"]] },
+    ],
+    center: [
+      { title: "Accenture India Pvt. Ltd.", sub: "Gandhinagar, Gujarat", side: "Accenture plc", data: [["Account", "Accenture plc"], ["City", "Gandhinagar"], ["Type", "GCC/GIC"], ["Headcount", "1K - 5K"], ["Status", "Active Center"]] },
+      { title: "Accenture Services Pvt. Ltd.", sub: "Gurugram, Haryana", side: "Accenture plc", data: [["Account", "Accenture plc"], ["City", "Gurugram"], ["Type", "GCC/GIC"], ["Headcount", "10K+"], ["Status", "Active Center"]] },
+      { title: "Accenture Services Pvt. Ltd.", sub: "Hyderabad, Telangana", side: "Accenture plc", data: [["Account", "Accenture plc"], ["City", "Hyderabad"], ["Type", "GCC/GIC"], ["Headcount", "10K+"], ["Status", "Active Center"]] },
+    ],
+    prospect: [
+      { title: "Priya Raman", sub: "VP Engineering · Accenture plc", side: "Bengaluru", data: [["Title", "VP Engineering"], ["Account", "Accenture plc"], ["Seniority", "VP"], ["Department", "Engineering"], ["City", "Bengaluru"]] },
+      { title: "Rahul Sethi", sub: "Director, Delivery · Accenture plc", side: "Pune", data: [["Title", "Director, Delivery"], ["Account", "Accenture plc"], ["Seniority", "Director"], ["Department", "Operations"], ["City", "Pune"]] },
+    ],
+  };
+  const TOTALS = { account: 2, center: 25, prospect: 214 };
+  const TYPE = { account: ["Accounts", "ri-building-line", "Account"], center: ["Centres", "ri-briefcase-line", "Centre"], prospect: ["Prospects", "ri-group-line", "Prospect"] };
+
+  /* ---------------- screens ---------------- */
+  const SCREENS = {
+    profile: {
+      label: "Profile menu",
+      variants: [
+        { id: "a", label: "A. One menu", note: "<b>One menu.</b> Everything stays in the menu, as plain rows. Your name, email and role at the top; theme and number format as two compact switches; then My exports, History and Take the tour as normal menu rows; Sign out last, set apart, and red only when you point at it. Phone and last sign-in move out of the menu: they are rarely needed and can live in Account settings later." },
+        { id: "b", label: "B. Menu and settings window", note: "<b>Menu and settings window.</b> The menu becomes a short list of places to go. Theme, number format, and your details (phone, role, last sign-in) move into an Account settings window with the same side list as the other windows, which leaves room for more settings later." },
+      ],
+      states: [["menu", "Menu"], ["settings", "Settings window"]],
+    },
+    notif: {
+      label: "Notifications",
+      variants: [
+        { id: "a", label: "A. Flat list", note: "<b>Flat list.</b> Same items as today on plain rows: a blue dot for unread, the record type icon, a short title, a few names and the time. New records get a small green New tag; updates stay neutral. The amber header and tinted cards go. Clear all becomes Mark all as read, which is what it does." },
+        { id: "b", label: "B. Summary table", note: "<b>Summary table.</b> Everything since you last checked, as one small table: new and updated records for Accounts, Centres and Prospects. Click a row to see the names. Easier to read when a data update changes hundreds of records." },
+      ],
+      states: [["list", "With updates"], ["read", "All read"], ["loading", "Loading"]],
+    },
+    search: {
+      label: "Search",
+      variants: [
+        { id: "a", label: "A. Refined list", note: "<b>Refined list.</b> The same search, tidied: chips under the box narrow results to Accounts, Centres or Prospects with their counts, the matched letters are bold, and the selected row uses the app's blue instead of orange. Each group ends with a Show all link instead of plain \"+23 more\" text. Showing every match of one type needs a small server change, since search returns only the first few of each." },
+        { id: "b", label: "B. List and preview", note: "<b>List and preview.</b> The refined list plus a preview of the highlighted record on the right: key facts and an Open button, so you can check you have the right Accenture before opening it. Search results already carry these details, so the preview needs no extra loading." },
+      ],
+      states: [["results", "Results"], ["start", "Before typing"], ["none", "No results"]],
+    },
+  };
+  const state = { screen: "profile", variant: { profile: "a", notif: "a", search: "a" }, st: { profile: "menu", notif: "list", search: "results" }, theme: "light", num: "auto", stype: "all", sel: 0, open: { u: "Centres" }, tab: "prefs" };
+
+  /* ---------------- profile ---------------- */
+  function profileA() {
+    return `<div class="pop" style="max-width:300px">
+      <div class="me"><span class="avatar">${ME.initials}</span><div style="min-width:0"><div class="n">${ME.name}<span class="role">${ME.role}</span></div><div class="e">${ME.email}</div></div></div>
+      <div class="rule"></div>
+      <div style="padding:8px 0 4px">
+        <div class="prefrow"><span>Theme</span><div class="seg">${segBtns([["light", "Light"], ["dark", "Dark"], ["system", "System"]], state.theme, "theme")}</div></div>
+        <div class="prefrow"><span>Numbers</span><div class="seg">${segBtns([["auto", "Auto"], ["full", "Full"], ["short", "Short"]], state.num, "num")}</div></div>
+        <div class="hint">${{ auto: "Shortens only when a card is too narrow.", full: "Always exact, for example 486,120.", short: "Always shortened, for example 486K." }[state.num]}</div>
+      </div>
+      <div class="rule"></div>
+      <div class="grp-p">
+        <button class="mi"><i class="ri-file-excel-2-line"></i>My exports</button>
+        <button class="mi"><i class="ri-history-line"></i>History</button>
+        <button class="mi"><i class="ri-compass-3-line"></i>Take the tour</button>
+      </div>
+      <div class="rule"></div>
+      <div class="grp-p"><button class="mi out"><i class="ri-logout-box-r-line"></i>Sign out</button></div>
+    </div>`;
+  }
+  function profileBMenu() {
+    return `<div class="pop" style="max-width:280px">
+      <div class="me"><span class="avatar">${ME.initials}</span><div style="min-width:0"><div class="n">${ME.name}</div><div class="e">${ME.email}</div></div></div>
+      <div class="rule"></div>
+      <div class="grp-p">
+        <button class="mi" data-st="settings"><i class="ri-settings-3-line"></i>Account settings</button>
+        <button class="mi"><i class="ri-file-excel-2-line"></i>My exports</button>
+        <button class="mi"><i class="ri-history-line"></i>History</button>
+        <button class="mi"><i class="ri-compass-3-line"></i>Take the tour</button>
+      </div>
+      <div class="rule"></div>
+      <div class="grp-p"><button class="mi out"><i class="ri-logout-box-r-line"></i>Sign out</button></div>
+    </div>`;
+  }
+  function profileBWindow() {
+    const body = state.tab === "prefs"
+      ? `<h3>Preferences</h3>
+        <div class="field"><span>Theme</span><div><div class="seg">${segBtns([["light", "Light", "ri-sun-line"], ["dark", "Dark", "ri-moon-line"], ["system", "System", "ri-computer-line"]], state.theme, "theme")}</div></div></div>
+        <div class="field"><span>Summary numbers</span><div><div class="seg">${segBtns([["auto", "Auto"], ["full", "Full"], ["short", "Short"]], state.num, "num")}</div><small>${{ auto: "Shortens only when a card is too narrow.", full: "Always exact, for example 486,120.", short: "Always shortened, for example 486K." }[state.num]}</small></div></div>`
+      : `<div style="display:flex;align-items:center;gap:14px;margin-bottom:12px"><span class="avatar lg">${ME.initials}</span><div><div style="font-size:16px;font-weight:600">${ME.name}</div><div class="muted" style="font-size:12.5px">${ME.email}</div></div></div>
+        <div class="field"><span>Role</span><span>${ME.role}. Can export data and manage users.</span></div>
+        <div class="field"><span>Phone</span><span>${ME.phone}</span></div>
+        <div class="field"><span>Last sign in</span><span>${ME.last}</span></div>
+        <p class="muted" style="font-size:12px;margin:14px 0 0">To change your name, email or role, contact your admin.</p>`;
+    return `<div class="dlg" style="height:auto;max-width:720px;width:100%"><div class="dh"><h2>Account settings</h2><span class="sp"></span><button class="ib lg" aria-label="Close" data-st="menu"><i class="ri-close-line"></i></button></div>
+      <div class="acct"><nav><button class="${state.tab === "prefs" ? "on" : ""}" data-tab="prefs"><i class="ri-equalizer-line"></i>Preferences</button><button class="${state.tab === "profile" ? "on" : ""}" data-tab="profile"><i class="ri-user-line"></i>Profile</button></nav><section>${body}</section></div></div>`;
+  }
+  function renderProfile() {
+    if (state.variant.profile === "a") return profileA();
+    return state.st.profile === "settings" ? profileBWindow() : profileBMenu();
+  }
+
+  /* ---------------- notifications ---------------- */
+  function notifHeader(unread) {
+    return `<div class="nh"><h3>Updates</h3><span class="sub">${unread ? `${unread.toLocaleString()} unread` : ""}</span><span class="sp"></span>${unread ? `<button class="link" data-st="read">Mark all as read</button>` : ""}</div>`;
+  }
+  function renderNotif() {
+    const st = state.st.notif;
+    if (st === "loading") return `<div class="pop" style="max-width:380px">${notifHeader(0)}<div class="nb">${[1, 2, 3].map(() => `<div class="nrow"><div class="sk" style="width:28px;height:28px;border-radius:7px"></div><div style="flex:1"><div class="sk" style="width:55%"></div><div class="sk" style="width:80%;margin-top:8px"></div></div></div>`).join("")}</div></div>`;
+    const read = st === "read";
+    if (state.variant.notif === "a") {
+      const rows = UPDATES.map((u) => `<div class="nrow"><span class="ndot ${read ? "read" : ""}"></span><span class="ic"><i class="${u.icon}"></i></span><div class="tx"><div class="t"><span>${u.n} ${u.kind === "new" ? "new " + u.table.toLowerCase() : u.table.toLowerCase() + " updated"} ${u.kind === "new" ? '<span class="tag new">New</span>' : ""}</span><span>${u.when}</span></div><div class="s">${u.names.map(esc).join(", ")}${u.n > 3 ? ` and ${u.n - 3} more` : ""}</div></div></div>`).join("");
+      if (read) return `<div class="pop" style="max-width:380px">${notifHeader(0)}<div class="nempty"><i class="ri-check-double-line"></i><p><b>You're up to date</b>New and changed accounts, centres and prospects from data updates appear here.</p></div></div>`;
+      return `<div class="pop" style="max-width:380px">${notifHeader(UPDATES.length)}<div class="nb">${rows}</div></div>`;
+    }
+    const tables = ["Accounts", "Centres", "Prospects"];
+    const rows = tables.map((t) => {
+      const nw = UPDATES.find((u) => u.table === t && u.kind === "new");
+      const up = UPDATES.find((u) => u.table === t && u.kind === "upd");
+      const open = state.open.u === t;
+      const names = [...(nw ? nw.names : []), ...(up ? up.names : [])];
+      return `<tr class="hasx ${open ? "open" : ""}"><td><button data-u="${t}"><i class="ri-arrow-right-s-line"></i>${t}</button></td><td class="${nw ? "add" : ""}">${nw ? "+" + nw.n : '<span class="z">0</span>'}</td><td class="up">${up ? up.n : '<span class="z">0</span>'}</td></tr>${open ? `<tr class="x"><td colspan="3">${names.map(esc).join(", ")} and ${(nw ? nw.n : 0) + (up ? up.n : 0) - names.length} more</td></tr>` : ""}`;
+    }).join("");
+    if (read) return `<div class="pop" style="max-width:380px">${notifHeader(0)}<div class="nempty"><i class="ri-check-double-line"></i><p><b>You're up to date</b>New and changed accounts, centres and prospects from data updates appear here.</p></div></div>`;
+    return `<div class="pop" style="max-width:380px">${notifHeader(164)}
+      <div class="run"><h4>Since you last checked</h4><div class="when">164 records changed, latest 2 hours ago</div>
+      <table class="tbl"><thead><tr><th></th><th>New</th><th>Updated</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  }
+
+  /* ---------------- search ---------------- */
+  const hl = (t) => esc(t).replace(/(accen)/i, "<mark>$1</mark>");
+  function searchList() {
+    const st = state.st.search;
+    if (st === "start") {
+      return `<div class="sg"><span>Recent searches</span></div><div class="rs">${["Accenture", "Walmart Chennai", "VP Engineering"].map((r) => `<button><i class="ri-time-line"></i>${r}</button>`).join("")}</div>
+        <div class="sg"><span>Recently opened</span></div>
+        ${[["account", "Barclays plc", "Banking · United Kingdom"], ["center", "Walmart Global Tech India", "Walmart Inc. · Chennai"], ["prospect", "Daniel Ortiz", "Director, Data · Walmart Inc."]].map(([t, a, b], i) => `<div class="si ${i === 0 ? "act" : ""}"><span class="ic"><i class="${TYPE[t][1]}"></i></span><div class="tx"><div class="t">${a}</div><div class="s">${b}</div></div></div>`).join("")}
+        <div class="sg"><span>Go to</span></div>
+        ${[["ri-building-line", "Accounts"], ["ri-briefcase-line", "Centres"], ["ri-group-line", "Prospects"]].map(([i, l]) => `<div class="si"><span class="ic"><i class="${i}"></i></span><div class="tx"><div class="t">${l}</div></div></div>`).join("")}`;
+    }
+    if (st === "none") return `<div class="nempty" style="padding:40px 20px"><i class="ri-search-line"></i><p><b>Nothing matches "accentur plc"</b>Check the spelling, or search by a shorter part of the name.</p></div>`;
+    let idx = 0;
+    const types = state.stype === "all" ? ["account", "center", "prospect"] : [state.stype];
+    return types.map((t) => {
+      const items = RESULTS[t];
+      const rows = items.map((r) => { const i = idx++; return `<div class="si ${state.sel === i ? "act" : ""}" data-sel="${i}"><span class="ic"><i class="${TYPE[t][1]}"></i></span><div class="tx"><div class="t">${hl(r.title)}${r.flag ? `<span class="flag">${r.flag}</span>` : ""}</div><div class="s">${esc(r.sub)}</div></div><span class="side">${esc(r.side)}</span></div>`; }).join("");
+      const more = TOTALS[t] > items.length ? `<button class="si more" data-stype="${t}">Show all ${TOTALS[t]} ${TYPE[t][0].toLowerCase()}<i class="ri-arrow-right-s-line"></i></button>` : "";
+      return `<div class="sg"><span>${TYPE[t][0]}</span><span>${TOTALS[t]}</span></div>${rows}${state.stype === "all" ? more : ""}`;
+    }).join("");
+  }
+  function selectedResult() {
+    const types = state.stype === "all" ? ["account", "center", "prospect"] : [state.stype];
+    const flat = types.flatMap((t) => RESULTS[t].map((r) => ({ ...r, t })));
+    return flat[state.sel] || flat[0];
+  }
+  function renderSearch() {
+    const st = state.st.search;
+    const query = st === "start" ? "" : st === "none" ? "accentur plc" : "accen";
+    const chips = st === "results" ? `<div class="stypes">${[["all", "All", 241], ["account", "Accounts", TOTALS.account], ["center", "Centres", TOTALS.center], ["prospect", "Prospects", TOTALS.prospect]].map(([v, l, n]) => `<button class="${state.stype === v ? "on" : ""}" data-stype="${v}">${l} <b>${n}</b></button>`).join("")}</div>` : "";
+    const head = `<div class="sq"><i class="ri-search-line"></i><input value="${query}" placeholder="Search accounts, centres and prospects" aria-label="Search" /><kbd>Esc</kbd></div>${chips}`;
+    const foot = `<div class="sfoot"><span><kbd>↑</kbd><kbd>↓</kbd> Move</span><span><kbd>Enter</kbd> Open</span>${st === "results" ? `<span><kbd>Tab</kbd> Next type</span>` : ""}</div>`;
+    if (state.variant.search === "a" || st !== "results") return `<div class="pop" style="max-width:640px">${head}<div class="sl">${searchList()}</div>${foot}</div>`;
+    const r = selectedResult();
+    const prev = `<div class="prev"><div class="ty"><i class="${TYPE[r.t][1]}"></i>${TYPE[r.t][2]}</div><h4>${esc(r.title)}</h4><div class="s">${esc(r.sub)}</div><dl>${r.data.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join("")}</dl><button class="btn primary sm"><i class="ri-external-link-line"></i>Open ${TYPE[r.t][2].toLowerCase()}</button></div>`;
+    return `<div class="pop" style="max-width:880px">${head}<div class="ssplit"><div class="sl">${searchList()}</div>${prev}</div>${foot}</div>`;
+  }
+
+  /* ---------------- shell ---------------- */
+  function renderStage() {
+    $("#stage").innerHTML = state.screen === "profile" ? renderProfile() : state.screen === "notif" ? renderNotif() : renderSearch();
+  }
+  function renderAll() {
+    const sc = SCREENS[state.screen];
+    $("#screens").innerHTML = Object.entries(SCREENS).map(([k, v]) => `<button class="${state.screen === k ? "on" : ""}" data-screen="${k}">${v.label}</button>`).join("");
+    $("#variants").innerHTML = sc.variants.map((v) => `<button class="${state.variant[state.screen] === v.id ? "on" : ""}" data-variant="${v.id}">${v.label}</button>`).join("");
+    const states = state.screen === "profile" && state.variant.profile === "a" ? [] : sc.states;
+    $("#states").parentElement.style.display = states.length ? "" : "none";
+    $("#states").innerHTML = states.map(([id, l]) => `<button class="${state.st[state.screen] === id ? "on" : ""}" data-state="${id}">${l}</button>`).join("");
+    $("#note").innerHTML = sc.variants.find((v) => v.id === state.variant[state.screen]).note;
+    renderStage();
+  }
+  document.addEventListener("click", (e) => {
+    const t = (s) => e.target.closest(s);
+    if (t("#theme")) { const dark = document.documentElement.classList.toggle("dark"); $("#theme").innerHTML = dark ? '<i class="ri-sun-line"></i><span>Light</span>' : '<i class="ri-moon-line"></i><span>Dark</span>'; return; }
+    if (t("[data-screen]")) { state.screen = t("[data-screen]").dataset.screen; renderAll(); return; }
+    if (t("[data-variant]")) { state.variant[state.screen] = t("[data-variant]").dataset.variant; state.st[state.screen] = SCREENS[state.screen].states[0][0]; renderAll(); return; }
+    if (t("[data-state]")) { state.st[state.screen] = t("[data-state]").dataset.state; state.sel = 0; renderAll(); return; }
+    if (t("[data-st]")) { state.st[state.screen] = t("[data-st]").dataset.st; renderAll(); return; }
+    if (t("[data-theme]")) { state.theme = t("[data-theme]").dataset.theme; renderStage(); return; }
+    if (t("[data-num]")) { state.num = t("[data-num]").dataset.num; renderStage(); return; }
+    if (t("[data-tab]")) { state.tab = t("[data-tab]").dataset.tab; renderStage(); return; }
+    if (t("[data-u]")) { const u = t("[data-u]").dataset.u; state.open.u = state.open.u === u ? null : u; renderStage(); return; }
+    if (t("[data-stype]")) { state.stype = t("[data-stype]").dataset.stype; state.sel = 0; renderStage(); return; }
+    if (t("[data-sel]")) { state.sel = Number(t("[data-sel]").dataset.sel); renderStage(); }
+  });
+  document.addEventListener("mouseover", (e) => { const r = e.target.closest?.(".ssplit [data-sel]"); if (r && Number(r.dataset.sel) !== state.sel) { state.sel = Number(r.dataset.sel); renderStage(); } });
+  renderAll();
+</script>
+</body>
+</html>
