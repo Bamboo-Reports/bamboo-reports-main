@@ -6,15 +6,17 @@ import time
 import gspread
 
 from common import tui
-from common.google import safe_api_call
+from common.google import read_settled
 from common.tui import console
+from sheets import source
 
 
 def get_worksheet_rows(
     worksheet: gspread.Worksheet,
 ) -> tuple[list[str], list[list[str]]]:
     """Fetch all data from a worksheet. Returns (headers, rows)."""
-    all_data = safe_api_call(lambda: worksheet.get_all_values())
+    # Read again while formulas still say Loading..., saying so.
+    all_data = read_settled(lambda: worksheet.get_all_values(), f"tab '{worksheet.title}'")
     if not all_data:
         return [], []
     headers = [str(h).strip().lower() for h in all_data[0]]
@@ -28,8 +30,15 @@ class SheetCache:
 
     def get_data(self, sheet_name: str) -> tuple[list[str], list[list[str]]]:
         if sheet_name not in self._cache:
-            ws = self.spreadsheet.worksheet(sheet_name)
+            # sheet_name is ours ("accounts"); the source names the tab behind it.
+            tab = source.active.tab(sheet_name)
+            if tab is None:
+                raise gspread.exceptions.WorksheetNotFound(sheet_name)
+            ws = self.spreadsheet.worksheet(tab)
             headers, rows = get_worksheet_rows(ws)
+            headers = source.active.our_headers(sheet_name, headers)
+            # Their words as ours where the profile says so (GCC -> include).
+            source.active.translate_rows(sheet_name, headers, rows)
             self._cache[sheet_name] = (headers, rows)
             time.sleep(0.5)  # small buffer after a large read
         return self._cache[sheet_name]

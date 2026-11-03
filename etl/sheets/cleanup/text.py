@@ -1,7 +1,9 @@
-"""Steps 2 to 6: chips and dropdowns, spreadsheet artifacts, invisible
-characters, look-alike letters and whitespace."""
+"""Steps 2 to 7: chips and dropdowns, spreadsheet artifacts, typed-number
+formulas, invisible characters, look-alike letters and whitespace."""
 
+import ast
 import html
+import operator
 import re
 
 from common import tui
@@ -10,6 +12,46 @@ from sheets import cell_meta
 from sheets.rules import INVISIBLE_CHARS, INVISIBLE_CHARS_RE, describe_lookalike, find_lookalikes, replace_lookalikes
 
 from .workbook import FIRST_DATA_ROW, Workbook
+
+# -- Step 4: typed-number formulas --------------------------------------------
+# A phone number typed with a leading plus ('+16142836500') is stored by
+# Sheets as the formula '=+16142836500', and a sum typed into a count
+# ('=672/3') stays a formula too. Only digits, + - * / and brackets: a
+# formula with a cell reference or a function never matches.
+CONSTANT_FORMULA_RE = re.compile(r"^=[\d\s.+\-*/()]+$")
+_OPS = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul, ast.Div: operator.truediv}
+
+
+def constant_value(formula: str) -> int | float | None:
+    """What '=+16142836500' or '=672/3' works out to, or None."""
+    if not CONSTANT_FORMULA_RE.match(formula):
+        return None
+
+    def ev(node):
+        if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+            return node.value
+        if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.UAdd, ast.USub)):
+            value = ev(node.operand)
+            return value if isinstance(node.op, ast.UAdd) else -value
+        if isinstance(node, ast.BinOp) and type(node.op) in _OPS:
+            return _OPS[type(node.op)](ev(node.left), ev(node.right))
+        raise ValueError(node)
+
+    try:
+        value = ev(ast.parse(formula[1:].strip(), mode="eval").body)
+    except (SyntaxError, ValueError, ZeroDivisionError):
+        return None
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    return value
+
+
+def step_constants(wb: Workbook) -> None:
+    for sheet in wb.editable:
+        for (r, c), formula in sorted(wb.formula_text.get(sheet, {}).items()):
+            value = constant_value(formula)
+            if value is not None:
+                wb.unformula("constants", sheet, r, c, value, "typed number, not a real formula")
 
 
 # -- Step 2: chips and dropdowns ----------------------------------------------
@@ -20,7 +62,7 @@ def step_chips(wb: Workbook) -> None:
     with tui.loading(len(wb.editable), "Reading cell metadata") as bar:
         for sheet in wb.editable:
             bar.start(f"Reading chips and dropdowns in '{sheet}'")
-            metas[sheet] = safe_api_call(lambda: cell_meta.fetch(wb.spreadsheet, sheet))
+            metas[sheet] = safe_api_call(lambda: cell_meta.fetch(wb.spreadsheet, sheet), f"chips in '{sheet}'")
             bar.done()
 
     # Chips first so the report leads with them: they are the few cells that

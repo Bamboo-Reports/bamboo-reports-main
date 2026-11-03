@@ -5,9 +5,10 @@ import sys
 import gspread
 
 from common import tui
-from common.env import SPREADSHEET_ID, require
-from common.google import get_credentials, safe_api_call
+from common.env import require
+from common.google import SheetNotSettled, authorize, get_credentials, safe_api_call
 from common.tui import console
+from sheets import source
 from sheets.rules import ALL_SHEETS
 
 from . import options
@@ -59,6 +60,19 @@ def parse_excluded_sheets(argv: list[str]) -> set[str]:
     return names
 
 
+def parse_source(argv: list[str]) -> str:
+    """Read --source NAME (or --source=NAME): which spreadsheet to check."""
+    for i, arg in enumerate(argv):
+        if arg == "--source":
+            if i + 1 >= len(argv) or argv[i + 1].startswith("--"):
+                console.print("[error][ERROR][/error] --source needs a name, such as data-team.")
+                sys.exit(2)
+            return argv[i + 1]
+        if arg.startswith("--source="):
+            return arg.split("=", 1)[1]
+    return "main"
+
+
 def parse_limit(argv: list[str]) -> int:
     """Read --limit N (or --limit=N): rows shown per detail table."""
     for i, arg in enumerate(argv):
@@ -96,7 +110,7 @@ def print_summary(results: list[PhaseResult]) -> int:
     next_steps: list[str] = []
     if any(r.fixable and (r.errors or r.warnings) for r in results):
         next_steps.append(
-            "[bold]uv run --directory etl python -m sheets.cleanup[/bold] fixes formats, invisible characters, chips, "
+            f"[bold]uv run --directory etl python -m sheets.cleanup{source.active.flag}[/bold] fixes formats, invisible characters, chips, "
             "dropdowns and case mismatches it can resolve on its own. Re-run sheets.validate after."
         )
     if errors and not options.highlight:
@@ -120,9 +134,18 @@ def main() -> None:
     force_mode = "--force" in sys.argv
     options.highlight = "--highlight" in sys.argv
     options.detail_limit = parse_limit(sys.argv)
-    options.EXCLUDED_SHEETS.update(parse_excluded_sheets(sys.argv))
+    user_excluded = parse_excluded_sheets(sys.argv)
+    options.EXCLUDED_SHEETS.update(user_excluded)
+    try:
+        active = source.select(parse_source(sys.argv))
+    except ValueError as exc:
+        console.print(f"[error][ERROR][/error] {exc}")
+        sys.exit(2)
+    # Sheets the source does not have are skipped like --exclude, without
+    # calling the results partial: there is nothing else to check.
+    options.EXCLUDED_SHEETS.update(set(ALL_SHEETS) - set(active.sheet_names))
 
-    require("SPREADSHEET_ID", "GOOGLE_SA_FILE")
+    require(active.spreadsheet_env, "GOOGLE_SA_FILE")
     try:
         # Highlighting writes cell formatting, which the read-only scope does not allow.
         credentials = get_credentials(write=options.highlight)
@@ -130,11 +153,11 @@ def main() -> None:
         console.print(f"[error][ERROR][/error] {exc}")
         sys.exit(1)
     options.service_account_email = credentials.service_account_email
-    gc = gspread.authorize(credentials)
+    gc = authorize(credentials)
 
     try:
         with console.status("Connecting to Google Sheets ...", spinner_style="info"):
-            spreadsheet = safe_api_call(lambda: gc.open_by_key(SPREADSHEET_ID))
+            spreadsheet = safe_api_call(lambda: gc.open_by_key(active.spreadsheet_id), "the spreadsheet")
     except gspread.exceptions.APIError as exc:
         console.print(
             f"[error][ERROR][/error] Could not open spreadsheet.\n"
@@ -147,10 +170,13 @@ def main() -> None:
     flags = []
     if force_mode:
         flags.append("--force (every phase runs)")
-    if options.EXCLUDED_SHEETS:
-        flags.append(f"--exclude {','.join(sorted(options.EXCLUDED_SHEETS))} (results are partial)")
+    if user_excluded:
+        flags.append(f"--exclude {','.join(sorted(user_excluded))} (results are partial)")
     header_rows = [
         ("Spreadsheet", f"[bold]{spreadsheet.title}[/bold]"),
+        ("Source", active.title if active.is_main else
+            f"{active.title} [muted](etl/sources/{active.name}.toml)[/muted]: "
+            + ", ".join(f"{s} = {active.tab(s)}" for s in active.sheet_names)),
         ("Mode", "[warning]writes highlights into the sheet[/warning]" if options.highlight else "read-only"),
     ]
     if flags:
@@ -193,3 +219,7 @@ def run() -> None:
         console.print()
         console.print("[warning]Stopped.[/warning]")
         sys.exit(130)
+    except SheetNotSettled as exc:
+        console.print()
+        console.print(f"[error][ERROR][/error] {exc}")
+        sys.exit(1)

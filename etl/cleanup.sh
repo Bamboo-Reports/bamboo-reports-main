@@ -13,6 +13,9 @@ Fixes what can be fixed automatically in the source Google Sheet, so
 etl/validate.sh only reports what needs a person. Dry run by default.
 
 Options:
+  --source NAME        Check another spreadsheet laid out by a profile in etl/sources/
+                       (default: the main sheet). data-team checks the data team's
+                       BR, CM and SM tabs as accounts, centers and services.
   --apply              Write the changes to the sheet (shows the report, then asks y/N).
   --yes                With --apply, write without asking (needed when not run from a terminal).
   --steps a,b          Only run these steps.
@@ -28,6 +31,7 @@ Steps, always run in this order:
   columns      unnamed columns with data deleted (kept if a formula reads them)
   chips        smart chips to plain text, dropdowns removed
   artifacts    #N/A and #REF! typed as text cleared, HTML entities decoded
+  constants    formulas that are only a typed number (=+16142836500) made plain numbers
   invisible    zero-width characters, BOMs, soft hyphens stripped
   lookalikes   Cyrillic or Greek look-alike letters in Latin words made Latin
   whitespace   trims, double spaces, tabs and exotic spaces
@@ -41,6 +45,7 @@ Examples:
   etl/cleanup.sh --report changes.csv          # preview, full list as CSV
   etl/cleanup.sh --apply                       # write after you confirm
   etl/cleanup.sh --steps formats --sheets centers
+  etl/cleanup.sh --source data-team             # preview on the data team's sheet
 
 Typical order: etl/cleanup.sh, etl/cleanup.sh --apply, etl/validate.sh, etl/import.sh.
 EOF

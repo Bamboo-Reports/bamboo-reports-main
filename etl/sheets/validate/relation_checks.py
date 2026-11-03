@@ -7,7 +7,13 @@ import gspread
 
 from common import tui
 from common.tui import console
-from sheets.rules import COMPLETENESS_RULES, SERVICE_COVERAGE_RULES, UNIQUENESS_RULES, VALIDATION_RULES
+from sheets.rules import (
+    COMPLETENESS_RULES,
+    PAIRED_COLUMN_RULES,
+    SERVICE_COVERAGE_RULES,
+    UNIQUENESS_RULES,
+    VALIDATION_RULES,
+)
 
 from . import options
 from .highlights import record_issue
@@ -168,7 +174,50 @@ def check_references(cache: SheetCache) -> PhaseResult:
                 tui.ICONS[tui.status_of(missing, case)],
             )
 
+    paired_rows: list[tuple[str, int, str, str, str]] = []
+    for rule in PAIRED_COLUMN_RULES:
+        src, dst, key, column = rule["source_sheet"], rule["target_sheet"], rule["key"], rule["column"]
+        if is_excluded(src) or is_excluded(dst):
+            continue
+        try:
+            src_headers, src_rows = cache.get_data(src)
+            dst_headers, dst_rows = cache.get_data(dst)
+        except gspread.exceptions.WorksheetNotFound:
+            continue
+        if not {key, column} <= set(src_headers) or not {key, column} <= set(dst_headers):
+            continue
+        sk, sc = src_headers.index(key), src_headers.index(column)
+        dk, dc = dst_headers.index(key), dst_headers.index(column)
+        expected: dict[str, str] = {}
+        for row in src_rows:
+            k = row[sk].strip() if sk < len(row) else ""
+            if k:
+                expected.setdefault(k, row[sc].strip() if sc < len(row) else "")
+        checked = wrong = 0
+        for row_no, row in enumerate(dst_rows, start=2):
+            k = row[dk].strip() if dk < len(row) else ""
+            if k not in expected:
+                continue  # a key missing from the source is reported by the rule above
+            checked += 1
+            value = row[dc].strip() if dc < len(row) else ""
+            if value != expected[k]:
+                wrong += 1
+                paired_rows.append((dst, row_no, tui.clip(k, 50), value or "(blank)", expected[k] or "(blank)"))
+                record_issue(dst, row_no, column, dst_headers)
+        result.errors += wrong
+        overview.add_row(
+            f"{column} by {key}",
+            f"{src} → {dst}",
+            tui.num(checked),
+            tui.num(wrong) if wrong else "[muted]0[/muted]",
+            "-",
+            tui.ICONS["fail" if wrong else "pass"],
+        )
+
     tui.print_table(overview)
+    if paired_rows:
+        details = tui.table("Sheet", "Row#", "Key~", "Has", "Source has", title="Different from the source sheet")
+        tui.capped(details, paired_rows, options.detail_limit, "row")
     if missing_rows:
         details = tui.table("Sheet", "Row#", "Column", "Value~", "Not found in", title="Missing from the source sheet")
         tui.capped(details, missing_rows, options.detail_limit, "row")
@@ -177,11 +226,21 @@ def check_references(cache: SheetCache) -> PhaseResult:
         tui.capped(details, case_rows, options.detail_limit, "row")
 
     parts = []
-    if result.errors:
-        parts.append(tui.plural(result.errors, "missing value"))
+    missing_count = result.errors - len(paired_rows)
+    if missing_count:
+        parts.append(tui.plural(missing_count, "missing value"))
+    if paired_rows:
+        parts.append(tui.plural(len(paired_rows), "uuid mismatch", "uuid mismatches"))
     if result.warnings:
         parts.append(tui.plural(result.warnings, "case mismatch", "case mismatches"))
-    result.detail = ", ".join(parts) or f"{len(VALIDATION_RULES)} rules, all match"
+    # Count only the rules that ran: one whose source sheet is excluded, or
+    # missing from this source, is skipped and not counted as matching.
+    ran = sum(
+        1
+        for rule in VALIDATION_RULES
+        if not is_excluded(rule["source_sheet"]) and any(not is_excluded(t) for t in rule["target_sheets"])
+    ) + sum(1 for rule in PAIRED_COLUMN_RULES if not is_excluded(rule["source_sheet"]) and not is_excluded(rule["target_sheet"]))
+    result.detail = ", ".join(parts) or f"{tui.plural(ran, 'rule')}, all match"
     return result
 
 
@@ -227,6 +286,8 @@ def check_completeness(cache: SheetCache) -> PhaseResult:
         details = tui.table("Sheet", "Row#", "Value~", "Missing from", title="Not present in the target sheet")
         tui.capped(details, missing_rows, options.detail_limit, "row")
         result.detail = tui.plural(result.errors, "missing row")
+    elif all(is_excluded(r["source_sheet"]) or is_excluded(r["target_sheet"]) for r in COMPLETENESS_RULES):
+        result.detail = "skipped"
     else:
         result.detail = "every account in alias and ticker"
     return result
@@ -248,7 +309,7 @@ def check_engagement_flags(cache: SheetCache) -> PhaseResult:
     result = PhaseResult("Phase 2C", "Engagement flags")
 
     if is_excluded("prospects") or is_excluded("subscribers"):
-        tui.line("skip", "prospects or subscribers excluded via --exclude.")
+        tui.line("skip", "prospects or subscribers excluded or not in this source.")
         result.detail = "skipped"
         return result
 

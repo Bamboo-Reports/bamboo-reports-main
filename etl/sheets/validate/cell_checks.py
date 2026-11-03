@@ -139,7 +139,7 @@ def check_chips_and_dropdowns(cache: SheetCache) -> PhaseResult:
         for sheet in sheets:
             bar.start(f"Reading chips and dropdowns in '{sheet}'")
             try:
-                meta = safe_api_call(lambda: cell_meta.fetch(cache.spreadsheet, sheet))
+                meta = safe_api_call(lambda: cell_meta.fetch(cache.spreadsheet, sheet), f"chips in '{sheet}'")
                 headers, rows = cache.get_data(sheet)
             except gspread.exceptions.WorksheetNotFound:
                 bar.done()

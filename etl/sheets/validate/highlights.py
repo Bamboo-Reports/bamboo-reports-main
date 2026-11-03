@@ -4,6 +4,7 @@ import gspread
 
 from common import tui
 from common.google import safe_api_call
+from sheets import source
 from sheets.rules import ALL_SHEETS
 
 from . import options
@@ -60,10 +61,14 @@ def apply_highlights(cache: SheetCache) -> None:
     tui.section("Highlighting issues in the sheet")
 
     try:
-        sheet_ids = {ws.title: ws.id for ws in safe_api_call(cache.spreadsheet.worksheets)}
+        tab_ids = {ws.title: ws.id for ws in safe_api_call(cache.spreadsheet.worksheets)}
     except gspread.exceptions.APIError as exc:
         tui.line("fail", f"Could not list worksheets: {exc}")
         return
+    # Keyed by our sheet names, which the recorded issues use.
+    sheet_ids = {
+        sheet: tab_ids[tab] for sheet in ALL_SHEETS if (tab := source.active.tab(sheet)) in tab_ids
+    }
 
     requests: list[dict] = []
     reset_sheets: list[str] = []

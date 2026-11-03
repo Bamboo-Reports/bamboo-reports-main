@@ -161,6 +161,13 @@ VALIDATION_RULES = [
     },
 ]
 
+# A row in the target sheet whose key is in the source sheet must carry the
+# same value in `column`: a services row with a center's cn_unique_key has
+# that center's uuid (Zurich ...Hyderabad1 is CN6329 in both).
+PAIRED_COLUMN_RULES = [
+    {"source_sheet": "centers", "target_sheet": "services", "key": "cn_unique_key", "column": "uuid"},
+]
+
 COMPLETENESS_RULES = [
     {
         "source_sheet": "accounts",
@@ -314,7 +321,9 @@ ALL_RULES = {
         "center_country": {
             "Can Be Nullable": "No",
             "Can Have URL": "No",
-            "Description": "should be a valid country india",
+            # Every center is in India (center_country_iso2 must be IN), so one
+            # exact spelling: cleanup turns "india" into "India".
+            "Description": "should contain||India",
         },
         "center_country_iso2": {
             "Can Be Nullable": "No",

@@ -14,7 +14,7 @@ from sqlalchemy.types import Text
 
 from common import tui
 from common.env import SPREADSHEET_ID
-from common.google import get_gspread_client
+from common.google import LOADING_VALUES, get_gspread_client, read_settled, safe_api_call
 from common.tui import console
 
 from .changes import (
@@ -100,8 +100,15 @@ def run_import(
 
                 start_time = time.perf_counter()
 
-                ws = gc.open_by_key(SPREADSHEET_ID).worksheet(ws_name)
-                df = get_as_dataframe(ws, evaluate_formulas=True, header=0)
+                ws = safe_api_call(lambda: gc.open_by_key(SPREADSHEET_ID).worksheet(ws_name), f"tab '{ws_name}'")
+                # A formula still being calculated reads as "Loading...";
+                # read again until none does, so that text never reaches the
+                # database. Says what it is waiting on meanwhile.
+                df = read_settled(
+                    lambda: get_as_dataframe(ws, evaluate_formulas=True, header=0),
+                    f"tab '{ws_name}'",
+                    count=lambda frame: 0 if frame is None else int(frame.isin(LOADING_VALUES).sum().sum()),
+                )
 
                 if df is not None:
                     df = df.dropna(how="all").loc[:, ~df.columns.astype(str).str.match(r"^Unnamed")]

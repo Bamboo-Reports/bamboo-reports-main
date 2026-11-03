@@ -6,6 +6,7 @@ import re
 from datetime import datetime
 
 from common.env import ETL_DIR
+from sheets import source
 from sheets.rules import ALL_RULES, ALL_SHEETS, EMAIL_PATTERN, URL_LINE_PATTERN
 
 from .highlights import record_issue
@@ -20,7 +21,13 @@ SCHEMA_FILE = ETL_DIR / "importer" / "master-schema.json"
 def check_table_format(cache: SheetCache, table_name: str) -> list[tuple[int, str, str]] | None:
     """(row, column, message) for every format issue in one sheet, or None
     when the sheet is missing or empty."""
-    rules_map = ALL_RULES.get(table_name, {})
+    # Columns the active source does not have (filled or calculated in the
+    # main sheet) are not checked; for the main sheet that is none.
+    rules_map = {
+        column: rule
+        for column, rule in ALL_RULES.get(table_name, {}).items()
+        if source.active.has_column(table_name, column)
+    }
     if not rules_map:
         return []
 
@@ -244,6 +251,8 @@ def check_columns(cache: SheetCache, table_name: str) -> list[tuple[int, str, st
     (sheets/rules.py) and the import's schema (master-schema.json) do not
     both know, in either direction. The import drops unnamed and unknown
     columns silently, so they are only caught here."""
+    if not source.active.is_main:
+        return check_source_columns(cache, table_name)
     rules_map = ALL_RULES.get(table_name, {})
     try:
         headers, rows = cache.get_data(table_name)
@@ -279,9 +288,48 @@ def check_columns(cache: SheetCache, table_name: str) -> list[tuple[int, str, st
     return issues
 
 
+def check_source_columns(cache: SheetCache, table_name: str) -> list[tuple[int, str, str]]:
+    """check_columns() for a sheet that is not the main one: its headers
+    against the profile in etl/sources/ instead of master-schema.json. Data
+    under a blank header, duplicated headers, a mapped header the sheet no
+    longer has (renamed, or a year rolled over), and a header the profile
+    neither maps nor ignores (a new column nobody has placed yet)."""
+    try:
+        headers, rows = cache.get_data(table_name)
+    except Exception:
+        return []
+    if not headers:
+        return []
+
+    profile = f"etl/sources/{source.active.name}.toml"
+    mapped = source.active.sheets[table_name]
+    issues: list[tuple[int, str, str]] = []
+    seen: set[str] = set()
+    for idx, header in enumerate(headers):
+        letter = column_letter(idx)
+        if not header:
+            filled = sum(1 for row in rows if idx < len(row) and str(row[idx]).strip())
+            if filled:
+                issues.append((1, f"{letter} (no header)", f"No header, {filled:,} cells filled"))
+        elif header in seen:
+            issues.append((1, f"{letter} ({header})", "Duplicate header: the name is used by an earlier column"))
+        elif header not in mapped.columns and header not in mapped.ignore:
+            issues.append(
+                (1, f"{letter} ({header})", f"Unmapped column: map it to one of ours or add it to ignore in {profile}")
+            )
+        seen.add(header)
+    for ours in sorted(set(mapped.columns) - seen):
+        issues.append(
+            (1, ours, f"Missing column: {profile} expects \"{mapped.labels[ours]}\", not in tab {mapped.tab}")
+        )
+    return issues
+
+
 def check_schema_tables() -> list[tuple[str, int, str, str]]:
     """(sheet, row, column, message) for tables master-schema.json imports
     that validate has no rules for, so they would load unchecked."""
+    if not source.active.is_main:
+        return []
     return [
         (table, 1, "-", "In master-schema.json but sheets/rules.py has no rules for this sheet")
         for table in sorted(schema_columns())

@@ -8,9 +8,10 @@ from gspread.utils import rowcol_to_a1
 from rich.prompt import Confirm
 
 from common import tui
-from common.env import SPREADSHEET_ID, require
-from common.google import get_gspread_client, safe_api_call
+from common.env import require
+from common.google import SheetNotSettled, get_gspread_client, safe_api_call
 from common.tui import console
+from sheets import source
 from sheets.rules import ALL_SHEETS
 
 from .columns import COLUMN_LEFTOVERS, step_columns
@@ -18,7 +19,7 @@ from .formats import step_formats
 from .links import LINK_LEFTOVERS, step_links
 from .lists import step_lists
 from .references import step_references
-from .text import step_artifacts, step_chips, step_invisible, step_lookalikes, step_whitespace
+from .text import step_artifacts, step_chips, step_constants, step_invisible, step_lookalikes, step_whitespace
 from .workbook import Change, Workbook
 
 # -- Runner -------------------------------------------------------------------
@@ -26,6 +27,7 @@ STEPS = [
     ("columns", step_columns),
     ("chips", step_chips),
     ("artifacts", step_artifacts),
+    ("constants", step_constants),
     ("invisible", step_invisible),
     ("lookalikes", step_lookalikes),
     ("whitespace", step_whitespace),
@@ -40,6 +42,7 @@ STEP_INFO = {
     "columns": "Unnamed columns with data deleted, unless a formula reads from them.",
     "chips": "Smart chips turned into plain text; dropdowns removed.",
     "artifacts": "Spreadsheet error values typed as text, and HTML entities.",
+    "constants": "Formulas that are only a typed number (=+16142836500, =672/3) made plain numbers.",
     "invisible": "Zero-width characters, BOMs, soft hyphens, direction marks.",
     "lookalikes": "Cyrillic or Greek letters that look Latin, inside Latin words.",
     "whitespace": "Stray, doubled and non-standard spaces; line breaks are kept.",
@@ -59,6 +62,11 @@ def parse_args() -> argparse.Namespace:
         prog="python -m sheets.cleanup",
         description="Clean the source spreadsheet in one ordered pass. Dry run unless --apply is given."
     )
+    parser.add_argument(
+        "--source",
+        default="main",
+        help="Spreadsheet to clean: main (default) or a profile in etl/sources/, such as data-team.",
+    )
     parser.add_argument("--apply", action="store_true", help="Write changes to the spreadsheet.")
     parser.add_argument("--steps", help=f"Only run these steps (comma-separated): {','.join(STEP_NAMES)}.")
     parser.add_argument("--skip", help="Run every step except these (comma-separated).")
@@ -76,9 +84,14 @@ def parse_args() -> argparse.Namespace:
         unknown = [s for s in csv_list(getattr(args, flag)) if s not in STEP_NAMES]
         if unknown:
             parser.error(f"--{flag}: unknown step(s) {', '.join(unknown)}. Known: {', '.join(STEP_NAMES)}")
-    unknown = [s for s in csv_list(args.sheets) if s not in ALL_SHEETS]
+    try:
+        source.select(args.source)
+    except ValueError as exc:
+        parser.error(f"--source: {exc}")
+    known = source.active.sheet_names
+    unknown = [s for s in csv_list(args.sheets) if s not in known]
     if unknown:
-        parser.error(f"--sheets: unknown sheet(s) {', '.join(unknown)}. Known: {', '.join(ALL_SHEETS)}")
+        parser.error(f"--sheets: unknown sheet(s) {', '.join(unknown)}. Known: {', '.join(known)}")
     return args
 
 
@@ -188,9 +201,10 @@ def main() -> None:
     skipped_steps = set(csv_list(args.skip))
     # Always canonical order, whatever order the flags list them in.
     steps = [(n, fn) for n, fn in STEPS if n in wanted and n not in skipped_steps]
-    editable = csv_list(args.sheets) or list(ALL_SHEETS)
+    active = source.active
+    editable = csv_list(args.sheets) or active.sheet_names
 
-    require("SPREADSHEET_ID", "GOOGLE_SA_FILE")
+    require(active.spreadsheet_env, "GOOGLE_SA_FILE")
     try:
         # Write scope: cleanup edits the spreadsheet (validate is read-only).
         gc = get_gspread_client(write=True)
@@ -198,12 +212,19 @@ def main() -> None:
         console.print(f"[error][ERROR][/error] {exc}")
         sys.exit(1)
     with console.status("Connecting to Google Sheets ...", spinner_style="info"):
-        spreadsheet = safe_api_call(lambda: gc.open_by_key(SPREADSHEET_ID))
+        spreadsheet = safe_api_call(lambda: gc.open_by_key(active.spreadsheet_id), "the spreadsheet")
 
     tui.header(
         "cleanup",
         [
             ("Spreadsheet", f"[bold]{spreadsheet.title}[/bold]"),
+            (
+                "Source",
+                active.title
+                if active.is_main
+                else f"{active.title} [muted](etl/sources/{active.name}.toml)[/muted]: "
+                + ", ".join(f"{s} = {active.tab(s)}" for s in active.sheet_names),
+            ),
             (
                 "Mode",
                 "[error]apply: writes to the sheet after you confirm[/error]"
@@ -211,7 +232,7 @@ def main() -> None:
                 else "dry run: nothing is written",
             ),
             ("Steps", " → ".join(n for n, _ in steps)),
-            ("Sheets", "all" if editable == list(ALL_SHEETS) else ", ".join(editable)),
+            ("Sheets", "all" if editable == active.sheet_names else ", ".join(editable)),
         ],
     )
 
@@ -283,7 +304,10 @@ def main() -> None:
         "pass",
         f"Wrote {tui.plural(sum(written.values()), 'cell')} to {tui.plural(len(written), 'sheet')}"
         + (f", deleted {tui.plural(dropped, 'column')}" if dropped else ""),
-        ["[bold]uv run --directory etl python -m sheets.validate[/bold] shows what is left to fix by hand.", *review_step],
+        [
+            f"[bold]uv run --directory etl python -m sheets.validate{active.flag}[/bold] shows what is left to fix by hand.",
+            *review_step,
+        ],
     )
 
 
@@ -298,3 +322,7 @@ def run() -> None:
         console.print()
         console.print("[warning]Stopped. Nothing more will be written.[/warning]")
         sys.exit(130)
+    except SheetNotSettled as exc:
+        console.print()
+        console.print(f"[error][ERROR][/error] {exc}")
+        sys.exit(1)

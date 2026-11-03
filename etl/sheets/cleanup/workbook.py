@@ -7,7 +7,8 @@ from dataclasses import dataclass
 import gspread
 
 from common import tui
-from common.google import safe_api_call
+from common.google import read_settled, safe_api_call
+from sheets import source
 from sheets.rules import INVISIBLE_CHARS_RE
 
 FIRST_DATA_ROW = 2
@@ -57,6 +58,9 @@ class Workbook:
         # Formula text per sheet, keyed (row_idx, col_idx), so a column is
         # only deleted when no formula reads from it.
         self.formula_text: dict[str, dict[tuple[int, int], str]] = {}
+        # Formula cells turned into plain numbers by unformula(), written as
+        # numbers. Keys are (sheet, row_idx, col_idx).
+        self.number_cells: dict[tuple[str, int, int], int | float] = {}
 
     def load(self, sheet: str) -> bool:
         """Read a worksheet if not read yet. False if it does not exist."""
@@ -64,24 +68,35 @@ class Workbook:
             return True
         if sheet in self._missing:
             return False
+        # sheet is ours ("accounts"); the source names the tab behind it.
+        tab = source.active.tab(sheet)
+        if tab is None:
+            self._missing.add(sheet)
+            return False
         try:
-            ws = self.spreadsheet.worksheet(sheet)
+            ws = self.spreadsheet.worksheet(tab)
         except gspread.exceptions.WorksheetNotFound:
             self._missing.add(sheet)
             return False
-        all_data = safe_api_call(lambda: ws.get_all_values())
+        # Read again while formulas still say Loading..., saying so.
+        all_data = read_settled(lambda: ws.get_all_values(), f"tab '{tab}'")
         time.sleep(0.5)
         # Header lookup ignores case, surrounding spaces and invisible
         # characters, so a stray BOM in a header does not hide the column.
-        self._headers[sheet] = [
-            INVISIBLE_CHARS_RE.sub("", str(h)).strip().lower() for h in (all_data[0] if all_data else [])
-        ]
+        self._headers[sheet] = source.active.our_headers(
+            sheet, [INVISIBLE_CHARS_RE.sub("", str(h)).strip().lower() for h in (all_data[0] if all_data else [])]
+        )
         rows = [[str(v) for v in r] for r in all_data[1:]]
+        # Their words as ours where the profile says so (GCC -> include),
+        # before the original copy, so a translated cell is not a change.
+        source.active.translate_rows(sheet, self._headers[sheet], rows)
         # Formula cells are read too, so they can be left alone: writing the
         # cleaned value would replace the formula with static text. Many
         # columns are formulas (tech.account_global_legal_name, the range
         # columns in accounts and centers).
-        formula_data = safe_api_call(lambda: ws.get_all_values(value_render_option="FORMULA"))
+        formula_data = safe_api_call(
+            lambda: ws.get_all_values(value_render_option="FORMULA"), f"the formulas in tab '{tab}'"
+        )
         time.sleep(0.5)
         self.formula_text[sheet] = {
             (r, c): v
@@ -157,6 +172,33 @@ class Workbook:
         target = self.chip_cells if kind == "chip" else self.dropdown_cells
         target.add((sheet, row_idx, col_idx))
         self.changes.append(change)
+
+    def unformula(self, step: str, sheet: str, row_idx: int, col_idx: int, number: int | float, note: str) -> None:
+        """Replace a formula cell with the plain number it works out to. The
+        one write to a formula cell cleanup makes, only for formulas that
+        are a typed number ('=+16142836500', '=672/3'), not for any formula
+        that reads other cells."""
+        if col_idx in self.dropped_columns.get(sheet, ()):
+            return
+        formula = self.formula_text[sheet].pop((row_idx, col_idx))
+        self._formulas[sheet].discard((row_idx, col_idx))
+        row = self._rows[sheet][row_idx]
+        while len(row) <= col_idx:
+            row.append("")
+        row[col_idx] = str(number)
+        self.number_cells[(sheet, row_idx, col_idx)] = number
+        self.changes.append(
+            Change(
+                step=step,
+                sheet=sheet,
+                row=row_idx + FIRST_DATA_ROW,
+                col=col_idx + 1,
+                column=self.header(sheet, col_idx),
+                before=formula,
+                after=str(number),
+                note=note,
+            )
+        )
 
     def set(self, step: str, sheet: str, row_idx: int, col_idx: int, value: str, note: str = "") -> None:
         """row_idx and col_idx are 0-based positions in the data rows."""
@@ -255,7 +297,11 @@ class Workbook:
             for sheet, cols in sorted(self.dropped_columns.items())
             for c in sorted(cols, reverse=True)
         ]
-        safe_api_call(lambda: self.spreadsheet.batch_update({"requests": requests}))
+        # Not idempotent: a timed-out delete may have run, and a retry would
+        # delete the next column too.
+        safe_api_call(
+            lambda: self.spreadsheet.batch_update({"requests": requests}), "deleting columns", idempotent=False
+        )
 
     def _write_cell_types(self) -> None:
         """Apply the chip and dropdown fixes with the Sheets batchUpdate API:
@@ -306,7 +352,7 @@ class Workbook:
                     start = prev = r
         for i in range(0, len(requests), 500):
             batch = requests[i : i + 500]
-            safe_api_call(lambda: self.spreadsheet.batch_update({"requests": batch}))
+            safe_api_call(lambda: self.spreadsheet.batch_update({"requests": batch}), "chip and dropdown fixes")
             time.sleep(0.5)
 
     def _write_sheet(self, sheet: str) -> int:
@@ -317,14 +363,21 @@ class Workbook:
         for r, row in enumerate(rows):
             before = original[r]
             for c, value in enumerate(row):
+                number = self.number_cells.get((sheet, r, c))
+                if number is not None:
+                    # Shows the same text before and after, so always written.
+                    dirty.append(gspread.Cell(row=r + FIRST_DATA_ROW, col=c + 1, value=number))
+                    continue
                 if value != (before[c] if c < len(before) else ""):
-                    dirty.append(gspread.Cell(row=r + FIRST_DATA_ROW, col=c + 1, value=value))
+                    # Back into their words: their sheet keeps its own values.
+                    theirs = source.active.their_value(sheet, self.header(sheet, c), value)
+                    dirty.append(gspread.Cell(row=r + FIRST_DATA_ROW, col=c + 1, value=theirs))
         if not dirty:
             return 0
         ws = self._ws[sheet]
         for i in range(0, len(dirty), WRITE_BATCH):
             batch = dirty[i : i + WRITE_BATCH]
             # RAW so the text is written back verbatim, not reparsed by Sheets.
-            safe_api_call(lambda: ws.update_cells(batch, value_input_option="RAW"))
+            safe_api_call(lambda: ws.update_cells(batch, value_input_option="RAW"), f"writing '{sheet}'")
             time.sleep(0.5)
         return len(dirty)

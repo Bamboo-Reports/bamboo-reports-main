@@ -16,6 +16,8 @@ from dataclasses import dataclass, field
 
 import gspread
 
+from sheets import source
+
 # Data validation types that render as a dropdown. Other rules (checkbox,
 # number ranges, custom formulas) are not flagged.
 DROPDOWN_TYPES = {"ONE_OF_LIST", "ONE_OF_RANGE"}
@@ -65,10 +67,14 @@ def chip_text(cell: dict) -> tuple[str, str] | None:
 
 def fetch(spreadsheet: gspread.Spreadsheet, sheet_name: str) -> CellMeta:
     """Every chip and dropdown in one worksheet. Raises
-    gspread.exceptions.WorksheetNotFound like spreadsheet.worksheet()."""
+    gspread.exceptions.WorksheetNotFound like spreadsheet.worksheet().
+    sheet_name is ours; the active source names the tab behind it."""
+    tab = source.active.tab(sheet_name)
+    if tab is None:
+        raise gspread.exceptions.WorksheetNotFound(sheet_name)
     meta = spreadsheet.fetch_sheet_metadata(
         params={
-            "ranges": f"'{sheet_name}'",
+            "ranges": f"'{tab}'",
             "includeGridData": "true",
             "fields": (
                 "sheets(properties(sheetId),"
