@@ -8,6 +8,7 @@ import gspread
 
 from common import tui
 from common.google import safe_api_call
+from sheets import source
 from sheets.rules import INVISIBLE_CHARS_RE
 
 FIRST_DATA_ROW = 2
@@ -64,8 +65,13 @@ class Workbook:
             return True
         if sheet in self._missing:
             return False
+        # sheet is ours ("accounts"); the source names the tab behind it.
+        tab = source.active.tab(sheet)
+        if tab is None:
+            self._missing.add(sheet)
+            return False
         try:
-            ws = self.spreadsheet.worksheet(sheet)
+            ws = self.spreadsheet.worksheet(tab)
         except gspread.exceptions.WorksheetNotFound:
             self._missing.add(sheet)
             return False
@@ -73,9 +79,9 @@ class Workbook:
         time.sleep(0.5)
         # Header lookup ignores case, surrounding spaces and invisible
         # characters, so a stray BOM in a header does not hide the column.
-        self._headers[sheet] = [
-            INVISIBLE_CHARS_RE.sub("", str(h)).strip().lower() for h in (all_data[0] if all_data else [])
-        ]
+        self._headers[sheet] = source.active.our_headers(
+            sheet, [INVISIBLE_CHARS_RE.sub("", str(h)).strip().lower() for h in (all_data[0] if all_data else [])]
+        )
         rows = [[str(v) for v in r] for r in all_data[1:]]
         # Formula cells are read too, so they can be left alone: writing the
         # cleaned value would replace the formula with static text. Many

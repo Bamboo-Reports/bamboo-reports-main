@@ -14,6 +14,9 @@ chips and dropdowns, look-alike letters, uniqueness, references, completeness,
 engagement flags, service coverage). Stops at the first failing phase unless --force.
 
 Options:
+  --source NAME        Check another spreadsheet laid out by a profile in etl/sources/
+                       (default: the main sheet). data-team checks the data team's
+                       BR, CM and SM tabs as accounts, centers and services.
   --force              Run every phase instead of stopping at the first failure.
   --limit N            Rows shown in each detail table (default 20).
   --exclude a,b,c      Skip these sheets in every phase (results are partial).
@@ -39,14 +42,14 @@ while [ $i -lt ${#args[@]} ]; do
     case "$arg" in
         -h|--help) usage; exit 0 ;;
         --force|--highlight) ;;
-        --limit|--exclude)
+        --limit|--exclude|--source)
             if [ $((i + 1)) -ge ${#args[@]} ] || [[ "${args[$((i + 1))]}" == --* ]]; then
                 echo "Error: $arg needs a value. See --help." >&2
                 exit 2
             fi
             i=$((i + 1))
             ;;
-        --limit=*|--exclude=*) ;;
+        --limit=*|--exclude=*|--source=*) ;;
         *) echo "Error: unknown option '$arg'. See --help." >&2; exit 2 ;;
     esac
     i=$((i + 1))

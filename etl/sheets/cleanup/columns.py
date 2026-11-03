@@ -5,6 +5,7 @@ unless a formula still reads from it."""
 
 import re
 
+from sheets import source
 from sheets.rules import ALL_SHEETS
 
 from .workbook import Workbook
@@ -52,8 +53,10 @@ def formulas_reading(wb: Workbook, sheet: str, col_idx: int) -> list[str]:
             for m in A1_REF.finditer(formula):
                 if m.group("r1") is None and m.group("c2") is None:
                     continue
-                target = m.group("quoted") or m.group("sheet") or other
-                if target.strip().lower() != sheet.lower():
+                # Formulas name tabs; map a named tab back to our sheet name.
+                named = m.group("quoted") or m.group("sheet")
+                target = source.active.sheet_for_tab(named) if named else other
+                if (target or "").lower() != sheet.lower():
                     continue
                 start = column_index(m.group("c1"))
                 end = column_index(m.group("c2")) if m.group("c2") else start

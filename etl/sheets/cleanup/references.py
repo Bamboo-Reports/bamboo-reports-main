@@ -1,6 +1,7 @@
 """Step 10: child-sheet keys rewritten to the parent sheet's exact spelling."""
 
 from common import tui
+from sheets import source as sheet_source
 from sheets.rules import VALIDATION_RULES
 
 from .formats import DASHES_RE
@@ -94,7 +95,10 @@ def step_references(wb: Workbook) -> None:
     renames = plan_key_renames(wb)
     if not renames:
         return
-    blocked = [s for s in KEY_SHEETS if s not in wb.editable]
+    # Only the key sheets this source has; the data team sheet has no
+    # functions or tech tab, so those cannot block a rename there.
+    key_sheets = [s for s in KEY_SHEETS if sheet_source.active.in_scope(s)]
+    blocked = [s for s in key_sheets if s not in wb.editable]
     if blocked:
         tui.line(
             "warn",
@@ -102,7 +106,7 @@ def step_references(wb: Workbook) -> None:
             f"sheet at once, and {', '.join(blocked)} is excluded by --sheets.",
         )
         return
-    for sheet in KEY_SHEETS:
+    for sheet in key_sheets:
         for r, c, value in wb.column_cells(sheet, "cn_unique_key"):
             new_key = renames.get(value.strip())
             if new_key is not None:

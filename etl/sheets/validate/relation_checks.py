@@ -227,6 +227,8 @@ def check_completeness(cache: SheetCache) -> PhaseResult:
         details = tui.table("Sheet", "Row#", "Value~", "Missing from", title="Not present in the target sheet")
         tui.capped(details, missing_rows, options.detail_limit, "row")
         result.detail = tui.plural(result.errors, "missing row")
+    elif all(is_excluded(r["source_sheet"]) or is_excluded(r["target_sheet"]) for r in COMPLETENESS_RULES):
+        result.detail = "skipped"
     else:
         result.detail = "every account in alias and ticker"
     return result
@@ -248,7 +250,7 @@ def check_engagement_flags(cache: SheetCache) -> PhaseResult:
     result = PhaseResult("Phase 2C", "Engagement flags")
 
     if is_excluded("prospects") or is_excluded("subscribers"):
-        tui.line("skip", "prospects or subscribers excluded via --exclude.")
+        tui.line("skip", "prospects or subscribers excluded or not in this source.")
         result.detail = "skipped"
         return result
 

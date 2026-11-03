@@ -1,0 +1,178 @@
+# The data team's spreadsheet, checked before its rows are copied into the
+# main sheet. Used by: etl/cleanup.sh --source data-team
+#                      etl/validate.sh --source data-team
+#
+# Only the three tabs below are read. Every other sheet (prospects, alias,
+# ticker, ...) is skipped, and so are the checks that need them.
+#
+# How to edit:
+#   [<our sheet>]          tab = the data team's tab name
+#   [<our sheet>.columns]  our column = "their header"
+#                          Matching ignores case, extra spaces and line breaks,
+#                          so "Source Link\n(HQ Offering)" is written as
+#                          "Source Link (HQ Offering)".
+#                          "" means their sheet has no such column (it is
+#                          filled or calculated in our sheet), so it is not
+#                          checked.
+#   ignore                 their columns we do not copy. Any header that is
+#                          neither mapped nor listed here is reported, so a
+#                          new or renamed column is never missed silently.
+#
+# Headers with a year in them ("HQ Forbes 2026", "( June 2026 )") change
+# when the data team rolls them over. Validate then reports the old header
+# as missing; update it here.
+
+title = "Data team sheet"
+# The spreadsheet ID lives in etl/.env, like the main sheet's.
+spreadsheet_env = "DATA_TEAM_SPREADSHEET_ID"
+
+# -- accounts ------------------------------------------------------------------
+[accounts]
+tab = "BR"
+# The last four are calculated by formulas in our sheet, so their values are never copied.
+ignore = [
+    "Center Type Priority", "GCC/Non GCC", "Non GCC Comments",
+    "HQ Revenue Range", "HQ Employee Range", "First Center",
+]
+
+[accounts.columns]
+uuid = "BRUID"
+account_last_update_date = "Date"
+account_nasscom_status = "Nasscom Status"
+account_nasscom_member_status = "Nasscom Member Status"
+account_data_coverage = ""
+account_source = ""
+account_type = ""
+account_global_legal_name = "Account Global Legal Name"
+account_about = "About Company"
+account_hq_address = "HQ Address"
+account_hq_city = "HQ City"
+account_hq_state = "HQ State"
+account_hq_zip_code = "HQZIPCode"
+account_hq_country = "HQ Country"
+account_hq_region = "HQ Region"
+account_hq_boardline = "HQ Broad Line"
+account_hq_website = "HQ Website"
+account_hq_linkedin_link = "Linkedin Link"
+account_hq_key_offerings = "HQ Offerings"
+account_key_offerings_source_link = "Source Link (HQ Offering)"
+account_hq_sub_industry = "HQ Sub Industry"
+account_hq_industry = "HQ Industry"
+account_primary_category = "Primary Category"
+account_primary_nature = "Primary Nature"
+account_hq_forbes_2000_rank = "HQ Forbes 2026"
+account_hq_fortune_500_rank = "HQ Fortune Rank 2026"
+account_hq_company_type = "HQ Company Type"
+account_hq_revenue = "HQ Revenue (in USD Mil)"
+account_hq_revenue_range = ""  # formula in our sheet (their buckets differ)
+account_hq_fy_end = "HQ FY End"
+account_hq_revenue_year = "HQ Revenue Year"
+account_hq_revenue_source_type = "Source Type (HQ Revenue)"
+account_hq_revenue_source_link = "Source Link (HQ Revenue)"
+account_hq_employee_count = "HQ Employee Count"
+account_hq_employee_range = ""  # formula in our sheet
+account_hq_employee_source_type = "Source Type (HQ Employee)"
+account_hq_employee_source_link = "Source Link (HQ Employee)"
+account_center_employees = ""
+account_center_employees_range = ""
+years_in_india = ""
+account_first_center_year = ""  # formula in our sheet
+account_primary_city = "Primary Location"
+account_hub_structure = "Hub Structure"
+account_comments = "Comments (CD)"
+account_visibility = ""
+account_visibility_note = ""
+
+# -- centers -------------------------------------------------------------------
+[centers]
+tab = "CM"
+# Time Line and First Center are calculated by formulas in our sheet.
+ignore = [
+    "CN CONCATENATE", "Updates", "Update Brief", "Update Date", "Update Link", "Center Type Priority",
+    "Time Line", "First Center",
+]
+
+[centers.columns]
+uuid = "UUID"
+last_update_date = "Last Update Date"
+cn_unique_key = "CN Unique Key"
+account_global_legal_name = "Account Global Legal Name"
+center_status = "Center Status"
+center_inc_year = "Inc Year"
+announced_year = "Announced Year"
+announced_month = "Month"
+center_inc_year_notes = "Inc Year Notes"
+center_inc_year_updated_link = "Updated Inc Year Link"
+center_timeline = ""  # formula in our sheet
+center_end_year = "End Year"
+center_account_website = ""
+center_name = "Center Legal Name"
+center_management_partner = "Center Management Partner"
+center_jv_status = "JV Status"
+center_jv_name = "JV Name"
+center_type = "Center Type"
+center_focus = "Center Foucs"
+center_source_link = "Center Souce Link"
+center_website = "Center Website"
+center_linkedin = "Center Linkedin Page"
+center_address = "Address"
+center_micro_location = "Microlocation"
+center_city = "City"
+center_state = "State"
+center_zip_code = "Zip Code"
+center_country = "Country"
+center_country_iso2 = ""
+lat = ""
+lng = ""
+center_boardline = "Broadline Number"
+center_employees_article = "Employee Count Article"
+center_employees_article_source_link = "Employee Source (Article) Link"
+center_employees_linkedin = "Employees Count Linkedin ( June 2026 )"
+center_employees_range_linkedin_source_link = "Employees Count (Linkedin) Link"
+center_employees = ""
+center_employees_range = ""
+center_services = ""
+center_first_year = ""  # formula in our sheet
+center_employees_comment = "Employees Comment"
+center_comments = "Center Comments"
+
+# -- services ------------------------------------------------------------------
+[services]
+tab = "SM"
+ignore = ["Team Member", "CN CONCATENATE"]
+
+[services.columns]
+uuid = "UUID"
+last_update_date = "Last Update Date"
+cn_unique_key = "CN Unique Key"
+account_global_legal_name = "Account Global Legal Name"
+center_name = "Center Legal Name"
+center_type = "Center Type"
+center_focus = "Center Focus"
+center_city = "City"
+primary_service = "Primary Serivces Foucs"
+primary_service_link = "Primary Services Source"
+focus_region = "Focus Region"
+focus_region_link = "Focus Region Source Link"
+service_it = "IT"
+service_it_link = "IT Source Link"
+service_ai = "AI Services"
+service_ai_link = "AI Service Source Link"
+service_erd = "ER&D"
+service_erd_link = "ER&D Source Link"
+service_fna = "FnA"
+service_fna_link = "FnA Source Link"
+service_hr = "HR"
+service_hr_link = "HR Source Link"
+service_procurement = "Procurement & Supply Chain"
+service_procurement_link = "Procurement & Supply Chain Source Link"
+service_sales_marketing = "Sales & Marketing"
+service_sales_marketing_link = "Sales & Marketing Source Link"
+service_customer_support = "Customer Support Services"
+service_customer_support_link = "Customer Services Source Link"
+service_others = "Others"
+service_others_link = "Others Source Link"
+software_vendor = "Software Vendor"
+software_in_use = "Software in Use"
+software_source_link = "Software Source Link"
+service_comments = "Comments"

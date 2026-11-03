@@ -8,6 +8,7 @@ import gspread
 from common import tui
 from common.google import safe_api_call
 from common.tui import console
+from sheets import source
 
 
 def get_worksheet_rows(
@@ -28,8 +29,13 @@ class SheetCache:
 
     def get_data(self, sheet_name: str) -> tuple[list[str], list[list[str]]]:
         if sheet_name not in self._cache:
-            ws = self.spreadsheet.worksheet(sheet_name)
+            # sheet_name is ours ("accounts"); the source names the tab behind it.
+            tab = source.active.tab(sheet_name)
+            if tab is None:
+                raise gspread.exceptions.WorksheetNotFound(sheet_name)
+            ws = self.spreadsheet.worksheet(tab)
             headers, rows = get_worksheet_rows(ws)
+            headers = source.active.our_headers(sheet_name, headers)
             self._cache[sheet_name] = (headers, rows)
             time.sleep(0.5)  # small buffer after a large read
         return self._cache[sheet_name]
