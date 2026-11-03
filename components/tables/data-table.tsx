@@ -185,10 +185,12 @@ interface DataTablePaginationProps<TData extends RowData> {
   totalRows: number
   /** Controls placed before "Rows per page", such as the layout switcher. */
   leading?: ReactNode
+  /** Page sizes to offer; defaults to PAGE_SIZE_OPTIONS. */
+  pageSizeOptions?: readonly number[]
 }
 
 /** Footer strip of the data card: optional leading controls, page size, then pages. */
-export function DataTablePagination<TData extends RowData>({ table, totalRows, leading }: DataTablePaginationProps<TData>) {
+export function DataTablePagination<TData extends RowData>({ table, totalRows, leading, pageSizeOptions = PAGE_SIZE_OPTIONS }: DataTablePaginationProps<TData>) {
   if (totalRows === 0 && !leading) return null
 
   const { pageIndex, pageSize } = table.state.pagination
@@ -213,7 +215,7 @@ export function DataTablePagination<TData extends RowData>({ table, totalRows, l
           </SelectTrigger>
           <SelectContent side="top">
             <SelectGroup>
-              {PAGE_SIZE_OPTIONS.map((size) => (
+              {pageSizeOptions.map((size) => (
                 <SelectItem key={size} value={String(size)}>
                   {size}
                 </SelectItem>
