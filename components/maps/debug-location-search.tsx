@@ -72,7 +72,7 @@ export function DebugLocationSearch({ mapRef }: DebugLocationSearchProps) {
   return (
     <>
       <div className="absolute top-3 right-3 z-20 w-[260px]">
-        <div className="flex items-center gap-1 rounded-lg border border-border/80 bg-popover/95 px-2 py-1 shadow-md backdrop-blur-md">
+        <div className="flex items-center gap-1 rounded-lg border border-border/80 bg-popover px-2 py-1 shadow-md">
           <input
             autoFocus
             value={query}
@@ -112,7 +112,7 @@ export function DebugLocationSearch({ mapRef }: DebugLocationSearchProps) {
           </Button>
         </div>
         {results.length > 0 && (
-          <ul className="mt-1 max-h-64 overflow-auto rounded-lg border border-border/80 bg-popover/95 shadow-lg backdrop-blur-md">
+          <ul className="mt-1 max-h-64 overflow-auto rounded-lg border border-border/80 bg-popover shadow-lg">
             {results.map((r, i) => (
               <li key={`${r.lat}-${r.lng}-${i}`}>
                 <button

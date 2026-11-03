@@ -399,7 +399,7 @@ export function AccountListUploadPanel({ existingList = null, onDone, onApply }:
 
             <div className="min-w-0 overflow-x-auto rounded-md border">
               <table className="w-full text-sm">
-                <thead className="sticky top-0 z-10 bg-muted/80 backdrop-blur">
+                <thead className="sticky top-0 z-10 bg-muted">
                   <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
                     <th className="px-3 py-2 font-medium">Uploaded name</th>
                     <th className="px-3 py-2 font-medium">Status</th>

@@ -575,7 +575,7 @@ export function CentersChoroplethMap({
         </Source>
 
         <div
-          className="absolute bottom-4 left-4 z-10 rounded-lg border bg-background/35 backdrop-blur-md p-3 shadow-sm min-w-[220px]"
+          className="absolute bottom-4 left-4 z-10 rounded-lg border bg-card p-3 shadow-sm min-w-[220px]"
           style={{
             fontFamily:
               "var(--font-sans), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
@@ -605,7 +605,7 @@ export function CentersChoroplethMap({
                 "var(--font-sans), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
             }}
           >
-            <div className="flex min-w-[220px] overflow-hidden rounded-lg border border-border/80 bg-popover/95 text-popover-foreground shadow-[0_12px_40px_-12px_rgba(0,0,0,0.35)] backdrop-blur-md animate-in fade-in-0 zoom-in-95 duration-150">
+            <div className="flex min-w-[220px] overflow-hidden rounded-lg border border-border/80 bg-popover text-popover-foreground shadow-[0_12px_40px_-12px_rgba(0,0,0,0.35)] animate-in fade-in-0 zoom-in-95 duration-150">
               <div className="w-0.5 bg-orange-500/80" aria-hidden="true" />
               <div className="flex-1 space-y-3 p-3.5">
                 {/* Location */}

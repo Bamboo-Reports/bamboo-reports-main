@@ -22,7 +22,7 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
   const devHint = "Development site: for testing changes before they go live. Data and accounts may differ from the live Bamboo Reports."
 
   return (
-    <header className="sticky top-0 z-20 border-b border-border/80 bg-background/95 backdrop-blur-md">
+    <header className="sticky top-0 z-20 border-b border-border/80 bg-background">
       <div className="mx-auto w-full px-6 py-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">

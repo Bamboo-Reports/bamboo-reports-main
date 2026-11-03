@@ -99,7 +99,7 @@ export function GridSkeletonCards({ cards = 6, statRows = 2, avatar = false }: G
 /** A small floating pill shown over maps while fresh aggregates load. */
 export function MapUpdatingPill() {
   return (
-    <div className="pointer-events-none absolute left-1/2 top-4 z-20 -translate-x-1/2 rounded-full border border-border/70 bg-background/90 px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur animate-pulse">
+    <div className="pointer-events-none absolute left-1/2 top-4 z-20 -translate-x-1/2 rounded-full border border-border/70 bg-card px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm animate-pulse">
       Updating map
     </div>
   )
