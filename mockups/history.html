@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>History</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css" rel="stylesheet" />
+<style>
+  /* Tokens copied from app/globals.css */
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 214 45% 15%;
+    --card: 0 0% 100%;
+    --primary: 204 100% 41%;
+    --primary-foreground: 0 0% 100%;
+    --muted: 210 25% 94%;
+    --muted-foreground: 215 20% 39%;
+    --border: 212 24% 86%;
+    --ring: 204 100% 41%;
+    --include: 142 64% 32%;
+    --exclude: 0 72% 46%;
+    --warn: 32 90% 40%;
+    --dialog-shadow: 0 30px 80px -30px rgba(15,30,50,.45), 0 2px 8px rgba(15,30,50,.08);
+  }
+  .dark {
+    --background: 0 0% 10%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 12%;
+    --primary: 204 92% 56%;
+    --primary-foreground: 0 0% 10%;
+    --muted: 0 0% 16%;
+    --muted-foreground: 0 0% 65%;
+    --border: 0 0% 24%;
+    --ring: 0 0% 83.1%;
+    --include: 142 55% 55%;
+    --exclude: 0 80% 66%;
+    --warn: 36 90% 60%;
+    --dialog-shadow: 0 30px 80px -30px rgba(0,0,0,.8);
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: light; }
+  html.dark { color-scheme: dark; }
+  body { margin: 0; font-family: "Inter", system-ui, sans-serif; background: hsl(var(--background)); color: hsl(var(--foreground)); -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; font-size: 13px; }
+  button, input { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+  ::selection { background: hsl(var(--primary) / .2); }
+
+  .page { max-width: 1100px; margin: 0 auto; padding: 32px 16px 80px; }
+  .top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+  .top h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .intro { margin: 0 0 16px; max-width: 82ch; line-height: 1.5; color: hsl(var(--muted-foreground)); }
+  .toggle { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 13px; font-weight: 500; }
+  .seg { display: inline-grid; grid-auto-flow: column; padding: 3px; border-radius: 9px; background: hsl(var(--muted) / .8); }
+  .seg button { height: 28px; padding: 0 12px; border: 0; border-radius: 6px; background: transparent; font-size: 12.5px; font-weight: 500; color: hsl(var(--muted-foreground)); white-space: nowrap; }
+  .seg button.on { background: hsl(var(--card)); color: hsl(var(--foreground)); box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 0 0 1px hsl(var(--border) / .6); }
+  .seg button .c { margin-left: 4px; font-size: 11.5px; color: hsl(var(--muted-foreground)); }
+  .bar2 { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; margin: 4px 0 12px; }
+  .bar2 > div { display: flex; align-items: center; gap: 8px; }
+  .ctl-label { font-size: 12px; font-weight: 500; color: hsl(var(--muted-foreground)); }
+  .variant-note { margin: 0 0 16px; padding-left: 12px; border-left: 2px solid hsl(var(--border)); max-width: 82ch; line-height: 1.5; color: hsl(var(--muted-foreground)); }
+  .variant-note b { color: hsl(var(--foreground)); font-weight: 600; }
+  .backdrop { padding: 24px 16px; border-radius: 16px; background: hsl(214 30% 12% / .08); }
+  .dark .backdrop { background: hsl(0 0% 0% / .35); }
+
+  /* ---------- shared ---------- */
+  .dlg { display: flex; flex-direction: column; height: 600px; margin: 0 auto; border-radius: 10px; border: 1px solid hsl(var(--border)); background: hsl(var(--background)); box-shadow: var(--dialog-shadow); overflow: hidden; }
+  .dlg.a { max-width: 920px; }
+  .dlg.b { max-width: 760px; }
+  .dh { flex: none; display: flex; align-items: center; gap: 10px; padding: 14px 16px 14px 20px; border-bottom: 1px solid hsl(var(--border)); }
+  .dh h2 { margin: 0; font-size: 16px; font-weight: 600; }
+  .dh .sub { font-size: 12.5px; color: hsl(var(--muted-foreground)); }
+  .dh .sp { flex: 1; }
+  .ib { display: grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 7px; background: transparent; color: hsl(var(--muted-foreground)); font-size: 16px; }
+  .ib:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
+  .ib.lg { font-size: 18px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 13px; font-weight: 500; white-space: nowrap; }
+  .btn:hover { border-color: hsl(var(--foreground) / .25); }
+  .btn i { font-size: 15px; }
+  .btn.primary { border-color: transparent; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+  .btn.sm { height: 28px; padding: 0 10px; font-size: 12.5px; }
+  .search { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; border-radius: 8px; border: 1px solid transparent; background: hsl(var(--muted) / .8); color: hsl(var(--muted-foreground)); }
+  .search:focus-within { border-color: hsl(var(--primary) / .6); box-shadow: 0 0 0 3px hsl(var(--primary) / .15); }
+  .search input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font-size: 13px; color: hsl(var(--foreground)); }
+  .search input::placeholder { color: hsl(var(--muted-foreground)); }
+  .chip { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px; border-radius: 6px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 12px; font-weight: 500; white-space: nowrap; }
+  .chip .k { color: hsl(var(--muted-foreground)); font-weight: 400; }
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .muted { color: hsl(var(--muted-foreground)); }
+  .grp { position: sticky; top: 0; z-index: 1; padding: 10px 10px 4px; background: inherit; font-size: 11.5px; font-weight: 600; color: hsl(var(--muted-foreground)); }
+  .state { display: grid; place-items: center; flex: 1; padding: 32px; text-align: center; }
+  .state i.big { font-size: 26px; color: hsl(var(--muted-foreground)); }
+  .state p { margin: 8px 0 0; max-width: 40ch; line-height: 1.5; color: hsl(var(--muted-foreground)); font-size: 12.5px; }
+  .state p b { display: block; margin-bottom: 2px; color: hsl(var(--foreground)); font-size: 13.5px; font-weight: 600; }
+  .state.err i.big { color: hsl(var(--exclude)); }
+  .sk { height: 10px; border-radius: 4px; background: hsl(var(--muted)); animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .5; } }
+  @media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
+
+  /* ---------- history ---------- */
+  .dlg.h { max-width: 680px; }
+  .dlg.hb { max-width: 920px; }
+  .tools-h { flex: none; display: flex; flex-direction: column; gap: 8px; padding: 12px 20px 6px; }
+  .typeseg { display: grid; grid-template-columns: repeat(4, 1fr); }
+  .list { flex: 1; min-height: 0; overflow-y: auto; padding: 0 12px 12px; }
+  .list .grp { background: hsl(var(--background)); }
+  .hi { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; padding: 8px 10px; border: 0; border-radius: 8px; background: transparent; text-align: left; }
+  .hi:hover, .hi:focus-within { background: hsl(var(--muted) / .6); }
+  .hi.sel { background: hsl(var(--primary) / .12); }
+  .hi.sel .t { color: hsl(var(--primary)); }
+  .tile { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); color: hsl(var(--muted-foreground)); font-size: 15px; }
+  .hi .who { flex: 1; min-width: 0; }
+  .hi .t { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hi .s { margin-top: 1px; font-size: 12px; color: hsl(var(--muted-foreground)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hi .kind { flex: none; width: 64px; font-size: 12px; color: hsl(var(--muted-foreground)); }
+  .hi .when { flex: none; width: 64px; text-align: right; font-size: 12px; color: hsl(var(--muted-foreground)); }
+  .hi .rm { position: absolute; right: 10px; width: 24px; height: 24px; border-radius: 6px; font-size: 14px; opacity: 0; }
+  .hi .rm:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
+  .hi:hover .rm, .hi:focus-within .rm { opacity: 1; }
+  .hi:hover .when, .hi:focus-within .when { visibility: hidden; }
+  .clear { color: hsl(var(--muted-foreground)); }
+  .clear:hover { color: hsl(var(--exclude)); background: hsl(var(--exclude) / .08); }
+  .split { flex: 1; min-height: 0; display: grid; grid-template-columns: 340px minmax(0, 1fr); }
+  .side { --side-bg: color-mix(in srgb, hsl(var(--muted)) 30%, hsl(var(--background))); display: flex; flex-direction: column; min-height: 0; border-right: 1px solid hsl(var(--border)); background: var(--side-bg); }
+  .side .tools-h { padding: 12px 12px 6px; }
+  .side .list { padding: 0 8px 8px; }
+  .side .list .grp { background: var(--side-bg); }
+  .side .hi .kind { display: none; }
+  .side .typeseg button { padding: 0 4px; font-size: 12px; }
+  .pane { display: flex; flex-direction: column; min-height: 0; }
+  .ph { flex: none; padding: 16px 20px 14px; border-bottom: 1px solid hsl(var(--border)); }
+  .ph .kindline { display: flex; align-items: center; gap: 6px; font-size: 12px; color: hsl(var(--muted-foreground)); }
+  .ph h3 { margin: 4px 0 0; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+  .ph .meta { margin-top: 4px; font-size: 12.5px; color: hsl(var(--muted-foreground)); }
+  .ph .acts { display: flex; gap: 6px; margin-top: 12px; }
+  .pb { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 20px 20px; }
+  .kv { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 8px 12px; font-size: 12.5px; }
+  .kv dt { color: hsl(var(--muted-foreground)); }
+  .kv dd { margin: 0; }
+  .note { margin-top: 18px; padding: 10px 12px; border-radius: 8px; background: hsl(var(--warn) / .08); font-size: 12px; line-height: 1.45; }
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; padding: 10px 14px; border-radius: 10px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); box-shadow: 0 12px 30px -12px rgba(0,0,0,.35); font-size: 13px; }
+  .toast button { border: 0; background: none; color: hsl(var(--primary)); font-weight: 600; }
+  @media (max-width: 760px) {
+    .hi .kind { display: none; }
+    .split { grid-template-columns: 1fr; grid-template-rows: 260px minmax(0, 1fr); }
+    .side { border-right: 0; border-bottom: 1px solid hsl(var(--border)); }
+    .dlg { height: 680px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="top">
+    <h1>History</h1>
+    <button class="toggle" id="theme"><i class="ri-moon-line"></i><span>Dark</span></button>
+  </div>
+  <p class="intro">Options for History, opened from the profile menu. Today it fills the whole screen with a paged list in a translucent card, with coloured type badges. Both options use the same window as My exports, Account lists and Saved filters: a normal-size window, search, grouped by day, and flat rows. Clicking a record opens it, the same as today.</p>
+  <div class="bar2">
+    <div><span class="ctl-label">Option</span><div class="seg" id="variants"></div></div>
+    <div><span class="ctl-label">State</span><div class="seg" id="states"></div></div>
+  </div>
+  <p class="variant-note" id="note"></p>
+  <div class="backdrop"><div id="stage"></div></div>
+</div>
+<div id="toast"></div>
+
+<script>
+  const H = (id, type, title, subtitle, group, when) => ({ id, type, title, subtitle, group, when });
+  const ITEMS = [
+    H("1", "account", "Accenture plc", "Professional Services · Dublin, Ireland", "Today", "16:40"),
+    H("2", "center", "Accenture Bengaluru Innovation Hub", "Accenture plc · Bengaluru", "Today", "16:38"),
+    H("3", "prospect", "Priya Raman", "VP Engineering · Accenture plc", "Today", "16:35"),
+    H("4", "account", "Barclays plc", "Banking · London, United Kingdom", "Today", "11:02"),
+    H("5", "center", "Barclays Global Service Centre", "Barclays plc · Pune", "Yesterday", "18:10"),
+    H("6", "account", "Infosys Ltd.", "IT Services · Bengaluru, India", "Yesterday", "09:44"),
+    H("7", "prospect", "Daniel Ortiz", "Director, Data · Walmart Inc.", "This week", "Thu 14:20"),
+    H("8", "account", "Walmart Inc.", "Retail · Bentonville, United States", "This week", "Thu 14:12"),
+    H("9", "center", "Walmart Global Tech India", "Walmart Inc. · Chennai", "This week", "Tue 10:05"),
+    H("10", "account", "Shell plc", "Energy · London, United Kingdom", "October", "28 Oct"),
+    H("11", "prospect", "Ananya Iyer", "Head of Procurement · Shell plc", "October", "28 Oct"),
+  ];
+  const TYPES = { account: { label: "Account", icon: "ri-building-2-line" }, center: { label: "Centre", icon: "ri-briefcase-line" }, prospect: { label: "Prospect", icon: "ri-user-line" } };
+  const VARIANTS = [
+    { id: "a", label: "A. One list", note: "<b>One list.</b> Search, a filter for Accounts, Centres or Prospects, and the records grouped by day. Click a record to open it. Hovering a record offers Remove, so one entry can go without clearing everything. Clear history stays in the header, with Undo afterwards." },
+    { id: "b", label: "B. List and preview", note: "<b>List and preview.</b> The same list on the left, with a short preview of the selected record on the right and an Open button. This matches My exports most closely, but History only stores a record's name and one line, so a useful preview would mean loading each record when it is selected." },
+  ];
+  const STATES = [{ id: "list", label: "With history" }, { id: "empty", label: "Empty" }, { id: "cleared", label: "Just cleared" }];
+  const FILTERS = [["all", "All"], ["account", "Accounts"], ["center", "Centres"], ["prospect", "Prospects"]];
+  const state = { variant: "a", st: "list", type: "all", q: "", sel: "1" };
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const items = () => { const q = state.q.trim().toLowerCase(); return state.st === "list" ? ITEMS.filter((i) => (state.type === "all" || i.type === state.type) && (!q || (i.title + " " + i.subtitle).toLowerCase().includes(q))) : []; };
+  const grouped = (list) => { const g = []; for (const i of list) { const l = g[g.length - 1]; if (l && l.group === i.group) l.items.push(i); else g.push({ group: i.group, items: [i] }); } return g; };
+  const count = (t) => ITEMS.filter((i) => t === "all" || i.type === t).length;
+
+  function tools() {
+    return `<div class="tools-h"><label class="search"><i class="ri-search-line"></i><input id="q" value="${esc(state.q)}" placeholder="Search history" aria-label="Search history" /></label>
+      <div class="seg typeseg" role="tablist" aria-label="Record type">${FILTERS.map(([id, l]) => `<button role="tab" aria-selected="${state.type === id}" class="${state.type === id ? "on" : ""}" data-type="${id}">${l}<span class="c">${count(id)}</span></button>`).join("")}</div></div>`;
+  }
+  function row(i, selectable) {
+    const t = TYPES[i.type];
+    return `<div class="hi ${selectable && state.sel === i.id ? "sel" : ""}" ${selectable ? `data-sel="${i.id}"` : ""} role="button" tabindex="0">
+      <span class="tile"><i class="${t.icon}"></i></span>
+      <span class="who"><div class="t">${esc(i.title)}</div><div class="s">${esc(i.subtitle)}</div></span>
+      <span class="kind">${t.label}</span><span class="when">${i.when}</span>
+      <button class="ib rm" title="Remove from history" aria-label="Remove ${esc(i.title)} from history" data-rm><i class="ri-close-line"></i></button>
+    </div>`;
+  }
+  function listHtml(list, selectable) {
+    if (state.st !== "list") return "";
+    return grouped(list).map((g) => `<div class="grp">${g.group}</div>${g.items.map((i) => row(i, selectable)).join("")}`).join("") || `<p class="muted" style="padding:24px;text-align:center;font-size:12.5px">Nothing matches.</p>`;
+  }
+  const emptyState = () => `<div class="state"><div><i class="ri-history-line big"></i><p><b>No history yet</b>Accounts, centres and prospects you open from the dashboard will appear here, so you can get back to them quickly.</p></div></div>`;
+  const header = () => `<div class="dh"><h2>History</h2>${state.st === "list" ? `<span class="sub">${ITEMS.length} records</span>` : ""}<span class="sp"></span>${state.st === "list" ? `<button class="btn sm clear" style="border-color:transparent;background:transparent"><i class="ri-delete-bin-line"></i>Clear history</button>` : ""}<button class="ib lg" aria-label="Close"><i class="ri-close-line"></i></button></div>`;
+
+  function renderA() {
+    const body = state.st === "list" ? `${tools()}<div class="list">${listHtml(items(), false)}</div>` : emptyState();
+    return `<div class="dlg h">${header()}${body}</div>`;
+  }
+  function renderB() {
+    if (state.st !== "list") return `<div class="dlg hb">${header()}${emptyState()}</div>`;
+    const list = items(); const sel = list.find((i) => i.id === state.sel) || list[0];
+    const t = sel && TYPES[sel.type];
+    const pane = sel ? `<div class="ph"><div class="kindline"><i class="${t.icon}"></i>${t.label}</div><h3>${esc(sel.title)}</h3><div class="meta">${esc(sel.subtitle)} · viewed ${sel.group.toLowerCase() === "today" ? "today" : sel.group.toLowerCase()}, ${sel.when}</div><div class="acts"><button class="btn primary sm"><i class="ri-external-link-line"></i>Open</button><button class="btn sm">Remove from history</button></div></div>
+      <div class="pb"><dl class="kv">${sel.type === "account" ? `<dt>Industry</dt><dd>Professional Services</dd><dt>HQ</dt><dd>Dublin, Ireland</dd><dt>Centres in India</dt><dd>34</dd><dt>India headcount</dt><dd>10K+</dd>` : sel.type === "center" ? `<dt>Account</dt><dd>${esc(sel.subtitle.split(" · ")[0])}</dd><dt>City</dt><dd>${esc(sel.subtitle.split(" · ")[1])}</dd><dt>Type</dt><dd>GCC/GIC</dd><dt>Headcount</dt><dd>1K - 5K</dd>` : `<dt>Title</dt><dd>${esc(sel.subtitle.split(" · ")[0])}</dd><dt>Account</dt><dd>${esc(sel.subtitle.split(" · ")[1])}</dd><dt>Seniority</dt><dd>VP</dd><dt>City</dt><dd>Bengaluru</dd>`}</dl>
+      <p class="note">These details would be loaded when the record is selected. History itself only keeps the name and the line under it.</p></div>` : "";
+    return `<div class="dlg hb">${header()}<div class="split"><aside class="side">${tools()}<div class="list">${listHtml(list, true)}</div></aside><section class="pane">${pane}</section></div></div>`;
+  }
+  function renderStage(keepFocus) {
+    const pos = keepFocus ? $("#q")?.selectionStart : null;
+    $("#stage").innerHTML = state.variant === "a" ? renderA() : renderB();
+    $("#toast").innerHTML = state.st === "cleared" ? `<div class="toast">History cleared <button data-undo>Undo</button></div>` : "";
+    if (keepFocus && $("#q")) { $("#q").focus(); $("#q").setSelectionRange(pos, pos); }
+  }
+  function renderAll() {
+    $("#variants").innerHTML = VARIANTS.map((v) => `<button class="${v.id === state.variant ? "on" : ""}" data-variant="${v.id}">${v.label}</button>`).join("");
+    $("#states").innerHTML = STATES.map((s) => `<button class="${s.id === state.st ? "on" : ""}" data-state="${s.id}">${s.label}</button>`).join("");
+    $("#note").innerHTML = VARIANTS.find((v) => v.id === state.variant).note;
+    renderStage(false);
+  }
+  document.addEventListener("click", (e) => {
+    const t = (s) => e.target.closest(s);
+    if (t("#theme")) { const dark = document.documentElement.classList.toggle("dark"); $("#theme").innerHTML = dark ? '<i class="ri-sun-line"></i><span>Light</span>' : '<i class="ri-moon-line"></i><span>Dark</span>'; return; }
+    if (t("[data-variant]")) { state.variant = t("[data-variant]").dataset.variant; renderAll(); return; }
+    if (t("[data-state]")) { state.st = t("[data-state]").dataset.state; renderAll(); return; }
+    if (t("[data-undo]")) { state.st = "list"; renderAll(); return; }
+    if (t(".clear")) { state.st = "cleared"; renderAll(); return; }
+    if (t("[data-rm]")) return;
+    if (t("[data-type]")) { state.type = t("[data-type]").dataset.type; renderStage(false); return; }
+    if (t("[data-sel]")) { state.sel = t("[data-sel]").dataset.sel; renderStage(false); }
+  });
+  document.addEventListener("input", (e) => { if (e.target.id === "q") { state.q = e.target.value; renderStage(true); } });
+  renderAll();
+</script>
+</body>
+</html>
