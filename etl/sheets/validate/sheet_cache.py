@@ -37,6 +37,8 @@ class SheetCache:
             ws = self.spreadsheet.worksheet(tab)
             headers, rows = get_worksheet_rows(ws)
             headers = source.active.our_headers(sheet_name, headers)
+            # Their words as ours where the profile says so (GCC -> include).
+            source.active.translate_rows(sheet_name, headers, rows)
             self._cache[sheet_name] = (headers, rows)
             time.sleep(0.5)  # small buffer after a large read
         return self._cache[sheet_name]

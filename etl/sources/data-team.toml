@@ -17,6 +17,12 @@
 #   ignore                 their columns we do not copy. Any header that is
 #                          neither mapped nor listed here is reported, so a
 #                          new or renamed column is never missed silently.
+#   [<our sheet>.values.<our column>]
+#                          "their value" = "our value", for a column where
+#                          the two sheets use different words. Validate
+#                          checks the translated value; any other value is
+#                          checked as it is. Cleanup never writes our words
+#                          into their sheet.
 #
 # Headers with a year in them ("HQ Forbes 2026", "( June 2026 )") change
 # when the data team rolls them over. Validate then reports the old header
@@ -29,11 +35,8 @@ spreadsheet_env = "DATA_TEAM_SPREADSHEET_ID"
 # -- accounts ------------------------------------------------------------------
 [accounts]
 tab = "BR"
-# The last four are calculated by formulas in our sheet, so their values are never copied.
-ignore = [
-    "Center Type Priority", "GCC/Non GCC", "Non GCC Comments",
-    "HQ Revenue Range", "HQ Employee Range", "First Center",
-]
+# The ranges and First Center are calculated by formulas in our sheet, so their values are never copied.
+ignore = ["Center Type Priority", "HQ Revenue Range", "HQ Employee Range", "First Center"]
 
 [accounts.columns]
 uuid = "BRUID"
@@ -80,8 +83,13 @@ account_first_center_year = ""  # formula in our sheet
 account_primary_city = "Primary Location"
 account_hub_structure = "Hub Structure"
 account_comments = "Comments (CD)"
-account_visibility = ""
-account_visibility_note = ""
+account_visibility = "GCC/Non GCC"
+account_visibility_note = "Non GCC Comments"
+
+# They write GCC / Non GCC; our sheet writes include / exclude.
+[accounts.values.account_visibility]
+"GCC" = "include"
+"Non GCC" = "exclude"
 
 # -- centers -------------------------------------------------------------------
 [centers]

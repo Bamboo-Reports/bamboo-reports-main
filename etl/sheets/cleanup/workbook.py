@@ -84,6 +84,9 @@ class Workbook:
             sheet, [INVISIBLE_CHARS_RE.sub("", str(h)).strip().lower() for h in (all_data[0] if all_data else [])]
         )
         rows = [[str(v) for v in r] for r in all_data[1:]]
+        # Their words as ours where the profile says so (GCC -> include),
+        # before the original copy, so a translated cell is not a change.
+        source.active.translate_rows(sheet, self._headers[sheet], rows)
         # Formula cells are read too, so they can be left alone: writing the
         # cleaned value would replace the formula with static text. Many
         # columns are formulas (tech.account_global_legal_name, the range
@@ -331,7 +334,9 @@ class Workbook:
             before = original[r]
             for c, value in enumerate(row):
                 if value != (before[c] if c < len(before) else ""):
-                    dirty.append(gspread.Cell(row=r + FIRST_DATA_ROW, col=c + 1, value=value))
+                    # Back into their words: their sheet keeps its own values.
+                    theirs = source.active.their_value(sheet, self.header(sheet, c), value)
+                    dirty.append(gspread.Cell(row=r + FIRST_DATA_ROW, col=c + 1, value=theirs))
         if not dirty:
             return 0
         ws = self._ws[sheet]

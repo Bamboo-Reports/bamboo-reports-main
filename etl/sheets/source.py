@@ -41,9 +41,13 @@ class SheetMap:
     labels: dict[str, str]
     # Their headers we do not copy, normalised.
     ignore: set[str] = field(default_factory=set)
+    # Our column -> {their value: our value}, for columns where the two
+    # sheets use different words (their "Non GCC" is our "exclude").
+    values: dict[str, dict[str, str]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         self.to_ours = {theirs: ours for ours, theirs in self.columns.items()}
+        self.to_theirs = {column: {v: k for k, v in mapping.items()} for column, mapping in self.values.items()}
 
 
 @dataclass
@@ -92,6 +96,31 @@ class Source:
             return headers
         mapped = self.sheets[sheet]
         return [mapped.to_ours.get(normalise_header(h), normalise_header(h)) for h in headers]
+
+    def translate_rows(self, sheet: str, headers: list[str], rows: list[list[str]]) -> None:
+        """Their values as ours, in place, for the columns the profile
+        translates. headers are ours (from our_headers()). A value the
+        profile does not list is left as it is, so the rules still see it."""
+        mapped = self.sheets.get(sheet) if self.sheets else None
+        if not mapped or not mapped.values:
+            return
+        for column, mapping in mapped.values.items():
+            if column not in headers:
+                continue
+            c = headers.index(column)
+            for row in rows:
+                if c < len(row):
+                    ours = mapping.get(str(row[c]).strip())
+                    if ours is not None:
+                        row[c] = ours
+
+    def their_value(self, sheet: str, column: str, value: str) -> str:
+        """The reverse of translate_rows() for one cell, so a write back to
+        their sheet keeps their words."""
+        mapped = self.sheets.get(sheet) if self.sheets else None
+        if not mapped:
+            return value
+        return mapped.to_theirs.get(column, {}).get(value, value)
 
     def has_column(self, sheet: str, column: str) -> bool:
         """False for our columns this source does not have, which are not checked."""
@@ -152,11 +181,19 @@ def load(name: str) -> Source:
                     f"{path.name}: [{sheet}] maps both {seen[theirs]} and {ours} to \"{raw[ours]}\"."
                 )
             seen[theirs] = ours
+        values = {column: {str(k).strip(): str(v) for k, v in m.items()} for column, m in spec.get("values", {}).items()}
+        for column, mapping in values.items():
+            if column not in columns:
+                raise ValueError(f"{path.name}: [{sheet}.values.{column}] is for a column that is not mapped.")
+            ours = list(mapping.values())
+            if len(set(ours)) != len(ours):
+                raise ValueError(f"{path.name}: [{sheet}.values.{column}] turns two of their values into the same one.")
         sheets[sheet] = SheetMap(
             tab=str(spec["tab"]),
             columns=columns,
             labels={ours: str(theirs) for ours, theirs in raw.items() if str(theirs).strip()},
             ignore={normalise_header(h) for h in spec.get("ignore", [])},
+            values=values,
         )
     if not sheets:
         raise ValueError(f"{path.name}: no sheets defined.")

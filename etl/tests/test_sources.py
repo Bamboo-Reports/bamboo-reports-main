@@ -66,7 +66,7 @@ def test_headers_match_ignoring_case_spacing_and_line_breaks(data_team):
 
 def test_columns_the_source_lacks_are_not_checked(data_team):
     assert not data_team.has_column("centers", "lat")
-    assert not data_team.has_column("accounts", "account_visibility")
+    assert not data_team.has_column("accounts", "account_type")
     assert data_team.has_column("centers", "center_focus")
     # Every rule that is checked refers to a mapped column.
     for sheet in data_team.sheet_names:
@@ -87,3 +87,29 @@ def test_two_columns_mapped_to_one_header_is_an_error(tmp_path, monkeypatch):
     monkeypatch.setattr(source, "SOURCES_DIR", tmp_path)
     with pytest.raises(ValueError, match="maps both"):
         source.load("dup")
+
+
+def test_their_values_are_read_as_ours(data_team):
+    headers = data_team.our_headers("accounts", ["Account Global Legal Name", "GCC/Non GCC", "Non GCC Comments"])
+    assert headers == ["account_global_legal_name", "account_visibility", "account_visibility_note"]
+    rows = [["A", "GCC", ""], ["B", "Non GCC", "Only Manufacturing Presence In India"], ["C", "Non-GCC", ""]]
+    data_team.translate_rows("accounts", headers, rows)
+    assert [r[1] for r in rows] == ["include", "exclude", "Non-GCC"]  # unlisted values left for the rules
+    assert rows[1][2] == "Only Manufacturing Presence In India"  # other columns untouched
+
+
+def test_a_write_back_uses_their_words(data_team):
+    assert data_team.their_value("accounts", "account_visibility", "exclude") == "Non GCC"
+    assert data_team.their_value("accounts", "account_visibility", "Non-GCC") == "Non-GCC"
+    assert data_team.their_value("accounts", "account_about", "include") == "include"
+
+
+def test_values_for_an_unmapped_column_are_an_error(tmp_path, monkeypatch):
+    (tmp_path / "bad.toml").write_text(
+        'spreadsheet_env = "X"\n[accounts]\ntab = "BR"\n[accounts.columns]\nuuid = "ID"\n'
+        '[accounts.values.account_visibility]\n"GCC" = "include"\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(source, "SOURCES_DIR", tmp_path)
+    with pytest.raises(ValueError, match="not mapped"):
+        source.load("bad")
