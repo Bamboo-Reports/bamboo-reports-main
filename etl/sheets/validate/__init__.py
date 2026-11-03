@@ -51,6 +51,10 @@ Validates Google Sheets data in several phases:
           Source of truth : centers
           Validated in    : services, functions, tech
 
+      Rule 3b - "uuid" by "cn_unique_key"
+          A services row with a center's cn_unique_key must have that
+          center's uuid (PAIRED_COLUMN_RULES).
+
       Rule 4 - "prospect_email"
           Source of truth : prospects
           Validated in    : subscribers (case-insensitive, like the ETL join)
