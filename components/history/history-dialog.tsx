@@ -55,7 +55,7 @@ export function HistoryDialog({
           event.preventDefault()
           contentRef.current?.focus()
         }}
-        className="h-screen w-screen max-w-none overflow-hidden rounded-none p-0 sm:max-w-none glassmorphism-dialog flex flex-col"
+        className="h-screen w-screen max-w-none overflow-hidden rounded-none p-0 sm:max-w-none flex flex-col"
       >
         <DialogHeader className="border-b border-border/60 px-6 py-5 shrink-0">
           <div className="flex items-start justify-between pr-10">

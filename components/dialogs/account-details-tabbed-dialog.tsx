@@ -460,7 +460,7 @@ export function AccountDetailsDialog({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         {/* Fixed height so switching tabs does not resize the dialog and move its header. */}
-        <DialogContent className="max-w-[95vw] h-[90vh] max-h-[90vh] content-start overflow-y-auto glassmorphism-dialog">
+        <DialogContent className="max-w-[95vw] h-[90vh] max-h-[90vh] content-start overflow-y-auto">
           <DialogHeader>
             <DialogDescription className="sr-only">
               Account profile details, centers, prospects, services, technology, and financial information.

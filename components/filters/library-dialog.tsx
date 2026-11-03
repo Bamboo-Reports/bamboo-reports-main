@@ -124,13 +124,13 @@ export function LibraryItem({ selected, onSelect, icon, name, meta, badge }: Lib
       onClick={onSelect}
       aria-current={selected || undefined}
       className={cn(
-        "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        selected ? "bg-background shadow-[0_1px_2px_rgba(0,0,0,0.06),0_0_0_1px_hsl(var(--border))]" : "hover:bg-muted/80"
+        "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+        selected ? "bg-primary/[0.12]" : "hover:bg-muted/70"
       )}
     >
-      <span className="grid h-4 w-4 shrink-0 place-items-center text-muted-foreground">{icon}</span>
+      <span className={cn("grid h-4 w-4 shrink-0 place-items-center", selected ? "text-primary" : "text-muted-foreground")}>{icon}</span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[13px] font-medium" title={name}>{name}</span>
+        <span className={cn("block truncate text-[13px] font-medium", selected && "text-primary")} title={name}>{name}</span>
         <span className="block truncate text-[11.5px] text-muted-foreground">{meta}</span>
       </span>
       {badge}

@@ -158,7 +158,7 @@ export function CenterDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glassmorphism-dialog max-h-[90vh] max-w-[95vw] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-[95vw] overflow-y-auto">
         <DialogHeader>
           <DialogBreadcrumb
             items={[

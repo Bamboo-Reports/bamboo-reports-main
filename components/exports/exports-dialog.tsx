@@ -153,7 +153,7 @@ export function ExportsDialog({ open, onOpenChange }: ExportsDialogProps) {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="h-screen w-screen max-w-none overflow-hidden rounded-none p-0 sm:max-w-none glassmorphism-dialog flex flex-col">
+        <DialogContent className="h-screen w-screen max-w-none overflow-hidden rounded-none p-0 sm:max-w-none flex flex-col">
           <DialogHeader className="border-b border-border/60 px-6 py-5 shrink-0">
             <div className="pr-10">
               <DialogTitle className="text-2xl font-bold flex items-center gap-3">
@@ -323,7 +323,7 @@ function ExportDetailsDialog({
 }) {
   return (
     <Dialog open={row !== null} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl glassmorphism-dialog">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
