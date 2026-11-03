@@ -62,7 +62,7 @@ import type { SearchResult } from "@/lib/search"
 import { TAB_SORT_COLUMNS } from "@/lib/dashboard/entity-columns"
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "@/components/tables/data-table"
 import type { RecentItem } from "@/hooks/use-recent-items"
-import type { Account, Alias, Center, Function as FunctionRow, Prospect, Service, Tech } from "@/lib/types"
+import type { Account, Alias, Center, Filters, Function as FunctionRow, Prospect, Service, Tech } from "@/lib/types"
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "br-dashboard-sidebar-collapsed"
 const PAGE_SIZE_STORAGE_KEY = "br-dashboard-page-size"
@@ -313,6 +313,7 @@ function DashboardContent(): React.JSX.Element | null {
     addRecentItem,
     addRecentSearch,
     clearRecentItems,
+    removeRecentItem,
     restoreRecentItems,
   } = useRecentItems()
 
@@ -929,11 +930,16 @@ function DashboardContent(): React.JSX.Element | null {
 
   // The filters a full export follows, described the way the sidebar shows them.
   const { lists: accountLists } = useAccountLists()
-  const exportFilterSummary = useMemo(() => {
-    const listNames = new Map(accountLists.map((list) => [list.id, list.name]))
-    const bounds = { revenue: revenueRange, yearsInIndia: yearsInIndiaRange, centerIncYear: centerIncYearRange }
-    return describeFilters(filters, bounds, listNames).flatMap((section) => section.fields)
-  }, [filters, accountLists, revenueRange, yearsInIndiaRange, centerIncYearRange])
+  const describeFilterFields = useCallback(
+    (source: unknown) => {
+      if (!source || typeof source !== "object") return []
+      const listNames = new Map(accountLists.map((list) => [list.id, list.name]))
+      const bounds = { revenue: revenueRange, yearsInIndia: yearsInIndiaRange, centerIncYear: centerIncYearRange }
+      return describeFilters(source as Partial<Filters>, bounds, listNames).flatMap((section) => section.fields)
+    },
+    [accountLists, revenueRange, yearsInIndiaRange, centerIncYearRange]
+  )
+  const exportFilterSummary = useMemo(() => describeFilterFields(filters), [describeFilterFields, filters])
 
   const exportPayload = useMemo(() => {
     if (!exportScope) {
@@ -1190,6 +1196,8 @@ function DashboardContent(): React.JSX.Element | null {
     [handleSearchRecentItemSelect]
   )
 
+  const handleRemoveHistoryItem = useCallback((item: RecentItem) => removeRecentItem(item.type, item.id), [removeRecentItem])
+
   const handleHistoryItemSelect = useCallback(
     (item: RecentItem) => handleSearchRecentItemSelect(item, "history_dialog"),
     [handleSearchRecentItemSelect]
@@ -1344,13 +1352,14 @@ function DashboardContent(): React.JSX.Element | null {
         Skip to main content
       </a>
       <Header onRefresh={handleRefresh} refreshing={refreshing} onOpenSearch={handleSearchOpen} />
-      <ExportsDialog open={exportsDialogOpen} onOpenChange={setExportsDialogOpen} />
+      <ExportsDialog open={exportsDialogOpen} onOpenChange={setExportsDialogOpen} describeFilters={describeFilterFields} />
       <HistoryDialog
         open={historyDialogOpen}
         onOpenChange={setHistoryDialogOpen}
         recentItems={recentItems}
         onItemSelect={handleHistoryItemSelect}
         onClearHistory={clearRecentItems}
+        onRemoveItem={handleRemoveHistoryItem}
         onRestoreHistory={restoreRecentItems}
       />
 

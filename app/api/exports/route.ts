@@ -34,7 +34,7 @@ export async function GET(request: Request) {
   }
 
   const select =
-    "id,created_at,filename,file_size_bytes,datasets,row_counts,total_rows,is_filtered,client_ip,user_agent"
+    "id,created_at,filename,file_size_bytes,datasets,row_counts,total_rows,is_filtered,filters_applied,client_ip,user_agent"
   const url = `${supabaseUrl}/rest/v1/user_exports?select=${encodeURIComponent(select)}&user_id=eq.${encodeURIComponent(userId)}&order=created_at.desc&limit=200`
 
   const res = await fetch(url, {

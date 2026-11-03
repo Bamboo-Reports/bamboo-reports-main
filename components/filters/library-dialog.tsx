@@ -16,10 +16,13 @@ interface LibraryDialogProps {
   searchPlaceholder: string
   query: string
   onQueryChange: (query: string) => void
-  tab: LibraryTab
-  onTabChange: (tab: LibraryTab) => void
-  mineCount: number
-  sharedCount: number
+  /** Mine / Shared with me tabs; omitted for libraries that are only yours (My exports). */
+  tab?: LibraryTab
+  onTabChange?: (tab: LibraryTab) => void
+  mineCount?: number
+  sharedCount?: number
+  /** Shown beside the title, such as a count. */
+  titleMeta?: React.ReactNode
   /** The items in the left column (LibraryItem elements, or an empty message). */
   items: React.ReactNode
   /** Pinned under the items, such as "Upload list". */
@@ -44,6 +47,7 @@ export function LibraryDialog({
   onTabChange,
   mineCount,
   sharedCount,
+  titleMeta,
   items,
   footer,
   children,
@@ -58,7 +62,10 @@ export function LibraryDialog({
         }}
       >
         <DialogHeader className="shrink-0 space-y-0 px-5 py-3.5 pr-12">
-          <DialogTitle className="text-base">{title}</DialogTitle>
+          <div className="flex items-baseline gap-2.5">
+            <DialogTitle className="text-base">{title}</DialogTitle>
+            {titleMeta && <span className="text-[12.5px] text-muted-foreground">{titleMeta}</span>}
+          </div>
           <DialogDescription className="sr-only">{description}</DialogDescription>
         </DialogHeader>
         <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,38%)_minmax(0,1fr)] border-t sm:grid-cols-[288px_minmax(0,1fr)] sm:grid-rows-1">
@@ -74,6 +81,7 @@ export function LibraryDialog({
                   className="min-w-0 flex-1 bg-transparent text-[13px] text-foreground placeholder:text-muted-foreground focus:outline-none"
                 />
               </label>
+              {tab && onTabChange && (
               <div className="grid grid-cols-2 rounded-lg bg-muted/80 p-[3px]" role="tablist" aria-label={`${title} owner`}>
                 {([
                   ["mine", "Mine", mineCount],
@@ -93,10 +101,11 @@ export function LibraryDialog({
                     )}
                   >
                     {label}
-                    <span className="ml-1 text-[11.5px] tabular-nums text-muted-foreground">{count}</span>
+                    <span className="ml-1 text-[11.5px] tabular-nums text-muted-foreground">{count ?? 0}</span>
                   </button>
                 ))}
               </div>
+              )}
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">{items}</div>
             {footer && <div className="shrink-0 border-t p-3">{footer}</div>}
@@ -135,6 +144,15 @@ export function LibraryItem({ selected, onSelect, icon, name, meta, badge }: Lib
       </span>
       {badge}
     </button>
+  )
+}
+
+/** A sticky heading over a run of items, such as "Today". Set --library-group-bg on a list whose background differs from the side column. */
+export function LibraryGroupLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="sticky top-0 z-[1] bg-[var(--library-group-bg,color-mix(in_srgb,hsl(var(--muted))_30%,hsl(var(--background))))] px-2.5 pb-1 pt-2.5 text-[11.5px] font-semibold text-muted-foreground">
+      {children}
+    </div>
   )
 }
 
