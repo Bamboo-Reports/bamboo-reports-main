@@ -18,6 +18,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { AccountListUploadPanel } from "@/components/filters/account-list-upload-panel"
+import { AccountListMatches } from "@/components/filters/account-list-matches"
 import {
   LibraryCountBadge,
   LibraryDialog,
@@ -29,7 +30,7 @@ import {
   type LibraryTab,
 } from "@/components/filters/library-dialog"
 import { useAccountLists, type AccountListShare } from "@/contexts/account-lists-context"
-import { MAX_ACCOUNT_LIST_NAME_LENGTH, type AccountList } from "@/lib/accounts/account-lists"
+import { MAX_ACCOUNT_LIST_NAME_LENGTH, mapUnmatchedName, type AccountList } from "@/lib/accounts/account-lists"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 
@@ -146,6 +147,15 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
       if (updated) captureEvent(ANALYTICS_EVENTS.ACCOUNT_LIST_RENAMED, { account_list_id: list.id })
       else toast.error("Could not rename the list.")
       setRenamingId(null)
+    },
+    [updateList]
+  )
+
+  const mapName = useCallback(
+    async (list: AccountList, input: string, account: string) => {
+      const updated = await updateList(list.id, mapUnmatchedName(list, input, account))
+      if (updated) toast.success(`Mapped "${input}" to ${account}.`)
+      else toast.error("Could not update the list.")
     },
     [updateList]
   )
@@ -290,15 +300,27 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
             </>
           }
         />
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-          {selected.unmatched.length > 0 && (
-            <div className="mb-4 flex gap-2 rounded-lg border border-amber-500/30 bg-amber-500/[0.08] px-3 py-2.5 text-[12.5px]">
-              <RiErrorWarningLine className="mt-px h-4 w-4 shrink-0 text-amber-600 dark:text-amber-300" />
-              <p className="min-w-0">
-                <span className="font-semibold text-amber-700 dark:text-amber-300">{plural(selected.unmatched.length, "name")} not matched: </span>
-                <span className="break-words">{selected.unmatched.join(", ")}</span>
+        {selected.matches.length > 0 ? (
+          <AccountListMatches
+            key={selected.id}
+            matches={selected.matches}
+            onMap={own ? (input, account) => void mapName(selected, input, account) : undefined}
+          />
+        ) : (
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+            {own && selected.source_file && (
+              <p className="mb-3 text-[12px] text-muted-foreground">
+                This list was saved before uploaded names were kept. Replace it from its file to see what each name was matched to.
               </p>
-            </div>
+            )}
+            {selected.unmatched.length > 0 && (
+              <div className="mb-4 flex gap-2 rounded-lg border border-amber-500/30 bg-amber-500/[0.08] px-3 py-2.5 text-[12.5px]">
+                <RiErrorWarningLine className="mt-px h-4 w-4 shrink-0 text-amber-600 dark:text-amber-300" />
+                <p className="min-w-0">
+                  <span className="font-semibold text-amber-700 dark:text-amber-300">{plural(selected.unmatched.length, "name")} not matched: </span>
+                  <span className="break-words">{selected.unmatched.join(", ")}</span>
+                </p>
+              </div>
           )}
           {selected.accounts.length > 8 && (
             <label className="mb-3 flex h-[34px] items-center gap-2 rounded-lg border border-transparent bg-muted/80 px-2.5 text-muted-foreground transition-shadow focus-within:border-primary/60 focus-within:ring-[3px] focus-within:ring-primary/15">
@@ -324,6 +346,7 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
             <p className="text-[12.5px] text-muted-foreground">No accounts match &ldquo;{accountQuery.trim()}&rdquo;.</p>
           )}
         </div>
+        )}
       </>
     )
   }

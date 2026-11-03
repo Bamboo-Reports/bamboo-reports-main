@@ -18,7 +18,7 @@ import { MAX_MATCH_NAMES, type AccountMatchCandidate, type AccountMatchResult, t
 import { extractNames, guessNameColumn, parseDelimitedText, tableFromRows, type ParsedAccountTable } from "@/lib/accounts/account-list-parser"
 import { devError } from "@/lib/utils/dev-log"
 import { useAccountLists } from "@/contexts/account-lists-context"
-import type { AccountList } from "@/lib/accounts/account-lists"
+import type { AccountList, AccountListMatch, AccountListMatchVia } from "@/lib/accounts/account-lists"
 
 interface AccountListUploadPanelProps {
   /** When set, the upload replaces the accounts of this existing list instead of creating a new one. */
@@ -101,6 +101,20 @@ function viaLabel(candidate: AccountMatchCandidate | null): string | null {
   if (candidate.via === "alias") return candidate.aliasValue ? `matched via alias "${candidate.aliasValue}"` : "matched via alias"
   if (candidate.via === "normalized") return "matched ignoring legal suffix"
   return null
+}
+
+/** How a reviewed row became an account, as stored on the saved list. */
+function matchVia(row: ReviewRow): AccountListMatchVia {
+  if (!row.selected) return "none"
+  if (!row.auto || row.auto.name !== row.selected) return "manual"
+  if (row.auto.via === "name") return "exact"
+  if (row.auto.via === "normalized") return "suffix"
+  if (row.auto.via === "alias") return "alias"
+  return "close"
+}
+
+function rowsToMatches(rows: ReviewRow[]): AccountListMatch[] {
+  return rows.map((row) => ({ input: row.input, account: row.selected, via: matchVia(row) }))
 }
 
 /**
@@ -213,7 +227,7 @@ export function AccountListUploadPanel({ existingList = null, onDone, onApply }:
       const name = filterName.trim()
       if (!name || mappedNames.length === 0) return
       const unmatched = rows.filter((r) => !r.selected).map((r) => r.input)
-      const input = { name, accounts: mappedNames, unmatched, sourceFile: fileName }
+      const input = { name, accounts: mappedNames, unmatched, matches: rowsToMatches(rows), sourceFile: fileName }
       const saved = existingList ? await updateList(existingList.id, input) : await createList(input)
       if (!saved) {
         toast.error("Could not save the account list. Please try again.")
