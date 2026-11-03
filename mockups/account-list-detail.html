@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Account list detail</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css" rel="stylesheet" />
+<style>
+  /* Tokens copied from app/globals.css */
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 214 45% 15%;
+    --card: 0 0% 100%;
+    --primary: 204 100% 41%;
+    --primary-foreground: 0 0% 100%;
+    --muted: 210 25% 94%;
+    --muted-foreground: 215 20% 39%;
+    --border: 212 24% 86%;
+    --ring: 204 100% 41%;
+    --include: 142 64% 32%;
+    --exclude: 0 72% 46%;
+    --warn: 32 90% 40%;
+    --dialog-shadow: 0 30px 80px -30px rgba(15,30,50,.45), 0 2px 8px rgba(15,30,50,.08);
+  }
+  .dark {
+    --background: 0 0% 10%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 12%;
+    --primary: 204 92% 56%;
+    --primary-foreground: 0 0% 10%;
+    --muted: 0 0% 16%;
+    --muted-foreground: 0 0% 65%;
+    --border: 0 0% 24%;
+    --ring: 0 0% 83.1%;
+    --include: 142 55% 55%;
+    --exclude: 0 80% 66%;
+    --warn: 36 90% 60%;
+    --dialog-shadow: 0 30px 80px -30px rgba(0,0,0,.8);
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: light; }
+  html.dark { color-scheme: dark; }
+  body { margin: 0; font-family: "Inter", system-ui, sans-serif; background: hsl(var(--background)); color: hsl(var(--foreground)); -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; font-size: 13px; }
+  button, input { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+  ::selection { background: hsl(var(--primary) / .2); }
+
+  .page { max-width: 1100px; margin: 0 auto; padding: 32px 16px 80px; }
+  .top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+  .top h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .intro { margin: 0 0 20px; max-width: 80ch; line-height: 1.5; color: hsl(var(--muted-foreground)); }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .toggle { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 13px; font-weight: 500; }
+
+  .seg { display: inline-grid; grid-auto-flow: column; padding: 3px; border-radius: 9px; background: hsl(var(--muted) / .8); }
+  .seg button { height: 26px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent; font-size: 12.5px; font-weight: 500; color: hsl(var(--muted-foreground)); }
+  .seg button.on { background: hsl(var(--card)); color: hsl(var(--foreground)); box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 0 0 1px hsl(var(--border) / .6); }
+  .seg button .c { margin-left: 4px; font-size: 11.5px; color: hsl(var(--muted-foreground)); }
+  .seg.big button { height: 30px; padding: 0 14px; font-size: 13px; }
+
+  .variant-note { margin: 18px 0 14px; padding-left: 12px; border-left: 2px solid hsl(var(--border)); max-width: 80ch; line-height: 1.5; color: hsl(var(--muted-foreground)); }
+  .variant-note b { color: hsl(var(--foreground)); font-weight: 600; }
+
+  .backdrop { padding: 24px; border-radius: 16px; background: hsl(214 30% 12% / .08); }
+  .dark .backdrop { background: hsl(0 0% 0% / .35); }
+
+  /* ---------- dialog shell (matches the app) ---------- */
+  .dlg { display: flex; flex-direction: column; height: 620px; max-width: 920px; margin: 0 auto; border-radius: 10px; border: 1px solid hsl(var(--border)); background: hsl(var(--background)); box-shadow: var(--dialog-shadow); overflow: hidden; }
+  .dh { flex: none; display: flex; align-items: center; padding: 14px 16px 14px 20px; border-bottom: 1px solid hsl(var(--border)); }
+  .dh h2 { flex: 1; margin: 0; font-size: 16px; font-weight: 600; }
+  .ib { display: grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 7px; background: transparent; color: hsl(var(--muted-foreground)); font-size: 16px; }
+  .ib:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
+  .ib.danger:hover { color: hsl(var(--exclude)); background: hsl(var(--exclude) / .1); }
+  .split { flex: 1; min-height: 0; display: grid; grid-template-columns: 288px minmax(0, 1fr); }
+  .side { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid hsl(var(--border)); background: hsl(var(--muted) / .3); }
+  .side .tools { display: flex; flex-direction: column; gap: 8px; padding: 12px 12px 8px; }
+  .side .seg { display: grid; grid-template-columns: 1fr 1fr; }
+  .items { flex: 1; min-height: 0; overflow-y: auto; padding: 0 8px 8px; }
+  .item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 0; border-radius: 8px; background: transparent; text-align: left; }
+  .item:hover { background: hsl(var(--muted) / .7); }
+  .item.sel { background: hsl(var(--primary) / .12); }
+  .item.sel .nm, .item.sel i { color: hsl(var(--primary)); }
+  .item i { flex: none; font-size: 15px; color: hsl(var(--muted-foreground)); }
+  .item .who { flex: 1; min-width: 0; }
+  .item .nm { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .item .meta { font-size: 11.5px; color: hsl(var(--muted-foreground)); }
+  .count { display: grid; place-items: center; height: 20px; min-width: 20px; padding: 0 6px; border-radius: 999px; background: hsl(var(--warn) / .15); color: hsl(var(--warn)); font-size: 11px; font-weight: 600; }
+  .side .foot { flex: none; padding: 12px; border-top: 1px solid hsl(var(--border)); }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 13px; font-weight: 500; white-space: nowrap; }
+  .btn:hover { border-color: hsl(var(--foreground) / .25); }
+  .btn i { font-size: 15px; }
+  .btn.primary { width: 100%; border-color: transparent; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+  .btn.sm { height: 28px; padding: 0 10px; font-size: 12.5px; }
+  .btn.in { color: hsl(var(--include)); }
+  .btn.ex { color: hsl(var(--exclude)); }
+  .btn.ghost { border-color: transparent; background: transparent; color: hsl(var(--muted-foreground)); }
+  .btn.ghost:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
+
+  .search { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; border-radius: 8px; border: 1px solid transparent; background: hsl(var(--muted) / .8); color: hsl(var(--muted-foreground)); }
+  .search:focus-within { border-color: hsl(var(--primary) / .6); box-shadow: 0 0 0 3px hsl(var(--primary) / .15); }
+  .search input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font-size: 13px; color: hsl(var(--foreground)); }
+  .search input::placeholder { color: hsl(var(--muted-foreground)); }
+
+  .pane { display: flex; flex-direction: column; min-height: 0; }
+  .ph { flex: none; padding: 16px 20px 14px; border-bottom: 1px solid hsl(var(--border)); }
+  .ph h3 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+  .ph .meta { margin-top: 4px; font-size: 12.5px; color: hsl(var(--muted-foreground)); }
+  .ph .acts { display: flex; align-items: center; gap: 6px; margin-top: 12px; }
+  .ph .acts .sp { flex: 1; }
+
+  /* Shared body bits */
+  .bar { flex: none; display: flex; align-items: center; gap: 8px; padding: 12px 20px 10px; }
+  .bar .search { flex: 1; }
+  .sortbtn { display: inline-flex; align-items: center; gap: 4px; height: 34px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: hsl(var(--muted-foreground)); font-size: 12.5px; font-weight: 500; white-space: nowrap; }
+  .sortbtn:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
+  .body { flex: 1; min-height: 0; overflow-y: auto; padding: 0 12px 16px; }
+  .none { padding: 28px 8px; text-align: center; font-size: 12.5px; color: hsl(var(--muted-foreground)); }
+
+  .unm { display: flex; align-items: center; gap: 10px; margin: 0 8px 10px; padding: 9px 10px 9px 12px; border-radius: 9px; background: hsl(var(--warn) / .08); font-size: 12.5px; }
+  .unm > i { flex: none; font-size: 16px; color: hsl(var(--warn)); }
+  .unm .txt { flex: 1; min-width: 0; }
+  .unm b { font-weight: 600; color: hsl(var(--warn)); }
+  .unm .names { color: hsl(var(--muted-foreground)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .unm .btn { background: transparent; }
+
+  /* Logo stand-in: in the app this is CompanyLogo (Brandfetch) */
+  .logo { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 11px; font-weight: 600; color: hsl(var(--muted-foreground)); letter-spacing: .02em; }
+  .logo.sm { width: 24px; height: 24px; border-radius: 6px; font-size: 9.5px; }
+
+  /* ---------- filter chips ---------- */
+  .fchips { flex: none; display: flex; flex-wrap: wrap; gap: 6px; padding: 0 20px 10px; }
+  .fchip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 999px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 12.5px; font-weight: 500; color: hsl(var(--muted-foreground)); }
+  .fchip b { font-weight: 600; color: hsl(var(--foreground)); }
+  .fchip:hover { color: hsl(var(--foreground)); }
+  .fchip.on { border-color: hsl(var(--primary) / .5); background: hsl(var(--primary) / .1); color: hsl(var(--primary)); }
+  .fchip.on b { color: hsl(var(--primary)); }
+  .dot { width: 7px; height: 7px; border-radius: 999px; background: currentColor; }
+  .dot.ok { color: hsl(var(--include)); } .dot.ch { color: hsl(var(--primary)); } .dot.no { color: hsl(var(--exclude)); }
+
+  /* how it matched */
+  .how { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; color: hsl(var(--muted-foreground)); white-space: nowrap; }
+  .how i { font-size: 13px; }
+  .how-alias i, .how-suffix i, .how-manual i { color: hsl(var(--primary)); }
+  .how-none { color: hsl(var(--exclude)); }
+
+  /* ---------- A: mapping table ---------- */
+  .map { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 13px; }
+  .map th { position: sticky; top: 0; z-index: 1; height: 34px; padding: 0 8px; background: hsl(var(--background)); border-bottom: 1px solid hsl(var(--border)); text-align: left; font-size: 12px; font-weight: 500; color: hsl(var(--muted-foreground)); }
+  .map col.c-arrow { width: 28px; } .map col.c-how { width: 150px; }
+  .map td { height: 46px; padding: 0 8px; border-bottom: 1px solid hsl(var(--border) / .6); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .map tr:hover td { background: hsl(var(--muted) / .5); }
+  .map td.up { color: hsl(var(--muted-foreground)); }
+  .map tr.changed td.up { color: hsl(var(--foreground)); }
+  .map td.arrow { padding: 0; text-align: center; color: hsl(var(--muted-foreground)); }
+  .map .acc { display: flex; align-items: center; gap: 9px; min-width: 0; }
+  .map .acc span:last-child { overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+  .map tr.nomatch td { background: hsl(var(--exclude) / .04); }
+  .map .missing { display: flex; align-items: center; gap: 8px; color: hsl(var(--muted-foreground)); font-style: normal; }
+
+  /* ---------- B: grouped ---------- */
+  .grp { margin: 0 8px 12px; border: 1px solid hsl(var(--border)); border-radius: 10px; background: hsl(var(--card)); overflow: hidden; }
+  .grp > button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border: 0; background: transparent; text-align: left; }
+  .grp > button:hover { background: hsl(var(--muted) / .5); }
+  .grp > button .t { flex: 1; font-weight: 600; }
+  .grp > button .t small { margin-left: 6px; font-weight: 500; color: hsl(var(--muted-foreground)); }
+  .grp > button .sub { font-size: 12px; color: hsl(var(--muted-foreground)); }
+  .grp > button > i { color: hsl(var(--muted-foreground)); transition: transform .15s; }
+  .grp.open > button > i { transform: rotate(180deg); }
+  .grp .rows { display: none; border-top: 1px solid hsl(var(--border)); }
+  .grp.open .rows { display: block; }
+  .pair { display: grid; grid-template-columns: minmax(0, 1fr) 20px minmax(0, 1fr); align-items: center; gap: 8px; padding: 9px 12px; border-top: 1px solid hsl(var(--border) / .6); }
+  .pair:first-child { border-top: 0; }
+  .pair .from { min-width: 0; }
+  .pair .from .v { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pair .from .how { margin-top: 2px; }
+  .pair .to { display: flex; align-items: center; gap: 9px; min-width: 0; }
+  .pair .to span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+  .pair > i { color: hsl(var(--muted-foreground)); text-align: center; }
+  .exactgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; padding: 4px 12px 8px; }
+  .exactgrid div { display: flex; align-items: center; gap: 9px; min-width: 0; padding: 6px 0; }
+  .exactgrid div span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Before */
+  .before { columns: 2; column-gap: 24px; padding: 4px 8px; font-size: 13px; }
+  .before div { break-inside: avoid; padding: 6px 0; border-bottom: 1px solid hsl(var(--border) / .5); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  @media (max-width: 760px) {
+    .split { grid-template-columns: 1fr; grid-template-rows: 200px minmax(0, 1fr); }
+    .side { border-right: 0; border-bottom: 1px solid hsl(var(--border)); }
+    .side .foot { display: none; }
+    .backdrop { padding: 0; background: none; }
+    .before { columns: 1; }
+    .exactgrid { grid-template-columns: 1fr; }
+    .map col.c-how { width: 0; } .map .hide-sm { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="top">
+    <h1>Account list detail</h1>
+    <div class="controls">
+      <div class="seg big" role="tablist" aria-label="Option" id="variants"></div>
+      <button class="toggle" id="theme"><i class="ri-moon-line"></i><span>Dark</span></button>
+    </div>
+  </div>
+  <p class="intro">Options for the right side of the Account lists window that show each name from the uploaded file next to the account it was matched to, and how it was matched. This needs one change behind the scenes: today a saved list keeps only the matched accounts, so it would also have to keep each uploaded name and how it matched. Lists saved before that change would show their accounts only. Logos are placeholders.</p>
+
+  <p class="variant-note" id="note"></p>
+  <div class="backdrop">
+    <div class="dlg">
+      <div class="dh"><h2>Account lists</h2><button class="ib" aria-label="Close"><i class="ri-close-line"></i></button></div>
+      <div class="split">
+        <aside class="side">
+          <div class="tools">
+            <label class="search"><i class="ri-search-line"></i><input placeholder="Search lists" aria-label="Search lists" /></label>
+            <div class="seg"><button class="on">Mine<span class="c">2</span></button><button>Shared with me<span class="c">0</span></button></div>
+          </div>
+          <div class="items" id="lists"></div>
+          <div class="foot"><button class="btn primary"><i class="ri-upload-2-line"></i>Upload list</button></div>
+        </aside>
+        <section class="pane">
+          <div class="ph">
+            <h3 id="lname"></h3>
+            <div class="meta" id="lmeta"></div>
+            <div class="acts">
+              <button class="btn sm in"><i class="ri-add-line"></i>Include in filters</button>
+              <button class="btn sm ex"><i class="ri-subtract-line"></i>Exclude</button>
+              <span class="sp"></span>
+              <button class="ib" aria-label="Share" title="Share"><i class="ri-share-line"></i></button>
+              <button class="ib" aria-label="Rename" title="Rename"><i class="ri-pencil-line"></i></button>
+              <button class="ib" aria-label="Replace from a file" title="Replace from a file"><i class="ri-file-upload-line"></i></button>
+              <button class="ib danger" aria-label="Delete" title="Delete"><i class="ri-delete-bin-line"></i></button>
+            </div>
+          </div>
+          <div id="detail" style="display:flex;flex-direction:column;flex:1;min-height:0"></div>
+        </section>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Placeholder data. "via" is how the upload step matched each name:
+  // exact, suffix (ignoring a legal suffix), alias (a known other name), manual (picked during review), none.
+  const M = (input, account, via) => ({ input, account, via });
+  const LISTS = [
+    { id: "l1", name: "List 1", updated: "updated 16 Oct 2026", file: "list-1.csv", rows: [
+      M("Global Infosys", "Infosys Ltd.", "manual"),
+      M("Accenture", "Accenture plc", "suffix"),
+    ] },
+    { id: "l2", name: "CP Exclusion", updated: "updated 12 Oct 2026", file: "cp-exclusion.xlsx", rows: [
+      M("Abbott Laboratories", "Abbott Laboratories", "exact"),
+      M("AB InBev", "Anheuser-Busch InBev", "alias"),
+      M("Barclays", "Barclays plc", "suffix"),
+      M("Comcast Corp.", "Comcast Corp.", "exact"),
+      M("Dell", "Dell Technologies", "alias"),
+      M("Deutsche Bank AG", "Deutsche Bank AG", "exact"),
+      M("Hewlett Packard", "HP Inc.", "manual"),
+      M("Landmark Group", "Landmark Group", "exact"),
+      M("Daimler", "Mercedes-Benz Group", "alias"),
+      M("Metro AG", "Metro AG", "exact"),
+      M("NatWest Group", "NatWest Group", "exact"),
+      M("Sabre Corp.", "Sabre Corp.", "exact"),
+      M("Shell", "Shell plc", "suffix"),
+      M("Sony Group", "Sony Group", "exact"),
+      M("Suzuki Motor", "Suzuki Motor", "exact"),
+      M("Telus Corp.", "Telus Corp.", "exact"),
+      M("Unilever plc", "Unilever plc", "exact"),
+      M("Verizon", "Verizon", "exact"),
+      M("Visa Inc.", "Visa Inc.", "exact"),
+      M("Walmart Inc.", "Walmart Inc.", "exact"),
+      M("Acme Holdings Pvt", null, "none"),
+    ] },
+  ];
+  const HOW = {
+    exact: ["ri-check-line", "Exact match"],
+    suffix: ["ri-scissors-cut-line", "Ignored legal suffix"],
+    alias: ["ri-links-line", "Known alias"],
+    manual: ["ri-user-follow-line", "Picked by you"],
+    none: ["ri-close-circle-line", "Not matched"],
+  };
+  const FILTERS = [
+    { id: "all", label: "All", dot: "", test: () => true },
+    { id: "changed", label: "Name changed", dot: "ch", test: (r) => r.via !== "exact" && r.via !== "none" },
+    { id: "none", label: "Not matched", dot: "no", test: (r) => r.via === "none" },
+    { id: "exact", label: "Exact", dot: "ok", test: (r) => r.via === "exact" },
+  ];
+  const VARIANTS = [
+    { id: "a", label: "A. Side by side", note: "<b>Side by side.</b> Every row of the file, with the name as uploaded on the left and the account it became on the right. Rows where the name changed are in full colour; exact matches are quieter. Filter to only the changed or unmatched rows to check the matching quickly, and use Map to fix a name that did not match." },
+    { id: "b", label: "B. Grouped", note: "<b>Grouped.</b> The rows that need a look come first: not matched, then names that changed, each shown as uploaded name to account. Exact matches are collapsed at the bottom since there is nothing to check in them." },
+    { id: "before", label: "Today", note: "<b>Today.</b> Matched account names only, with unmatched names in a warning. You cannot see what the file said." },
+  ];
+
+  const state = { variant: "a", list: "l2", q: "", filter: "all", open: { none: true, changed: true, exact: false } };
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const initials = (n) => n.replace(/[^A-Za-z ]/g, "").split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+  const plural = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
+  const list = () => LISTS.find((l) => l.id === state.list);
+  const matched = (l) => l.rows.filter((r) => r.account);
+  const searched = () => { const q = state.q.trim().toLowerCase(); return list().rows.filter((r) => !q || r.input.toLowerCase().includes(q) || (r.account || "").toLowerCase().includes(q)); };
+  const how = (via) => `<span class="how how-${via}"><i class="${HOW[via][0]}"></i>${HOW[via][1]}</span>`;
+  const logo = (n) => `<span class="logo sm">${initials(n)}</span>`;
+
+  function renderSide() {
+    $("#lists").innerHTML = LISTS.map((l) => {
+      const miss = l.rows.length - matched(l).length;
+      return `<button class="item ${l.id === state.list ? "sel" : ""}" data-list="${l.id}">
+        <i class="ri-file-list-3-line"></i>
+        <span class="who"><div class="nm">${esc(l.name)}</div><div class="meta">${plural(matched(l).length, "account")} · ${esc(l.updated)}</div></span>
+        ${miss ? `<span class="count" title="Names not matched">${miss}</span>` : ""}
+      </button>`; }).join("");
+    const l = list();
+    $("#lname").textContent = l.name;
+    $("#lmeta").textContent = [plural(matched(l).length, "account"), `${l.rows.length} names in ${l.file}`, l.updated].join(" · ");
+  }
+
+  const search = () => `<div class="bar"><label class="search"><i class="ri-search-line"></i><input id="q" value="${esc(state.q)}" placeholder="Search uploaded names and accounts" aria-label="Search uploaded names and accounts" /></label></div>`;
+  const none = () => `<div class="none">Nothing matches “${esc(state.q.trim())}”.</div>`;
+
+  function renderA() {
+    const base = searched();
+    const chips = FILTERS.map((f) => { const n = base.filter(f.test).length; return (f.id === "all" || n) ? `<button class="fchip ${state.filter === f.id ? "on" : ""}" data-filter="${f.id}">${f.dot ? `<span class="dot ${f.dot}"></span>` : ""}${f.label}<b>${n}</b></button>` : ""; }).join("");
+    const rows = base.filter(FILTERS.find((f) => f.id === state.filter).test);
+    const body = rows.map((r) => {
+      const cls = r.via === "none" ? "nomatch" : r.via === "exact" ? "" : "changed";
+      const to = r.account ? `<div class="acc">${logo(r.account)}<span>${esc(r.account)}</span></div>` : `<div class="missing"><button class="btn sm">Map to an account</button></div>`;
+      return `<tr class="${cls}"><td class="up" title="${esc(r.input)}">${esc(r.input)}</td><td class="arrow"><i class="ri-arrow-right-line"></i></td><td>${to}</td><td class="hide-sm">${how(r.via)}</td></tr>`;
+    }).join("");
+    return search() + `<div class="fchips">${chips}</div><div class="body">${rows.length ? `<table class="map"><colgroup><col /><col class="c-arrow" /><col /><col class="c-how" /></colgroup><thead><tr><th>Uploaded name</th><th></th><th>Matched account</th><th class="hide-sm">How</th></tr></thead><tbody>${body}</tbody></table>` : none()}</div>`;
+  }
+
+  function renderB() {
+    const base = searched();
+    const groups = [
+      { id: "none", title: "Not matched", sub: "Not in the list until mapped", rows: base.filter((r) => r.via === "none") },
+      { id: "changed", title: "Name changed", sub: "Matched to an account with a different name", rows: base.filter((r) => r.via !== "exact" && r.via !== "none") },
+      { id: "exact", title: "Exact matches", sub: "Uploaded name and account are the same", rows: base.filter((r) => r.via === "exact") },
+    ].filter((g) => g.rows.length);
+    const html = groups.map((g) => {
+      let inner;
+      if (g.id === "exact") inner = `<div class="exactgrid">${g.rows.map((r) => `<div>${logo(r.account)}<span>${esc(r.account)}</span></div>`).join("")}</div>`;
+      else inner = g.rows.map((r) => `<div class="pair">
+          <div class="from"><div class="v" title="${esc(r.input)}">${esc(r.input)}</div>${how(r.via)}</div>
+          <i class="ri-arrow-right-line"></i>
+          ${r.account ? `<div class="to">${logo(r.account)}<span>${esc(r.account)}</span></div>` : `<div><button class="btn sm">Map to an account</button></div>`}
+        </div>`).join("");
+      const open = state.q.trim() ? true : state.open[g.id];
+      return `<div class="grp ${open ? "open" : ""}"><button data-grp="${g.id}" aria-expanded="${open}"><span class="dot ${g.id === "none" ? "no" : g.id === "changed" ? "ch" : "ok"}"></span><span><div class="t">${g.title}<small>${g.rows.length}</small></div><div class="sub">${g.sub}</div></span><span style="flex:1"></span><i class="ri-arrow-down-s-line"></i></button><div class="rows">${inner}</div></div>`;
+    }).join("");
+    return search() + `<div class="body">${html || none()}</div>`;
+  }
+
+  function renderBefore() {
+    const l = list(), miss = l.rows.filter((r) => !r.account);
+    const warn = miss.length ? `<div class="unm"><i class="ri-error-warning-line"></i><div class="txt"><b>${plural(miss.length, "name")} not matched</b><div class="names">${miss.map((r) => esc(r.input)).join(", ")}</div></div></div>` : "";
+    return `<div class="body" style="padding-top:16px">${warn}<div class="before">${matched(l).map((r) => `<div>${esc(r.account)}</div>`).join("")}</div></div>`;
+  }
+
+  function renderDetail(keepFocus) {
+    const fn = { a: renderA, b: renderB, before: renderBefore }[state.variant];
+    const pos = keepFocus ? $("#q")?.selectionStart : null;
+    $("#detail").innerHTML = fn();
+    if (keepFocus && $("#q")) { $("#q").focus(); $("#q").setSelectionRange(pos, pos); }
+  }
+  function renderVariants() {
+    $("#variants").innerHTML = VARIANTS.map((v) => `<button role="tab" aria-selected="${v.id === state.variant}" class="${v.id === state.variant ? "on" : ""}" data-variant="${v.id}">${v.label}</button>`).join("");
+    $("#note").innerHTML = VARIANTS.find((v) => v.id === state.variant).note;
+  }
+  function render() { renderVariants(); renderSide(); renderDetail(false); }
+
+  document.addEventListener("click", (e) => {
+    const t = (sel) => e.target.closest(sel);
+    if (t("[data-variant]")) { state.variant = t("[data-variant]").dataset.variant; state.q = ""; state.filter = "all"; render(); return; }
+    if (t("[data-list]")) { state.list = t("[data-list]").dataset.list; state.q = ""; state.filter = "all"; render(); return; }
+    if (t("[data-filter]")) { state.filter = t("[data-filter]").dataset.filter; renderDetail(false); return; }
+    if (t("[data-grp]")) { const g = t("[data-grp]").dataset.grp; state.open[g] = !state.open[g]; renderDetail(false); return; }
+    if (t("#theme")) {
+      const dark = document.documentElement.classList.toggle("dark");
+      $("#theme").innerHTML = dark ? '<i class="ri-sun-line"></i><span>Light</span>' : '<i class="ri-moon-line"></i><span>Dark</span>';
+    }
+  });
+  document.addEventListener("input", (e) => { if (e.target.id === "q") { state.q = e.target.value; renderDetail(true); } });
+  render();
+</script>
+</body>
+</html>
