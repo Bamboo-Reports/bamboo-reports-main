@@ -20,7 +20,7 @@ import requests
 from google.oauth2.service_account import Credentials
 
 from common.env import ETL_DIR, GOOGLE_SA_FILE
-from common.tui import console
+from common.tui import ICONS, console
 
 SCOPE_READONLY = "https://www.googleapis.com/auth/spreadsheets.readonly"
 SCOPE_READWRITE = "https://www.googleapis.com/auth/spreadsheets"
@@ -73,7 +73,7 @@ def get_gspread_client(write: bool = False) -> gspread.Client:
 
 def waiting(what: str, seconds: float) -> None:
     console.print(
-        f"  [warning]⏳ Still waiting on Google Sheets for {what} ({seconds:.0f}s).[/warning] "
+        f"  [warning]{ICONS['warn']} Still waiting on Google Sheets for {what} ({seconds:.0f}s).[/warning] "
         "[muted]The sheet is probably recalculating formulas. This is normal: "
         "nothing is wrong, and the run carries on by itself.[/muted]"
     )
@@ -145,7 +145,7 @@ def safe_api_call(func, what: str = "a response", idempotent: bool = True):
             reason = f"No answer within {HTTP_TIMEOUT}s, probably recalculating formulas"
         delay = RETRY_DELAYS[attempt - 1]
         console.print(
-            f"  [warning]⏳ {reason}.[/warning] [muted]Retrying {what} in {delay}s "
+            f"  [warning]{ICONS['warn']} {reason}.[/warning] [muted]Retrying {what} in {delay}s "
             f"(try {attempt + 1} of {attempts}). Nothing is wrong.[/muted]"
         )
         time.sleep(delay)
@@ -176,7 +176,7 @@ def read_settled(read, what: str, count=count_loading):
             break
         delay = SETTLE_DELAYS[attempt]
         console.print(
-            f"  [warning]⏳ {loading:,} formula cell{'s' if loading != 1 else ''} in {what} still "
+            f"  [warning]{ICONS['warn']} {loading:,} formula cell{'s' if loading != 1 else ''} in {what} still "
             f"{'say' if loading != 1 else 'says'} Loading...[/warning] [muted]The sheet is recalculating. Reading again in {delay}s "
             f"(try {attempt + 2} of {len(SETTLE_DELAYS) + 1}). Nothing is wrong.[/muted]"
         )
