@@ -59,6 +59,8 @@ class Source:
     spreadsheet_env: str
     # None for the main sheet: every sheet, our names, our headers.
     sheets: dict[str, SheetMap] | None = None
+    # Our columns sheets.sync leaves blank, to be filled by hand.
+    sync_skip: list[str] = field(default_factory=list)
 
     @property
     def is_main(self) -> bool:
@@ -166,7 +168,7 @@ def load(name: str) -> Source:
 
     sheets: dict[str, SheetMap] = {}
     for sheet, spec in data.items():
-        if not isinstance(spec, dict):
+        if not isinstance(spec, dict) or sheet == "sync":
             continue
         if sheet not in ALL_SHEETS:
             raise ValueError(f"{path.name}: [{sheet}] is not one of our sheets ({', '.join(ALL_SHEETS)}).")
@@ -204,6 +206,7 @@ def load(name: str) -> Source:
         spreadsheet_id=os.getenv(env_name),
         spreadsheet_env=env_name,
         sheets=sheets,
+        sync_skip=[str(c) for c in data.get("sync", {}).get("skip", [])],
     )
 
 

@@ -24,6 +24,8 @@ from common.tui import ICONS, console
 
 SCOPE_READONLY = "https://www.googleapis.com/auth/spreadsheets.readonly"
 SCOPE_READWRITE = "https://www.googleapis.com/auth/spreadsheets"
+# Backups copy the whole spreadsheet into a Drive folder (common/drive.py).
+SCOPE_DRIVE = "https://www.googleapis.com/auth/drive"
 
 # Seconds one request may take before it is abandoned and retried. Without
 # a timeout a frozen sheet hangs the run for good.
@@ -54,10 +56,11 @@ def service_account_path() -> Path:
     return path
 
 
-def get_credentials(write: bool = False) -> Credentials:
-    """Service-account credentials. Read-only unless write is set."""
-    scope = SCOPE_READWRITE if write else SCOPE_READONLY
-    return Credentials.from_service_account_file(str(service_account_path()), scopes=[scope])
+def get_credentials(write: bool = False, scopes: list[str] | None = None) -> Credentials:
+    """Service-account credentials. Read-only unless write is set; scopes
+    replaces both (sync needs the sheets and Drive scopes together)."""
+    scopes = scopes or [SCOPE_READWRITE if write else SCOPE_READONLY]
+    return Credentials.from_service_account_file(str(service_account_path()), scopes=scopes)
 
 
 def authorize(credentials: Credentials) -> gspread.Client:

@@ -20,6 +20,12 @@ Steps, in the order they run (the order matters, see the notes):
   3. artifacts    Spreadsheet error values typed as text (#N/A, #REF!) are
                   cleared, and HTML entities from copied page source
                   ('64 &amp; 65', '&nbsp;') are decoded.
+  3b. constants   Formulas that are only a typed number become that
+                  number: '=+16142836500' (a phone number typed with a
+                  plus) and '=672/3' (a sum typed into a count). The one
+                  case where cleanup writes a formula cell; a formula
+                  that reads any cell or calls a function is never
+                  touched.
   4. invisible    Strip zero-width characters, BOMs, soft hyphens and
                   bidirectional controls from every cell. (validate 0B)
   5. lookalikes   Cyrillic or Greek letters that look Latin, inside a

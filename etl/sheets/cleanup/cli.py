@@ -19,7 +19,7 @@ from .formats import step_formats
 from .links import LINK_LEFTOVERS, step_links
 from .lists import step_lists
 from .references import step_references
-from .text import step_artifacts, step_chips, step_invisible, step_lookalikes, step_whitespace
+from .text import step_artifacts, step_chips, step_constants, step_invisible, step_lookalikes, step_whitespace
 from .workbook import Change, Workbook
 
 # -- Runner -------------------------------------------------------------------
@@ -27,6 +27,7 @@ STEPS = [
     ("columns", step_columns),
     ("chips", step_chips),
     ("artifacts", step_artifacts),
+    ("constants", step_constants),
     ("invisible", step_invisible),
     ("lookalikes", step_lookalikes),
     ("whitespace", step_whitespace),
@@ -41,6 +42,7 @@ STEP_INFO = {
     "columns": "Unnamed columns with data deleted, unless a formula reads from them.",
     "chips": "Smart chips turned into plain text; dropdowns removed.",
     "artifacts": "Spreadsheet error values typed as text, and HTML entities.",
+    "constants": "Formulas that are only a typed number (=+16142836500, =672/3) made plain numbers.",
     "invisible": "Zero-width characters, BOMs, soft hyphens, direction marks.",
     "lookalikes": "Cyrillic or Greek letters that look Latin, inside Latin words.",
     "whitespace": "Stray, doubled and non-standard spaces; line breaks are kept.",

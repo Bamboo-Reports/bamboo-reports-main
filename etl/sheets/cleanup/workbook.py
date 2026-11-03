@@ -58,6 +58,9 @@ class Workbook:
         # Formula text per sheet, keyed (row_idx, col_idx), so a column is
         # only deleted when no formula reads from it.
         self.formula_text: dict[str, dict[tuple[int, int], str]] = {}
+        # Formula cells turned into plain numbers by unformula(), written as
+        # numbers. Keys are (sheet, row_idx, col_idx).
+        self.number_cells: dict[tuple[str, int, int], int | float] = {}
 
     def load(self, sheet: str) -> bool:
         """Read a worksheet if not read yet. False if it does not exist."""
@@ -169,6 +172,33 @@ class Workbook:
         target = self.chip_cells if kind == "chip" else self.dropdown_cells
         target.add((sheet, row_idx, col_idx))
         self.changes.append(change)
+
+    def unformula(self, step: str, sheet: str, row_idx: int, col_idx: int, number: int | float, note: str) -> None:
+        """Replace a formula cell with the plain number it works out to. The
+        one write to a formula cell cleanup makes, only for formulas that
+        are a typed number ('=+16142836500', '=672/3'), not for any formula
+        that reads other cells."""
+        if col_idx in self.dropped_columns.get(sheet, ()):
+            return
+        formula = self.formula_text[sheet].pop((row_idx, col_idx))
+        self._formulas[sheet].discard((row_idx, col_idx))
+        row = self._rows[sheet][row_idx]
+        while len(row) <= col_idx:
+            row.append("")
+        row[col_idx] = str(number)
+        self.number_cells[(sheet, row_idx, col_idx)] = number
+        self.changes.append(
+            Change(
+                step=step,
+                sheet=sheet,
+                row=row_idx + FIRST_DATA_ROW,
+                col=col_idx + 1,
+                column=self.header(sheet, col_idx),
+                before=formula,
+                after=str(number),
+                note=note,
+            )
+        )
 
     def set(self, step: str, sheet: str, row_idx: int, col_idx: int, value: str, note: str = "") -> None:
         """row_idx and col_idx are 0-based positions in the data rows."""
@@ -333,6 +363,11 @@ class Workbook:
         for r, row in enumerate(rows):
             before = original[r]
             for c, value in enumerate(row):
+                number = self.number_cells.get((sheet, r, c))
+                if number is not None:
+                    # Shows the same text before and after, so always written.
+                    dirty.append(gspread.Cell(row=r + FIRST_DATA_ROW, col=c + 1, value=number))
+                    continue
                 if value != (before[c] if c < len(before) else ""):
                     # Back into their words: their sheet keeps its own values.
                     theirs = source.active.their_value(sheet, self.header(sheet, c), value)

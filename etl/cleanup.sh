@@ -31,6 +31,7 @@ Steps, always run in this order:
   columns      unnamed columns with data deleted (kept if a formula reads them)
   chips        smart chips to plain text, dropdowns removed
   artifacts    #N/A and #REF! typed as text cleared, HTML entities decoded
+  constants    formulas that are only a typed number (=+16142836500) made plain numbers
   invisible    zero-width characters, BOMs, soft hyphens stripped
   lookalikes   Cyrillic or Greek look-alike letters in Latin words made Latin
   whitespace   trims, double spaces, tabs and exotic spaces
