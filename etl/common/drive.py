@@ -46,7 +46,7 @@ def _check(response, doing: str) -> dict:
             " The service account has no Drive storage of its own: put the backup folder in a"
             " Shared Drive and add the service account as a member."
         )
-    raise BackupFailed(f"{doing}: HTTP {response.status_code} {message}.{hint}")
+    raise BackupFailed(f"{doing}: HTTP {response.status_code} {message.rstrip('.')}.{hint}")
 
 
 def _folder(session: AuthorizedSession, parent: str, name: str) -> str:
