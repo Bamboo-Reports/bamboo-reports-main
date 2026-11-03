@@ -50,7 +50,7 @@ This section is the single source for the repo layout; the README only shows the
 | `hooks/` | Custom hooks (2.3) |
 | `lib/` | Shared modules (2.4) |
 | `contexts/` | `notification-context.tsx` and `account-lists-context.tsx`, mounted in `AppProviders` |
-| `etl/` | Python ETL, one uv project: `importer/` (Sheets to Postgres, `master-schema.json`), `sheets/` (validate and cleanup), `common/`, plus `import.sh`, `validate.sh`, `cleanup.sh`. See [ETL Pipeline](backend/etl-pipeline.md) |
+| `etl/` | Python ETL, one uv project: `importer/` (Sheets to Postgres, `master-schema.json`), `sheets/` (validate, cleanup, and sync from the data team's sheet), `sources/` (the data team sheet's mapping, place coordinates), `common/`, plus `import.sh`, `validate.sh`, `cleanup.sh`, `sync.sh`. See [ETL Pipeline](backend/etl-pipeline.md) |
 | `prisma/` | Prisma schema for the Neon warehouse |
 | `tests/` | Vitest suites. See [Testing Guide](testing-guide.md) |
 | `public/` | Static assets, including `data/admin-1.geojson` |
