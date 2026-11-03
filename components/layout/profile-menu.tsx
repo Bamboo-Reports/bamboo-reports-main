@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useState } from 'react'
-import { RiCollapseHorizontalLine, RiCompass3Line, RiComputerLine, RiExpandHorizontalLine, RiFileZipLine, RiLogoutBoxRLine, RiMagicLine, RiMoonLine, RiSunLine, RiTimeLine } from "@remixicon/react"
+import { RiCompass3Line, RiFileExcel2Line, RiHistoryLine, RiLogoutBoxRLine } from "@remixicon/react"
 import { useTheme } from 'next-themes'
 import {
   DropdownMenu,
@@ -17,19 +17,25 @@ import type { CurrentProfile } from '@/hooks/use-current-profile'
 
 type ThemeMode = 'light' | 'dark' | 'system'
 
-const THEME_OPTIONS: Array<{
-  value: ThemeMode
-  label: string
-  icon: React.ComponentType<{ className?: string }>
-}> = [
-  { value: 'light', label: 'Light', icon: RiSunLine },
-  { value: 'dark', label: 'Dark', icon: RiMoonLine },
-  { value: 'system', label: 'System', icon: RiComputerLine },
+const THEME_OPTIONS: Array<{ value: ThemeMode; label: string }> = [
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+  { value: 'system', label: 'System' },
 ]
 
-const SEGMENT_GROUP_CLASS = "grid grid-cols-3 gap-1 rounded-xl border border-border/70 bg-muted/35 p-1"
-const SEGMENT_ACTIVE_CLASS = "inline-flex items-center justify-center gap-1.5 rounded-lg bg-background px-2 py-1.5 text-xs font-semibold text-foreground shadow-sm ring-1 ring-border/60 transition-colors"
-const SEGMENT_IDLE_CLASS = "inline-flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-background/50 hover:text-foreground disabled:pointer-events-none disabled:opacity-60"
+const SEGMENT_GROUP_CLASS = "inline-grid grid-cols-3 rounded-lg bg-muted/80 p-[3px]"
+const SEGMENT_BUTTON_CLASS = "h-[26px] rounded-md px-2.5 text-[12px] font-medium transition-colors disabled:pointer-events-none disabled:opacity-60"
+const SEGMENT_ACTIVE_CLASS = `${SEGMENT_BUTTON_CLASS} bg-background text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.08),0_0_0_1px_hsl(var(--border)/0.6)]`
+const SEGMENT_IDLE_CLASS = `${SEGMENT_BUTTON_CLASS} text-muted-foreground hover:text-foreground`
+
+function PreferenceRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-3 px-3.5 py-1.5">
+      <span className="text-[12.5px]">{label}</span>
+      {children}
+    </div>
+  )
+}
 
 function ProfileThemeSwitcher() {
   const { theme, setTheme } = useTheme()
@@ -42,23 +48,16 @@ function ProfileThemeSwitcher() {
   const activeTheme = mounted ? (theme as ThemeMode | undefined) ?? 'light' : 'light'
 
   return (
-    <div className="px-4 py-3">
-      <div className="mb-2 text-xs font-medium text-muted-foreground">Appearance</div>
-      <div
-        className={SEGMENT_GROUP_CLASS}
-        role="tablist"
-        aria-label="Theme preference"
-      >
+    <PreferenceRow label="Theme">
+      <div className={SEGMENT_GROUP_CLASS} role="radiogroup" aria-label="Theme">
         {THEME_OPTIONS.map((option) => {
-          const Icon = option.icon
           const isActive = activeTheme === option.value
-
           return (
             <button
               key={option.value}
               type="button"
-              role="tab"
-              aria-selected={isActive}
+              role="radio"
+              aria-checked={isActive}
               disabled={!mounted}
               onClick={() => {
                 if (option.value !== activeTheme) {
@@ -72,25 +71,19 @@ function ProfileThemeSwitcher() {
               }}
               className={isActive ? SEGMENT_ACTIVE_CLASS : SEGMENT_IDLE_CLASS}
             >
-              <Icon className="h-3.5 w-3.5" />
               {option.label}
             </button>
           )
         })}
       </div>
-    </div>
+    </PreferenceRow>
   )
 }
 
-const NUMBER_FORMAT_OPTIONS: Array<{
-  value: NumberFormatPreference
-  label: string
-  hint: string
-  icon: React.ComponentType<{ className?: string }>
-}> = [
-  { value: 'auto', label: 'Auto', hint: 'Shortens only when a card is too narrow', icon: RiMagicLine },
-  { value: 'full', label: 'Full', hint: 'Always exact, for example 486,120', icon: RiExpandHorizontalLine },
-  { value: 'short', label: 'Short', hint: 'Always shortened, for example 486K', icon: RiCollapseHorizontalLine },
+const NUMBER_FORMAT_OPTIONS: Array<{ value: NumberFormatPreference; label: string; hint: string }> = [
+  { value: 'auto', label: 'Auto', hint: 'Shortens only when a card is too narrow.' },
+  { value: 'full', label: 'Full', hint: 'Always exact, for example 486,120.' },
+  { value: 'short', label: 'Short', hint: 'Always shortened, for example 486K.' },
 ]
 
 function ProfileNumberFormatSwitcher() {
@@ -98,40 +91,38 @@ function ProfileNumberFormatSwitcher() {
   const active = NUMBER_FORMAT_OPTIONS.find((option) => option.value === preference) ?? NUMBER_FORMAT_OPTIONS[0]
 
   return (
-    <div className="px-4 pb-3">
-      <div className="mb-2 text-xs font-medium text-muted-foreground">Summary numbers</div>
-      <div className={SEGMENT_GROUP_CLASS} role="tablist" aria-label="Summary number format">
-        {NUMBER_FORMAT_OPTIONS.map((option) => {
-          const Icon = option.icon
-          const isActive = preference === option.value
-
-          return (
-            <button
-              key={option.value}
-              type="button"
-              role="tab"
-              aria-selected={isActive}
-              title={option.hint}
-              onClick={() => {
-                if (option.value !== preference) {
-                  captureEvent(ANALYTICS_EVENTS.NUMBER_FORMAT_CHANGED, {
-                    number_format: option.value,
-                    previous_number_format: preference,
-                    source: 'profile_menu',
-                  })
-                }
-                setPreference(option.value)
-              }}
-              className={isActive ? SEGMENT_ACTIVE_CLASS : SEGMENT_IDLE_CLASS}
-            >
-              <Icon className="h-3.5 w-3.5" />
-              {option.label}
-            </button>
-          )
-        })}
-      </div>
-      <p className="mt-1.5 text-[11px] text-muted-foreground">{active.hint}</p>
-    </div>
+    <>
+      <PreferenceRow label="Numbers">
+        <div className={SEGMENT_GROUP_CLASS} role="radiogroup" aria-label="Summary number format">
+          {NUMBER_FORMAT_OPTIONS.map((option) => {
+            const isActive = preference === option.value
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="radio"
+                aria-checked={isActive}
+                title={option.hint}
+                onClick={() => {
+                  if (option.value !== preference) {
+                    captureEvent(ANALYTICS_EVENTS.NUMBER_FORMAT_CHANGED, {
+                      number_format: option.value,
+                      previous_number_format: preference,
+                      source: 'profile_menu',
+                    })
+                  }
+                  setPreference(option.value)
+                }}
+                className={isActive ? SEGMENT_ACTIVE_CLASS : SEGMENT_IDLE_CLASS}
+              >
+                {option.label}
+              </button>
+            )
+          })}
+        </div>
+      </PreferenceRow>
+      <p className="px-3.5 pb-2.5 pt-1 text-[11.5px] text-muted-foreground">{active.hint}</p>
+    </>
   )
 }
 
@@ -146,7 +137,9 @@ interface ProfileMenuProps {
   onOpenHistory?: () => void
 }
 
-/** Account details, appearance and number format, tour, exports, history and sign out. */
+const ITEM_CLASS = "h-[34px] cursor-pointer gap-2.5 rounded-md px-2.5 text-[13px] [&_svg]:h-4 [&_svg]:w-4 [&_svg]:text-muted-foreground"
+
+/** Who you are, theme and number format, then My exports, History, the tour and Sign out. */
 export function ProfileMenu({ user, children, side = 'bottom', align = 'end', onStartTour, onOpenExports, onOpenHistory }: ProfileMenuProps) {
   return (
     <DropdownMenu
@@ -155,95 +148,80 @@ export function ProfileMenu({ user, children, side = 'bottom', align = 'end', on
       }}
     >
       <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
-      <DropdownMenuContent side={side} align={align} sideOffset={8} className="w-80 p-0 overflow-hidden">
-        <div className="flex items-start gap-3 px-4 pt-4 pb-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold text-foreground">
+      <DropdownMenuContent side={side} align={align} sideOffset={8} className="w-[300px] overflow-hidden p-0">
+        <div className="flex items-center gap-3 p-3.5">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-[13px] font-semibold text-foreground">
             {user.initials}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-2">
-              <div className="truncate text-sm font-semibold text-foreground">{user.displayName}</div>
+            <div className="flex min-w-0 items-center gap-1.5">
+              <span className="truncate text-[13px] font-semibold text-foreground">{user.displayName}</span>
               <span
                 className={
                   user.role === 'admin'
-                    ? 'shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-primary'
-                    : 'shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground'
+                    ? 'shrink-0 rounded-[5px] bg-primary/10 px-1.5 text-[11px] font-semibold leading-[18px] text-primary'
+                    : 'shrink-0 rounded-[5px] bg-muted px-1.5 text-[11px] font-semibold leading-[18px] text-muted-foreground'
                 }
               >
                 {user.roleLabel}
               </span>
             </div>
-            <div className="mt-0.5 truncate text-xs text-muted-foreground">{user.displayEmail}</div>
+            <div className="truncate text-[12px] text-muted-foreground">{user.displayEmail}</div>
           </div>
         </div>
 
-        <DropdownMenuSeparator />
+        <DropdownMenuSeparator className="m-0" />
 
-        <div className="px-4 py-3 space-y-2 text-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Phone</span>
-            <span className={user.profile?.phone ? 'text-foreground' : 'text-muted-foreground'}>
-              {user.profile?.phone ?? 'Not set'}
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Last sign in</span>
-            <span className="text-foreground tabular-nums">{user.formattedLastSignIn}</span>
-          </div>
+        <div className="pt-2">
+          <ProfileThemeSwitcher />
+          <ProfileNumberFormatSwitcher />
         </div>
 
-        <DropdownMenuSeparator />
+        {(onOpenExports || onOpenHistory || onStartTour) && (
+          <>
+            <DropdownMenuSeparator className="m-0" />
+            <div className="p-1">
+              {onOpenExports && (
+                <DropdownMenuItem className={ITEM_CLASS} onSelect={() => onOpenExports()}>
+                  <RiFileExcel2Line />
+                  My exports
+                </DropdownMenuItem>
+              )}
+              {onOpenHistory && (
+                <DropdownMenuItem
+                  className={ITEM_CLASS}
+                  onSelect={() => {
+                    captureEvent(ANALYTICS_EVENTS.HISTORY_OPENED, { source: 'profile_menu' })
+                    onOpenHistory()
+                  }}
+                >
+                  <RiHistoryLine />
+                  History
+                </DropdownMenuItem>
+              )}
+              {onStartTour && (
+                <DropdownMenuItem className={ITEM_CLASS} onSelect={() => onStartTour()}>
+                  <RiCompass3Line />
+                  Take the tour
+                </DropdownMenuItem>
+              )}
+            </div>
+          </>
+        )}
 
-        <ProfileThemeSwitcher />
-        <ProfileNumberFormatSwitcher />
-
-        <DropdownMenuSeparator />
-
-        <div className="flex items-stretch gap-1 p-1.5">
-          {onStartTour && (
-            <DropdownMenuItem
-              className="flex flex-1 flex-col items-center justify-center gap-1 cursor-pointer rounded-md border border-border/60 bg-muted/20 px-2 py-2.5 text-[11px] font-medium text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 focus:border-border focus:bg-muted/60 focus:text-foreground"
-              onSelect={() => onStartTour()}
-            >
-              <RiCompass3Line className="h-4 w-4" />
-              Tour
-            </DropdownMenuItem>
-          )}
+        <DropdownMenuSeparator className="m-0" />
+        <div className="p-1">
           <DropdownMenuItem
             disabled={user.isLoading}
-            className="flex flex-1 flex-col items-center justify-center gap-1 cursor-pointer rounded-md border border-destructive/25 bg-destructive/5 px-2 py-2.5 text-[11px] font-medium text-destructive transition-colors hover:border-destructive/40 hover:bg-destructive/10 focus:border-destructive/40 focus:bg-destructive/10 focus:text-destructive"
+            className={`${ITEM_CLASS} focus:bg-exclude/[0.07] focus:text-exclude [&:focus_svg]:text-exclude`}
             onSelect={(event) => {
               event.preventDefault()
               void user.signOut()
             }}
           >
-            <RiLogoutBoxRLine className="h-4 w-4" />
+            <RiLogoutBoxRLine />
             Sign out
           </DropdownMenuItem>
-        </div>
-
-        <div className="flex items-stretch gap-1 px-1.5 pb-1.5">
-          {onOpenExports && (
-            <DropdownMenuItem
-              className="flex flex-1 flex-col items-center justify-center gap-1 cursor-pointer rounded-md border border-border/60 bg-muted/20 px-2 py-2.5 text-[11px] font-medium text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 focus:border-border focus:bg-muted/60 focus:text-foreground"
-              onSelect={() => onOpenExports()}
-            >
-              <RiFileZipLine className="h-4 w-4" />
-              Exports
-            </DropdownMenuItem>
-          )}
-          {onOpenHistory && (
-            <DropdownMenuItem
-              className="flex flex-1 flex-col items-center justify-center gap-1 cursor-pointer rounded-md border border-border/60 bg-muted/20 px-2 py-2.5 text-[11px] font-medium text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 focus:border-border focus:bg-muted/60 focus:text-foreground"
-              onSelect={() => {
-                captureEvent(ANALYTICS_EVENTS.HISTORY_OPENED, { source: 'profile_menu' })
-                onOpenHistory()
-              }}
-            >
-              <RiTimeLine className="h-4 w-4" />
-              History
-            </DropdownMenuItem>
-          )}
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
