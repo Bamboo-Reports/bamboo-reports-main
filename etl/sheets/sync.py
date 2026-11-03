@@ -20,8 +20,11 @@ Every column of the main sheet gets one of four treatments:
             profile): cn_unique_key is account + center + type + focus +
             city, then a running number per repeat in row order, exactly
             like the data team's COUNTIF formula.
-  blank     anything else (lat, lng, and the profile's sync.skip columns):
-            left empty, to be filled by hand.
+  geo       lat and lng from the row's city, state and country
+            ([sync.geo] in the profile, sheets/geo.py): TBA city takes the
+            state's coordinates, TBA city and state the country's.
+  blank     anything else (the profile's sync.skip columns): left empty,
+            to be filled by hand.
 
 The rows come in the source's order. Rows are not matched one by one: the
 main sheet's rows are replaced as a whole, so nothing of the old rows
@@ -63,6 +66,7 @@ from common.google import (
 )
 from common.tui import console
 from sheets import source
+from sheets.geo import Gazetteer
 from sheets.rules import ALL_RULES
 
 FIRST_DATA_ROW = 2
@@ -83,6 +87,7 @@ class Plan:
     numeric: set[str] = field(default_factory=set)
     dates: set[str] = field(default_factory=set)
     key_parts: dict[str, list[str]] = field(default_factory=dict)  # column -> parts
+    geo: dict[str, str] = field(default_factory=dict)  # [sync.geo], when lat/lng are filled
 
 
 def is_formula(value) -> bool:
@@ -90,7 +95,13 @@ def is_formula(value) -> bool:
 
 
 def plan_columns(
-    sheet: str, headers: list[str], values: list[list], formulas: list[list], skip: set[str], keys: dict | None = None
+    sheet: str,
+    headers: list[str],
+    values: list[list],
+    formulas: list[list],
+    skip: set[str],
+    keys: dict | None = None,
+    geo: dict | None = None,
 ) -> Plan:
     """Decide each of our columns' treatment. values are our sheet's
     unformatted data rows, formulas the same rows rendered as formulas."""
@@ -105,6 +116,11 @@ def plan_columns(
         elif keys and column in keys and all(p in headers for p in keys[column]):
             plan.kinds[column] = "key"
             plan.key_parts[column] = keys[column]
+        elif geo and column in (geo.get("lat"), geo.get("lng")) and all(
+            geo.get(p) in headers for p in ("city", "state", "country")
+        ):
+            plan.kinds[column] = "geo"
+            plan.geo = geo
         elif rows and len(formula_cells) == rows:
             plan.kinds[column] = "formula"
             plan.formulas[column] = formulas[0][c]
@@ -148,7 +164,7 @@ def convert(value, column: str, plan: Plan):
     return value
 
 
-def build_rows(plan: Plan, src_headers: list[str], src_rows: list[list]) -> list[list]:
+def build_rows(plan: Plan, src_headers: list[str], src_rows: list[list], gazetteer: Gazetteer | None = None) -> list[list]:
     """Our rows from theirs. A formula column holds None (not written)."""
     index = {h: i for i, h in enumerate(src_headers) if h}
     out = []
@@ -168,7 +184,18 @@ def build_rows(plan: Plan, src_headers: list[str], src_rows: list[list]) -> list
                 new.append("")
         out.append(new)
     fill_keys(plan, out)
+    if plan.geo and gazetteer is not None:
+        fill_geo(plan, out, gazetteer)
     return out
+
+
+def fill_geo(plan: Plan, rows: list[list], gazetteer: Gazetteer) -> None:
+    """lat and lng from each row's city, state and country (sheets/geo.py)."""
+    at = {part: plan.headers.index(column) for part, column in plan.geo.items()}
+    for row in rows:
+        found = gazetteer.find(row[at["city"]], row[at["state"]], row[at["country"]])
+        row[at["lat"]] = found.lat if found else ""
+        row[at["lng"]] = found.lng if found else ""
 
 
 def part_text(value) -> str:
@@ -278,9 +305,10 @@ def report(job: SheetJob, show: int) -> None:
         "formula": "formula filled down",
         "constant": "same value on every row",
         "key": "built from other columns",
+        "geo": "from city, state, country",
         "blank": "left blank, fill by hand",
     }
-    for kind in ("copy", "key", "formula", "constant", "blank"):
+    for kind in ("copy", "key", "geo", "formula", "constant", "blank"):
         cols = by_kind.get(kind, [])
         if not cols:
             continue
@@ -453,6 +481,7 @@ def main() -> None:
     )
 
     jobs: list[SheetJob] = []
+    gazetteer = Gazetteer()
     with tui.loading(len(args.sheet_list) * 2, "Reading") as bar:
         for sheet in args.sheet_list:
             bar.start(f"Reading their '{active.tab(sheet)}'")
@@ -461,19 +490,38 @@ def main() -> None:
             bar.start(f"Reading our '{sheet}'")
             ws, headers, old_rows, old_formulas = read_target(ours, sheet)
             bar.done()
-            plan = plan_columns(sheet, headers, old_rows, old_formulas, skip, active.sync_keys)
-            jobs.append(SheetJob(sheet, tab, src_headers, src_rows, ws, plan, old_rows, build_rows(plan, src_headers, src_rows)))
+            plan = plan_columns(sheet, headers, old_rows, old_formulas, skip, active.sync_keys, active.sync_geo)
+            jobs.append(
+                SheetJob(sheet, tab, src_headers, src_rows, ws, plan, old_rows, build_rows(plan, src_headers, src_rows, gazetteer))
+            )
 
     for job in jobs:
         report(job, args.limit)
+    if gazetteer.added:
+        tui.line(
+            "info",
+            f"Looked up {tui.plural(len(gazetteer.added), 'new place')} on OpenStreetMap: "
+            + ", ".join(f"{r['city']}, {r['state']}, {r['country']}" for r in gazetteer.added)
+            + (" (saved to etl/sources/geo.csv)" if args.apply else " (saved to etl/sources/geo.csv with --apply)"),
+        )
+    if gazetteer.failed:
+        tui.line(
+            "warn",
+            f"No coordinates found for {', '.join(', '.join(p for p in f if p) for f in gazetteer.failed)}: "
+            "lat and lng stay blank. Add the place to etl/sources/geo.csv by hand.",
+        )
 
     tui.section("Summary")
     total = sum(len(j.new_rows) for j in jobs)
     blanks = sorted({c for j in jobs for c in j.plan.headers if j.plan.kinds[c] == "blank"})
-    after = [
-        f"Fill by hand afterwards: {', '.join(blanks)}." if blanks else "",
-        "Do not import until then: etl/validate.sh fails while required columns are blank.",
-    ]
+    after = (
+        [
+            f"Fill by hand afterwards: {', '.join(blanks)}.",
+            "Do not import until then: etl/validate.sh fails while required columns are blank.",
+        ]
+        if blanks
+        else []
+    )
     if not args.apply:
         tui.verdict(
             "warn",
@@ -495,6 +543,7 @@ def main() -> None:
             tui.verdict("warn", "Nothing written", [])
             return
 
+    gazetteer.save()
     with console.status("Backing up the main sheet ...", spinner_style="info"):
         try:
             url = backup_spreadsheet(SPREADSHEET_ID, ours.title, backup_folder)

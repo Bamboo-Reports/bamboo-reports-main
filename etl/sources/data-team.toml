@@ -43,6 +43,17 @@ skip = []
 [sync.keys.cn_unique_key]
 parts = ["account_global_legal_name", "center_name", "center_type", "center_focus", "center_city"]
 
+# lat and lng filled by sync from etl/sources/geo.csv (see sheets/geo.py):
+# city + state + country; state + country when the city is TBA; country
+# when both are TBA. A place not in geo.csv is looked up on OpenStreetMap
+# and added to it.
+[sync.geo]
+lat = "lat"
+lng = "lng"
+city = "center_city"
+state = "center_state"
+country = "center_country"
+
 # -- accounts ------------------------------------------------------------------
 [accounts]
 tab = "BR"

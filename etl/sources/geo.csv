@@ -1,0 +1,284 @@
+city,state,country,lat,lng,source
+Amalapuram,Andhra Pradesh,India,16.578300,82.006500,main sheet
+Anakapalli,Andhra Pradesh,India,17.6896435,83.0023634,main sheet
+Anantapur,Andhra Pradesh,India,14.6824455,77.6017089,main sheet
+Bhimadole,Andhra Pradesh,India,16.8108022,81.2636995,main sheet
+Chittoor,Andhra Pradesh,India,13.217176,79.1003289,main sheet
+Guntur,Andhra Pradesh,India,16.3066525,80.4365402,main sheet
+Jaggaiahpet,Andhra Pradesh,India,16.898534,80.103347,main sheet
+Kadapa,Andhra Pradesh,India,14.4698779,78.8241068,main sheet
+Kakinada,Andhra Pradesh,India,16.9478217,82.2420317,main sheet
+Nellore,Andhra Pradesh,India,14.4425987,79.98645599999999,main sheet
+Nuzividu,Andhra Pradesh,India,16.780001,80.849998,main sheet
+Rajamahendravaram,Andhra Pradesh,India,17.0095854,81.7797234,main sheet
+Somandepalle,Andhra Pradesh,India,14.0106722,77.6081315,main sheet
+Sri City,Andhra Pradesh,India,13.4936889,79.99759159999999,main sheet
+Srikakulam,Andhra Pradesh,India,18.2949165,83.89380179999999,main sheet
+Tirupati,Andhra Pradesh,India,13.6287557,79.4191795,main sheet
+Vijayawada,Andhra Pradesh,India,16.5061743,80.6480153,main sheet
+Visakhapatnam,Andhra Pradesh,India,17.7343219,83.3129841,main sheet
+Vizianagaram,Andhra Pradesh,India,18.1066576,83.39555059999999,main sheet
+Guwahati,Assam,India,26.1157917,91.7085933,main sheet
+Jagiroad,Assam,India,26.1258644,92.2008692,main sheet
+Nalbari,Assam,India,26.442907,91.441039,main sheet
+Tezpur,Assam,India,26.6528495,92.7925592,main sheet
+Tinsukia,Assam,India,27.4885539,95.355758,main sheet
+Madhepura,Bihar,India,25.9239677,86.7946387,main sheet
+Marhowrah,Bihar,India,25.9701764,84.8763365,main sheet
+Patna,Bihar,India,25.5940947,85.1375645,main sheet
+Chandigarh,Chandigarh,India,30.7333148,76.7794179,main sheet
+Bhilai,Chhattisgarh,India,21.1938475,81.3509416,main sheet
+Kirandul,Chhattisgarh,India,18.6333668,81.2558974,main sheet
+Raipur,Chhattisgarh,India,21.2513844,81.62964130000002,main sheet
+Daman,Dadra and Nagar Haveli and Daman and Diu,India,20.3977145,72.8319638,main sheet
+Silvassa,Dadra and Nagar Haveli and Daman and Diu,India,20.2753406,73.0072986,main sheet
+New Delhi,Delhi,India,28.6139298,77.2088282,main sheet
+Aldona,Goa,India,15.5944122,73.8744194,main sheet
+Mapusa,Goa,India,15.5901641,73.809958,main sheet
+Mormugao,Goa,India,15.3889087,73.81656679999999,main sheet
+Panaji,Goa,India,15.5009538,73.8293928,main sheet
+Ponda,Goa,India,15.4026927,74.0078049,main sheet
+Verna,Goa,India,15.2646548,73.95949399999999,main sheet
+Ahmedabad,Gujarat,India,23.0225237,72.57128639999999,main sheet
+Anand,Gujarat,India,22.5543092,72.9512021,main sheet
+Anjar,Gujarat,India,23.11316,70.02671,main sheet
+Bhachau,Gujarat,India,23.2930388,70.339045,main sheet
+Bhagapura,Gujarat,India,23.3334,72.1086,main sheet
+Bharuch,Gujarat,India,21.7024318,73.0005587,main sheet
+Bhuj,Gujarat,India,23.2419997,69.6669324,main sheet
+Dahej,Gujarat,India,21.7132151,72.5842502,main sheet
+Dekavada,Gujarat,India,23.3545308,72.15938419999999,main sheet
+Dholera,Gujarat,India,22.2498636,72.1934421,main sheet
+Gandhidham,Gujarat,India,23.075297,70.133673,main sheet
+Gandhinagar,Gujarat,India,23.2156354,72.63694149999999,main sheet
+Halol,Gujarat,India,22.5045713,73.4713666,main sheet
+Himatnagar,Gujarat,India,23.5968857,72.9630378,main sheet
+Jamnagar,Gujarat,India,22.4707019,70.05773,main sheet
+Kadi,Gujarat,India,23.2973208,72.33024209999999,main sheet
+Kalol,Gujarat,India,23.2418194,72.49297159999999,main sheet
+Kheda,Gujarat,India,22.750154,72.686499,main sheet
+Mehsana,Gujarat,India,23.5879607,72.36932519999999,main sheet
+Morbi,Gujarat,India,22.8251874,70.84908089999999,main sheet
+Mundra,Gujarat,India,22.8395642,69.72407489999999,main sheet
+Navsari,Gujarat,India,20.9516798,72.9262324,main sheet
+Palanpur,Gujarat,India,24.1724338,72.434581,main sheet
+Panoli,Gujarat,India,21.5352535,72.97013129999999,main sheet
+Rajkot,Gujarat,India,22.3038945,70.80215989999999,main sheet
+Sanand,Gujarat,India,22.9919637,72.3772986,main sheet
+Surat,Gujarat,India,21.1980619,72.8297585,main sheet
+TBA,Gujarat,India,22.309425,72.136230,main sheet
+Vadodara,Gujarat,India,22.3001515,73.2105012,main sheet
+Valsad,Gujarat,India,20.6098893,72.93041099999999,main sheet
+Vapi,Gujarat,India,20.3893155,72.9106202,main sheet
+Vithalapur,Gujarat,India,23.363723,72.05422349999999,main sheet
+Bahadurgarh,Haryana,India,28.6913756,76.9314064,main sheet
+Bawal,Haryana,India,28.1094308,76.6025423,main sheet
+Bhiwani,Haryana,India,28.7984414,76.14437149999999,main sheet
+Faridabad,Haryana,India,28.4089123,77.3177894,main sheet
+Gurugram,Haryana,India,28.4594965,77.0266383,main sheet
+Jhajjar,Haryana,India,28.6054875,76.6537749,main sheet
+Karnal,Haryana,India,29.6856929,76.9904825,main sheet
+Kharkhoda,Haryana,India,28.8745856,76.91252279999999,main sheet
+Manesar,Haryana,India,28.3438489,76.9430867,main sheet
+Palwal,Haryana,India,28.1472852,77.3259878,main sheet
+Panchkula,Haryana,India,30.6942091,76.860565,main sheet
+Rewari,Haryana,India,28.1919738,76.6190774,main sheet
+Rohtak,Haryana,India,28.8955152,76.606611,main sheet
+Samalkha,Haryana,India,29.2405272,77.0117647,main sheet
+Sonipat,Haryana,India,28.99308229999999,77.0150735,main sheet
+TBA,Haryana,India,29.0587757,76.085601,main sheet
+Baddi,Himachal Pradesh,India,30.9578258,76.79135579999999,main sheet
+Kala Amb,Himachal Pradesh,India,30.4992306,77.20702589999999,main sheet
+Sirmaur,Himachal Pradesh,India,30.5592557,77.2952108,main sheet
+Solan,Himachal Pradesh,India,30.9084245,77.09990309999999,main sheet
+Una,Himachal Pradesh,India,31.4684649,76.2708152,main sheet
+Jammu,Jammu and Kashmir,India,32.7266016,74.8570259,main sheet
+Gumia,Jharkhand,India,23.8012672,85.8238938,main sheet
+Jamshedpur,Jharkhand,India,22.8045665,86.2028754,main sheet
+Ranchi,Jharkhand,India,23.3440997,85.309562,main sheet
+Bagalkot,Karnataka,India,16.181700,75.696000,main sheet
+Ballari,Karnataka,India,15.1393932,76.9214428,main sheet
+Belagavi,Karnataka,India,15.8608974,74.5129177,main sheet
+Belur,Karnataka,India,13.166287,75.8669422,main sheet
+Bengaluru,Karnataka,India,12.9628957,77.57754,main sheet
+Dharwad,Karnataka,India,15.4589466,75.00785859999999,main sheet
+Harihar,Karnataka,India,14.5152216,75.8071609,main sheet
+Harohalli,Karnataka,India,12.6815831,77.4731876,main sheet
+Haveri,Karnataka,India,14.7950698,75.39906739999999,main sheet
+Hoskote,Karnataka,India,13.0692593,77.7982428,main sheet
+Hubballi,Karnataka,India,15.3647083,75.1239547,main sheet
+Kanakapura,Karnataka,India,12.5462442,77.4198823,main sheet
+Kodagu,Karnataka,India,12.4183164,75.7407934,main sheet
+Kolar,Karnataka,India,13.1357262,78.13259049999999,main sheet
+Malur,Karnataka,India,13.0037225,77.9383033,main sheet
+Mangaluru,Karnataka,India,12.8854777,74.8388112,main sheet
+Manipal,Karnataka,India,13.352400,74.793700,main sheet
+Moodbidri,Karnataka,India,13.070000,74.996400,main sheet
+Mysuru,Karnataka,India,12.2958104,76.6393805,main sheet
+Nanjangud,Karnataka,India,12.1159697,76.678249,main sheet
+Ranebennur,Karnataka,India,14.617883,75.6302226,main sheet
+Shivamogga,Karnataka,India,13.9299299,75.568101,main sheet
+Tumakuru,Karnataka,India,13.3378762,77.117325,main sheet
+Vemagal,Karnataka,India,13.150000,78.000000,main sheet
+Vijayapura,Karnataka,India,16.830200,75.710000,main sheet
+Ernakulam,Kerala,India,9.9816358,76.2998842,main sheet
+Kochi,Kerala,India,9.9312328,76.26730409999999,main sheet
+Koratty,Kerala,India,10.2649196,76.34871509999999,main sheet
+Palakkad,Kerala,India,10.7733121,76.6580401,main sheet
+Thiruvananthapuram,Kerala,India,8.5241391,76.9366376,main sheet
+Bhind,Madhya Pradesh,India,26.5637768,78.78609159999999,main sheet
+Bhopal,Madhya Pradesh,India,23.2599333,77.412615,main sheet
+Chhindwara,Madhya Pradesh,India,22.057437,78.9381729,main sheet
+Dewas,Madhya Pradesh,India,22.9675929,76.0534454,main sheet
+Dhar,Madhya Pradesh,India,22.5980549,75.3039628,main sheet
+Gwalior,Madhya Pradesh,India,26.2124007,78.1772053,main sheet
+Indore,Madhya Pradesh,India,22.7195687,75.8577258,main sheet
+Katni,Madhya Pradesh,India,23.8343441,80.38938139999999,main sheet
+Mandideep,Madhya Pradesh,India,23.0992796,77.5114731,main sheet
+Nagda,Madhya Pradesh,India,23.4561435,75.42266649999999,main sheet
+Pithampur,Madhya Pradesh,India,22.611121,75.6772689,main sheet
+Ujjain,Madhya Pradesh,India,23.1764665,75.7885163,main sheet
+Ahilyanagar,Maharashtra,India,19.0914655,74.734655,main sheet
+Ambernath,Maharashtra,India,19.1825167,73.19260229999999,main sheet
+Amravati,Maharashtra,India,20.9319821,77.7523039,main sheet
+Amshet,Maharashtra,India,18.1189823,73.5329091,main sheet
+Badhalawadi,Maharashtra,India,18.8086989,73.7126169,main sheet
+Baramati,Maharashtra,India,18.151400,74.577500,main sheet
+Bhiwandi,Maharashtra,India,19.2898318,73.0686209,main sheet
+Chakan,Maharashtra,India,18.7632075,73.8613203,main sheet
+Chandrapur,Maharashtra,India,19.9615398,79.2961468,main sheet
+Chhatrapati Sambhajinagar,Maharashtra,India,19.875754,75.3393195,main sheet
+Chiplun,Maharashtra,India,17.5319037,73.5151341,main sheet
+Deulgaon Raja,Maharashtra,India,20.0186403,76.03527749999999,main sheet
+Dombivli,Maharashtra,India,19.2149032,73.0908247,main sheet
+Gondia,Maharashtra,India,21.4549477,80.19607119999999,main sheet
+Jalgaon,Maharashtra,India,21.0076578,75.5626039,main sheet
+Khalapur,Maharashtra,India,18.8305523,73.2846445,main sheet
+Kolhapur,Maharashtra,India,16.706369,74.2481772,main sheet
+Latur,Maharashtra,India,18.4087934,76.5603828,main sheet
+Malkapur,Maharashtra,India,20.8843273,76.2026077,main sheet
+Mumbai,Maharashtra,India,18.9582347,72.8319514,main sheet
+Nagpur,Maharashtra,India,21.1458004,79.0881546,main sheet
+Nashik,Maharashtra,India,19.9993217,73.79001880000001,main sheet
+Navi Mumbai,Maharashtra,India,19.0330488,73.0296625,main sheet
+Palghar,Maharashtra,India,19.6967136,72.769885,main sheet
+Pune,Maharashtra,India,18.5246091,73.8786239,main sheet
+Raigad,Maharashtra,India,18.6584525,72.8773176,main sheet
+Ratnagiri,Maharashtra,India,16.990308,73.31184069999999,main sheet
+Satara,Maharashtra,India,17.688671,74.005667,main sheet
+Sawantwadi,Maharashtra,India,15.905263,73.821320,main sheet
+Sinnar,Maharashtra,India,19.8479813,73.9889645,main sheet
+Solapur,Maharashtra,India,17.6700736,75.9010467,main sheet
+TBA,Maharashtra,India,19.7514798,75.7138884,main sheet
+Taloja,Maharashtra,India,19.0325926,73.0853976,main sheet
+Thane,Maharashtra,India,19.2122949,72.97716609999999,main sheet
+Shillong,Meghalaya,India,25.5787726,91.8932535,main sheet
+Bhadrak,Odisha,India,21.0573616,86.4962996,main sheet
+Bhubaneswar,Odisha,India,20.2959847,85.8246101,main sheet
+Cuttack,Odisha,India,20.462521,85.8829895,main sheet
+Dabuna,Odisha,India,21.8424227,85.4104706,main sheet
+Gopalpur,Odisha,India,19.2647208,84.8620054,main sheet
+Jharsuguda,Odisha,India,21.8554375,84.0061661,main sheet
+Khordha,Odisha,India,20.1862584,85.62227419999999,main sheet
+Paradeep,Odisha,India,20.3165523,86.6113628,main sheet
+Rourkela,Odisha,India,22.260423,84.8535844,main sheet
+Mahe,Puducherry,India,11.7001957,75.5343014,main sheet
+Puducherry,Puducherry,India,11.9415915,79.8083133,main sheet
+Bathinda,Punjab,India,30.210994,74.9454745,main sheet
+Fatehgarh Sahib,Punjab,India,30.6435345,76.39703,main sheet
+Fazilka,Punjab,India,30.4036478,74.0279621,main sheet
+Lalru,Punjab,India,30.4928634,76.8019683,main sheet
+Ludhiana,Punjab,India,30.900965,75.8572758,main sheet
+Moga,Punjab,India,30.8230114,75.17344709999999,main sheet
+Mohali,Punjab,India,30.7046486,76.71787259999999,main sheet
+Morinda,Punjab,India,30.791232,76.502549,main sheet
+Nabha,Punjab,India,30.3730177,76.1469551,main sheet
+Nawanshahr,Punjab,India,31.1255583,76.118642,main sheet
+Patiala,Punjab,India,30.3397809,76.3868797,main sheet
+Rajpura,Punjab,India,30.4765796,76.5905317,main sheet
+Tarn Taran Sahib,Punjab,India,31.4538668,74.9267599,main sheet
+Ajmer,Rajasthan,India,26.4498954,74.6399163,main sheet
+Alwar,Rajasthan,India,27.5529907,76.6345735,main sheet
+Behror,Rajasthan,India,27.8946773,76.2820297,main sheet
+Bhilwara,Rajasthan,India,25.3407388,74.63131829999999,main sheet
+Bhiwadi,Rajasthan,India,28.2014149,76.8275503,main sheet
+Bikaner,Rajasthan,India,28.0229348,73.3119159,main sheet
+Bundi,Rajasthan,India,25.4325869,75.6482726,main sheet
+Chittorgarh,Rajasthan,India,24.8829177,74.6229699,main sheet
+Jaipur,Rajasthan,India,26.9124336,75.7872709,main sheet
+Jaisalmer,Rajasthan,India,26.9157487,70.9083443,main sheet
+Jodhpur,Rajasthan,India,26.2389469,73.02430939999999,main sheet
+Neemrana,Rajasthan,India,27.9796711,76.3961899,main sheet
+Pilani,Rajasthan,India,28.3802101,75.6091696,main sheet
+Rajsamand,Rajasthan,India,25.0583257,73.88600339999999,main sheet
+Shahjahanpur,Rajasthan,India,27.9976473,76.452782,main sheet
+Udaipur,Rajasthan,India,24.585445,73.712479,main sheet
+TBA,TBA,India,20.593684,78.96288,main sheet
+Ambasamudram,Tamil Nadu,India,8.7035955,77.4485388,main sheet
+Ambur,Tamil Nadu,India,12.7801672,78.71772709999999,main sheet
+Chengalpattu,Tamil Nadu,India,12.6819372,79.98884129999999,main sheet
+Chennai,Tamil Nadu,India,13.0570568,80.2098219,main sheet
+Coimbatore,Tamil Nadu,India,10.9973691,76.9588876,main sheet
+Cuddalore,Tamil Nadu,India,11.7480419,79.7713687,main sheet
+Dindigul,Tamil Nadu,India,10.361965,77.9735844,main sheet
+Erode,Tamil Nadu,India,11.3410364,77.7171642,main sheet
+Hosur,Tamil Nadu,India,12.7409127,77.8252923,main sheet
+Kanchipuram,Tamil Nadu,India,12.8371787,79.7041698,main sheet
+Krishnagiri,Tamil Nadu,India,12.5247853,78.216004,main sheet
+Madurai,Tamil Nadu,India,9.9252007,78.1197754,main sheet
+Manapparai,Tamil Nadu,India,10.622817,78.447189,main sheet
+Nagapattinam,Tamil Nadu,India,10.7672313,79.8448512,main sheet
+Nellikuppam,Tamil Nadu,India,11.7768452,79.6703186,main sheet
+Nilakottai,Tamil Nadu,India,10.1647481,77.85318380000001,main sheet
+Panapakkam,Tamil Nadu,India,12.9212731,79.5646536,main sheet
+Salem,Tamil Nadu,India,11.6751854,78.1222336,main sheet
+TBA,Tamil Nadu,India,11.1271225,78.6568942,main sheet
+Thoothukudi,Tamil Nadu,India,8.764166099999999,78.1348361,main sheet
+Tiruchirappalli,Tamil Nadu,India,10.7904833,78.7046725,main sheet
+Tirunelveli,Tamil Nadu,India,8.715017999999999,77.765628,main sheet
+Tiruvallur,Tamil Nadu,India,13.1226901,79.91176899999999,main sheet
+Tiruvannamalai,Tamil Nadu,India,12.2252841,79.07469569999999,main sheet
+Vallam,Tamil Nadu,India,10.7140158,79.0701548,main sheet
+Vellore,Tamil Nadu,India,12.9235541,79.1330768,main sheet
+Hyderabad,Telangana,India,17.406498,78.47724389999999,main sheet
+Jadcherla,Telangana,India,16.7629646,78.1442814,main sheet
+Khammam,Telangana,India,17.2472528,80.1514447,main sheet
+Kothur,Telangana,India,17.144727,78.288574,main sheet
+Mahbubnagar,Telangana,India,16.7488379,78.00351719999999,main sheet
+Medak,Telangana,India,18.0462192,78.2631756,main sheet
+Patancheruvu,Telangana,India,17.5287427,78.266725,main sheet
+Toopran,Telangana,India,17.8411095,78.47716270000001,main sheet
+Warangal,Telangana,India,17.9692624,79.59263039999999,main sheet
+Aligarh,Uttar Pradesh,India,27.8973944,78.0880129,main sheet
+Amroha,Uttar Pradesh,India,28.9051778,78.46731799999999,main sheet
+Bareilly,Uttar Pradesh,India,28.3670355,79.4304381,main sheet
+Ghaziabad,Uttar Pradesh,India,28.6691565,77.45375779999999,main sheet
+Kanpur,Uttar Pradesh,India,26.449923,80.3318736,main sheet
+Khurja,Uttar Pradesh,India,28.2489801,77.854903,main sheet
+Lucknow,Uttar Pradesh,India,26.8466937,80.94616599999999,main sheet
+Mathura,Uttar Pradesh,India,27.4924134,77.673673,main sheet
+Meerut,Uttar Pradesh,India,28.9844618,77.7064137,main sheet
+Noida,Uttar Pradesh,India,28.5355161,77.3910265,main sheet
+Orai,Uttar Pradesh,India,25.987523,79.4488695,main sheet
+Prayagraj,Uttar Pradesh,India,25.468338,81.85460189999999,main sheet
+Sambhal,Uttar Pradesh,India,28.5903614,78.5717631,main sheet
+Sumerpur,Uttar Pradesh,India,25.8263937,80.1573915,main sheet
+TBA,Uttar Pradesh,India,27.5705886,80.0981869,main sheet
+Unnao,Uttar Pradesh,India,26.536938,80.489960,main sheet
+Varanasi,Uttar Pradesh,India,25.3176452,82.9739144,main sheet
+Dehradun,Uttarakhand,India,30.3164945,78.03219179999999,main sheet
+Haridwar,Uttarakhand,India,29.9456906,78.16424780000001,main sheet
+Kashipur,Uttarakhand,India,29.2104232,78.9618845,main sheet
+Roorkee,Uttarakhand,India,29.8542626,77.8880002,main sheet
+Rudrapur,Uttarakhand,India,28.9875082,79.4141214,main sheet
+Sitarganj,Uttarakhand,India,28.9235479,79.70072110000001,main sheet
+Bankura,West Bengal,India,23.2312686,87.07838749999999,main sheet
+Durgapur,West Bengal,India,23.5204443,87.3119227,main sheet
+Haldia,West Bengal,India,22.0627164,88.0832934,main sheet
+Jalpaiguri,West Bengal,India,26.5214579,88.7195567,main sheet
+Kalyani,West Bengal,India,22.9747271,88.43372099999999,main sheet
+Kharagpur,West Bengal,India,22.3451723,87.3047053,main sheet
+Kolkata,West Bengal,India,22.5743545,88.3628734,main sheet
+Midnapore,West Bengal,India,22.4257701,87.3200083,main sheet
+Serampore,West Bengal,India,22.7510165,88.3405111,main sheet
+Siliguri,West Bengal,India,26.7271012,88.39528609999999,main sheet

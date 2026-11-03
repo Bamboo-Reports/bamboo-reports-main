@@ -25,6 +25,7 @@ dependencies = [
     { name = "pandas" },
     { name = "psycopg2-binary" },
     { name = "python-dotenv" },
+    { name = "requests" },
     { name = "rich" },
     { name = "sqlalchemy" },
 ]
@@ -44,6 +45,7 @@ requires-dist = [
     { name = "pandas" },
     { name = "psycopg2-binary" },
     { name = "python-dotenv" },
+    { name = "requests", specifier = ">=2.34.2" },
     { name = "rich" },
     { name = "sqlalchemy" },
 ]

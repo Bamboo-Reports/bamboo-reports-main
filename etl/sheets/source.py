@@ -64,6 +64,9 @@ class Source:
     # Our columns sheets.sync builds: column -> the columns joined, then a
     # running number per repeat (cn_unique_key).
     sync_keys: dict[str, list[str]] = field(default_factory=dict)
+    # sheets.sync fills these from sheets/geo.py: lat, lng, city, state,
+    # country -> our column names. Empty when the profile has no [sync.geo].
+    sync_geo: dict[str, str] = field(default_factory=dict)
 
     @property
     def is_main(self) -> bool:
@@ -214,6 +217,7 @@ def load(name: str) -> Source:
             str(column): [str(p) for p in spec.get("parts", [])]
             for column, spec in data.get("sync", {}).get("keys", {}).items()
         },
+        sync_geo={str(k): str(v) for k, v in data.get("sync", {}).get("geo", {}).items()},
     )
 
 
