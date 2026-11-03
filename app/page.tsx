@@ -295,6 +295,8 @@ function DashboardContent(): React.JSX.Element | null {
     setQuery: setSearchQuery,
     results: searchResults,
     isSearching,
+    focus: searchFocus,
+    setFocus: setSearchFocus,
     isOpen: isSearchOpen,
     setIsOpen: setIsSearchOpen,
     handleOpen: handleSearchOpen,
@@ -1370,6 +1372,8 @@ function DashboardContent(): React.JSX.Element | null {
         onQueryChange={setSearchQuery}
         results={searchResults}
         isSearching={isSearching}
+        focus={searchFocus}
+        onFocusChange={setSearchFocus}
         recentItems={recentItems}
         recentSearches={recentSearches}
         onSelectResult={handleSearchResultSelect}

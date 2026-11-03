@@ -2,7 +2,7 @@ import { extractBearerToken, resolveAuthenticatedUserId } from "@/lib/auth/serve
 import { enforceRateLimit } from "@/lib/rate-limit/server"
 import { createLogger } from "@/lib/logger"
 import { queryWarehouse } from "@/lib/db/warehouse"
-import { buildAccountSearch, buildCenterSearch, buildProspectSearch, MIN_QUERY_LENGTH } from "@/lib/search/search-sql"
+import { buildAccountSearch, buildCenterSearch, buildProspectSearch, MAX_PER_GROUP, MAX_SINGLE_GROUP, MIN_QUERY_LENGTH } from "@/lib/search/search-sql"
 import { ACCOUNT_PROJECTION, CENTER_COLUMNS, PROSPECT_COLUMNS } from "@/lib/dashboard/entity-columns"
 import { dashboardCacheTtlMs, getOrCompute } from "@/lib/cache/memory"
 
@@ -29,7 +29,7 @@ const joinParts = (parts: Array<string | null | undefined>, sep: string) =>
 
 const total = (rows: Record<string, unknown>[]) => Number(rows[0]?.total ?? 0)
 
-// Full rows for the (at most 10) hits per group, keyed by id, so the client
+// Full rows for the hits per group (10, or 50 for the type search is narrowed to), keyed by id, so the client
 // can open detail dialogs straight from a result like the in-browser index did.
 async function hydrate(
   table: "accounts" | "centers" | "prospects",
@@ -59,7 +59,12 @@ export async function GET(request: Request) {
   // awaited before any warehouse work so an over-limit caller never reaches it.
   const limitedPromise = enforceRateLimit({ userId, bucket: "search" })
 
-  const term = (new URL(request.url).searchParams.get("q") ?? "").toLowerCase().trim()
+  const params = new URL(request.url).searchParams
+  const term = (params.get("q") ?? "").toLowerCase().trim()
+  // Narrowed to one type ("Show all centres"): that group returns more hits.
+  const rawType = params.get("type")
+  const focus = rawType === "accounts" || rawType === "centers" || rawType === "prospects" ? rawType : null
+  const limitFor = (group: "accounts" | "centers" | "prospects") => (group === focus ? MAX_SINGLE_GROUP : MAX_PER_GROUP)
   const empty = { items: [], totalMatches: 0 }
   if (term.length < MIN_QUERY_LENGTH) {
     return json({ accounts: empty, centers: empty, prospects: empty, total: 0 })
@@ -70,12 +75,12 @@ export async function GET(request: Request) {
 
   try {
     const body = await getOrCompute(
-      `search:${term}`,
+      focus ? `search:${focus}:${term}` : `search:${term}`,
       searchCacheTtl(),
       async () => {
-        const acc = buildAccountSearch(term)
-        const cen = buildCenterSearch(term)
-        const pro = buildProspectSearch(term)
+        const acc = buildAccountSearch(term, limitFor("accounts"))
+        const cen = buildCenterSearch(term, limitFor("centers"))
+        const pro = buildProspectSearch(term, limitFor("prospects"))
         const [aItems, aCount, cItems, cCount, pItems, pCount] = await Promise.all([
           queryWarehouse<Record<string, string | null>>(acc.items),
           queryWarehouse(acc.count),

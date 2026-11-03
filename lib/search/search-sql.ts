@@ -10,6 +10,8 @@ import type { SqlQuery } from "@/lib/dashboard/filtering-sql"
  */
 
 export const MAX_PER_GROUP = 10
+/** Results for one type when search is narrowed to it ("Show all centres"). */
+export const MAX_SINGLE_GROUP = 50
 export const MAX_AUTOCOMPLETE = 50
 export const MIN_QUERY_LENGTH = 2
 
@@ -29,7 +31,7 @@ const aliasInSubquery = (p: string) =>
 
 export type SearchQueries = { items: SqlQuery; count: SqlQuery }
 
-export function buildAccountSearch(term: string): SearchQueries {
+export function buildAccountSearch(term: string, limit: number = MAX_PER_GROUP): SearchQueries {
   const { starts, contains } = patterns(term)
   const where = (p: string) =>
     `(account_global_legal_name ilike ${p} or account_hq_industry ilike ${p} or account_hq_country ilike ${p} or ${aliasInSubquery(p)})`
@@ -38,7 +40,7 @@ export function buildAccountSearch(term: string): SearchQueries {
       text: `select account_global_legal_name as id, account_hq_industry as industry, account_hq_country as country,
         (case when account_global_legal_name ilike $1 then 1 else 0 end) as sw
         from accounts where ${where("$2")}
-        order by sw desc, account_global_legal_name asc limit ${MAX_PER_GROUP}`,
+        order by sw desc, account_global_legal_name asc limit ${Math.max(1, Math.floor(limit))}`,
       values: [starts, contains],
     },
     count: { text: `select count(*)::int as total from accounts where ${where("$1")}`, values: [contains] },
@@ -47,7 +49,7 @@ export function buildAccountSearch(term: string): SearchQueries {
 
 const CENTER_TITLE = "case when center_name is null or center_name = '' then cn_unique_key else center_name end"
 
-export function buildCenterSearch(term: string): SearchQueries {
+export function buildCenterSearch(term: string, limit: number = MAX_PER_GROUP): SearchQueries {
   const { starts, contains } = patterns(term)
   const where = (p: string) =>
     `((${CENTER_TITLE}) ilike ${p} or account_global_legal_name ilike ${p} or center_city ilike ${p} or center_state ilike ${p})`
@@ -56,7 +58,7 @@ export function buildCenterSearch(term: string): SearchQueries {
       text: `select cn_unique_key as id, (${CENTER_TITLE}) as title, center_city as city, center_state as state, center_country as country,
         (case when (${CENTER_TITLE}) ilike $1 then 1 else 0 end) as sw
         from centers where ${where("$2")}
-        order by sw desc, title asc, cn_unique_key asc limit ${MAX_PER_GROUP}`,
+        order by sw desc, title asc, cn_unique_key asc limit ${Math.max(1, Math.floor(limit))}`,
       values: [starts, contains],
     },
     count: { text: `select count(*)::int as total from centers where ${where("$1")}`, values: [contains] },
@@ -73,7 +75,7 @@ const PROSPECT_FULLNAME =
   "when coalesce(prospect_last_name, '') <> '' then prospect_last_name " +
   "else '' end"
 
-export function buildProspectSearch(term: string): SearchQueries {
+export function buildProspectSearch(term: string, limit: number = MAX_PER_GROUP): SearchQueries {
   const { starts, contains } = patterns(term)
   const where = (p: string) =>
     `((${PROSPECT_FULLNAME}) ilike ${p} or prospect_title ilike ${p} or head_type ilike ${p} or account_global_legal_name ilike ${p} or center_name ilike ${p} or prospect_email ilike ${p} or ps_unique_key ilike ${p})`
@@ -82,7 +84,7 @@ export function buildProspectSearch(term: string): SearchQueries {
       text: `select ps_unique_key as id, (${PROSPECT_FULLNAME}) as fullname, prospect_title as title, account_global_legal_name as account,
         (case when (${PROSPECT_FULLNAME}) ilike $1 then 1 else 0 end) as sw
         from prospects where ${where("$2")}
-        order by sw desc, fullname asc, ps_unique_key asc limit ${MAX_PER_GROUP}`,
+        order by sw desc, fullname asc, ps_unique_key asc limit ${Math.max(1, Math.floor(limit))}`,
       values: [starts, contains],
     },
     count: { text: `select count(*)::int as total from prospects where ${where("$1")}`, values: [contains] },

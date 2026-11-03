@@ -117,4 +117,24 @@ describe("search route", () => {
       expect(warehouseMocks.queryWarehouse.mock.calls.length).toBeGreaterThan(callsAfterFirst)
     })
   })
+
+  it("returns up to 50 of the type search is narrowed to, and 10 of the others", async () => {
+    const res = await search(new Request("https://example.com/api/search?q=acme&type=centers", { headers: { authorization: "Bearer token-1" } }))
+    expect(res.status).toBe(200)
+    const itemQueries = warehouseMocks.queryWarehouse.mock.calls
+      .map(([query]) => (query as { text: string }).text)
+      .filter((text) => !text.includes("count(*)") && /limit \d+/.test(text))
+    const limitFor = (table: string) => itemQueries.find((text) => text.includes(`from ${table} where`))?.match(/limit (\d+)/)?.[1]
+    expect(limitFor("centers")).toBe("50")
+    expect(limitFor("accounts")).toBe("10")
+    expect(limitFor("prospects")).toBe("10")
+  })
+
+  it("ignores an unknown type", async () => {
+    await search(new Request("https://example.com/api/search?q=acme&type=bogus", { headers: { authorization: "Bearer token-1" } }))
+    const limits = warehouseMocks.queryWarehouse.mock.calls
+      .map(([query]) => (query as { text: string }).text.match(/limit (\d+)/)?.[1])
+      .filter(Boolean)
+    expect(new Set(limits)).toEqual(new Set(["10"]))
+  })
 })
