@@ -4,6 +4,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTheme } from "next-themes"
 import { toast } from "sonner"
 import { ExportDialog } from "@/components/export/export-dialog"
+import { describeFilters } from "@/components/filters/filter-description"
+import { useAccountLists } from "@/contexts/account-lists-context"
 import type { ExportDatasetKey } from "@/lib/utils/export-helpers"
 import { ExportsDialog } from "@/components/exports/exports-dialog"
 import { HistoryDialog } from "@/components/history/history-dialog"
@@ -925,6 +927,14 @@ function DashboardContent(): React.JSX.Element | null {
 
   useEffect(() => cancelPendingScopeClear, [cancelPendingScopeClear])
 
+  // The filters a full export follows, described the way the sidebar shows them.
+  const { lists: accountLists } = useAccountLists()
+  const exportFilterSummary = useMemo(() => {
+    const listNames = new Map(accountLists.map((list) => [list.id, list.name]))
+    const bounds = { revenue: revenueRange, yearsInIndia: yearsInIndiaRange, centerIncYear: centerIncYearRange }
+    return describeFilters(filters, bounds, listNames).flatMap((section) => section.fields)
+  }, [filters, accountLists, revenueRange, yearsInIndiaRange, centerIncYearRange])
+
   const exportPayload = useMemo(() => {
     if (!exportScope) {
       // The client does not hold the filtered arrays (#249 Phase 4): the
@@ -1415,6 +1425,7 @@ function DashboardContent(): React.JSX.Element | null {
             compact={Boolean(exportPayload.allowedDatasets)}
             initialDatasets={exportScope ? undefined : exportStartDatasets}
             exportScope={exportScope ? "selection" : "all"}
+            filterSummary={exportScope ? undefined : exportFilterSummary}
             onExportCompleted={handleExportCompleted}
           />
           <FiltersSidebar
