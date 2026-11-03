@@ -2,11 +2,12 @@
 
 import React from 'react'
 import Image from 'next/image'
-import { RiRefreshLine, RiSearchLine, RiTerminalBoxLine } from "@remixicon/react"
+import { RiRefreshLine, RiSearchLine } from "@remixicon/react"
 import { Button } from '@/components/ui/button'
 import { NotificationDropdown } from '@/components/notifications/notification-dropdown'
 import { getEnvironmentLabel } from '@/lib/config/environment'
 import { NOTIFICATIONS_ENABLED } from '@/lib/config/notifications'
+import { cn } from '@/lib/utils'
 
 interface HeaderProps {
   onRefresh: () => void
@@ -16,36 +17,47 @@ interface HeaderProps {
 }
 
 export const Header = React.memo(function Header({ onRefresh, refreshing = false, onOpenSearch }: HeaderProps): React.JSX.Element {
-  const environmentLabel = getEnvironmentLabel()
-  const environmentBadgeLabel = environmentLabel === "DEV" ? "DEV" : null
+  // On the development site the name reads "Bamboo Reports Dev" and the logo gets an amber dot.
+  const isDev = getEnvironmentLabel() === "DEV"
+  const devHint = "Development site: for testing changes before they go live. Data and accounts may differ from the live Bamboo Reports."
 
   return (
     <header className="sticky top-0 z-20 border-b border-border/80 bg-background/95 backdrop-blur-md">
       <div className="mx-auto w-full px-6 py-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-primary/20 bg-background">
-              <Image
-                src="/logo.svg"
-                alt="Bamboo Reports logo"
-                fill
-                sizes="40px"
-                className="object-contain p-1"
-                priority
-              />
+            <div className="relative h-10 w-10 shrink-0">
+              <div
+                className={cn(
+                  "relative h-full w-full overflow-hidden rounded-xl border bg-background",
+                  isDev ? "border-amber-500/50" : "border-primary/20"
+                )}
+              >
+                <Image
+                  src="/logo.svg"
+                  alt="Bamboo Reports logo"
+                  fill
+                  sizes="40px"
+                  className="object-contain p-1"
+                  priority
+                />
+              </div>
+              {isDev && (
+                <span
+                  aria-hidden
+                  className="absolute -right-[3px] -top-[3px] h-2.5 w-2.5 rounded-full bg-amber-500 ring-2 ring-background dark:bg-amber-400"
+                />
+              )}
             </div>
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <p className="truncate text-lg font-bold text-foreground">Bamboo Reports</p>
-                {environmentBadgeLabel ? (
-                  <div className="inline-flex shrink-0 items-center gap-1 rounded-md border border-amber-500/25 bg-amber-500/8 px-2 py-0.5 dark:border-amber-400/20 dark:bg-amber-500/10">
-                    <RiTerminalBoxLine className="h-3 w-3 shrink-0 text-amber-600 dark:text-amber-400" />
-                    <span className="font-mono text-[10px] font-bold uppercase leading-none tracking-widest text-amber-700 dark:text-amber-300">
-                      {environmentBadgeLabel}
-                    </span>
-                  </div>
-                ) : null}
-              </div>
+              <p className="truncate text-lg font-bold text-foreground">
+                Bamboo Reports
+                {isDev && (
+                  <span className="ml-1.5 cursor-default font-medium text-amber-600 dark:text-amber-400" title={devHint}>
+                    Dev
+                  </span>
+                )}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2" data-tour="header-actions">

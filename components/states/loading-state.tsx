@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { ChartWaveSkeleton } from "@/components/ui/chart-wave-skeleton"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TopProgressBar } from "@/components/ui/top-progress-bar"
+import { getEnvironmentLabel } from "@/lib/config/environment"
+import { cn } from "@/lib/utils"
 
 /**
  * Full-page loading state for the dashboard.
@@ -20,6 +22,7 @@ import { TopProgressBar } from "@/components/ui/top-progress-bar"
  * only extra moment is the four petals of the logo assembling once on entry.
  */
 export function LoadingState() {
+  const isDev = getEnvironmentLabel() === "DEV"
   return (
     <div
       className="flex h-screen flex-col overflow-hidden bg-[radial-gradient(circle_at_top_right,_hsl(var(--primary)/0.14),_transparent_36%),radial-gradient(circle_at_0%_45%,_hsl(var(--chart-3)/0.10),_transparent_34%),hsl(var(--background))]"
@@ -33,10 +36,26 @@ export function LoadingState() {
         <div className="mx-auto w-full px-6 py-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
-              <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-primary/20 bg-background">
-                <BrandMark />
+              <div className="relative h-10 w-10 shrink-0">
+                <div
+                  className={cn(
+                    "relative flex h-full w-full items-center justify-center overflow-hidden rounded-xl border bg-background",
+                    isDev ? "border-amber-500/50" : "border-primary/20"
+                  )}
+                >
+                  <BrandMark />
+                </div>
+                {isDev && (
+                  <span
+                    aria-hidden
+                    className="absolute -right-[3px] -top-[3px] h-2.5 w-2.5 rounded-full bg-amber-500 ring-2 ring-background dark:bg-amber-400"
+                  />
+                )}
               </div>
-              <p className="truncate text-lg font-bold text-foreground">Bamboo Reports</p>
+              <p className="truncate text-lg font-bold text-foreground">
+                Bamboo Reports
+                {isDev && <span className="ml-1.5 font-medium text-amber-600 dark:text-amber-400">Dev</span>}
+              </p>
             </div>
 
             <div className="flex items-center gap-2" aria-hidden="true">
