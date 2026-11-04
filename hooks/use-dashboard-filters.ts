@@ -8,14 +8,8 @@ import {
 } from "react"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
-import {
-  buildTrackedFiltersSnapshot,
-  toTrackedFilterPlainValues,
-  toTrackedFilterValueArray,
-  toTrackedStringArray,
-} from "@/lib/analytics/tracking"
-import { getFilterMetadataProperties } from "@/lib/analytics/filter-metadata"
-import type { Account, Center, Function, Prospect, Service, Tech, Filters, AvailableOptions, FilterValue } from "@/lib/types"
+import { buildTrackedFiltersSnapshot } from "@/lib/analytics/tracking"
+import type { Account, Center, Function, Prospect, Service, Tech, Filters, AvailableOptions } from "@/lib/types"
 import { createDefaultFilters } from "@/lib/dashboard/defaults"
 import { calculateBaseRanges } from "@/lib/dashboard/ranges"
 import {
@@ -28,6 +22,10 @@ import {
 } from "@/lib/dashboard/filtering"
 import { getAccountChartData, getCenterChartData, getProspectChartData } from "@/lib/dashboard/charts"
 import { perfLog } from "@/lib/utils/dev-log"
+import { countActiveFilters } from "@/lib/dashboard/active-filters"
+import { useAccountLists } from "@/contexts/account-lists-context"
+import { expandAccountLists } from "@/lib/accounts/account-lists"
+import { useFilterChangeTracking } from "@/hooks/use-filter-change-tracking"
 
 // Returns the filter keys whose values differ between two filter objects.
 function changedFilterKeys(prev: Filters, next: Filters): string[] {
@@ -40,8 +38,6 @@ function changedFilterKeys(prev: Filters, next: Filters): string[] {
   }
   return changed
 }
-import { useAccountLists } from "@/contexts/account-lists-context"
-import { expandAccountLists } from "@/lib/accounts/account-lists"
 
 interface UseDashboardFiltersParams {
   accounts: Account[]
@@ -61,15 +57,6 @@ interface UseDashboardFiltersParams {
     centerIncYear: { min: number; max: number }
   } | null
 }
-
-const isNumberRange = (value: unknown): value is [number, number] =>
-  Array.isArray(value) &&
-  value.length === 2 &&
-  typeof value[0] === "number" &&
-  typeof value[1] === "number"
-
-const serializeFilterValues = (values: FilterValue[]) =>
-  values.map(({ value, mode }) => `${mode}:${value}`).sort()
 
 /** Pull a [min, max] range inside the data's bounds (a reversed range falls back to the full range). */
 export function clampRange(range: [number, number], bounds: { min: number; max: number }): [number, number] {
@@ -109,8 +96,6 @@ export function useDashboardFilters({
   const [centerIncYearRange, setCenterIncYearRange] = useState(baseRanges.centerIncYearRange)
 
   const isRevenueRangeAutoRef = useRef(true)
-  const previousTrackedFiltersRef = useRef<Filters | null>(null)
-  const filterTrackTimeoutRef = useRef<number | null>(null)
 
   // Interaction timing instrumentation (dev only).
   const applyStartRef = useRef<number | null>(null)
@@ -308,57 +293,12 @@ export function useDashboardFilters({
   )
 
   const getActiveFilterCountFor = useCallback(
-    (sourceFilters: Filters) => {
-      let count = 0
-      // Multi-select filters: count selected values
-      count += sourceFilters.accountHqRegionValues.length
-      if ((sourceFilters.accountVisibilityMode ?? "gcc") !== "gcc") count += 1
-      count += sourceFilters.accountHqCountryValues.length
-      count += sourceFilters.accountHqIndustryValues.length
-      count += sourceFilters.accountPrimaryCategoryValues.length
-      count += sourceFilters.accountPrimaryNatureValues.length
-      count += sourceFilters.accountNasscomStatusValues.length
-      count += sourceFilters.accountHqEmployeeRangeValues.length
-      count += sourceFilters.accountCenterEmployeesRangeValues.length
-      count += sourceFilters.accountGlobalLegalNameKeywords.length
-      count += sourceFilters.accountListValues.length > 0 ? sourceFilters.accountListValues.length : sourceFilters.accountNameValues.length
-      count += sourceFilters.centerTypeValues.length
-      count += sourceFilters.centerFocusValues.length
-      count += sourceFilters.centerCityValues.length
-      count += sourceFilters.centerStateValues.length
-      count += sourceFilters.centerEmployeesRangeValues.length
-      count += sourceFilters.centerStatusValues.length
-      count += sourceFilters.functionNameValues.length
-      count += sourceFilters.techSoftwareInUseKeywords.length
-      count += sourceFilters.prospectDepartmentValues.length
-      count += sourceFilters.prospectHeadTypeValues.length
-      count += sourceFilters.prospectLevelValues.length
-      count += sourceFilters.prospectEngagedValues.length
-      count += sourceFilters.prospectCityValues.length
-      count += sourceFilters.prospectTitleKeywords.length
-
-      // Range filters: count as 1 if range has been adjusted from default
-      if (
-        sourceFilters.accountHqRevenueRange[0] !== revenueRange.min ||
-        sourceFilters.accountHqRevenueRange[1] !== revenueRange.max
-      ) count += 1
-      if (
-        sourceFilters.accountYearsInIndiaRange[0] !== yearsInIndiaRange.min ||
-        sourceFilters.accountYearsInIndiaRange[1] !== yearsInIndiaRange.max
-      ) count += 1
-      if (
-        sourceFilters.centerIncYearRange[0] !== centerIncYearRange.min ||
-        sourceFilters.centerIncYearRange[1] !== centerIncYearRange.max
-      ) count += 1
-
-      // "Include all" toggles are on by default; they only narrow the results
-      // (and count as a filter) when switched off.
-      if (!sourceFilters.accountHqRevenueIncludeNull) count += 1
-      if (!sourceFilters.yearsInIndiaIncludeNull) count += 1
-      if (!sourceFilters.centerIncYearIncludeNull) count += 1
-
-      return count
-    },
+    (sourceFilters: Filters) =>
+      countActiveFilters(sourceFilters, {
+        revenue: revenueRange,
+        yearsInIndia: yearsInIndiaRange,
+        centerIncYear: centerIncYearRange,
+      }),
     [revenueRange, yearsInIndiaRange, centerIncYearRange]
   )
 
@@ -408,34 +348,6 @@ export function useDashboardFilters({
     setFilters(sanitizedSavedFilters)
   }, [accountLists, baseRanges])
 
-  const handleMinRevenueChange = useCallback(
-    (value: string) => {
-      if (value === "") return
-      const numValue = Number.parseFloat(value)
-      if (Number.isNaN(numValue)) return
-      isRevenueRangeAutoRef.current = false
-      setPendingFilters((prev) => ({
-        ...prev,
-        accountHqRevenueRange: [numValue, prev.accountHqRevenueRange[1]],
-      }))
-    },
-    []
-  )
-
-  const handleMaxRevenueChange = useCallback(
-    (value: string) => {
-      if (value === "") return
-      const numValue = Number.parseFloat(value)
-      if (Number.isNaN(numValue)) return
-      isRevenueRangeAutoRef.current = false
-      setPendingFilters((prev) => ({
-        ...prev,
-        accountHqRevenueRange: [prev.accountHqRevenueRange[0], numValue],
-      }))
-    },
-    []
-  )
-
   const handleRevenueRangeChange = useCallback((value: [number, number]) => {
     isRevenueRangeAutoRef.current = false
     setPendingFilters((prev) => ({
@@ -444,64 +356,12 @@ export function useDashboardFilters({
     }))
   }, [])
 
-  const handleMinYearsInIndiaChange = useCallback(
-    (value: string) => {
-      if (value === "") return
-      const numValue = Number.parseFloat(value)
-      if (Number.isNaN(numValue)) return
-      setPendingFilters((prev) => ({
-        ...prev,
-        accountYearsInIndiaRange: [numValue, prev.accountYearsInIndiaRange[1]],
-      }))
-    },
-    []
-  )
-
-  const handleMaxYearsInIndiaChange = useCallback(
-    (value: string) => {
-      if (value === "") return
-      const numValue = Number.parseFloat(value)
-      if (Number.isNaN(numValue)) return
-      setPendingFilters((prev) => ({
-        ...prev,
-        accountYearsInIndiaRange: [prev.accountYearsInIndiaRange[0], numValue],
-      }))
-    },
-    []
-  )
-
   const handleYearsInIndiaRangeChange = useCallback((value: [number, number]) => {
     setPendingFilters((prev) => ({
       ...prev,
       accountYearsInIndiaRange: value,
     }))
   }, [])
-
-  const handleMinCenterIncYearChange = useCallback(
-    (value: string) => {
-      if (value === "") return
-      const numValue = Number.parseFloat(value)
-      if (Number.isNaN(numValue)) return
-      setPendingFilters((prev) => ({
-        ...prev,
-        centerIncYearRange: [numValue, prev.centerIncYearRange[1]],
-      }))
-    },
-    []
-  )
-
-  const handleMaxCenterIncYearChange = useCallback(
-    (value: string) => {
-      if (value === "") return
-      const numValue = Number.parseFloat(value)
-      if (Number.isNaN(numValue)) return
-      setPendingFilters((prev) => ({
-        ...prev,
-        centerIncYearRange: [prev.centerIncYearRange[0], numValue],
-      }))
-    },
-    []
-  )
 
   const handleCenterIncYearRangeChange = useCallback((value: [number, number]) => {
     setPendingFilters((prev) => ({
@@ -512,167 +372,7 @@ export function useDashboardFilters({
 
   const getTotalActiveFilters = useCallback(() => getActiveFilterCountFor(filters), [filters, getActiveFilterCountFor])
 
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return
-    }
-
-    const previousFilters = previousTrackedFiltersRef.current
-    if (!previousFilters) {
-      previousTrackedFiltersRef.current = filters
-      return
-    }
-
-    if (filterTrackTimeoutRef.current !== null) {
-      window.clearTimeout(filterTrackTimeoutRef.current)
-    }
-
-    filterTrackTimeoutRef.current = window.setTimeout(() => {
-      const previousActiveFiltersCount = getActiveFilterCountFor(previousFilters)
-      const currentActiveFiltersCount = getActiveFilterCountFor(filters)
-
-      if (previousActiveFiltersCount === 0 && currentActiveFiltersCount === 0) {
-        previousTrackedFiltersRef.current = filters
-        return
-      }
-
-      const filterKeys = Object.keys(filters) as Array<keyof Filters>
-
-      for (const filterKey of filterKeys) {
-        const previousValue = previousFilters[filterKey]
-        const currentValue = filters[filterKey]
-        const filterMetadataProperties = getFilterMetadataProperties(filterKey)
-
-        if (JSON.stringify(previousValue) === JSON.stringify(currentValue)) {
-          continue
-        }
-
-        if (isNumberRange(currentValue)) {
-          const previousRange = isNumberRange(previousValue) ? previousValue : null
-          captureEvent(ANALYTICS_EVENTS.FILTER_CHANGED, {
-            filter_key: filterKey,
-            ...filterMetadataProperties,
-            change_type: "range_change",
-            range_min: currentValue[0],
-            range_max: currentValue[1],
-            previous_range_min: previousRange ? previousRange[0] : null,
-            previous_range_max: previousRange ? previousRange[1] : null,
-            range_delta_min: previousRange ? currentValue[0] - previousRange[0] : null,
-            range_delta_max: previousRange ? currentValue[1] - previousRange[1] : null,
-            active_filters_count: currentActiveFiltersCount,
-          })
-          continue
-        }
-
-        if (typeof currentValue === "boolean") {
-          captureEvent(ANALYTICS_EVENTS.FILTER_CHANGED, {
-            filter_key: filterKey,
-            ...filterMetadataProperties,
-            change_type: "toggle",
-            null_toggle_value: currentValue,
-            previous_null_toggle_value: typeof previousValue === "boolean" ? previousValue : null,
-            active_filters_count: currentActiveFiltersCount,
-          })
-          continue
-        }
-
-        if (typeof currentValue === "string") {
-          captureEvent(ANALYTICS_EVENTS.FILTER_CHANGED, {
-            filter_key: filterKey,
-            ...filterMetadataProperties,
-            change_type: "select",
-            selected_value: currentValue,
-            previous_selected_value: typeof previousValue === "string" ? previousValue : null,
-            active_filters_count: currentActiveFiltersCount,
-          })
-          continue
-        }
-
-        if (!Array.isArray(currentValue)) {
-          continue
-        }
-
-        const previousArray = (Array.isArray(previousValue) ? previousValue : []) as FilterValue[]
-        const currentArray = currentValue as FilterValue[]
-        const serializedPreviousValues = serializeFilterValues(previousArray)
-        const serializedCurrentValues = serializeFilterValues(currentArray)
-        const serializedPrevious = new Set(serializedPreviousValues)
-        const serializedCurrent = new Set(serializedCurrentValues)
-
-        let addedCount = 0
-        let removedCount = 0
-        const addedValues: string[] = []
-        const removedValues: string[] = []
-
-        for (const value of serializedCurrent) {
-          if (!serializedPrevious.has(value)) {
-            addedCount += 1
-            addedValues.push(value)
-          }
-        }
-
-        for (const value of serializedPrevious) {
-          if (!serializedCurrent.has(value)) {
-            removedCount += 1
-            removedValues.push(value)
-          }
-        }
-
-        const includeValues = currentArray
-          .filter((item) => item.mode === "include")
-          .map((item) => item.value)
-        const excludeValues = currentArray
-          .filter((item) => item.mode === "exclude")
-          .map((item) => item.value)
-        const previousIncludeValues = previousArray
-          .filter((item) => item.mode === "include")
-          .map((item) => item.value)
-        const previousExcludeValues = previousArray
-          .filter((item) => item.mode === "exclude")
-          .map((item) => item.value)
-        const includeCount = includeValues.length
-        const excludeCount = excludeValues.length
-
-        const changeType =
-          currentArray.length === 0
-            ? "clear"
-            : addedCount >= removedCount
-              ? "add"
-              : "remove"
-
-        captureEvent(ANALYTICS_EVENTS.FILTER_CHANGED, {
-          filter_key: filterKey,
-          ...filterMetadataProperties,
-          change_type: changeType,
-          include_count: includeCount,
-          exclude_count: excludeCount,
-          selected_count: currentArray.length,
-          previous_selected_count: previousArray.length,
-          added_count: addedCount,
-          removed_count: removedCount,
-          selected_values: toTrackedFilterPlainValues(currentArray),
-          selected_values_with_mode: toTrackedFilterValueArray(currentArray),
-          previous_selected_values: toTrackedFilterPlainValues(previousArray),
-          previous_selected_values_with_mode: toTrackedFilterValueArray(previousArray),
-          include_values: toTrackedStringArray(includeValues),
-          exclude_values: toTrackedStringArray(excludeValues),
-          previous_include_values: toTrackedStringArray(previousIncludeValues),
-          previous_exclude_values: toTrackedStringArray(previousExcludeValues),
-          added_values: toTrackedStringArray(addedValues),
-          removed_values: toTrackedStringArray(removedValues),
-          active_filters_count: currentActiveFiltersCount,
-        })
-      }
-
-      previousTrackedFiltersRef.current = filters
-    }, 350)
-
-    return () => {
-      if (filterTrackTimeoutRef.current !== null) {
-        window.clearTimeout(filterTrackTimeoutRef.current)
-      }
-    }
-  }, [filters, getActiveFilterCountFor])
+  useFilterChangeTracking(filters, getActiveFilterCountFor)
 
   return {
     filters,
@@ -690,14 +390,8 @@ export function useDashboardFilters({
     prospectChartData,
     resetFilters,
     handleLoadSavedFilters,
-    handleMinRevenueChange,
-    handleMaxRevenueChange,
     handleRevenueRangeChange,
-    handleMinYearsInIndiaChange,
-    handleMaxYearsInIndiaChange,
     handleYearsInIndiaRangeChange,
-    handleMinCenterIncYearChange,
-    handleMaxCenterIncYearChange,
     handleCenterIncYearRangeChange,
     getTotalActiveFilters,
   }
