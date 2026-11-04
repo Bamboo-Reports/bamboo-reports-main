@@ -227,7 +227,7 @@ export function DataTablePagination<TData extends RowData>({ table, totalRows, l
       {totalRows > 0 && (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
           <p className="text-sm text-muted-foreground tabular-nums">
-            {firstRow.toLocaleString()}-{lastRow.toLocaleString()} of {totalRows.toLocaleString()}
+            {firstRow.toLocaleString()}–{lastRow.toLocaleString()} of {totalRows.toLocaleString()}
           </p>
           <nav aria-label="Pagination" className="flex items-center gap-1">
             <Button

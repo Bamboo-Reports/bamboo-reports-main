@@ -230,15 +230,19 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
       return (
         <div className="grid flex-1 place-items-center p-8">
           <div className="max-w-sm text-center">
-            <RiFileList3Line className="mx-auto h-7 w-7 text-muted-foreground" />
-            <p className="mt-3 text-sm font-medium">Filter by your own account lists</p>
-            <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
-              Upload a CSV, TSV, TXT or XLSX file with company names. Each name is matched to an account and saved as a list you can apply any time.
+            {tab === "mine" ? (
+              <RiFileList3Line className="mx-auto h-7 w-7 text-muted-foreground" />
+            ) : (
+              <RiGroupLine className="mx-auto h-7 w-7 text-muted-foreground" />
+            )}
+            <p className="mt-3 text-sm font-medium">
+              {tab === "mine" ? "Filter by your own account lists" : "Lists shared with you"}
             </p>
-            <Button className="mt-4" onClick={() => openUpload(null)}>
-              <RiUploadLine />
-              Upload list
-            </Button>
+            <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
+              {tab === "mine"
+                ? "Upload a CSV, TSV, TXT or XLSX file with company names. Each name is matched to an account and saved as a list you can apply any time."
+                : "When a teammate shares an account list with you, it shows up here. You can apply it, but only its owner can change it."}
+            </p>
           </div>
         </div>
       )
@@ -371,10 +375,12 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
         sharedCount={sharedLists.length}
         items={renderItems()}
         footer={
-          <Button className="w-full" onClick={() => openUpload(null)}>
-            <RiUploadLine />
-            Upload list
-          </Button>
+          tab === "mine" ? (
+            <Button className="w-full" onClick={() => openUpload(null)}>
+              <RiUploadLine />
+              Upload list
+            </Button>
+          ) : undefined
         }
       >
         {renderDetail()}

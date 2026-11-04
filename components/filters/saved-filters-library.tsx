@@ -105,12 +105,12 @@ export function SavedFiltersLibrary({
           <div className="max-w-sm text-center">
             <RiBookmarkLine className="mx-auto h-7 w-7 text-muted-foreground" />
             <p className="mt-3 text-sm font-medium">
-              {tab === "mine" ? "Save filters you use often" : "Nothing shared with you yet"}
+              {tab === "mine" ? "Save filters you use often" : "Filters shared with you"}
             </p>
             <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
               {tab === "mine"
                 ? "Set up filters in the sidebar, then save them here to apply them again in one click."
-                : "When a teammate shares saved filters with you, they appear here."}
+                : "When a teammate shares saved filters with you, they show up here. You can apply them, but only their owner can change them."}
             </p>
           </div>
         </div>
@@ -244,10 +244,12 @@ export function SavedFiltersLibrary({
         )
       }
       footer={
-        <Button variant="outline" className="w-full" onClick={onSaveCurrent} disabled={!canSaveCurrent}>
-          <RiAddLine />
-          Save current filters
-        </Button>
+        tab === "mine" ? (
+          <Button variant="outline" className="w-full" onClick={onSaveCurrent} disabled={!canSaveCurrent}>
+            <RiAddLine />
+            Save current filters
+          </Button>
+        ) : undefined
       }
     >
       {renderDetail()}

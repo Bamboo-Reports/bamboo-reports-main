@@ -32,7 +32,7 @@ export function PaginationControls({
     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-6 py-4 border-t shrink-0 bg-muted/20">
       <div className="flex flex-wrap items-center gap-3">
         <p className="text-sm text-muted-foreground tabular-nums">
-          {pageInfo.startItem.toLocaleString()}-{pageInfo.endItem.toLocaleString()} of {totalItems.toLocaleString()}
+          {pageInfo.startItem.toLocaleString()}–{pageInfo.endItem.toLocaleString()} of {totalItems.toLocaleString()}
         </p>
         {onExport && (
           <Button

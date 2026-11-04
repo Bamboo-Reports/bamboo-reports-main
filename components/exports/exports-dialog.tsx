@@ -335,9 +335,9 @@ export function ExportsDialog({ open, onOpenChange, describeFilters }: ExportsDi
             </summary>
             <dl className="mt-2 grid grid-cols-[110px_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-[13px]">
               <dt className="text-muted-foreground">File name</dt>
-              <dd className="break-all font-mono text-xs">{selected.filename}</dd>
+              <dd className="break-all text-xs">{selected.filename}</dd>
               <dt className="text-muted-foreground">IP address</dt>
-              <dd className="font-mono text-xs">{ip ?? "Not recorded"}</dd>
+              <dd className="text-xs tabular-nums">{ip ?? "Not recorded"}</dd>
               <dt className="text-muted-foreground">Browser</dt>
               <dd title={selected.user_agent ?? undefined}>{browser ?? "Not recorded"}</dd>
             </dl>
