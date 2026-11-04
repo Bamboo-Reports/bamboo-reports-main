@@ -286,25 +286,6 @@ export function CentersChoroplethMap({
     lastTooltipStateRef.current = stateKey
   }, [hoverInfo])
 
-  useEffect(() => {
-    if (!isClient || typeof ResizeObserver === "undefined") return
-    const container = containerRef.current
-    if (!container) return
-
-    const resizeMap = () => {
-      if (mapRef.current?.resize) {
-        mapRef.current.resize()
-      }
-    }
-
-    const observer = new ResizeObserver(resizeMap)
-    observer.observe(container)
-
-    requestAnimationFrame(resizeMap)
-
-    return () => observer.disconnect()
-  }, [isClient])
-
   const stateAggregates = useMemo(
     () => (states ? aggregatesFromStateRows(states) : buildStateAggregates(centers)),
     [states, centers]

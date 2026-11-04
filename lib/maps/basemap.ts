@@ -27,9 +27,11 @@ export const MAPLIBRE_WORKER_URL = new URL("maplibre-gl/dist/maplibre-gl-worker.
 // map, so a worker that fails to download stays broken until a full reload.
 // Fetch the worker file ourselves first, retrying through brief network drops:
 // the response is immutable, so the browser caches it and MapLibre then starts
-// its workers from the cache. Resolves either way, so a map is never blocked
-// for longer than the retries take.
+// its workers from the cache. Resolves either way, and each attempt is cut off
+// after WORKER_PRELOAD_TIMEOUT_MS, so a hung connection cannot hold the map on
+// its loading state. If every attempt fails, the next map mount tries again.
 const WORKER_PRELOAD_DELAYS_MS = [0, 600, 1800]
+export const WORKER_PRELOAD_TIMEOUT_MS = 8000
 let workerPreload: Promise<void> | null = null
 
 export function preloadMapWorker(): Promise<void> {
@@ -37,18 +39,28 @@ export function preloadMapWorker(): Promise<void> {
   workerPreload ??= (async () => {
     for (const delay of WORKER_PRELOAD_DELAYS_MS) {
       if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay))
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), WORKER_PRELOAD_TIMEOUT_MS)
       try {
-        const res = await fetch(MAPLIBRE_WORKER_URL, { cache: "force-cache" })
+        const res = await fetch(MAPLIBRE_WORKER_URL, { cache: "force-cache", signal: controller.signal })
         if (res.ok) {
           await res.arrayBuffer()
           return
         }
       } catch {
-        // Network error: try again after the next delay.
+        // Network error or timeout: try again after the next delay.
+      } finally {
+        clearTimeout(timeout)
       }
     }
+    // Every attempt failed: forget this run so a later mount retries.
+    workerPreload = null
   })()
   return workerPreload
+}
+
+export function __resetMapWorkerPreloadForTests(): void {
+  workerPreload = null
 }
 
 /** True when the map failed because its worker could not start. */

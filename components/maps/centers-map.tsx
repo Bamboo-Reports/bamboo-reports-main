@@ -212,27 +212,6 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
     return () => clearTimeout(fallback)
   }, [])
 
-  // Force map to recalc size when container changes to avoid clipped bottom
-  useEffect(() => {
-    if (!isClient || typeof ResizeObserver === "undefined") return
-    const container = containerRef.current
-    if (!container) return
-
-    const resizeMap = () => {
-      if (mapRef.current?.resize) {
-        mapRef.current.resize()
-      }
-    }
-
-    const observer = new ResizeObserver(resizeMap)
-    observer.observe(container)
-
-    // Initial pass after layout
-    requestAnimationFrame(resizeMap)
-
-    return () => observer.disconnect()
-  }, [isClient])
-
   // Calculate center of all points for initial view
   const initialViewState = useMemo(() => {
     if (cityData.length === 0) {
