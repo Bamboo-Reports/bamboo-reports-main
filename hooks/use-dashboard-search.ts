@@ -19,6 +19,7 @@ import { useRecentItems, type RecentItem } from "@/hooks/use-recent-items"
 import { useRecordOpener } from "@/hooks/use-record-opener"
 
 type OpenedFrom = "global_search" | "history" | "related_account_link"
+type SearchCloseReason = "dismissed" | "result_selected" | "recent_item_selected" | "action_selected"
 
 export type RecordDialog<T> = {
   record: T | null
@@ -64,6 +65,23 @@ export function useDashboardSearch({ currentScreenView, onSectionSelect, onReloa
     aliases: NO_ALIASES,
     serverMode: true,
   })
+
+  // Every way search opens or closes is reported, not only the dialog's own
+  // open/close (Ctrl+K, Escape, the close button).
+  const openSearch = useCallback(() => {
+    captureEvent(ANALYTICS_EVENTS.SEARCH_OPENED, { trigger: "shortcut_or_button" })
+    handleSearchOpen()
+  }, [handleSearchOpen])
+
+  const closeSearch = useCallback(
+    (reason: SearchCloseReason) => {
+      if (isSearchOpen) {
+        captureEvent(ANALYTICS_EVENTS.SEARCH_CLOSED, { had_query: searchQuery.length > 0, close_reason: reason })
+      }
+      handleSearchClose()
+    },
+    [handleSearchClose, isSearchOpen, searchQuery]
+  )
 
   const {
     recentItems,
@@ -122,7 +140,7 @@ export function useDashboardSearch({ currentScreenView, onSectionSelect, onReloa
 
   const handleSelectResult = useCallback(
     (result: SearchResult) => {
-      handleSearchClose()
+      closeSearch("result_selected")
       if (searchQuery.trim()) {
         addRecentSearch(searchQuery.trim())
       }
@@ -156,14 +174,14 @@ export function useDashboardSearch({ currentScreenView, onSectionSelect, onReloa
         setProspectDialogOpen(true)
       }
     },
-    [handleSearchClose, addRecentSearch, searchQuery, trackRecordOpened]
+    [closeSearch, addRecentSearch, searchQuery, trackRecordOpened]
   )
 
   const openRecord = useRecordOpener()
 
   const handleRecentItemSelect = useCallback(
     (item: RecentItem, source: "global_search" | "history_dialog") => {
-      handleSearchClose()
+      closeSearch("recent_item_selected")
       captureEvent(ANALYTICS_EVENTS.SEARCH_RECENT_ITEM_SELECTED, {
         result_type: item.type,
         source,
@@ -216,7 +234,7 @@ export function useDashboardSearch({ currentScreenView, onSectionSelect, onReloa
         })
       }
     },
-    [handleSearchClose, trackRecordOpened, openRecord]
+    [closeSearch, trackRecordOpened, openRecord]
   )
 
   const handleSearchRecentItemSelect = useCallback(
@@ -289,7 +307,7 @@ export function useDashboardSearch({ currentScreenView, onSectionSelect, onReloa
 
   const handleSelectAction = useCallback(
     (action: string) => {
-      handleSearchClose()
+      closeSearch("action_selected")
       captureEvent(ANALYTICS_EVENTS.SEARCH_ACTION_SELECTED, { action })
 
       switch (action) {
@@ -317,7 +335,7 @@ export function useDashboardSearch({ currentScreenView, onSectionSelect, onReloa
         }
       }
     },
-    [handleSearchClose, onSectionSelect, onReload, setTheme, resolvedTheme]
+    [closeSearch, onSectionSelect, onReload, setTheme, resolvedTheme]
   )
 
   const handleSearchOpenChange = useCallback(
@@ -325,7 +343,7 @@ export function useDashboardSearch({ currentScreenView, onSectionSelect, onReloa
       if (open) {
         captureEvent(ANALYTICS_EVENTS.SEARCH_OPENED, { trigger: "shortcut_or_button" })
       } else {
-        captureEvent(ANALYTICS_EVENTS.SEARCH_CLOSED, { had_query: searchQuery.length > 0 })
+        captureEvent(ANALYTICS_EVENTS.SEARCH_CLOSED, { had_query: searchQuery.length > 0, close_reason: "dismissed" })
       }
       setIsSearchOpen(open)
       if (!open) {
@@ -378,5 +396,5 @@ export function useDashboardSearch({ currentScreenView, onSectionSelect, onReloa
     },
   }
 
-  return { openSearch: handleSearchOpen, openHistory, addRecentItem, searchProps, historyProps, recordDialogs }
+  return { openSearch, openHistory, addRecentItem, searchProps, historyProps, recordDialogs }
 }

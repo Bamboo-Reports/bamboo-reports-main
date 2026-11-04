@@ -58,6 +58,7 @@ const accountResult = { type: "account", id: "a1", title: "Acme", data: { name: 
 beforeEach(() => {
   vi.useFakeTimers()
   vi.clearAllMocks()
+  search.isOpen = false
 })
 afterEach(() => {
   cleanup()
@@ -149,6 +150,33 @@ describe("useDashboardSearch", () => {
     act(() => result.current.searchProps.onOpenChange(false))
     expect(search.setIsOpen).toHaveBeenLastCalledWith(false)
     expect(search.setQuery).toHaveBeenCalledWith("")
-    expect(events("search_closed")).toEqual([["search_closed", { had_query: true }]])
+    expect(events("search_closed")).toEqual([["search_closed", { had_query: true, close_reason: "dismissed" }]])
+  })
+
+  it("reports opening search from the header button", () => {
+    const { result } = setup()
+    act(() => result.current.openSearch())
+    expect(search.handleOpen).toHaveBeenCalled()
+    expect(events("search_opened")).toEqual([["search_opened", { trigger: "shortcut_or_button" }]])
+  })
+
+  it("reports search closing when a result, recent item or action is picked", () => {
+    search.isOpen = true
+    const { result } = setup()
+    act(() => result.current.searchProps.onSelectResult(accountResult))
+    act(() => result.current.searchProps.onSelectRecentItem({ type: "prospect", id: "p1", title: "Jo" } as RecentItem))
+    act(() => result.current.searchProps.onSelectAction("go-accounts"))
+    expect(events("search_closed").map(([, p]) => p)).toEqual([
+      { had_query: true, close_reason: "result_selected" },
+      { had_query: true, close_reason: "recent_item_selected" },
+      { had_query: true, close_reason: "action_selected" },
+    ])
+  })
+
+  it("does not report a close when search was not open (history dialog)", () => {
+    const { result } = setup()
+    act(() => result.current.historyProps.onItemSelect({ type: "center", id: "c9", title: "Pune" } as RecentItem))
+    expect(events("search_closed")).toHaveLength(0)
+    expect(search.handleClose).toHaveBeenCalled()
   })
 })
