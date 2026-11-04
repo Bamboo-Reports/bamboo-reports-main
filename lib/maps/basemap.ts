@@ -5,7 +5,7 @@ type MapInstance = MapLibreEvent["target"]
 type PaintProperty = Parameters<MapInstance["setPaintProperty"]>[1]
 
 // Carto Positron (light) and Dark Matter (dark): OSM vector basemaps, no API key.
-// Only the basemap follows the theme; data layers keep the same colours in both.
+// Only the basemap follows the theme (see themeBasemap); data layers keep the same colours in both.
 // India boundaries come from the Survey of India GeoJSON overlay, not the basemap
 // (see hideBasemapBoundaries).
 export const BASEMAP_STYLE_URLS = {
@@ -42,26 +42,39 @@ export function hideBasemapBoundaries(map: MapInstance): void {
   }
 }
 
-// Dark Matter's land is near-black (#0e0e0e), darker than the app's own dark
-// surfaces. Lift land to charcoal and keep water a shade darker so coastlines
-// still read. Data layers are untouched.
-const DARK_LAND = "#2a2b2e"
-const DARK_WATER = "#1b1f23"
-const DARK_BASEMAP_PAINT: Array<[layerId: string, property: PaintProperty, value: string]> = [
-  ["background", "background-color", DARK_LAND],
-  ["landcover", "fill-color", DARK_LAND],
-  ["landuse", "fill-color", DARK_LAND],
-  ["park_national_park", "fill-color", DARK_LAND],
-  ["park_nature_reserve", "fill-color", DARK_LAND],
-  ["water", "fill-color", DARK_WATER],
+// Both Carto styles are repainted onto the app's own neutrals so the map sits
+// in the dashboard like any other surface: land matches the page background,
+// water is one step darker (light) or deeper (dark), and the green and beige
+// land-use patches are cleared so only the data layers carry colour.
+// Light values follow --background and --muted, dark values the neutral greys
+// of the dark theme. Data layers are untouched.
+const CLEAR = "rgba(0, 0, 0, 0)"
+const basemapPaint = (land: string, water: string): Array<[layerId: string, property: PaintProperty, value: string]> => [
+  ["background", "background-color", land],
+  ["landcover", "fill-color", CLEAR],
+  ["landuse", "fill-color", CLEAR],
+  ["landuse_residential", "fill-color", CLEAR],
+  ["park_national_park", "fill-color", CLEAR],
+  ["park_nature_reserve", "fill-color", CLEAR],
+  ["water", "fill-color", water],
+  ["waterway", "line-color", water],
+  ["watername_ocean", "text-halo-color", water],
+  ["watername_sea", "text-halo-color", water],
 ]
 
-// Softens Dark Matter to charcoal. No-op on other styles, and only sets values
-// that differ, so it is safe to call from a styledata handler.
-export function softenDarkBasemap(map: MapInstance): void {
-  const style = map.getStyle?.()
-  if (!style?.name?.startsWith("Dark Matter")) return
-  for (const [layerId, property, value] of DARK_BASEMAP_PAINT) {
+const BASEMAP_PAINT = {
+  light: basemapPaint("#f8fafc", "#e2e8ef"),
+  dark: basemapPaint("#262626", "#181818"),
+}
+
+// Repaints Positron or Dark Matter to the app theme. No-op on other styles,
+// and only sets values that differ, so it is safe to call from a styledata
+// handler.
+export function themeBasemap(map: MapInstance): void {
+  const name = map.getStyle?.()?.name ?? ""
+  const paint = name.startsWith("Dark Matter") ? BASEMAP_PAINT.dark : name.startsWith("Positron") ? BASEMAP_PAINT.light : null
+  if (!paint) return
+  for (const [layerId, property, value] of paint) {
     if (!map.getLayer(layerId)) continue
     if (map.getPaintProperty(layerId, property) !== value) {
       map.setPaintProperty(layerId, property, value)
@@ -72,5 +85,5 @@ export function softenDarkBasemap(map: MapInstance): void {
 // Everything the basemap needs after any style (re)load.
 export function prepareBasemap(map: MapInstance): void {
   hideBasemapBoundaries(map)
-  softenDarkBasemap(map)
+  themeBasemap(map)
 }

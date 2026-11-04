@@ -315,9 +315,9 @@ export function ExportDialog({
     let rampCancelled = false
     const ramp = async () => {
       const stages: Array<{ to: number; stage: string; duration: number }> = [
-        { to: 25, stage: "Fetching data from database", duration: 900 },
+        { to: 25, stage: "Fetching data", duration: 900 },
         { to: 65, stage: "Generating spreadsheet", duration: 2200 },
-        { to: 88, stage: "Uploading archive", duration: 1400 },
+        { to: 88, stage: "Saving the file", duration: 1400 },
       ]
       let current = 0
       for (const s of stages) {
@@ -445,21 +445,19 @@ export function ExportDialog({
               <span className="tabular-nums text-muted-foreground">{Math.round(displayedProgress)}%</span>
             </div>
             <div className="mt-2 h-1 overflow-hidden rounded-full bg-muted">
-              <div className="h-full rounded-full bg-primary" style={{ width: `${displayedProgress}%` }} />
+              <div className="h-full origin-left rounded-full bg-primary" style={{ transform: `scaleX(${displayedProgress / 100})` }} />
             </div>
           </div>
-          <Button variant="outline" disabled>
-            Cancel
-          </Button>
         </>
       ) : showResult && exportResult ? (
         <>
-          <div className="flex min-w-0 flex-1 items-center gap-2.5" role="status">
+          <div className="flex min-w-0 flex-1 items-center gap-2.5" role="status" title={exportResult.filename}>
             <RiCheckboxCircleFill className="h-5 w-5 shrink-0 text-include" />
             <div className="min-w-0">
-              <p className="truncate text-[13px] font-medium" title={exportResult.filename}>{exportResult.filename}</p>
-              <p className="text-xs tabular-nums text-muted-foreground">
-                {plural(exportResult.totalRows, "row")} · {plural(sheetCount, "sheet")}
+              <p className="text-[13px] font-medium">Ready to download</p>
+              <p className="truncate text-xs tabular-nums text-muted-foreground">
+                {plural(exportResult.totalRows, "row")}
+                {compact ? "" : ` · ${plural(sheetCount, "sheet")}`} · Excel file
               </p>
             </div>
           </div>
@@ -524,7 +522,7 @@ export function ExportDialog({
               Export {plural(selectedRowCount, noun)}
             </DialogTitle>
             <DialogDescription className="text-[13px]">
-              Only the rows you selected in the {meta?.label ?? "data"} table.
+              Only the rows you selected in the {meta?.label ?? "data"} table
             </DialogDescription>
           </DialogHeader>
           {footer}
@@ -544,8 +542,8 @@ export function ExportDialog({
           <DialogTitle className="text-[17px] font-semibold tracking-[-0.01em]">Export data</DialogTitle>
           <DialogDescription className="text-[13px]">
             {isFiltered
-              ? "Exports the filtered data across all pages, not just the rows on screen."
-              : "Exports everything shown on the dashboard, with no filters applied."}
+              ? "Exports the filtered data across all pages, not just the rows on screen"
+              : "Exports everything shown on the dashboard, with no filters applied"}
           </DialogDescription>
           {isFiltered && filterSummary.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5 pt-2">
@@ -626,7 +624,7 @@ export function ExportDialog({
                   ) : (
                     <span className="inline-flex items-center gap-1 whitespace-nowrap text-xs font-medium text-muted-foreground">
                       <RiLockLine className="h-3.5 w-3.5" />
-                      Not in plan
+                      Not procured
                     </span>
                   )}
                 </label>

@@ -1418,9 +1418,14 @@ function DashboardContent(): React.JSX.Element | null {
       )}
 
       {dataLoaded && (
+        // The map and data panels end level with the filters sidebar. Their height is
+        // the viewport minus everything stacked above them: header (64px + 1px border),
+        // top gap (1.5rem), summary cards (5rem), their margin (1.5rem), the
+        // "analytics" heading row (2.5rem), its margin (1rem), and the bottom gap
+        // (0.75rem). Update this when any of those change.
         <main
           id="main-content"
-          className="flex flex-1 overflow-hidden [--dashboard-content-top-gap:1.5rem] [--dashboard-content-bottom-gap:0.75rem] [--dashboard-panel-height:calc(100dvh-16.875rem)]"
+          className="flex flex-1 overflow-hidden [--dashboard-content-top-gap:1.5rem] [--dashboard-content-bottom-gap:0.75rem] [--dashboard-panel-height:calc(100dvh-65px-var(--dashboard-content-top-gap)-5rem-1.5rem-2.5rem-1rem-var(--dashboard-content-bottom-gap))]"
         >
           <ExportDialog
             open={exportDialogOpen}

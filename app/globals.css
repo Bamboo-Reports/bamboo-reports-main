@@ -427,3 +427,33 @@
 .driver-popover.br-tour-popover .driver-popover-arrow-side-bottom .driver-popover-arrow {
   background: hsl(var(--popover)) !important;
 }
+
+/* MapLibre controls (zoom, compass, fullscreen, attribution) follow the theme. */
+.maplibregl-map .maplibregl-ctrl-group:not(:empty) {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.maplibregl-map .maplibregl-ctrl-group button + button {
+  border-top-color: hsl(var(--border));
+}
+
+.maplibregl-map .maplibregl-ctrl.maplibregl-ctrl-attrib,
+.maplibregl-map .maplibregl-ctrl.maplibregl-ctrl-attrib.maplibregl-compact {
+  background: hsl(var(--card) / 0.85);
+  color: hsl(var(--muted-foreground));
+}
+
+.maplibregl-map .maplibregl-ctrl-attrib a {
+  color: hsl(var(--muted-foreground));
+}
+
+.dark .maplibregl-map .maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+  filter: invert(1);
+}
+
+.dark .maplibregl-map .maplibregl-ctrl-attrib-button {
+  filter: invert(1);
+}

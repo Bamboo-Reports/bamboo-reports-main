@@ -57,7 +57,7 @@ export function SelectionActionBar({
   if (!mounted) return null
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4">
+    <div className="pointer-events-none fixed inset-x-0 bottom-16 z-50 flex justify-center px-4">
       <div
         className={
           "pointer-events-auto flex items-center gap-3 rounded-xl border bg-card px-3 py-2 shadow-float ease-[cubic-bezier(0.22,1,0.36,1)] " +
