@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto"
 import { z } from "zod"
-import { extractBearerToken, resolveAuthenticatedUserId } from "@/lib/auth/server"
+import { authenticateRequest } from "@/lib/auth/request"
 import { canExportData, normalizeUserRole, type UserRole } from "@/lib/auth/roles"
 import { createLogger } from "@/lib/logger"
 import { getSupabaseServiceRoleClient, USER_EXPORTS_BUCKET } from "@/lib/supabase/server"
@@ -100,15 +100,9 @@ function trackGenerationFailed(userId: string, stage: string, err: unknown, role
 
 export async function POST(request: Request) {
   const startedAt = Date.now()
-  const token = extractBearerToken(request.headers.get("authorization"))
-  if (!token) return json({ error: "Missing authorization token" }, 401)
-
-  let userId: string
-  try {
-    userId = await resolveAuthenticatedUserId(token)
-  } catch {
-    return json({ error: "Invalid or expired token" }, 401)
-  }
+  const auth = await authenticateRequest(request)
+  if (auth instanceof Response) return auth
+  const { userId } = auth
 
   // Authorize before touching the request body so unauthorized callers get a
   // consistent 403 regardless of body contents (no endpoint behavior leak).

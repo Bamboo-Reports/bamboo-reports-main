@@ -1,4 +1,4 @@
-import { extractBearerToken, resolveAuthenticatedUserId } from "@/lib/auth/server"
+import { authenticateRequest } from "@/lib/auth/request"
 import { enforceRateLimit } from "@/lib/rate-limit/server"
 import { createLogger } from "@/lib/logger"
 import { queryWarehouse } from "@/lib/db/warehouse"
@@ -21,14 +21,9 @@ function json(body: unknown, status = 200) {
  * prospects only by email, matched case-insensitively.
  */
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const token = extractBearerToken(request.headers.get("authorization"))
-  if (!token) return json({ error: "Missing authorization token" }, 401)
-  let userId: string
-  try {
-    userId = await resolveAuthenticatedUserId(token)
-  } catch {
-    return json({ error: "Invalid or expired token" }, 401)
-  }
+  const auth = await authenticateRequest(request)
+  if (auth instanceof Response) return auth
+  const { userId } = auth
   const limited = await enforceRateLimit({ userId, bucket: "prospects:engagements" })
   if (!limited.ok) return limited.response
 
