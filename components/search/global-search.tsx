@@ -54,7 +54,7 @@ const GROUPS: Array<{ key: SearchFocus; type: SearchResultType; heading: string 
 
 /** Rows share one look: a quiet icon tile, the name with the typed letters in bold, and a line under it. */
 const ITEM_CLASS =
-  "gap-2.5 rounded-md px-2.5 py-2 data-[selected=true]:bg-primary/10 data-[selected=true]:text-foreground [&[data-selected=true]_.result-title]:text-primary"
+  "gap-2.5 rounded-md px-2.5 py-2 data-[selected=true]:bg-primary/10 data-[selected=true]:text-foreground [&[data-selected=true]_.result-title]:text-primary-strong"
 
 function formatTimeAgo(timestamp: number): string {
   const seconds = Math.floor((Date.now() - timestamp) / 1000)
@@ -240,11 +240,11 @@ export function GlobalSearch({
               onClick={() => onFocusChange?.(chip.key)}
               className={cn(
                 "inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium transition-colors disabled:opacity-45",
-                on ? "border-primary/50 bg-primary/10 text-primary" : "bg-card text-muted-foreground enabled:hover:text-foreground"
+                on ? "border-primary/50 bg-primary/10 text-primary-strong" : "bg-card text-muted-foreground enabled:hover:text-foreground"
               )}
             >
               {chip.label}
-              <span className={cn("font-medium tabular-nums", on ? "text-primary" : "text-foreground")}>{chip.count.toLocaleString()}</span>
+              <span className={cn("font-medium tabular-nums", on ? "text-primary-strong" : "text-foreground")}>{chip.count.toLocaleString()}</span>
             </button>
           )
         }

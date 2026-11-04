@@ -58,7 +58,7 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
               <p className="truncate text-[17px] font-semibold text-foreground">
                 Bamboo Reports
                 {isDev && (
-                  <span className="ml-1.5 cursor-default font-medium text-amber-600 dark:text-amber-400" title={devHint}>
+                  <span className="ml-1.5 cursor-default font-medium text-amber-700 dark:text-amber-400" title={devHint}>
                     Dev
                   </span>
                 )}

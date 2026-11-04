@@ -182,7 +182,7 @@ export function FilterRangeField({
                 className={cn(
                   "h-6 rounded-md border px-2 text-xs tabular-nums transition-colors",
                   selected
-                    ? "border-primary/50 bg-primary/10 text-primary"
+                    ? "border-primary/50 bg-primary/10 text-primary-strong"
                     : "border-border bg-background text-muted-foreground hover:border-foreground/20 hover:text-foreground"
                 )}
               >

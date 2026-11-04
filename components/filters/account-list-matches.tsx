@@ -62,12 +62,12 @@ export function AccountListMatches({ matches, onMap }: AccountListMatchesProps) 
                 onClick={() => setFilter(f.id)}
                 className={cn(
                   "inline-flex h-7 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors",
-                  on ? "border-primary/50 bg-primary/10 text-primary" : "border-border bg-card text-muted-foreground hover:text-foreground"
+                  on ? "border-primary/50 bg-primary/10 text-primary-strong" : "border-border bg-card text-muted-foreground hover:text-foreground"
                 )}
               >
                 {f.dot && <span className={cn("h-2 w-2 rounded-full", f.dot)} />}
                 {f.label}
-                <span className={cn("tabular-nums", on ? "text-primary" : "text-foreground")}>{count}</span>
+                <span className={cn("tabular-nums", on ? "text-primary-strong" : "text-foreground")}>{count}</span>
               </button>
             )
           })}

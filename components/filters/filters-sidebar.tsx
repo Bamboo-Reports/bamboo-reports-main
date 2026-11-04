@@ -80,7 +80,7 @@ function CountBadge({ count, className }: { count: number; className?: string })
   return (
     <span
       className={cn(
-        "inline-grid h-5 min-w-5 place-items-center rounded-md bg-primary/10 px-1.5 text-xs font-medium tabular-nums text-primary",
+        "inline-grid h-5 min-w-5 place-items-center rounded-md bg-primary/10 px-1.5 text-xs font-medium tabular-nums text-primary-strong",
         className
       )}
     >
@@ -271,7 +271,7 @@ export function FiltersSidebar({
         </button>
         {totalActiveFilters > 0 ? (
           <span
-            className="my-1 grid h-6 w-10 place-items-center rounded-md bg-primary/10 text-xs font-medium tabular-nums text-primary"
+            className="my-1 grid h-6 w-10 place-items-center rounded-md bg-primary/10 text-xs font-medium tabular-nums text-primary-strong"
             title={`${totalActiveFilters} ${totalActiveFilters === 1 ? "filter" : "filters"} applied`}
           >
             {totalActiveFilters}
@@ -362,7 +362,7 @@ export function FiltersSidebar({
           <div className="flex items-center gap-2">
             <h2 className="text-base font-medium text-foreground">Filters</h2>
             {totalActiveFilters > 0 && (
-              <span className="inline-flex h-5 items-center rounded-md bg-primary/10 px-1.5 text-xs font-medium tabular-nums text-primary">
+              <span className="inline-flex h-5 items-center rounded-md bg-primary/10 px-1.5 text-xs font-medium tabular-nums text-primary-strong">
                 {totalActiveFilters}
               </span>
             )}

@@ -137,7 +137,7 @@ export function SavedFiltersLibrary({
               <LibraryPaneTitle
                 badge={
                   applied ? (
-                    <span className="inline-flex h-5 shrink-0 items-center rounded-md bg-primary/10 px-1.5 text-xs font-medium text-primary">
+                    <span className="inline-flex h-5 shrink-0 items-center rounded-md bg-primary/10 px-1.5 text-xs font-medium text-primary-strong">
                       {appliedModified ? "Applied · changed" : "Applied"}
                     </span>
                   ) : undefined

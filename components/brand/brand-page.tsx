@@ -46,7 +46,7 @@ export function BrandPage({ children, className, homeHref = "/" }: BrandPageProp
             </span>
             <span className="text-[17px] font-semibold text-foreground">
               Bamboo Reports
-              {isDev && <span className="ml-1.5 font-medium text-amber-600 dark:text-amber-400">Dev</span>}
+              {isDev && <span className="ml-1.5 font-medium text-amber-700 dark:text-amber-400">Dev</span>}
             </span>
           </Link>
           {children}
