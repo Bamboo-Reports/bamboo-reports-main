@@ -22,7 +22,7 @@ import {
 } from "@/lib/dashboard/filtering"
 import { getAccountChartData, getCenterChartData, getProspectChartData } from "@/lib/dashboard/charts"
 import { perfLog } from "@/lib/utils/dev-log"
-import { countActiveFilters } from "@/lib/dashboard/active-filters"
+import { countActiveFilters, type RangeBaselines } from "@/lib/dashboard/active-filters"
 import { useAccountLists } from "@/contexts/account-lists-context"
 import { expandAccountLists } from "@/lib/accounts/account-lists"
 import { useFilterChangeTracking } from "@/hooks/use-filter-change-tracking"
@@ -87,8 +87,16 @@ export function useDashboardFilters({
     [serverRanges, accounts, centers]
   )
 
-  const [filters, setFilters] = useState<Filters>(() => createDefaultFilters())
-  const [pendingFilters, setPendingFilters] = useState<Filters>(() => createDefaultFilters())
+  // Start the ranges at the current bounds, so the filters never disagree with
+  // the bounds they are measured against (the effect below keeps them in step).
+  const initialFilters = () =>
+    createDefaultFilters({
+      accountHqRevenueRange: [baseRanges.revenueRange.min, baseRanges.revenueRange.max],
+      accountYearsInIndiaRange: [baseRanges.yearsInIndiaRange.min, baseRanges.yearsInIndiaRange.max],
+      centerIncYearRange: [baseRanges.centerIncYearRange.min, baseRanges.centerIncYearRange.max],
+    })
+  const [filters, setFilters] = useState<Filters>(initialFilters)
+  const [pendingFilters, setPendingFilters] = useState<Filters>(initialFilters)
   const [isApplying, startApplyTransition] = useTransition()
 
   const [revenueRange, setRevenueRange] = useState(baseRanges.revenueRange)
@@ -292,14 +300,15 @@ export function useDashboardFilters({
     [accounts, centers, functions, prospects, tech, filterStateForOptions]
   )
 
-  const getActiveFilterCountFor = useCallback(
-    (sourceFilters: Filters) =>
-      countActiveFilters(sourceFilters, {
-        revenue: revenueRange,
-        yearsInIndia: yearsInIndiaRange,
-        centerIncYear: centerIncYearRange,
-      }),
+  // The full extent of each range slider: a range at these bounds is not a filter.
+  const rangeBaselines: RangeBaselines = useMemo(
+    () => ({ revenue: revenueRange, yearsInIndia: yearsInIndiaRange, centerIncYear: centerIncYearRange }),
     [revenueRange, yearsInIndiaRange, centerIncYearRange]
+  )
+
+  const getActiveFilterCountFor = useCallback(
+    (sourceFilters: Filters) => countActiveFilters(sourceFilters, rangeBaselines),
+    [rangeBaselines]
   )
 
   const resetFilters = useCallback(() => {
@@ -372,7 +381,7 @@ export function useDashboardFilters({
 
   const getTotalActiveFilters = useCallback(() => getActiveFilterCountFor(filters), [filters, getActiveFilterCountFor])
 
-  useFilterChangeTracking(filters, getActiveFilterCountFor)
+  useFilterChangeTracking(filters, rangeBaselines)
 
   return {
     filters,

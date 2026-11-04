@@ -38,8 +38,8 @@ const change = (result: Hook, update: (prev: Filters) => Filters) => {
   act(() => result.current.setPendingFilters(update))
 }
 const flushTracking = () => act(() => vi.advanceTimersByTime(350))
-// Lets the load-time range sync report (see "reports the initial range
-// sync") and forgets it, so a test sees only its own changes.
+// Lets the load-time tracking settle and forgets anything it sent, so a
+// test sees only its own changes.
 const settle = () => {
   flushTracking()
   vi.mocked(captureEvent).mockClear()
@@ -141,18 +141,34 @@ describe("useDashboardFilters", () => {
   })
 
   describe("filter_changed tracking", () => {
-    // Current behaviour, kept as is by the hook split: moving the sliders from
-    // their placeholder defaults to the server bounds is reported as three
-    // range changes on every load.
-    it("reports the initial range sync as three range changes", () => {
+    // The sliders move from their placeholders to the server's bounds once the
+    // facets load. That is not a filter change by the user.
+    it("does not report the sliders settling on the server bounds", () => {
       setup()
       flushTracking()
-      expect(events("filter_changed").map((e) => (e as { filter_key: string }).filter_key)).toEqual([
-        "accountHqRevenueRange",
-        "accountYearsInIndiaRange",
-        "centerIncYearRange",
+      expect(events("filter_changed")).toHaveLength(0)
+    })
+
+    it("does not report new bounds arriving, even with a user change in the same batch", () => {
+      const { result, rerender } = setup()
+      settle()
+      rerender({ serverRanges: { ...RANGES, centerIncYear: { min: 1985, max: 2031 } } })
+      change(result, (f) => ({ ...f, centerCityValues: [inc("Pune")] }))
+      flushTracking()
+      expect(events("filter_changed").map((e) => (e as { filter_key: string }).filter_key)).toEqual(["centerCityValues"])
+    })
+
+    it("still reports a range the user narrows or widens back", () => {
+      const { result } = setup()
+      settle()
+      act(() => result.current.handleCenterIncYearRangeChange([2000, 2030]))
+      flushTracking()
+      act(() => result.current.handleCenterIncYearRangeChange([1990, 2030]))
+      flushTracking()
+      expect(events("filter_changed")).toMatchObject([
+        { filter_key: "centerIncYearRange", range_min: 2000, previous_range_min: 1990, active_filters_count: 1 },
+        { filter_key: "centerIncYearRange", range_min: 1990, previous_range_min: 2000, active_filters_count: 0 },
       ])
-      expect(events("filter_changed")[0]).toMatchObject({ previous_range_max: 1000000, active_filters_count: 0 })
     })
 
     it("reports a multi-select change with every detail, after a pause", () => {
