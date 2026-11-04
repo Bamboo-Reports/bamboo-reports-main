@@ -155,7 +155,7 @@
     will-change: transform, opacity;
   }
 
-  /* Smooth scrolling — disabled during product tour to avoid double-animation */
+  /* Smooth scrolling, disabled during the product tour to avoid a double animation */
   html {
     font-size: 100%;
     scroll-behavior: smooth;
