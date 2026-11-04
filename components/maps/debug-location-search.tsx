@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
-import { Marker } from "@vis.gl/react-maplibre"
+import { Marker, type MapRef } from "@vis.gl/react-maplibre"
 import { RiCloseLine } from "@remixicon/react"
 import { Button } from "@/components/ui/button"
 import { devError } from "@/lib/utils/dev-log"
@@ -14,7 +14,7 @@ interface SearchResult {
 
 interface DebugLocationSearchProps {
   // Ref to the react-maplibre <Map> (or the underlying maplibre Map).
-  mapRef: React.MutableRefObject<any>
+  mapRef: React.RefObject<MapRef | null>
 }
 
 // Debug-only location finder. Hidden by default; toggle with Ctrl/Cmd+Shift+F.
@@ -63,7 +63,7 @@ export function DebugLocationSearch({ mapRef }: DebugLocationSearchProps) {
     setPin(r)
     setResults([])
     setQuery(r.label.split(",")[0])
-    const map = mapRef.current?.getMap?.() ?? mapRef.current
+    const map = mapRef.current?.getMap()
     map?.flyTo({ center: [r.lng, r.lat], zoom: 11, duration: 1000 })
   }
 

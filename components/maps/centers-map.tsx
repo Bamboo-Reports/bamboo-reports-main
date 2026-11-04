@@ -1,7 +1,8 @@
 "use client"
 
 import React, { useMemo, useState, useEffect, useCallback, useLayoutEffect } from "react"
-import { Map as MapGL, Source, Layer, NavigationControl, FullscreenControl } from "@vis.gl/react-maplibre"
+import { Map as MapGL, Source, Layer, NavigationControl, FullscreenControl, type MapRef, type ViewStateChangeEvent } from "@vis.gl/react-maplibre"
+import type { ExpressionSpecification } from "maplibre-gl"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { MAPLIBRE_WORKER_URL, prepareBasemap, transformMapRequest, useBasemapStyleUrl } from "@/lib/maps/basemap"
@@ -76,7 +77,7 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
   const [isMapReady, setIsMapReady] = useState(false)
   const [visibleGeojsonData, setVisibleGeojsonData] = useState<CityFeatureCollection | null>(null)
   const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number } | null>(null)
-  const mapRef = React.useRef<any>(null)
+  const mapRef = React.useRef<MapRef>(null)
   const containerRef = React.useRef<HTMLDivElement | null>(null)
   const tooltipRef = React.useRef<HTMLDivElement | null>(null)
   const lastMapMoveTrackedAtRef = React.useRef(0)
@@ -305,7 +306,7 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
   }, [cityData, getCoreRadiusForCount, getLabelConfig])
 
   const updateVisibleGeojsonData = useCallback(() => {
-    const mapInstance = mapRef.current?.getMap?.() ?? mapRef.current
+    const mapInstance = mapRef.current?.getMap()
     if (!mapInstance?.project || geojsonData.features.length === 0) {
       setVisibleGeojsonData(geojsonData)
       return
@@ -348,9 +349,9 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
     updateVisibleGeojsonData()
   }, [isMapReady, updateVisibleGeojsonData])
 
-  const coreRadiusExpression = useMemo(() => ["get", "radius"] as any, [])
+  const coreRadiusExpression = useMemo((): ExpressionSpecification => ["get", "radius"], [])
   const haloRadiusExpression = useMemo(
-    () => ["*", coreRadiusExpression, HALO_RADIUS_SCALE] as any,
+    (): ExpressionSpecification => ["*", coreRadiusExpression, HALO_RADIUS_SCALE],
     [coreRadiusExpression]
   )
 
@@ -416,7 +417,7 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
   logger.debug("rendering_map", { cities_count: cityData.length })
 
   try {
-    const handleMapMoveTracked = (event: any) => {
+    const handleMapMoveTracked = (event: ViewStateChangeEvent) => {
       updateVisibleGeojsonData()
       const now = Date.now()
       const zoom = Number(event?.viewState?.zoom ?? 0)
@@ -463,7 +464,7 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
         projection="mercator"
         onLoad={() => {
           handleLoad()
-          const map = mapRef.current?.getMap?.() ?? mapRef.current
+          const map = mapRef.current?.getMap()
           // Hide the basemap's de-facto international borders; India boundaries
           // come from the SOI overlay below.
           if (map) prepareBasemap(map)

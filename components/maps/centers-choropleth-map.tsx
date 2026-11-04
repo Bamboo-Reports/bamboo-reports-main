@@ -1,7 +1,8 @@
 "use client"
 
 import React, { useMemo, useState, useEffect, useLayoutEffect } from "react"
-import { Map as MapGL, Source, Layer, NavigationControl, FullscreenControl } from "@vis.gl/react-maplibre"
+import { Map as MapGL, Source, Layer, NavigationControl, FullscreenControl, type MapRef } from "@vis.gl/react-maplibre"
+import type { ExpressionSpecification, FilterSpecification } from "maplibre-gl"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { MAPLIBRE_WORKER_URL, prepareBasemap, transformMapRequest, useBasemapStyleUrl } from "@/lib/maps/basemap"
@@ -36,7 +37,7 @@ interface Admin1Feature {
   properties?: Admin1Properties
   geometry?: {
     type: "Polygon" | "MultiPolygon"
-    coordinates: any
+    coordinates: unknown
   }
 }
 
@@ -121,7 +122,7 @@ const aggregatesFromStateRows = (rows: StateAggregate[]): StateAggregates => {
   return { countsByState, accountsCountByState, headcountByState, countryNamesByIso }
 }
 
-const buildColorScale = (values: number[], countExpression: any) => {
+const buildColorScale = (values: number[], countExpression: ExpressionSpecification) => {
   const computedMax = values.length > 0 ? Math.max(...values) : 0
   const computedMin = values.length > 0 ? Math.min(...values) : 0
   const maxValue = Math.max(0, computedMax)
@@ -129,7 +130,7 @@ const buildColorScale = (values: number[], countExpression: any) => {
 
   if (maxValue <= 0) {
     return {
-      expression: ["step", countExpression, COLOR_SCALE[0], 1, COLOR_SCALE[1]] as any,
+      expression: ["step", countExpression, COLOR_SCALE[0], 1, COLOR_SCALE[1]] as ExpressionSpecification,
       legend: [
         { label: "0", color: COLOR_SCALE[0] },
         { label: "1+", color: COLOR_SCALE[1] },
@@ -140,7 +141,7 @@ const buildColorScale = (values: number[], countExpression: any) => {
   if (minValue >= maxValue) {
     const color = COLOR_SCALE[COLOR_SCALE.length - 1]
     return {
-      expression: ["case", [">", countExpression, 0], color, COLOR_SCALE[0]] as any,
+      expression: ["case", [">", countExpression, 0], color, COLOR_SCALE[0]] as ExpressionSpecification,
       legend: [
         { label: minValue.toLocaleString(), color },
       ],
@@ -169,10 +170,12 @@ const buildColorScale = (values: number[], countExpression: any) => {
     const step = maxColorIndex / (bucketCount - 1)
     return COLOR_SCALE[Math.round(index * step)]
   })
-  const expression: any[] = ["step", countExpression, colors[0]]
+  // Built step by step, so typed once complete.
+  const stepParts: Array<ExpressionSpecification | string | number> = ["step", countExpression, colors[0]]
   uniqueThresholds.forEach((threshold, index) => {
-    expression.push(threshold, colors[index + 1])
+    stepParts.push(threshold, colors[index + 1])
   })
+  const expression = stepParts as ExpressionSpecification
 
   const legend: Array<{ label: string; color: string }> = []
   const formatRange = (min: number, max: number | null) => {
@@ -226,7 +229,7 @@ export function CentersChoroplethMap({
   } | null>(null)
   const [hoveredFeatureKeys, setHoveredFeatureKeys] = useState<string[] | null>(null)
   const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number } | null>(null)
-  const mapRef = React.useRef<any>(null)
+  const mapRef = React.useRef<MapRef>(null)
   const containerRef = React.useRef<HTMLDivElement | null>(null)
   const tooltipRef = React.useRef<HTMLDivElement | null>(null)
   const lastMapMoveTrackedAtRef = React.useRef(0)
@@ -310,7 +313,7 @@ export function CentersChoroplethMap({
   }, [countValues])
 
   const featureKeyExpression = useMemo(
-    () => (["concat", ["get", "level_0"], "|", ["downcase", ["coalesce", ["get", "name"], ""]]] as any),
+    (): ExpressionSpecification => ["concat", ["get", "level_0"], "|", ["downcase", ["coalesce", ["get", "name"], ""]]],
     []
   )
 
@@ -322,16 +325,17 @@ export function CentersChoroplethMap({
     return keys
   }, [stateAggregates])
 
-  const countExpression = useMemo(() => {
-    if (stateKeysWithCounts.length === 0) return ["literal", 0] as any
-    const expression: any[] = ["match", featureKeyExpression]
+  const countExpression = useMemo((): ExpressionSpecification => {
+    if (stateKeysWithCounts.length === 0) return ["literal", 0]
+    // Built pair by pair, so typed once complete.
+    const match: Array<ExpressionSpecification | string | number> = ["match", featureKeyExpression]
     stateAggregates.countsByState.forEach((value, key) => {
       if (value > 0) {
-        expression.push(key, value)
+        match.push(key, value)
       }
     })
-    expression.push(0)
-    return expression
+    match.push(0)
+    return match as ExpressionSpecification
   }, [featureKeyExpression, stateAggregates, stateKeysWithCounts])
 
   const { expression: fillColorExpression } = useMemo(
@@ -339,28 +343,28 @@ export function CentersChoroplethMap({
     [countValues, countExpression]
   )
 
-  const layerFilter = useMemo(() => {
+  const layerFilter = useMemo((): FilterSpecification => {
     if (stateKeysWithCounts.length === 0) {
-      return ["==", 0, 1] as any
+      return ["==", 0, 1]
     }
-    return ["all", ["==", ["get", "level"], 1], ["in", featureKeyExpression, ["literal", stateKeysWithCounts]]] as any
+    return ["all", ["==", ["get", "level"], 1], ["in", featureKeyExpression, ["literal", stateKeysWithCounts]]]
   }, [featureKeyExpression, stateKeysWithCounts])
 
-  const hoverLayerFilter = useMemo(() => {
+  const hoverLayerFilter = useMemo((): FilterSpecification => {
     if (!hoveredFeatureKeys || hoveredFeatureKeys.length === 0) {
-      return ["==", ["get", "name"], "__never_hovered_state__"] as any
+      return ["==", ["get", "name"], "__never_hovered_state__"]
     }
     return [
       "all",
       ["==", ["get", "level"], 1],
       ["in", featureKeyExpression, ["literal", hoveredFeatureKeys]],
-    ] as any
+    ]
   }, [featureKeyExpression, hoveredFeatureKeys])
 
   const mapStyle = useBasemapStyleUrl()
 
   const handleRecenter = () => {
-    const mapInstance = mapRef.current?.getMap?.() ?? mapRef.current
+    const mapInstance = mapRef.current?.getMap()
     if (!mapInstance) return
 
     mapInstance.flyTo({
@@ -511,7 +515,7 @@ export function CentersChoroplethMap({
           <Layer
             id="admin1-base-outline"
             type="line"
-            filter={["==", ["get", "level"], 1] as any}
+            filter={["==", ["get", "level"], 1]}
             paint={{
               "line-color": "#64748b",
               "line-width": 0.5,
