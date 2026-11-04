@@ -337,8 +337,10 @@ export function useDashboardAnalytics({
     previousPageRef.current[activeSection] = activePage
   }, [activePage, itemsPerPage, activeSection])
 
+  // Before sign-in finishes nothing is loading and there is no error, so
+  // dataLoaded is already true; wait for real counts instead of reporting zeros.
   useEffect(() => {
-    if (!dataLoaded || hasTrackedDashboardLoadRef.current) {
+    if (!dataLoaded || !summary || hasTrackedDashboardLoadRef.current) {
       return
     }
     captureEvent(ANALYTICS_EVENTS.DASHBOARD_LOADED, {

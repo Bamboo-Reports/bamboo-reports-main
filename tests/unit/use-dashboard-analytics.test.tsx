@@ -119,6 +119,18 @@ describe("useDashboardAnalytics", () => {
     expect(events("no_results_after_filter")).toHaveLength(2)
   })
 
+  it("waits for real counts before reporting the first load", () => {
+    const { rerender } = setup({ authReady: false, userId: null, dataLoaded: true, summary: null })
+    expect(events("dashboard_loaded")).toHaveLength(0)
+    rerender({ ...base, dataLoaded: true, summary: null })
+    expect(events("dashboard_loaded")).toHaveLength(0)
+    const summary = { full: { accounts: 9, centers: 8, services: 7, prospects: 6 } } as UseDashboardAnalyticsParams["summary"]
+    rerender({ ...base, dataLoaded: true, summary })
+    expect(events("dashboard_loaded")).toEqual([
+      ["dashboard_loaded", { total_accounts_count: 9, total_centers_count: 8, total_services_count: 7, total_prospects_count: 6 }],
+    ])
+  })
+
   it("reports the first load once and error states", () => {
     const summary = { full: { accounts: 1, centers: 2, services: 3, prospects: 4 } } as UseDashboardAnalyticsParams["summary"]
     const { rerender } = setup({ dataLoaded: true, summary })
