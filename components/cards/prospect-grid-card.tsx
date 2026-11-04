@@ -49,7 +49,7 @@ export const ProspectGridCard = memo(({ prospect, onClick }: ProspectGridCardPro
           <CardContent className="p-4 flex flex-col gap-4">
             <div className="flex items-start gap-3">
               <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <span className="text-sm font-bold text-primary">{initials || "?"}</span>
+                <span className="text-sm font-semibold text-primary">{initials || "?"}</span>
               </div>
               <div className="min-w-0 flex-1">
                 <h3

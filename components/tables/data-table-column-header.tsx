@@ -19,7 +19,7 @@ export function DataTableColumnHeader<TData extends RowData, TValue>({
   className,
 }: DataTableColumnHeaderProps<TData, TValue>) {
   if (!column.getCanSort()) {
-    return <div className={cn("truncate text-xs uppercase tracking-wider", className)}>{title}</div>
+    return <div className={cn("truncate text-xs font-medium", className)}>{title}</div>
   }
 
   const sorted = column.getIsSorted()
@@ -28,7 +28,7 @@ export function DataTableColumnHeader<TData extends RowData, TValue>({
       type="button"
       variant="ghost"
       size="sm"
-      className={cn("-ml-3 max-w-full text-xs uppercase tracking-wider", sorted ? "text-foreground" : "text-muted-foreground", className)}
+      className={cn("-ml-3 max-w-full text-xs font-medium", sorted ? "text-foreground" : "text-muted-foreground", className)}
       onClick={column.getToggleSortingHandler()}
       aria-label={
         sorted === "asc" ? `${title}, sorted ascending` : sorted === "desc" ? `${title}, sorted descending` : `Sort by ${title}`

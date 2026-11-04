@@ -342,7 +342,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width] min-w-[280px] p-1" align="start">
-            <div className="flex items-center justify-between px-2 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <div className="flex items-center justify-between px-2 pb-1 pt-2 text-xs font-medium text-muted-foreground">
               <span>My filters</span>
               {myFilters.length > 0 && <span className="tabular-nums">{myFilters.length}</span>}
             </div>
@@ -354,7 +354,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
 
             {sharedWithMeFilters.length > 0 && (
               <>
-                <div className="flex items-center justify-between px-2 pb-1 pt-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <div className="flex items-center justify-between px-2 pb-1 pt-3 text-xs font-medium text-muted-foreground">
                   <span>Shared with me</span>
                   <span className="tabular-nums">{sharedWithMeFilters.length}</span>
                 </div>

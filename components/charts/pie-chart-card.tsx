@@ -207,7 +207,7 @@ export const PieChartCard = memo(({
                   ${countLabel}: <span class="font-medium text-foreground" style="color:${color}">${Number(value).toLocaleString()}</span>
                 </p>
                 <p class="text-xs text-muted-foreground">
-                  ${showBigPercentage ? `<span class="text-2xl font-bold" style="color:${color}">${percent}%</span>` : `<span class="font-medium" style="color:${color}">${percent}%</span>`}
+                  ${showBigPercentage ? `<span class="text-2xl font-medium" style="color:${color}">${percent}%</span>` : `<span class="font-medium" style="color:${color}">${percent}%</span>`}
                 </p>
               </div>
             </div>

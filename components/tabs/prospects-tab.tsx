@@ -234,8 +234,8 @@ export function ProspectsTab({
     <TabsContent value="prospects">
       {/* Header with View Toggle */}
       <div className="flex items-center gap-2 mb-4">
-        <RiPieChartLine className="h-5 w-5 text-primary" />
-        <h2 className="text-lg font-semibold text-foreground">Prospect Analytics</h2>
+        <RiPieChartLine className="h-[18px] w-[18px] text-muted-foreground" />
+        <h2 className="text-lg font-medium text-foreground">Prospect analytics</h2>
         <ViewSwitcher
           data-tour="view-switcher"
           value={prospectsView}

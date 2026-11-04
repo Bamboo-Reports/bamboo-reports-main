@@ -27,7 +27,7 @@ function ProspectAvatar({ prospect }: { prospect: Prospect }) {
     .join("")
   return (
     <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
-      <span className="text-sm font-bold text-primary">{initials}</span>
+      <span className="text-sm font-semibold text-primary">{initials}</span>
     </div>
   )
 }

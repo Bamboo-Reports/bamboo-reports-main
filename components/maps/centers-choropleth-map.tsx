@@ -491,12 +491,12 @@ export function CentersChoroplethMap({
           const accountsCount = stateAggregates.accountsCountByState.get(key) || 0
           const headcount = stateAggregates.headcountByState.get(key) || 0
           const countryName = stateAggregates.countryNamesByIso.get(iso2) || iso2
-          const stateLabel = stateName || "Unknown State"
+          const stateLabel = stateName || "Unknown state"
           setHoverInfo({
             x: e.point.x,
             y: e.point.y,
             state: stateLabel,
-            country: countryName || "Unknown Country",
+            country: countryName || "Unknown country",
             count,
             accountsCount,
             headcount,
@@ -581,7 +581,7 @@ export function CentersChoroplethMap({
               "var(--font-sans), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
           }}
         >
-          <div className="text-sm font-semibold text-muted-foreground dark:text-white mb-2 text-center">Total Centres</div>
+          <div className="mb-2 text-xs font-medium text-muted-foreground">Total centres</div>
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground dark:text-white">
             <span className="tabular-nums">{countRange.min.toLocaleString()}</span>
             <div
@@ -605,26 +605,26 @@ export function CentersChoroplethMap({
                 "var(--font-sans), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
             }}
           >
-            <div className="flex min-w-[220px] overflow-hidden rounded-lg border border-border/80 bg-popover text-popover-foreground shadow-[0_12px_40px_-12px_rgba(0,0,0,0.35)] animate-in fade-in-0 zoom-in-95 duration-150">
+            <div className="flex min-w-[220px] overflow-hidden rounded-lg border border-border/80 bg-popover text-popover-foreground shadow-[0_8px_24px_rgba(0,0,0,0.08)] animate-in fade-in-0 zoom-in-95 duration-150">
               <div className="w-0.5 bg-orange-500/80" aria-hidden="true" />
-              <div className="flex-1 space-y-3 p-3.5">
+              <div className="flex-1 space-y-3 p-4">
                 {/* Location */}
                 <div>
-                  <div className="text-[11px] font-semibold uppercase leading-tight tracking-[0.14em] text-foreground">
-                    {hoverInfo.state || "Unknown State"}
+                  <div className="text-sm font-medium leading-tight text-foreground">
+                    {hoverInfo.state || "Unknown state"}
                   </div>
-                  <div className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                    {hoverInfo.country || "Unknown Country"}
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    {hoverInfo.country || "Unknown country"}
                   </div>
                 </div>
 
                 {/* Hero metric: centers count */}
                 <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-semibold leading-none tabular-nums text-foreground">
+                  <span className="text-2xl font-medium leading-none tabular-nums text-foreground">
                     {hoverInfo.count.toLocaleString()}
                   </span>
-                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                    {hoverInfo.count === 1 ? 'center' : 'centers'}
+                  <span className="text-xs text-muted-foreground">
+                    {hoverInfo.count === 1 ? 'centre' : 'centres'}
                   </span>
                 </div>
 

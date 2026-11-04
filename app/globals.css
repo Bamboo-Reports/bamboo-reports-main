@@ -120,27 +120,27 @@
 
   /* Typography Hierarchy Enhancement */
   h1 {
-    @apply text-3xl font-bold tracking-tight;
+    @apply text-3xl font-semibold tracking-tight;
   }
 
   h2 {
-    @apply text-2xl font-semibold tracking-tight;
+    @apply text-2xl font-semibold;
   }
 
   h3 {
-    @apply text-xl font-semibold tracking-tight;
+    @apply text-xl font-semibold;
   }
 
   h4 {
-    @apply text-lg font-medium tracking-tight;
+    @apply text-lg font-medium;
   }
 
   h5 {
-    @apply text-base font-medium tracking-tight;
+    @apply text-base font-medium;
   }
 
   h6 {
-    @apply text-sm font-medium tracking-tight;
+    @apply text-sm font-medium;
   }
 
   /* Performance optimizations */
@@ -215,20 +215,20 @@
   }
 
   .animate-fade-in {
-    animation: fadeIn 0.2s ease-out forwards;
+    animation: fadeIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   }
 
   /* Staggered animation for list items */
   .animate-stagger {
     opacity: 0;
-    animation: fadeIn 0.2s ease-out forwards;
+    animation: fadeIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   }
 
   .animate-stagger:nth-child(1) { animation-delay: 0ms; }
-  .animate-stagger:nth-child(2) { animation-delay: 25ms; }
-  .animate-stagger:nth-child(3) { animation-delay: 50ms; }
-  .animate-stagger:nth-child(4) { animation-delay: 75ms; }
-  .animate-stagger:nth-child(5) { animation-delay: 100ms; }
+  .animate-stagger:nth-child(2) { animation-delay: 40ms; }
+  .animate-stagger:nth-child(3) { animation-delay: 80ms; }
+  .animate-stagger:nth-child(4) { animation-delay: 120ms; }
+  .animate-stagger:nth-child(5) { animation-delay: 160ms; }
   .animate-stagger:nth-child(6) { animation-delay: 125ms; }
   .animate-stagger:nth-child(7) { animation-delay: 150ms; }
   .animate-stagger:nth-child(8) { animation-delay: 175ms; }
@@ -237,12 +237,12 @@
 
   /* Smooth transition for all interactive elements */
   .interactive {
-    transition: color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
-                background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
-                border-color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
-                transform 0.15s cubic-bezier(0.4, 0, 0.2, 1),
-                opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1),
-                box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: color 0.15s cubic-bezier(0.22, 1, 0.36, 1),
+                background-color 0.15s cubic-bezier(0.22, 1, 0.36, 1),
+                border-color 0.15s cubic-bezier(0.22, 1, 0.36, 1),
+                transform 0.15s cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 0.15s cubic-bezier(0.22, 1, 0.36, 1),
+                box-shadow 0.15s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   /* Table row hover */

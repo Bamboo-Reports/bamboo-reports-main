@@ -1338,7 +1338,7 @@ function DashboardContent(): React.JSX.Element | null {
 
   return (
     <RecordHistoryProvider recordOpened={addRecentItem}>
-    <div className="h-screen bg-[radial-gradient(circle_at_top_right,_hsl(var(--primary)/0.14),_transparent_36%),radial-gradient(circle_at_0%_45%,_hsl(var(--chart-3)/0.10),_transparent_34%),hsl(var(--background))] flex flex-col overflow-hidden">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
       <TopProgressBar
         active={
           serverData.pending.core ||

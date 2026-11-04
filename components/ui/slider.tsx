@@ -33,8 +33,8 @@ const Slider = React.forwardRef<
       disabled={disabled || !hasRange}
       {...props}
     >
-      <SliderPrimitive.Track className="relative h-2 w-full grow overflow-hidden rounded-full bg-secondary transition-all duration-150">
-        <SliderPrimitive.Range className="absolute h-full bg-primary transition-all duration-150" />
+      <SliderPrimitive.Track className="relative h-2 w-full grow overflow-hidden rounded-full bg-secondary">
+        <SliderPrimitive.Range className="absolute h-full bg-primary" />
       </SliderPrimitive.Track>
       {Array.from({ length: thumbCount }).map((_, index) => (
         <SliderPrimitive.Thumb key={index} className={THUMB_CLASS} />

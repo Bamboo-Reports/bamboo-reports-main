@@ -33,10 +33,10 @@ export function FilterRow({ label, summary, active, children }: FilterRowProps) 
           !open && "hover:bg-muted/60"
         )}
       >
-        <span className={cn("shrink-0 text-foreground", active && "font-semibold")}>{label}</span>
+        <span className={cn("shrink-0 text-foreground", active && "font-medium")}>{label}</span>
         <span
           className={cn(
-            "min-w-0 flex-1 truncate text-right text-[12.5px]",
+            "min-w-0 flex-1 truncate text-right text-[13px]",
             active ? "text-foreground" : "text-muted-foreground"
           )}
         >
@@ -51,7 +51,7 @@ export function FilterRow({ label, summary, active, children }: FilterRowProps) 
         />
       </button>
       {open && (
-        <div id={bodyId} className="flex flex-col gap-2.5 px-2.5 pb-3 pt-0.5">
+        <div id={bodyId} className="flex flex-col gap-3 px-2.5 pb-3 pt-1">
           {children}
         </div>
       )}
@@ -62,14 +62,14 @@ export function FilterRow({ label, summary, active, children }: FilterRowProps) 
 /** Divider before the less-used filters (what used to sit behind "Show More"). */
 export function FilterMoreDivider({ locked = false, onLockedClick }: { locked?: boolean; onLockedClick?: () => void }) {
   return (
-    <div className="mx-2.5 mb-1 mt-2.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+    <div className="mx-2.5 mb-1 mt-3 flex items-center gap-2 text-xs font-medium text-muted-foreground">
       More
       <span className="h-px flex-1 bg-sidebar-border" />
       {locked && (
         <button
           type="button"
           onClick={onLockedClick}
-          className="inline-flex items-center gap-1 normal-case tracking-normal hover:text-foreground"
+          className="inline-flex items-center gap-1 hover:text-foreground"
           title="These filters are not part of your plan"
         >
           <RiLockLine className="h-3 w-3" />

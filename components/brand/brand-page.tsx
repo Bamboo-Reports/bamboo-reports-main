@@ -4,9 +4,8 @@ import { BrandMark } from "@/components/brand/brand-mark"
 import { getEnvironmentLabel } from "@/lib/config/environment"
 import { cn } from "@/lib/utils"
 
-/** The dashboard's page gradient, shared by every standalone screen. */
-export const DASHBOARD_PAGE_BACKGROUND =
-  "bg-[radial-gradient(circle_at_top_right,_hsl(var(--primary)/0.14),_transparent_36%),radial-gradient(circle_at_0%_45%,_hsl(var(--chart-3)/0.10),_transparent_34%),hsl(var(--background))]"
+/** The dashboard's page background, shared by every standalone screen. */
+export const DASHBOARD_PAGE_BACKGROUND = "bg-background"
 
 interface BrandPageProps {
   children: ReactNode
@@ -18,7 +17,7 @@ interface BrandPageProps {
 
 /**
  * Standalone screen frame used outside the dashboard shell: the auth pages,
- * the load error and the 404. It borrows the dashboard's gradient and the
+ * the load error and the 404. It borrows the dashboard's background and the
  * header's brand lockup so those screens read as part of the same product.
  */
 export function BrandPage({ children, className, homeHref = "/" }: BrandPageProps) {
@@ -42,10 +41,10 @@ export function BrandPage({ children, className, homeHref = "/" }: BrandPageProp
                 <BrandMark />
               </span>
               {isDev && (
-                <span aria-hidden className="absolute -right-[3px] -top-[3px] h-2.5 w-2.5 rounded-full bg-amber-500 ring-2 ring-background dark:bg-amber-400" />
+                <span aria-hidden className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-amber-500 ring-2 ring-background dark:bg-amber-400" />
               )}
             </span>
-            <span className="text-lg font-bold text-foreground">
+            <span className="text-[17px] font-semibold text-foreground">
               Bamboo Reports
               {isDev && <span className="ml-1.5 font-medium text-amber-600 dark:text-amber-400">Dev</span>}
             </span>

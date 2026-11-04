@@ -229,7 +229,7 @@ export function ProspectDetailsDialog({
         <div className="shrink-0 border-b px-6 pb-4 pt-5">
           <DialogBreadcrumb items={breadcrumbItems} />
           <div className="mt-2.5 flex items-start gap-3.5">
-            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-primary/10 text-base font-bold text-primary">{initials || "?"}</div>
+            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-primary/10 text-base font-semibold text-primary">{initials || "?"}</div>
             <div className="min-w-0 flex-1">
               <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                 <DialogTitle className="min-w-0 truncate text-[21px] font-semibold tracking-[-0.015em]">{fullName || "Prospect"}</DialogTitle>

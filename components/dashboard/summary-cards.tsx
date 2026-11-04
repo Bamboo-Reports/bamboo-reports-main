@@ -24,7 +24,7 @@ function formatCompactNumber(num: number): string {
   return num.toLocaleString()
 }
 
-const NUMBER_CLASS = 'text-2xl font-semibold leading-tight tracking-tight tabular-nums'
+const NUMBER_CLASS = 'text-2xl font-medium leading-tight tabular-nums'
 const TOTAL_CLASS = 'text-xs tabular-nums'
 
 /**
@@ -183,7 +183,7 @@ export const SummaryCards = React.memo(function SummaryCards({
       value: filteredAccountsCount,
       total: totalAccountsCount,
       icon: RiBuildingLine,
-      iconClassName: 'text-primary',
+      iconClassName: 'text-muted-foreground',
       interactive: accountsEnabled,
       procured: accountsEnabled,
       message: accountsEnabled ? null : getSectionUnavailableMessage("accounts"),
@@ -194,22 +194,22 @@ export const SummaryCards = React.memo(function SummaryCards({
       value: filteredCentersCount,
       total: totalCentersCount,
       icon: RiBriefcaseLine,
-      iconClassName: 'text-primary',
+      iconClassName: 'text-muted-foreground',
       interactive: centersEnabled,
       procured: centersEnabled,
       message: centersEnabled ? null : getSectionUnavailableMessage("centers"),
     },
     {
       id: 'upcoming-centers' as const,
-      title: 'Upcoming Centres',
+      title: 'Upcoming centres',
       value: filteredUpcomingCentersCount,
       total: totalUpcomingCentersCount,
       icon: RiTimeLine,
-      iconClassName: 'text-primary',
+      iconClassName: 'text-muted-foreground',
       interactive: false,
       procured: centersEnabled,
       message: centersEnabled
-        ? "Upcoming Centres is an overview stat. Only Accounts, Centres, and Prospects open as views."
+        ? "Upcoming centres is an overview stat. Only Accounts, Centres and Prospects open as views."
         : getSectionUnavailableMessage("centers"),
     },
     {
@@ -218,7 +218,7 @@ export const SummaryCards = React.memo(function SummaryCards({
       value: filteredProspectsCount,
       total: totalProspectsCount,
       icon: RiGroupLine,
-      iconClassName: 'text-primary',
+      iconClassName: 'text-muted-foreground',
       interactive: prospectsEnabled,
       procured: prospectsEnabled,
       message: prospectsEnabled ? null : getSectionUnavailableMessage("prospects"),
@@ -229,11 +229,11 @@ export const SummaryCards = React.memo(function SummaryCards({
       value: filteredHeadcount,
       total: totalHeadcount,
       icon: RiUserFollowLine,
-      iconClassName: 'text-primary',
+      iconClassName: 'text-muted-foreground',
       interactive: false,
       procured: centersEnabled,
       message: centersEnabled
-        ? "Headcount is an overview stat. Only Accounts, Centres, and Prospects open as views."
+        ? "Headcount is an overview stat. Only Accounts, Centres and Prospects open as views."
         : getSectionUnavailableMessage("centers"),
     },
   ]
@@ -264,20 +264,20 @@ export const SummaryCards = React.memo(function SummaryCards({
               }
             } : undefined}
             className={cn(
-              'px-3.5 pt-2.5 pb-[11px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 ease-out animate-stagger',
+              'px-4 py-3 shadow-[0_1px_2px_rgba(0,0,0,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-[border-color,box-shadow] duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] animate-stagger',
               card.interactive && 'cursor-pointer select-none',
               !card.interactive && card.message && 'cursor-help',
               isActive
-                ? 'ring-2 ring-sidebar-ring border-transparent shadow-[0_18px_55px_-35px_rgba(0,0,0,0.6)]'
-                : 'border-border/70 shadow-[0_14px_42px_-30px_rgba(0,0,0,0.45)]',
-              !isActive && card.interactive && 'hover:border-border hover:shadow-[0_16px_48px_-32px_rgba(0,0,0,0.5)]'
+                ? 'border-primary ring-1 ring-primary'
+                : 'border-border/70',
+              !isActive && card.interactive && 'hover:border-border'
             )}
           >
-            <div className="flex items-center gap-1.5 text-[13px] font-medium text-sidebar-foreground">
+            <div className="flex items-center gap-2 text-[13px] font-medium text-sidebar-foreground">
               <Icon className={cn('h-4 w-4 shrink-0', card.iconClassName)} />
               <span className={cn('truncate', !card.procured && 'text-muted-foreground')}>{card.title}</span>
               {!card.procured && (
-                <span className="ml-auto inline-flex h-[18px] shrink-0 items-center rounded-full bg-muted px-1.5 text-[10.5px] font-semibold text-muted-foreground">
+                <span className="ml-auto shrink-0 text-xs font-normal text-muted-foreground">
                   Not procured
                 </span>
               )}

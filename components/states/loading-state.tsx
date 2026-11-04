@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils"
  * Full-page loading state for the dashboard.
  *
  * Instead of a centered card with a spinner, this draws a ghost of the real
- * dashboard shell: the same page gradient, the same header band with the
+ * dashboard shell: the same page background, the same header band with the
  * brand mark, the summary-card row, the tab strip and the chart cards. When
  * data arrives, the real dashboard lands on top of the same structure, so the
  * swap reads as content filling in rather than a screen change.
@@ -25,7 +25,7 @@ export function LoadingState() {
   const isDev = getEnvironmentLabel() === "DEV"
   return (
     <div
-      className="flex h-screen flex-col overflow-hidden bg-[radial-gradient(circle_at_top_right,_hsl(var(--primary)/0.14),_transparent_36%),radial-gradient(circle_at_0%_45%,_hsl(var(--chart-3)/0.10),_transparent_34%),hsl(var(--background))]"
+      className="flex h-screen flex-col overflow-hidden bg-background"
       aria-busy="true"
       aria-label="Loading dashboard"
     >
@@ -33,7 +33,7 @@ export function LoadingState() {
 
       {/* Header ghost: mirrors components/layout/header.tsx so nothing moves on swap. */}
       <div className="sticky top-0 z-20 border-b border-border/80 bg-background">
-        <div className="mx-auto w-full px-6 py-4">
+        <div className="mx-auto w-full px-6 py-3">
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
               <div className="relative h-10 w-10 shrink-0">
@@ -48,11 +48,11 @@ export function LoadingState() {
                 {isDev && (
                   <span
                     aria-hidden
-                    className="absolute -right-[3px] -top-[3px] h-2.5 w-2.5 rounded-full bg-amber-500 ring-2 ring-background dark:bg-amber-400"
+                    className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-amber-500 ring-2 ring-background dark:bg-amber-400"
                   />
                 )}
               </div>
-              <p className="truncate text-lg font-bold text-foreground">
+              <p className="truncate text-[17px] font-semibold text-foreground">
                 Bamboo Reports
                 {isDev && <span className="ml-1.5 font-medium text-amber-600 dark:text-amber-400">Dev</span>}
               </p>
@@ -60,8 +60,7 @@ export function LoadingState() {
 
             <div className="flex items-center gap-2" aria-hidden="true">
               <Skeleton className="hidden h-8 w-56 rounded-lg sm:block" />
-              <Skeleton className="h-8 w-20 rounded-md" />
-              <Skeleton className="h-8 w-8 rounded-md" />
+                            <Skeleton className="h-8 w-8 rounded-md" />
               <Skeleton className="h-8 w-8 rounded-md" />
             </div>
           </div>

@@ -1,6 +1,6 @@
 "use client"
 
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { RiRefreshLine, RiSearchLine } from "@remixicon/react"
 import { Button } from '@/components/ui/button'
@@ -20,10 +20,15 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
   // On the development site the name reads "Bamboo Reports Dev" and the logo gets an amber dot.
   const isDev = getEnvironmentLabel() === "DEV"
   const devHint = "Development site: for testing changes before they go live. Data and accounts may differ from the live Bamboo Reports."
+  // Set after mount so the server render and the first client render match.
+  const [shortcut, setShortcut] = useState("Ctrl K")
+  useEffect(() => {
+    if (/Mac|iPhone|iPad/.test(navigator.platform)) setShortcut("\u2318K")
+  }, [])
 
   return (
     <header className="sticky top-0 z-20 border-b border-border/80 bg-background">
-      <div className="mx-auto w-full px-6 py-4">
+      <div className="mx-auto w-full px-6 py-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <div className="relative h-10 w-10 shrink-0">
@@ -45,12 +50,12 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
               {isDev && (
                 <span
                   aria-hidden
-                  className="absolute -right-[3px] -top-[3px] h-2.5 w-2.5 rounded-full bg-amber-500 ring-2 ring-background dark:bg-amber-400"
+                  className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-amber-500 ring-2 ring-background dark:bg-amber-400"
                 />
               )}
             </div>
             <div className="min-w-0">
-              <p className="truncate text-lg font-bold text-foreground">
+              <p className="truncate text-[17px] font-semibold text-foreground">
                 Bamboo Reports
                 {isDev && (
                   <span className="ml-1.5 cursor-default font-medium text-amber-600 dark:text-amber-400" title={devHint}>
@@ -65,12 +70,15 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
               <button
                 type="button"
                 onClick={onOpenSearch}
-                title="Search (⌘K)"
+                title={`Search (${shortcut})`}
                 aria-label="Open search"
-                className="hidden sm:inline-flex items-center gap-2 rounded-lg border border-border/60 bg-muted/30 px-3 py-1.5 text-sm text-muted-foreground/70 transition-colors hover:bg-muted/60 hover:text-muted-foreground hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 w-56"
+                className="hidden sm:inline-flex h-8 items-center gap-2 rounded-lg border border-border/60 bg-muted/30 pl-3 pr-1.5 text-[13px] text-muted-foreground transition-colors hover:bg-muted/60 hover:text-muted-foreground hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 w-56"
               >
-                <RiSearchLine className="h-3.5 w-3.5 shrink-0" />
-                <span className="flex-1 text-left text-xs">Search…</span>
+                <RiSearchLine className="h-4 w-4 shrink-0" />
+                <span className="flex-1 text-left">Search</span>
+                <kbd className="inline-grid h-5 min-w-5 place-items-center rounded-[5px] border bg-background px-1 font-sans text-[11px] font-medium text-muted-foreground">
+                  {shortcut}
+                </kbd>
               </button>
             )}
             <Button

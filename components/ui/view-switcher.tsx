@@ -31,7 +31,7 @@ export function ViewSwitcher<V extends string>({
   const iconOnly = size === "sm"
   return (
     <Tabs value={value} onValueChange={(v) => onValueChange(v as V)} className={cn("w-fit", className)} data-tour={dataTour}>
-      <TabsList className={cn("bg-secondary/80 shadow-sm", iconOnly ? "h-8 gap-0.5 rounded-lg p-0.5" : "gap-2")}>
+      <TabsList className={cn("bg-secondary/80", iconOnly ? "h-8 gap-0.5 rounded-lg p-0.5" : "gap-2")}>
         {options.map(({ value: optionValue, label, icon }) => (
           <TabsTrigger
             key={optionValue}
