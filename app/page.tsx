@@ -300,6 +300,7 @@ function DashboardContent(): React.JSX.Element | null {
           id="main-content"
           className="flex flex-1 overflow-hidden [--dashboard-content-top-gap:1.5rem] [--dashboard-content-bottom-gap:0.75rem] [--dashboard-panel-height:calc(100dvh-65px-var(--dashboard-content-top-gap)-5rem-1.5rem-2.5rem-1rem-var(--dashboard-content-bottom-gap))]"
         >
+          <h1 className="sr-only">Bamboo Reports dashboard</h1>
           <ExportDialog {...exportDialogProps} />
           <FiltersSidebar
             filters={filters}

@@ -255,7 +255,8 @@ export function FiltersSidebar({
           'absolute inset-y-0 left-0 z-10 flex w-16 flex-col items-center gap-1 py-3 transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
           isCollapsed ? 'opacity-100 translate-x-0 pointer-events-auto' : 'opacity-0 -translate-x-1 pointer-events-none'
         )}
-        aria-hidden={!isCollapsed}
+        // inert, not just aria-hidden: the hidden panel's buttons must leave the tab order too.
+        inert={!isCollapsed}
       >
         <button
           type="button"
@@ -355,7 +356,7 @@ export function FiltersSidebar({
           'absolute inset-y-0 left-0 flex w-[320px] flex-col transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
           isCollapsed ? 'opacity-0 translate-x-1 pointer-events-none' : 'opacity-100 translate-x-0 pointer-events-auto'
         )}
-        aria-hidden={isCollapsed}
+        inert={isCollapsed}
       >
         <div className="flex shrink-0 flex-col gap-3 border-b border-sidebar-border p-4 pb-3">
           <div className="flex items-center gap-2">

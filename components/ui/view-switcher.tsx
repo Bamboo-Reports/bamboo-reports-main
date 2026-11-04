@@ -37,6 +37,9 @@ export function ViewSwitcher<V extends string>({
             key={optionValue}
             value={optionValue}
             title={iconOnly && typeof label === "string" ? label : undefined}
+            // The views are rendered outside this switcher, so there is no tab
+            // panel to point at; Radix's default aria-controls would dangle.
+            aria-controls={undefined}
             className={cn(
               "gap-2 border border-transparent data-[state=active]:bg-background data-[state=active]:ring-1 data-[state=active]:ring-black/10 dark:data-[state=active]:ring-white/15 data-[state=inactive]:hover:bg-muted/60 data-[state=inactive]:hover:text-foreground",
               iconOnly && "w-8 rounded-md px-0"
