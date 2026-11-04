@@ -40,7 +40,8 @@ export function Toaster() {
         classNames: {
           toast:
             "group/toast flex w-[var(--width)] items-start gap-2.5 rounded-xl border border-border bg-popover py-3 pl-4 pr-3 font-sans text-popover-foreground shadow-float",
-          icon: "mt-px flex h-4 w-4 shrink-0 items-center justify-center text-muted-foreground [&>svg]:h-4 [&>svg]:w-4",
+          // relative: sonner centres its loading spinner absolutely inside this box.
+          icon: "relative mt-px flex h-4 w-4 shrink-0 items-center justify-center text-muted-foreground [&>svg]:h-4 [&>svg]:w-4",
           success: "[&_[data-icon]]:text-include",
           error: "[&_[data-icon]]:text-exclude",
           warning: "[&_[data-icon]]:text-exclude",

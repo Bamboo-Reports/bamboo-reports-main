@@ -2,7 +2,7 @@ import { memo } from "react"
 import { RiArrowRightUpLine, RiExternalLinkLine, RiEyeLine, RiFileCopyLine } from "@remixicon/react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { HeadTypeBadge, isHighlightedHeadType } from "@/components/ui/head-type-badge"
 import {
   ContextMenu,
   ContextMenuContent,
@@ -65,16 +65,7 @@ export const ProspectGridCard = memo(({ prospect, onClick }: ProspectGridCardPro
                   {accountName}
                 </p>
               </div>
-              {prospect.head_type === "GCC Head" && (
-                <Badge variant="secondary" className="shrink-0 px-1.5">
-                  GCC Head
-                </Badge>
-              )}
-              {prospect.head_type === "HR Head" && (
-                <Badge variant="secondary" className="shrink-0 px-1.5">
-                  HR Head
-                </Badge>
-              )}
+              {isHighlightedHeadType(prospect.head_type) && <HeadTypeBadge headType={prospect.head_type!} />}
               {isEngagedProspect(prospect) && <EngagedIcon className="mt-0.5" />}
             </div>
             <div className="space-y-2 text-sm">

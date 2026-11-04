@@ -4,7 +4,7 @@ import "driver.js/dist/driver.css"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { TOUR_AUTO_START_DELAY_MS } from "@/lib/tour/constants"
-import { getDashboardTourSteps } from "@/lib/tour/steps"
+import { getAnalyticsStepTitle, getDashboardTourSteps } from "@/lib/tour/steps"
 import { useTourPersistence } from "@/hooks/use-tour-persistence"
 
 interface UseProductTourOptions {
@@ -34,17 +34,17 @@ export function useProductTour({ userId, dataLoaded, hasMapView, isSidebarCollap
       overlayColor: "black",
       overlayOpacity: 0.5,
       stagePadding: 8,
-      stageRadius: 8,
+      stageRadius: 12,
       popoverClass: "br-tour-popover",
-      prevBtnText: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px"><path d="m15 18-6-6 6-6"/></svg>Previous',
-      nextBtnText: 'Next<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-left:4px"><path d="m9 18 6-6-6-6"/></svg>',
-      doneBtnText: 'Done<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-left:4px"><path d="M5 12l5 5L20 7"/></svg>',
+      prevBtnText: "Back",
+      nextBtnText: "Next",
+      doneBtnText: "Done",
       steps,
       onHighlightStarted: (_element, step, opts) => {
         stepIndexRef.current = opts.state.activeIndex ?? 0
         captureEvent(ANALYTICS_EVENTS.TOUR_STEP_VIEWED, {
           step_index: opts.state.activeIndex,
-          step_title: step.popover?.title,
+          step_title: getAnalyticsStepTitle(step.popover?.title),
         })
       },
       onDestroyStarted: (_element, _step, opts) => {

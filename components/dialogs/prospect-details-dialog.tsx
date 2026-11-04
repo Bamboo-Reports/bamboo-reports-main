@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useEffect, useMemo, useRef, useState } from "react"
+import { HeadTypeBadge } from "@/components/ui/head-type-badge"
 import { functionalUpdate, useTable, type PaginationState, type SortingState, type Updater } from "@tanstack/react-table"
 import {
   Dialog,
@@ -236,9 +237,7 @@ export function ProspectDetailsDialog({
                 {engaged && (
                   <span className="rounded-md bg-include/[0.12] px-1.5 text-xs font-medium leading-5 text-include">Engaged</span>
                 )}
-                {showHeadType && (
-                  <span className="rounded-md bg-muted px-1.5 text-xs leading-5 text-muted-foreground">{headType}</span>
-                )}
+                {showHeadType && headType && <HeadTypeBadge headType={headType} />}
               </div>
               <p className="mt-0.5 text-[13px] text-muted-foreground">
                 {p.prospect_title}
