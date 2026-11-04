@@ -72,7 +72,10 @@ export const isWorkerLoadError = (message: string) => /worker failed to load/i.t
 // combining marks and general punctuation. Any other request still goes to
 // Carto, and if that fails MapLibre draws the character with a local font.
 // To refresh, re-download the same stacks and ranges from the glyphs URL in
-// the Carto style.json.
+// the Carto style.json and store them decompressed: Carto sends them gzipped,
+// and we serve them without a Content-Encoding header, so a gzipped file
+// fails to parse ("Unimplemented type: 7"). tests/unit/map-glyphs.test.ts
+// checks this.
 const HOSTED_GLYPH_STACKS = new Set([
   "Montserrat Medium,Open Sans Regular,Noto Sans Regular,Noto Sans CJK JP Regular",
   "Montserrat Regular Italic,Open Sans Italic,Noto Sans Regular,Noto Sans CJK JP Regular",
