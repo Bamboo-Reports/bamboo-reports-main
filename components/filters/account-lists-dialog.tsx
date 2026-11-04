@@ -154,7 +154,7 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
   const mapName = useCallback(
     async (list: AccountList, input: string, account: string) => {
       const updated = await updateList(list.id, mapUnmatchedName(list, input, account))
-      if (updated) toast.success(`Mapped "${input}" to ${account}`)
+      if (updated) toast.success(`Matched "${input}"`, { description: `to ${account}` })
       else toast.error("Could not update the list")
     },
     [updateList]

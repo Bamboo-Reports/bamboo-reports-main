@@ -201,8 +201,8 @@ describe("summary-cards", () => {
     const headcountCard = getByText("Headcount").closest(".rounded-xl")
     if (headcountCard) fireEvent.click(headcountCard)
     expect(toast.info).toHaveBeenCalledWith(
-      "Headcount is an overview stat. Only Accounts, Centres and Prospects open as views.",
-      expect.any(Object)
+      "Headcount is an overview figure",
+      expect.objectContaining({ description: "Only Accounts, Centres and Prospects open as views" })
     )
   })
 })

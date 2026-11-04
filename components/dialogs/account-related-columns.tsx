@@ -132,7 +132,7 @@ function ProspectActions({ prospect }: { prospect: Prospect }) {
           onClick={async () => {
             try {
               await navigator.clipboard.writeText(email)
-              toast.success(`Copied ${email}`)
+              toast.success("Email copied", { description: email })
             } catch {
               toast.error("Could not copy the email address")
             }

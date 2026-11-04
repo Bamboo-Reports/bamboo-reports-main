@@ -737,7 +737,7 @@ function DashboardContent(): React.JSX.Element | null {
     shownFailureSeqRef.current = failure.seq
     if (!serverData.summary) return
     captureEvent(ANALYTICS_EVENTS.ERROR_STATE_SHOWN, { error_message: failure.message })
-    toast.error("Some data could not be loaded.", {
+    toast.error("Some data did not load", {
       id: LOAD_ERROR_TOAST_ID,
       description: failure.message,
       duration: Infinity,
@@ -861,7 +861,7 @@ function DashboardContent(): React.JSX.Element | null {
       })
       const { downloadSummaryReportPdf } = await import("@/lib/reports/summary-report-pdf")
       await downloadSummaryReportPdf(model)
-      toast.success("Summary PDF downloaded.")
+      toast.success("Summary PDF downloaded")
       captureEvent(ANALYTICS_EVENTS.SUMMARY_REPORT_DOWNLOADED, {
         active_filters_count: activeFiltersCount,
         active_view: activeSection,
@@ -869,7 +869,7 @@ function DashboardContent(): React.JSX.Element | null {
       })
     } catch (error) {
       devError("Summary report failed", error)
-      toast.error("Could not generate the summary PDF. Please try again.")
+      toast.error("Could not create the summary PDF", { description: "Try again in a moment" })
       captureEvent(ANALYTICS_EVENTS.SUMMARY_REPORT_FAILED, {
         active_filters_count: activeFiltersCount,
       })
@@ -1065,7 +1065,7 @@ function DashboardContent(): React.JSX.Element | null {
       // Server results without a hydrated row (e.g. keyless prospects) cannot
       // open a detail dialog.
       if (!result.data) {
-        toast.info("This record is not available right now.")
+        toast.info("This record is not available right now")
         return
       }
 
@@ -1118,8 +1118,8 @@ function DashboardContent(): React.JSX.Element | null {
             setSearchSelectedAccount(account)
             setSearchAccountDialogOpen(true)
           },
-          notFoundMessage: "This account could not be found.",
-          errorMessage: "This account is not available right now.",
+          notFoundMessage: "This account could not be found",
+          errorMessage: "This account is not available right now",
         })
       } else if (item.type === "center") {
         openRecord({
@@ -1130,8 +1130,8 @@ function DashboardContent(): React.JSX.Element | null {
             setSearchSelectedCenter(center)
             setSearchCenterDialogOpen(true)
           },
-          notFoundMessage: "This centre could not be found.",
-          errorMessage: "This centre is not available right now.",
+          notFoundMessage: "This centre could not be found",
+          errorMessage: "This centre is not available right now",
         })
       } else if (item.type === "prospect") {
         openRecord({
@@ -1142,8 +1142,8 @@ function DashboardContent(): React.JSX.Element | null {
             setSearchSelectedProspect(prospect)
             setSearchProspectDialogOpen(true)
           },
-          notFoundMessage: "This prospect could not be found.",
-          errorMessage: "This prospect is not available right now.",
+          notFoundMessage: "This prospect could not be found",
+          errorMessage: "This prospect is not available right now",
         })
       }
     },
@@ -1207,8 +1207,8 @@ function DashboardContent(): React.JSX.Element | null {
           setSearchSelectedAccount(account)
           setSearchAccountDialogOpen(true)
         },
-        notFoundMessage: "This account could not be found.",
-        errorMessage: "This account is not available right now.",
+        notFoundMessage: "This account could not be found",
+        errorMessage: "This account is not available right now",
       })
     },
     [trackSearchRecordOpened, openRecord]

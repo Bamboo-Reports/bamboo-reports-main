@@ -199,7 +199,7 @@ export const SummaryCards = React.memo(function SummaryCards({
       icon: RiTimeLine,
       iconClassName: 'text-muted-foreground',
       interactive: false,
-      message: "Upcoming centres is an overview stat. Only Accounts, Centres and Prospects open as views.",
+      message: "Upcoming centres is an overview figure",
     },
     {
       id: 'prospects' as const,
@@ -219,7 +219,7 @@ export const SummaryCards = React.memo(function SummaryCards({
       icon: RiUserFollowLine,
       iconClassName: 'text-muted-foreground',
       interactive: false,
-      message: "Headcount is an overview stat. Only Accounts, Centres and Prospects open as views.",
+      message: "Headcount is an overview figure",
     },
   ]
 
@@ -240,7 +240,7 @@ export const SummaryCards = React.memo(function SummaryCards({
               }
               const message = card.message
               if (!message) return undefined
-              return () => toast.info(message, { id: `summary-readonly-${card.id}` })
+              return () => toast.info(message, { id: `summary-readonly-${card.id}`, description: "Only Accounts, Centres and Prospects open as views" })
             })()}
             onKeyDown={card.interactive ? (event) => {
               if (event.key === 'Enter' || event.key === ' ') {

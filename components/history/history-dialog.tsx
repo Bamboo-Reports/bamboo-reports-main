@@ -75,7 +75,11 @@ export function HistoryDialog({
 
   const withUndo = (message: string, before: RecentItem[]) =>
     // Longer than the 4s default so there is time to reach Undo.
-    toast(message, { duration: UNDO_WINDOW_MS, action: { label: "Undo", onClick: () => onRestoreHistory(before) } })
+    toast(message, {
+      icon: <RiDeleteBinLine className="h-4 w-4" />,
+      duration: UNDO_WINDOW_MS,
+      action: { label: "Undo", onClick: () => onRestoreHistory(before) },
+    })
 
   const clearAll = () => {
     const before = recentItems
@@ -87,7 +91,7 @@ export function HistoryDialog({
   const removeOne = (item: RecentItem) => {
     const before = recentItems
     onRemoveItem(item)
-    withUndo(`Removed ${item.title} from History`, before)
+    withUndo(`Removed ${item.title} from history`, before)
   }
 
   const empty = recentItems.length === 0

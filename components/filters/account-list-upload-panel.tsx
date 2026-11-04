@@ -192,7 +192,7 @@ export function AccountListUploadPanel({ existingList = null, onDone, onApply }:
       })
     } catch (err) {
       devError("account list match failed:", err)
-      toast.error(err instanceof Error ? err.message : "Could not match the account list. Please try again.")
+      toast.error("Could not match the list", err instanceof Error && err.message ? { description: err.message } : undefined)
     } finally {
       setMatching(false)
     }
@@ -230,7 +230,7 @@ export function AccountListUploadPanel({ existingList = null, onDone, onApply }:
       const input = { name, accounts: mappedNames, unmatched, matches: rowsToMatches(rows), sourceFile: fileName }
       const saved = existingList ? await updateList(existingList.id, input) : await createList(input)
       if (!saved) {
-        toast.error("Could not save the account list. Please try again.")
+        toast.error("Could not save the list", { description: "Try again in a moment" })
         return
       }
       captureEvent(ANALYTICS_EVENTS.ACCOUNT_LIST_FILTER_SAVED, {
@@ -242,11 +242,12 @@ export function AccountListUploadPanel({ existingList = null, onDone, onApply }:
         unmapped_count: unmappedCount,
         applied: apply,
       })
-      toast.success(
-        unmappedCount > 0
-          ? `Saved "${name}" with ${mappedNames.length} accounts (${unmappedCount} skipped)`
-          : `Saved "${name}" with ${mappedNames.length} accounts`
-      )
+      toast.success(`Saved "${name}"`, {
+        description:
+          unmappedCount > 0
+            ? `${mappedNames.length.toLocaleString()} accounts matched, ${unmappedCount.toLocaleString()} skipped`
+            : `${mappedNames.length.toLocaleString()} accounts matched`,
+      })
       if (apply && onApply) onApply(saved)
       else onDone(saved)
     },

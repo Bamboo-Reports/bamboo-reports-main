@@ -136,7 +136,7 @@ export function FilterRangeField({
     if (typed === null) return
     const clamped = Math.max(bounds.min, Math.min(bounds.max, typed))
     if (clamped !== typed) {
-      toast.info(`${label} data ranges from ${formatRangeValue(bounds.min, unit)} to ${formatRangeValue(bounds.max, unit)}`)
+      toast.info(`${label} ranges from ${formatRangeValue(bounds.min, unit)} to ${formatRangeValue(bounds.max, unit)}`)
     }
     const next: [number, number] = end === 0 ? [clamped, hi] : [lo, clamped]
     onChange(next[0] <= next[1] ? next : [next[1], next[0]])

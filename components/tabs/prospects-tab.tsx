@@ -180,8 +180,8 @@ export function ProspectsTab({
         label: "account",
         load: () => getQueryClient().fetchQuery(accountRelatedQuery(accountName)).then((res) => res.account),
         onLoaded: openAccount,
-        notFoundMessage: "This account could not be found.",
-        errorMessage: "This account is not available right now.",
+        notFoundMessage: "This account could not be found",
+        errorMessage: "This account is not available right now",
       })
     }
   }
