@@ -41,7 +41,7 @@ describe("buildReportFilterRows", () => {
       baselineRanges
     )
     expect(rows).toHaveLength(1)
-    expect(rows[0]).toMatchObject({ group: "Scope", label: "Account Visibility", included: ["GCC accounts only"] })
+    expect(rows[0]).toMatchObject({ group: "Scope", label: "Accounts to show", included: ["GCC accounts only"] })
   })
 
   it("splits list filters into included and excluded values with sidebar labels", () => {
@@ -53,13 +53,13 @@ describe("buildReportFilterRows", () => {
       prospectTitleKeywords: [inc("CFO")],
     })
     const rows = buildReportFilterRows(filters, baselineRanges)
-    const country = rows.find((row) => row.label === "HQ Country")
+    const country = rows.find((row) => row.label === "HQ country")
     expect(country).toMatchObject({
       group: "Account",
       included: ["United States", "Germany"],
       excluded: ["China"],
     })
-    const title = rows.find((row) => row.label === "Job Title")
+    const title = rows.find((row) => row.label === "Job title")
     expect(title).toMatchObject({ group: "Prospect", included: ["CFO"], excluded: [] })
   })
 
@@ -72,16 +72,16 @@ describe("buildReportFilterRows", () => {
     })
     const rows = buildReportFilterRows(filters, baselineRanges)
     const labels = rows.map((row) => row.label)
-    expect(labels).toContain("HQ Company Revenue")
-    expect(labels).toContain("Incorporation Timeline")
-    expect(labels).not.toContain("Years In India")
+    expect(labels).toContain("HQ revenue")
+    expect(labels).toContain("Incorporation year")
+    expect(labels).not.toContain("Years in India")
 
-    const revenue = rows.find((row) => row.label === "HQ Company Revenue")
+    const revenue = rows.find((row) => row.label === "HQ revenue")
     expect(revenue?.included).toEqual(["100M to 2,500M (USD)"])
     expect(revenue?.excluded).toEqual(["Accounts with no recorded value"])
 
-    const incYear = rows.find((row) => row.label === "Incorporation Timeline")
-    expect(incYear?.included).toEqual(["2015 to 2026", "Centers with no recorded value"])
+    const incYear = rows.find((row) => row.label === "Incorporation year")
+    expect(incYear?.included).toEqual(["2015 to 2026", "Centres with no recorded value"])
     expect(incYear?.excluded).toEqual([])
   })
 
@@ -124,12 +124,12 @@ describe("buildSummaryReport", () => {
       generatedBy: "ops@example.com",
       generatedAt,
     })
-    expect(model.title).toBe("Dashboard Summary Report")
+    expect(model.title).toBe("Dashboard summary")
     expect(model.productName).toBe("Bamboo Reports")
     expect(model.generatedBy).toBe("ops@example.com")
     expect(model.activeView).toBe("centers")
     expect(model.metrics).toHaveLength(5)
-    expect(model.filters.map((row) => row.label)).toEqual(["Account Visibility", "Center Type"])
+    expect(model.filters.map((row) => row.label)).toEqual(["Accounts to show", "Centre type"])
   })
 })
 
@@ -169,6 +169,20 @@ describe("buildReportChart", () => {
     ])
   })
 
+  it("folds an incoming Others slice into a single Others segment", () => {
+    const chart = buildReportChart("City", "Centres", [
+      { name: "Bengaluru", value: 60 },
+      { name: "Others", value: 30 },
+      { name: "Pune", value: 8 },
+      { name: "Kochi", value: 2 },
+    ])
+    expect(chart.segments.map((segment) => [segment.name, segment.value])).toEqual([
+      ["Bengaluru", 60],
+      ["Pune", 8],
+      ["Others", 32],
+    ])
+  })
+
   it("returns an empty chart for no data", () => {
     const chart = buildReportChart("City", "Centers", [])
     expect(chart.total).toBe(0)
@@ -188,7 +202,7 @@ describe("buildReportChartGroups", () => {
     const groups = buildReportChartGroups(sources, counts)
     expect(groups.map((group) => [group.title, group.charts.length])).toEqual([
       ["Accounts", 4],
-      ["Centers", 4],
+      ["Centres", 4],
       ["Prospects", 2],
     ])
     expect(groups.map((group) => [group.matching, group.databaseTotal])).toEqual([

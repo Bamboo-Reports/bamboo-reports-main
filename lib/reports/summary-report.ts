@@ -135,6 +135,41 @@ const GROUP_LABEL: Record<"account" | "center" | "prospect", ReportFilterGroup> 
   prospect: "Prospect",
 }
 
+// Filter names as the sidebar shows them. FILTER_METADATA keeps its own
+// labels because analytics reports filter_name with them.
+const REPORT_LABEL: Partial<Record<keyof Filters, string>> = {
+  accountVisibilityMode: "Accounts to show",
+  accountGlobalLegalNameKeywords: "Account name",
+  accountListValues: "Account list",
+  accountHqRevenueRange: "HQ revenue",
+  accountCenterEmployeesRangeValues: "GCC headcount (India)",
+  accountYearsInIndiaRange: "Years in India",
+  accountPrimaryCategoryValues: "Industry",
+  accountHqCountryValues: "HQ country",
+  accountHqRegionValues: "HQ region",
+  accountHqEmployeeRangeValues: "HQ employee range",
+  accountHqIndustryValues: "Sub industry",
+  accountPrimaryNatureValues: "Segment",
+  accountNasscomStatusValues: "NASSCOM listing",
+  centerStatusValues: "Status",
+  centerTypeValues: "Centre type",
+  functionNameValues: "Services offered",
+  centerCityValues: "City",
+  centerIncYearRange: "Incorporation year",
+  centerEmployeesRangeValues: "Centre headcount",
+  centerStateValues: "State",
+  centerFocusValues: "Centre focus",
+  techSoftwareInUseKeywords: "Software in use",
+  prospectTitleKeywords: "Job title",
+  prospectHeadTypeValues: "Role",
+  prospectLevelValues: "Seniority level",
+  prospectDepartmentValues: "Department",
+  prospectCityValues: "City",
+}
+
+const reportLabel = (key: keyof Filters) =>
+  REPORT_LABEL[key] ?? (FILTER_METADATA as Record<string, { label: string }>)[key]?.label ?? key
+
 const VISIBILITY_LABEL: Record<AccountVisibilityMode, string> = {
   all: "All accounts (GCC and non-GCC)",
   gcc: "GCC accounts only",
@@ -213,7 +248,7 @@ export function buildReportFilterRows(
   const mode = filters.accountVisibilityMode ?? "gcc"
   rows.push({
     group: "Scope",
-    label: FILTER_METADATA.accountVisibilityMode.label,
+    label: reportLabel("accountVisibilityMode"),
     included: [VISIBILITY_LABEL[mode] ?? mode],
     excluded: [],
   })
@@ -224,7 +259,7 @@ export function buildReportFilterRows(
     const { included, excluded } = splitByMode(values)
     if (included.length === 0 && excluded.length === 0) return null
     const meta = FILTER_METADATA[key]
-    return { group: GROUP_LABEL[meta.group], label: meta.label, included, excluded }
+    return { group: GROUP_LABEL[meta.group], label: reportLabel(key), included, excluded }
   }
 
   const accountKeys = LIST_FILTER_KEYS.filter((key) => FILTER_METADATA[key].group === "account")
@@ -242,7 +277,7 @@ export function buildReportFilterRows(
     const describe = (n: number) => `${n} account${n === 1 ? "" : "s"}${lists > 0 ? ` from ${lists} list${lists === 1 ? "" : "s"}` : ""}`
     rows.push({
       group: GROUP_LABEL.account,
-      label: FILTER_METADATA.accountListValues.label,
+      label: reportLabel("accountListValues"),
       included: included.length > 0 ? [describe(included.length)] : [],
       excluded: excluded.length > 0 ? [describe(excluded.length)] : [],
     })
@@ -252,7 +287,7 @@ export function buildReportFilterRows(
     const [min, max] = filters.accountHqRevenueRange
     rows.push(rangeRow({
       group: "Account",
-      label: FILTER_METADATA.accountHqRevenueRange.label,
+      label: reportLabel("accountHqRevenueRange"),
       value: `${formatRevenueInMillions(min)} to ${formatRevenueInMillions(max)} (USD)`,
       includeNull: filters.accountHqRevenueIncludeNull,
       noun: "Accounts",
@@ -263,7 +298,7 @@ export function buildReportFilterRows(
     const [min, max] = filters.accountYearsInIndiaRange
     rows.push(rangeRow({
       group: "Account",
-      label: FILTER_METADATA.accountYearsInIndiaRange.label,
+      label: reportLabel("accountYearsInIndiaRange"),
       value: `${pluralYears(min)} to ${pluralYears(max)}`,
       includeNull: filters.yearsInIndiaIncludeNull,
       noun: "Accounts",
@@ -279,10 +314,10 @@ export function buildReportFilterRows(
     const [min, max] = filters.centerIncYearRange
     rows.push(rangeRow({
       group: "Center",
-      label: FILTER_METADATA.centerIncYearRange.label,
+      label: reportLabel("centerIncYearRange"),
       value: `${min} to ${max}`,
       includeNull: filters.centerIncYearIncludeNull,
-      noun: "Centers",
+      noun: "Centres",
     }))
   }
 
@@ -307,15 +342,15 @@ export function buildReportMetrics(counts: SummaryReportCounts): ReportMetric[] 
 
   metrics.push({
     id: "centers",
-    label: "Centers",
-    description: "Delivery and capability centers",
+    label: "Centres",
+    description: "Delivery and capability centres",
     filtered: counts.filteredCentersCount,
     total: counts.totalCentersCount,
   })
   metrics.push({
     id: "upcomingCenters",
-    label: "Upcoming Centers",
-    description: "Centers with an Upcoming status",
+    label: "Upcoming centres",
+    description: "Centres with an upcoming status",
     filtered: counts.filteredUpcomingCentersCount,
     total: counts.totalUpcomingCentersCount,
   })
@@ -331,7 +366,7 @@ export function buildReportMetrics(counts: SummaryReportCounts): ReportMetric[] 
   metrics.push({
     id: "headcount",
     label: "Headcount",
-    description: "Employees across matching centers",
+    description: "Employees across matching centres",
     filtered: counts.filteredHeadcount,
     total: counts.totalHeadcount,
   })
@@ -346,12 +381,19 @@ export function buildReportChart(title: string, countLabel: string, data: ChartD
   const total = data.reduce((sum, item) => sum + (typeof item.value === "number" ? item.value : 0), 0)
   const major: ReportChartSegment[] = []
   const othersMembers: ReportChartOtherMember[] = []
+  // The dashboard's chart data can already carry an "Others" slice; fold it
+  // into the report's own Others so the chart never lists Others twice.
+  let incomingOthers = 0
 
   data.forEach((item, index) => {
     const value = typeof item.value === "number" ? item.value : 0
     if (value <= 0) return
     const share = total > 0 ? (value / total) * 100 : 0
     const name = item.name || "Unknown"
+    if (name.trim().toLowerCase() === "others") {
+      incomingOthers += value
+      return
+    }
     if (share < OTHERS_THRESHOLD_PERCENT) {
       othersMembers.push({ name, value, percent: Math.round(share * 10) / 10 })
       return
@@ -367,7 +409,7 @@ export function buildReportChart(title: string, countLabel: string, data: ChartD
   major.sort((a, b) => b.value - a.value)
   othersMembers.sort((a, b) => b.value - a.value)
 
-  const othersTotal = othersMembers.reduce((sum, member) => sum + member.value, 0)
+  const othersTotal = othersMembers.reduce((sum, member) => sum + member.value, incomingOthers)
   if (othersTotal > 0) {
     major.push({
       name: "Others",
@@ -396,22 +438,22 @@ export function buildReportChartGroups(
     charts: [
       buildReportChart("Country", "Accounts", accountSrc.regionData),
       buildReportChart("Industry", "Accounts", accountSrc.primaryNatureData),
-      buildReportChart("Revenue Range", "Accounts", accountSrc.revenueRangeData),
-      buildReportChart("GCC Aggregate Headcount (India)", "Accounts", accountSrc.employeesRangeData),
+      buildReportChart("Revenue range", "Accounts", accountSrc.revenueRangeData),
+      buildReportChart("GCC aggregate headcount (India)", "Accounts", accountSrc.employeesRangeData),
     ],
   })
 
   const centerSrc = sources.centers
   groups.push({
     section: "centers",
-    title: "Centers",
+    title: "Centres",
     matching: counts.filteredCentersCount,
     databaseTotal: counts.totalCentersCount,
     charts: [
-      buildReportChart("Center Type", "Centers", centerSrc.centerTypeData),
-      buildReportChart("Center Headcount", "Centers", centerSrc.employeesRangeData),
-      buildReportChart("City", "Centers", centerSrc.cityData),
-      buildReportChart("Function", "Centers", centerSrc.functionData),
+      buildReportChart("Centre type", "Centres", centerSrc.centerTypeData),
+      buildReportChart("Centre headcount", "Centres", centerSrc.employeesRangeData),
+      buildReportChart("City", "Centres", centerSrc.cityData),
+      buildReportChart("Function", "Centres", centerSrc.functionData),
     ],
   })
 
@@ -432,7 +474,7 @@ export function buildReportChartGroups(
 
 export function buildSummaryReport(input: BuildSummaryReportInput): SummaryReportModel {
   return {
-    title: "Dashboard Summary Report",
+    title: "Dashboard summary",
     productName: "Bamboo Reports",
     generatedAt: input.generatedAt ?? new Date(),
     generatedBy: input.generatedBy,
