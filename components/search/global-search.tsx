@@ -10,7 +10,6 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command"
-import { getEnabledSections } from "@/lib/config/dashboard-access"
 import { cn } from "@/lib/utils"
 import type { GroupedResults, SearchResult, SearchResultType } from "@/lib/search"
 import type { RecentItem } from "@/hooks/use-recent-items"
@@ -146,29 +145,18 @@ export function GlobalSearch({
   onSelectRecentSearch,
   onSelectAction,
 }: GlobalSearchProps) {
-  const enabledSections = getEnabledSections()
-  const enabledSectionSet = useMemo(() => new Set(enabledSections), [enabledSections])
   const quickActions = useMemo(
-    () =>
-      [
-        { value: "action::go-accounts", label: "Go to accounts", icon: RiBuildingLine, primary: true, section: "accounts" },
-        { value: "action::go-centers", label: "Go to centres", icon: RiBriefcaseLine, primary: true, section: "centers" },
-        { value: "action::go-prospects", label: "Go to prospects", icon: RiGroupLine, primary: true, section: "prospects" },
-        { value: "action::refresh", label: "Refresh data", icon: RiRefreshLine, primary: false, section: null },
-        { value: "action::toggle-theme", label: "Toggle theme", icon: RiContrastLine, primary: false, section: null },
-      ].filter((action) => !action.section || enabledSectionSet.has(action.section as (typeof enabledSections)[number])),
-    [enabledSectionSet]
+    () => [
+      { value: "action::go-accounts", label: "Go to accounts", icon: RiBuildingLine, primary: true },
+      { value: "action::go-centers", label: "Go to centres", icon: RiBriefcaseLine, primary: true },
+      { value: "action::go-prospects", label: "Go to prospects", icon: RiGroupLine, primary: true },
+      { value: "action::refresh", label: "Refresh data", icon: RiRefreshLine, primary: false },
+      { value: "action::toggle-theme", label: "Toggle theme", icon: RiContrastLine, primary: false },
+    ],
+    []
   )
-  const visibleRecentItems = useMemo(
-    () =>
-      recentItems.filter((item) => {
-        if (item.type === "account") return enabledSectionSet.has("accounts")
-        if (item.type === "center") return enabledSectionSet.has("centers")
-        return enabledSectionSet.has("prospects")
-      }),
-    [enabledSectionSet, recentItems]
-  )
-  const sectionNames = GROUPS.filter((g) => enabledSectionSet.has(g.key)).map((g) => g.heading.toLowerCase())
+  const visibleRecentItems = recentItems
+  const sectionNames = GROUPS.map((g) => g.heading.toLowerCase())
   const searchPlaceholder =
     sectionNames.length > 1 ? `Search ${sectionNames.slice(0, -1).join(", ")} and ${sectionNames[sectionNames.length - 1]}` : `Search ${sectionNames[0] ?? ""}`
 
@@ -219,7 +207,7 @@ export function GlobalSearch({
   const hasResults = results.total > 0
   const hasRecentItems = visibleRecentItems.length > 0
   const hasRecentSearches = recentSearches.length > 0
-  const visibleGroups = GROUPS.filter((group) => enabledSectionSet.has(group.key) && (!focus || focus === group.key))
+  const visibleGroups = GROUPS.filter((group) => !focus || focus === group.key)
 
   // Actions stay reachable by name: "theme" or "go to prospects" finds them too.
   const queryWords = query.trim().toLowerCase().split(/\s+/).filter(Boolean)
@@ -240,7 +228,7 @@ export function GlobalSearch({
 
   const chips = hasQuery && hasResults && (
     <div className="flex flex-wrap gap-1.5 border-b px-3 py-2.5" role="group" aria-label="Show results for">
-      {[{ key: null, label: "All", count: results.total }, ...GROUPS.filter((g) => enabledSectionSet.has(g.key)).map((g) => ({ key: g.key, label: g.heading, count: results[g.key].totalMatches }))].map(
+      {[{ key: null, label: "All", count: results.total }, ...GROUPS.map((g) => ({ key: g.key, label: g.heading, count: results[g.key].totalMatches }))].map(
         (chip) => {
           const on = focus === chip.key
           return (

@@ -1,11 +1,6 @@
 import ExcelJS from "exceljs"
 import { getPrismaOrThrow } from "@/lib/db/prisma"
-import {
-  buildAccountsQuery,
-  buildCentersQuery,
-  buildProspectsQuery,
-  type FilterAccess,
-} from "@/lib/dashboard/filtering-sql"
+import { buildAccountsQuery, buildCentersQuery, buildProspectsQuery } from "@/lib/dashboard/filtering-sql"
 import { queryWarehouse } from "@/lib/db/warehouse"
 import type { Account, Center, Filters, Prospect, Service } from "@/lib/types"
 
@@ -46,8 +41,6 @@ export type ServerExportSelection = {
    * these filters, and the key lists above are ignored.
    */
   filters?: Filters | null
-  /** Section entitlements for the filter engine (resolveAccess()). */
-  access?: FilterAccess
 }
 
 export type ServerExportResult = {
@@ -71,29 +64,29 @@ function normalizeAccount(row: Account & { account_hq_revenue?: bigint | number 
 // EXPORT-BY-FILTER FETCHERS (#249 Phase 4)
 // ============================================
 
-async function fetchAccountsByFilters(filters: Filters, access: FilterAccess): Promise<Account[]> {
+async function fetchAccountsByFilters(filters: Filters): Promise<Account[]> {
   const rows = await queryWarehouse<Account & { account_hq_revenue?: string | number | null }>(
-    buildAccountsQuery(filters, access, { columns: "*", orderBy: "account_global_legal_name asc" })
+    buildAccountsQuery(filters, { columns: "*", orderBy: "account_global_legal_name asc" })
   )
   return rows.map((row) => normalizeAccount(row))
 }
 
-async function fetchCentersByFilters(filters: Filters, access: FilterAccess): Promise<Center[]> {
-  return queryWarehouse<Center>(buildCentersQuery(filters, access, { columns: "*", orderBy: "center_name asc" }))
+async function fetchCentersByFilters(filters: Filters): Promise<Center[]> {
+  return queryWarehouse<Center>(buildCentersQuery(filters, { columns: "*", orderBy: "center_name asc" }))
 }
 
-async function fetchServicesByFilters(filters: Filters, access: FilterAccess): Promise<Service[]> {
+async function fetchServicesByFilters(filters: Filters): Promise<Service[]> {
   // Services have no engine of their own: they belong to the surviving centers.
-  const centers = buildCentersQuery(filters, access, { columns: "cn_unique_key", orderBy: null })
+  const centers = buildCentersQuery(filters, { columns: "cn_unique_key", orderBy: null })
   return queryWarehouse<Service>({
     text: `select * from services where cn_unique_key in (${centers.text}) order by center_name`,
     values: centers.values,
   })
 }
 
-async function fetchProspectsByFilters(filters: Filters, access: FilterAccess): Promise<Prospect[]> {
+async function fetchProspectsByFilters(filters: Filters): Promise<Prospect[]> {
   return queryWarehouse<Prospect>(
-    buildProspectsQuery(filters, access, { columns: "*", orderBy: "prospect_last_name, prospect_first_name" })
+    buildProspectsQuery(filters, { columns: "*", orderBy: "prospect_last_name, prospect_first_name" })
   )
 }
 
@@ -227,14 +220,14 @@ function addWorksheet<T extends Record<string, unknown>>(
 export async function buildServerExport(
   selection: ServerExportSelection
 ): Promise<ServerExportResult> {
-  const { datasets, accountNames, centerKeys, prospectKeys, keylessProspectIds, filters, access } = selection
+  const { datasets, accountNames, centerKeys, prospectKeys, keylessProspectIds, filters } = selection
 
   const [accounts, centers, services, prospects] = filters
     ? await Promise.all([
-        datasets.includes("accounts") ? fetchAccountsByFilters(filters, access ?? {}) : Promise.resolve([] as Account[]),
-        datasets.includes("centers") ? fetchCentersByFilters(filters, access ?? {}) : Promise.resolve([] as Center[]),
-        datasets.includes("services") ? fetchServicesByFilters(filters, access ?? {}) : Promise.resolve([] as Service[]),
-        datasets.includes("prospects") ? fetchProspectsByFilters(filters, access ?? {}) : Promise.resolve([] as Prospect[]),
+        datasets.includes("accounts") ? fetchAccountsByFilters(filters) : Promise.resolve([] as Account[]),
+        datasets.includes("centers") ? fetchCentersByFilters(filters) : Promise.resolve([] as Center[]),
+        datasets.includes("services") ? fetchServicesByFilters(filters) : Promise.resolve([] as Service[]),
+        datasets.includes("prospects") ? fetchProspectsByFilters(filters) : Promise.resolve([] as Prospect[]),
       ])
     : await Promise.all([
         datasets.includes("accounts") ? fetchAccounts(accountNames) : Promise.resolve([] as Account[]),

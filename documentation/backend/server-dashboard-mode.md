@@ -81,7 +81,7 @@ The SQL MUST produce exactly the same id-sets as the client engine. The client e
 
 `lib/dashboard/filters-request.ts` is the trust boundary:
 
-- `parseFilters(body.filters)` coerces an untrusted body into a valid `Filters`: unknown/malformed fields fall back to defaults, value arrays are shape-checked (`{ value, mode }`), ranges must be finite number pairs, and `sanitizeFilters` resets filters disabled by deployment config.
+- `parseFilters(body.filters)` coerces an untrusted body into a valid `Filters`: unknown/malformed fields fall back to defaults, value arrays are shape-checked (`{ value, mode }`), ranges must be finite number pairs, and unknown keys (including removed filters in old saved filters) are ignored.
 - `resolveAccess()` resolves server-side section entitlements (accounts/centers/prospects enabled), mirroring the client.
 
 ## Ordering rules

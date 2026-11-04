@@ -6,12 +6,11 @@ import { createLogger } from "@/lib/logger"
 import { getSupabaseServiceRoleClient, USER_EXPORTS_BUCKET } from "@/lib/supabase/server"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { getClientInfo } from "@/lib/request/client-info"
-import { getDatasetUnavailableMessage, isDatasetEnabled } from "@/lib/config/dashboard-access"
 import {
   buildServerExport,
   type ServerExportDatasetKey,
 } from "@/lib/exports/server-builder"
-import { parseFilters, resolveAccess } from "@/lib/dashboard/filters-request"
+import { parseFilters } from "@/lib/dashboard/filters-request"
 import { captureServerEvent } from "@/lib/analytics/server"
 import { SERVER_ANALYTICS_EVENTS } from "@/lib/analytics/events"
 
@@ -149,10 +148,6 @@ export async function POST(request: Request) {
   if (datasets.length === 0) {
     return json({ error: "At least one dataset must be selected" }, 400)
   }
-  if (datasets.some((dataset) => !isDatasetEnabled(dataset))) {
-    const blockedDataset = datasets.find((dataset) => !isDatasetEnabled(dataset))
-    return json({ error: blockedDataset ? getDatasetUnavailableMessage(blockedDataset) : "Dataset unavailable" }, 403)
-  }
 
   if (await isRateLimited(supabase, userId)) {
     captureServerEvent({
@@ -169,7 +164,6 @@ export async function POST(request: Request) {
       ? await buildServerExport({
           datasets,
           filters: parseFilters(body.filters),
-          access: resolveAccess(),
         })
       : await buildServerExport({
           datasets,

@@ -31,7 +31,6 @@ import { useAccountRelated } from "@/hooks/use-account-related"
 import { RelatedLoadError } from "./related-load-error"
 import { useRecordHistory } from "@/contexts/record-history-context"
 import { accountHistoryItem } from "@/lib/dashboard/record-history"
-import { isSectionEnabled } from "@/lib/config/dashboard-access"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { cn } from "@/lib/utils"
@@ -115,8 +114,6 @@ export function AccountDetailsDialog({
   onOpenChange,
   fetchRelated = false,
 }: AccountDetailsDialogProps) {
-  const canViewCenters = isSectionEnabled("centers")
-  const canViewProspects = isSectionEnabled("prospects")
 
   const recordOpened = useRecordHistory()
   useEffect(() => {
@@ -163,16 +160,16 @@ export function AccountDetailsDialog({
   const ticker = account?.account_hq_stock_ticker?.trim() ?? ""
 
   const accountCenters = React.useMemo(
-    () => account && canViewCenters
+    () => account
       ? centers.filter((center) => center.account_global_legal_name === account.account_global_legal_name)
       : [],
-    [account, canViewCenters, centers]
+    [account, centers]
   )
   const accountProspects = React.useMemo(
-    () => account && canViewProspects
+    () => account
       ? prospects.filter((prospect) => prospect.account_global_legal_name === account.account_global_legal_name)
       : [],
-    [account, canViewProspects, prospects]
+    [account, prospects]
   )
   const accountTech = React.useMemo(
     () => account ? tech.filter((item) => item.account_global_legal_name === account.account_global_legal_name) : [],
@@ -394,9 +391,7 @@ export function AccountDetailsDialog({
   const shownOfferings = showAllOfferings ? offerings : offerings.slice(0, VISIBLE_OFFERINGS)
   const nasscomListed = (account.account_nasscom_status ?? "").trim().toLowerCase() === "yes"
   const marketSource = [financialData?.inputTicker, financialData?.exchange].filter(Boolean).join(", ") || null
-  const showIndia =
-    canViewCenters &&
-    Boolean(
+  const showIndia = Boolean(
       account.account_first_center_year || account.years_in_india || account.account_center_employees ||
         account.account_center_employees_range || account.account_primary_city || account.account_hub_structure || accountCenters.length > 0
     )
@@ -448,8 +443,8 @@ export function AccountDetailsDialog({
 
               <TabsList className="mt-3 h-auto justify-start gap-6 rounded-none border-0 bg-transparent p-0 shadow-none">
                 <TabsTrigger value="info" className={tabTriggerClass}>Account info</TabsTrigger>
-                {relatedLoading && canViewCenters && <Skeleton className="my-3 h-4 w-20" />}
-                {relatedLoading && canViewProspects && <Skeleton className="my-3 h-4 w-24" />}
+                {relatedLoading && <Skeleton className="my-3 h-4 w-20" />}
+                {relatedLoading && <Skeleton className="my-3 h-4 w-24" />}
                 {accountCenters.length > 0 && (
                   <TabsTrigger value="centers" className={tabTriggerClass}>
                     <span className="inline-flex items-baseline gap-1.5">

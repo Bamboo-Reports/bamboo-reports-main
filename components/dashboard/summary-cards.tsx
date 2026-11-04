@@ -3,7 +3,6 @@ import { RiBriefcaseLine, RiBuildingLine, RiGroupLine, RiTimeLine, RiUserFollowL
 import { toast } from 'sonner'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { getSectionUnavailableMessage, isSectionEnabled } from '@/lib/config/dashboard-access'
 import { useNumberFormatPreference } from '@/hooks/use-number-format-preference'
 import { cn } from '@/lib/utils'
 
@@ -79,12 +78,10 @@ function useCompactLevel(value: number, total: number) {
 const SummaryFigure = React.memo(function SummaryFigure({
   value,
   total,
-  procured,
   updating,
 }: {
   value: number
   total: number
-  procured: boolean
   updating: boolean
 }): React.JSX.Element {
   const [preference] = useNumberFormatPreference()
@@ -125,7 +122,7 @@ const SummaryFigure = React.memo(function SummaryFigure({
         </span>
       ) : (
         <span
-          className={cn('shrink-0', NUMBER_CLASS, procured ? 'text-sidebar-foreground' : 'text-muted-foreground')}
+          className={cn('shrink-0 text-sidebar-foreground', NUMBER_CLASS)}
           title={shownValue === fullValue ? undefined : fullValue}
         >
           {shownValue}
@@ -173,9 +170,6 @@ export const SummaryCards = React.memo(function SummaryCards({
   onSelect,
   updating = false,
 }: SummaryCardsProps): React.JSX.Element {
-  const accountsEnabled = isSectionEnabled("accounts")
-  const centersEnabled = isSectionEnabled("centers")
-  const prospectsEnabled = isSectionEnabled("prospects")
   const cards = [
     {
       id: 'accounts' as const,
@@ -184,9 +178,8 @@ export const SummaryCards = React.memo(function SummaryCards({
       total: totalAccountsCount,
       icon: RiBuildingLine,
       iconClassName: 'text-muted-foreground',
-      interactive: accountsEnabled,
-      procured: accountsEnabled,
-      message: accountsEnabled ? null : getSectionUnavailableMessage("accounts"),
+      interactive: true,
+      message: null,
     },
     {
       id: 'centers' as const,
@@ -195,9 +188,8 @@ export const SummaryCards = React.memo(function SummaryCards({
       total: totalCentersCount,
       icon: RiBriefcaseLine,
       iconClassName: 'text-muted-foreground',
-      interactive: centersEnabled,
-      procured: centersEnabled,
-      message: centersEnabled ? null : getSectionUnavailableMessage("centers"),
+      interactive: true,
+      message: null,
     },
     {
       id: 'upcoming-centers' as const,
@@ -207,10 +199,7 @@ export const SummaryCards = React.memo(function SummaryCards({
       icon: RiTimeLine,
       iconClassName: 'text-muted-foreground',
       interactive: false,
-      procured: centersEnabled,
-      message: centersEnabled
-        ? "Upcoming centres is an overview stat. Only Accounts, Centres and Prospects open as views."
-        : getSectionUnavailableMessage("centers"),
+      message: "Upcoming centres is an overview stat. Only Accounts, Centres and Prospects open as views.",
     },
     {
       id: 'prospects' as const,
@@ -219,9 +208,8 @@ export const SummaryCards = React.memo(function SummaryCards({
       total: totalProspectsCount,
       icon: RiGroupLine,
       iconClassName: 'text-muted-foreground',
-      interactive: prospectsEnabled,
-      procured: prospectsEnabled,
-      message: prospectsEnabled ? null : getSectionUnavailableMessage("prospects"),
+      interactive: true,
+      message: null,
     },
     {
       id: 'headcount' as const,
@@ -231,10 +219,7 @@ export const SummaryCards = React.memo(function SummaryCards({
       icon: RiUserFollowLine,
       iconClassName: 'text-muted-foreground',
       interactive: false,
-      procured: centersEnabled,
-      message: centersEnabled
-        ? "Headcount is an overview stat. Only Accounts, Centres and Prospects open as views."
-        : getSectionUnavailableMessage("centers"),
+      message: "Headcount is an overview stat. Only Accounts, Centres and Prospects open as views.",
     },
   ]
 
@@ -275,17 +260,11 @@ export const SummaryCards = React.memo(function SummaryCards({
           >
             <div className="flex items-center gap-2 text-[13px] font-medium text-sidebar-foreground">
               <Icon className={cn('h-4 w-4 shrink-0', card.iconClassName)} />
-              <span className={cn('truncate', !card.procured && 'text-muted-foreground')}>{card.title}</span>
-              {!card.procured && (
-                <span className="ml-auto shrink-0 text-xs font-normal text-muted-foreground">
-                  Not procured
-                </span>
-              )}
+              <span className="truncate">{card.title}</span>
             </div>
             <SummaryFigure
               value={card.value}
               total={card.total}
-              procured={card.procured}
               updating={updating}
             />
           </Card>

@@ -1,7 +1,7 @@
 import { extractBearerToken, resolveAuthenticatedUserId } from "@/lib/auth/server"
 import { enforceRateLimit } from "@/lib/rate-limit/server"
 import { createLogger } from "@/lib/logger"
-import { parseFilters, resolveAccess } from "@/lib/dashboard/filters-request"
+import { parseFilters } from "@/lib/dashboard/filters-request"
 import { computeSummary } from "@/lib/dashboard/dashboard-core"
 
 export const dynamic = "force-dynamic"
@@ -42,10 +42,9 @@ export async function POST(request: Request) {
     rawBody = {}
   }
   const filters = parseFilters((rawBody as { filters?: unknown })?.filters)
-  const access = resolveAccess()
 
   try {
-    const body = await computeSummary(filters, access, { bypassRead: request.headers.get("x-no-cache") === "1" })
+    const body = await computeSummary(filters, { bypassRead: request.headers.get("x-no-cache") === "1" })
     return json(body)
   } catch (err) {
     logger.error("summary_failed", { error: err })

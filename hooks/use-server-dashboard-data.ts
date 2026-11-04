@@ -12,7 +12,6 @@ import {
 import { devError } from "@/lib/utils/dev-log"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
-import { sanitizeFilters } from "@/lib/config/filters"
 import { createDefaultFilters } from "@/lib/dashboard/defaults"
 import { getQueryClient } from "@/lib/query-client"
 import {
@@ -38,12 +37,12 @@ const WIDE_RANGE: [number, number] = [0, Number.MAX_SAFE_INTEGER]
 export function normalizeFiltersForServer(filters: Filters, ranges: FacetRanges | null): Filters {
   const norm = (value: [number, number], base: { min: number; max: number } | undefined): [number, number] =>
     !base || (value[0] <= base.min && value[1] >= base.max) ? WIDE_RANGE : value
-  return sanitizeFilters({
+  return {
     ...filters,
     accountHqRevenueRange: norm(filters.accountHqRevenueRange, ranges?.revenue),
     accountYearsInIndiaRange: norm(filters.accountYearsInIndiaRange, ranges?.yearsInIndia),
     centerIncYearRange: norm(filters.centerIncYearRange, ranges?.centerIncYear),
-  })
+  }
 }
 
 // ============================================
@@ -239,7 +238,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
   useLayoutEffect(() => {
     filtersRef.current = filters
   }, [filters])
-  const filtersKey = useMemo(() => JSON.stringify(sanitizeFilters(filters)), [filters])
+  const filtersKey = useMemo(() => JSON.stringify(filters), [filters])
 
   const reportError = useCallback((message: string) => {
     setError(message)

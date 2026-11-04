@@ -1,7 +1,5 @@
 import { isRangeActive, type FilterRangeBounds, type FilterSectionId } from "@/components/filters/filter-fields"
 import { formatRangeSummary, type RangeUnit } from "@/components/filters/filter-range-field"
-import { isSectionEnabled } from "@/lib/config/dashboard-access"
-import { isFilterEnabled, isSectionVisible } from "@/lib/config/filters"
 import { withFilterDefaults } from "@/lib/dashboard/filter-summary"
 import type { AccountVisibilityMode, FilterValue, Filters } from "@/lib/types"
 
@@ -46,9 +44,6 @@ const SECTION_SPECS: Record<FilterSectionId, FieldSpec[]> = {
     { kind: "values", key: "accountHqIndustryValues", label: "Sub industry" },
     { kind: "values", key: "accountPrimaryNatureValues", label: "Segment" },
     { kind: "values", key: "accountNasscomStatusValues", label: "NASSCOM listing" },
-    { kind: "values", key: "accountSourceValues", label: "Source" },
-    { kind: "values", key: "accountTypeValues", label: "Type" },
-    { kind: "values", key: "accountDataCoverageValues", label: "Coverage" },
   ],
   centers: [
     { kind: "values", key: "centerStatusValues", label: "Status" },
@@ -60,7 +55,6 @@ const SECTION_SPECS: Record<FilterSectionId, FieldSpec[]> = {
     { kind: "values", key: "centerStateValues", label: "State" },
     { kind: "values", key: "centerFocusValues", label: "Centre focus" },
     { kind: "values", key: "techSoftwareInUseKeywords", label: "Software in use" },
-    { kind: "values", key: "centerCountryValues", label: "Country" },
   ],
   prospects: [
     { kind: "values", key: "prospectTitleKeywords", label: "Job title" },
@@ -86,27 +80,23 @@ export function describeFilters(
   const out: DescribedSection[] = []
 
   for (const section of Object.keys(SECTION_SPECS) as FilterSectionId[]) {
-    if (!isSectionVisible(section) || !isSectionEnabled(section)) continue
     const fields: DescribedField[] = []
 
-    if (section === "accounts" && isFilterEnabled("accountVisibilityMode") && filters.accountVisibilityMode !== "gcc") {
+    if (section === "accounts" && filters.accountVisibilityMode !== "gcc") {
       fields.push({ label: "Accounts to show", text: VISIBILITY_LABELS[filters.accountVisibilityMode] })
     }
 
     for (const spec of SECTION_SPECS[section]) {
       if (spec.kind === "values") {
-        if (!isFilterEnabled(spec.key)) continue
         const values = filters[spec.key] as FilterValue[]
         if (values.length > 0) fields.push({ label: spec.label, values })
       } else if (spec.kind === "range") {
-        if (!isFilterEnabled(spec.key)) continue
-        const includeNull = !isFilterEnabled(spec.includeNullKey) || filters[spec.includeNullKey]
+        const includeNull = filters[spec.includeNullKey]
         const range = filters[spec.key]
         if (isRangeActive(range, bounds[spec.bounds], includeNull)) {
           fields.push({ label: spec.label, text: formatRangeSummary(range, bounds[spec.bounds], includeNull, spec.unit) })
         }
       } else {
-        if (!isFilterEnabled("accountListValues")) continue
         if (filters.accountListValues.length > 0) {
           fields.push({
             label: spec.label,

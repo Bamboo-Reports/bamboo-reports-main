@@ -1,6 +1,6 @@
 import type { Filters } from "@/lib/types"
 import { HEADCOUNT_SUM_SQL } from "@/lib/dashboard/headcount"
-import { buildEntityAggregateQuery, buildEntityUnionQuery, type AggregateBranch, type FilterAccess, type SqlQuery } from "@/lib/dashboard/filtering-sql"
+import { buildEntityAggregateQuery, buildEntityUnionQuery, type AggregateBranch, type SqlQuery } from "@/lib/dashboard/filtering-sql"
 
 /**
  * Server-side aggregations for the centers maps, replacing the in-browser
@@ -49,8 +49,8 @@ const CITY_BRANCH: AggregateBranch = {
   groupBy: "center_city",
 }
 
-export function buildCityMapQuery(f: Filters, access: FilterAccess = {}): SqlQuery {
-  return buildEntityAggregateQuery("centers", f, access, CITY_BRANCH.select, { where: CITY_BRANCH.where, groupBy: CITY_BRANCH.groupBy })
+export function buildCityMapQuery(f: Filters): SqlQuery {
+  return buildEntityAggregateQuery("centers", f, CITY_BRANCH.select, { where: CITY_BRANCH.where, groupBy: CITY_BRANCH.groupBy })
 }
 
 /**
@@ -74,8 +74,8 @@ const STATE_BRANCH: AggregateBranch = {
   groupBy: "upper(trim(center_country_iso2)), lower(trim(center_state))",
 }
 
-export function buildStateMapQuery(f: Filters, access: FilterAccess = {}): SqlQuery {
-  return buildEntityAggregateQuery("centers", f, access, STATE_BRANCH.select, { where: STATE_BRANCH.where, groupBy: STATE_BRANCH.groupBy })
+export function buildStateMapQuery(f: Filters): SqlQuery {
+  return buildEntityAggregateQuery("centers", f, STATE_BRANCH.select, { where: STATE_BRANCH.where, groupBy: STATE_BRANCH.groupBy })
 }
 
 /** A city or state row from the combined statement, discriminated by `kind`. */
@@ -90,7 +90,7 @@ export type CentersMapRow =
  * coordinates, three counts) so the union lines up; the columns unused by a
  * branch are null. Rows split back by `kind`.
  */
-export function buildCentersMapQuery(f: Filters, access: FilterAccess = {}): SqlQuery {
+export function buildCentersMapQuery(f: Filters): SqlQuery {
   const cityCols = CITY_BRANCH.select
     .replace("center_city as city", "'city' as kind, center_city as key1, null::text as key2")
     .replace(" as country,", " as name,")
@@ -98,7 +98,7 @@ export function buildCentersMapQuery(f: Filters, access: FilterAccess = {}): Sql
     .replace("upper(trim(center_country_iso2)) as country_iso2", "'state' as kind, upper(trim(center_country_iso2)) as key1")
     .replace("lower(trim(center_state)) as state_key", "lower(trim(center_state)) as key2")
     .replace("max(center_country) as country_name", "max(center_country) as name, null::float8 as lat, null::float8 as lng")
-  return buildEntityUnionQuery("centers", f, access, [
+  return buildEntityUnionQuery("centers", f, [
     { ...CITY_BRANCH, select: cityCols },
     { ...STATE_BRANCH, select: stateCols },
   ])

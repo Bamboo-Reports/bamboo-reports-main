@@ -58,9 +58,6 @@ interface Filters {
   accountHqRegionValues: FilterValue[];
   accountHqCountryValues: FilterValue[];
   accountHqIndustryValues: FilterValue[];
-  accountDataCoverageValues: FilterValue[];
-  accountSourceValues: FilterValue[];
-  accountTypeValues: FilterValue[];
   accountPrimaryCategoryValues: FilterValue[];
   accountPrimaryNatureValues: FilterValue[];
   accountNasscomStatusValues: FilterValue[];
@@ -79,7 +76,6 @@ interface Filters {
   centerFocusValues: FilterValue[];
   centerCityValues: FilterValue[];
   centerStateValues: FilterValue[];
-  centerCountryValues: FilterValue[];
   centerEmployeesRangeValues: FilterValue[];
   centerStatusValues: FilterValue[];
   centerIncYearRange: [number, number];
@@ -154,16 +150,14 @@ for each row execute function public.set_updated_at();
 
 ### 4.2 Application Integration
 - **Saving:** The frontend serializes the entire `filters` state object to JSON and sends it to Supabase.
-- **Loading:** The frontend fetches the JSON, parses it, runs it through `withFilterDefaults` to ensure required keys and range defaults are present, and then sanitizes disabled keys before applying it to the dashboard state.
+- **Loading:** The frontend fetches the JSON, parses it, runs it through `withFilterDefaults` to ensure required keys and range defaults are present (and to drop keys `Filters` no longer has) before applying it to the dashboard state.
 
-### 4.3 Deployment Access and Premium Filter Sanitization
+### 4.3 Removed Filter Keys
 
-Saved filters are intentionally forward-compatible with deployment packaging changes.
+Saved filters stay valid when a filter is removed from the product.
 
-- If a whole section is disabled via `lib/config/dashboard-access.ts`, any saved-filter keys for that section are ignored at load/runtime.
-- If premium filters are disabled via `showMoreEnabled: false` in `lib/config/filters.ts`, any keys listed in that section's `premiumFilterKeys` are ignored at load/runtime.
-- No database migration is required when packaging changes. Existing `saved_filters.filters` JSON payloads remain valid; inaccessible keys are simply treated as inert.
-- This also means inaccessible keys do not contribute to active-filter counts or result filtering after load.
+- `withFilterDefaults` copies only keys that `Filters` still has, and `parseFilters` on the server reads only known keys, so a removed filter's key in an old payload is dropped on load.
+- Older payloads may still carry `accountSourceValues`, `accountTypeValues`, `accountDataCoverageValues` and `centerCountryValues` (filters that were removed). They are ignored: no migration is needed, and they do not count as active filters or affect results.
 
 ---
 

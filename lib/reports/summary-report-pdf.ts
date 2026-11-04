@@ -198,7 +198,7 @@ export async function renderSummaryReportPdf(model: SummaryReportModel) {
     .map((metric) => metric.label)
   const scopeLines: Array<[string, string]> = [
     ...scopeRows.map((row): [string, string] => [row.label, row.included.join(", ")]),
-    ["Sections covered", sectionNames.length > 0 ? sectionNames.join(", ") : "None procured"],
+    ["Sections covered", sectionNames.join(", ")],
   ]
   sectionHeading("Report scope")
   scopeLines.forEach(([label, value]) => {

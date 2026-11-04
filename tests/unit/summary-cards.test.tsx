@@ -2,14 +2,8 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest"
 import { render, fireEvent, cleanup, act } from "@testing-library/react"
 import { SummaryCards } from "@/components/dashboard/summary-cards"
-import * as dashboardAccess from "@/lib/config/dashboard-access"
 import { toast } from "sonner"
 import { NUMBER_FORMAT_STORAGE_KEY } from "@/hooks/use-number-format-preference"
-
-vi.mock("@/lib/config/dashboard-access", () => ({
-  isSectionEnabled: vi.fn(),
-  getSectionUnavailableMessage: vi.fn(),
-}))
 
 vi.mock("sonner", () => ({
   toast: { info: vi.fn() },
@@ -45,7 +39,6 @@ describe("summary-cards", () => {
   })
 
   it("renders the summary cards and handles click events on enabled sections", () => {
-    vi.mocked(dashboardAccess.isSectionEnabled).mockReturnValue(true)
     const onSelect = vi.fn()
     
     const { getByText } = render(
@@ -76,7 +69,6 @@ describe("summary-cards", () => {
   })
 
   it("shows a new count immediately without animating", () => {
-    vi.mocked(dashboardAccess.isSectionEnabled).mockReturnValue(true)
     const props = {
       filteredAccountsCount: 10,
       totalAccountsCount: 20,
@@ -100,7 +92,6 @@ describe("summary-cards", () => {
   })
 
   it("shortens only the figures that do not fit their own card", () => {
-    vi.mocked(dashboardAccess.isSectionEnabled).mockReturnValue(true)
     // Fake layout: every card row is 150px wide and text is 10px per character.
     // Measure copies carry their text in data-text, so width comes from that.
     const clientWidth = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(150)
@@ -143,7 +134,6 @@ describe("summary-cards", () => {
   })
 
   it("follows the Full and Short number format preferences", () => {
-    vi.mocked(dashboardAccess.isSectionEnabled).mockReturnValue(true)
     // Fake a narrow card (100px, 10px per character) where Auto would shorten.
     const clientWidth = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(100)
     const rect = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
@@ -190,10 +180,7 @@ describe("summary-cards", () => {
     }
   })
 
-  it("renders read-only cards and shows toast on click when sections are disabled", () => {
-    vi.mocked(dashboardAccess.isSectionEnabled).mockImplementation((section) => section !== "accounts")
-    vi.mocked(dashboardAccess.getSectionUnavailableMessage).mockReturnValue("Not available")
-    
+  it("shows a toast when an overview-only card is clicked", () => {
     const { getByText } = render(
       <SummaryCards
         filteredAccountsCount={10}
@@ -204,16 +191,18 @@ describe("summary-cards", () => {
         totalUpcomingCentersCount={2}
         filteredProspectsCount={50}
         totalProspectsCount={100}
-        filteredHeadcount={5000} // Test >1K compact formatting
+        filteredHeadcount={5000}
         totalHeadcount={10000}
         activeView="centers"
         onSelect={vi.fn()}
       />
     )
 
-    const accountsCardTitle = getByText("Accounts")
-    const accountsCard = accountsCardTitle.closest(".rounded-xl")
-    if (accountsCard) fireEvent.click(accountsCard)
-    expect(toast.info).toHaveBeenCalledWith("Not available", expect.any(Object))
+    const headcountCard = getByText("Headcount").closest(".rounded-xl")
+    if (headcountCard) fireEvent.click(headcountCard)
+    expect(toast.info).toHaveBeenCalledWith(
+      "Headcount is an overview stat. Only Accounts, Centres and Prospects open as views.",
+      expect.any(Object)
+    )
   })
 })

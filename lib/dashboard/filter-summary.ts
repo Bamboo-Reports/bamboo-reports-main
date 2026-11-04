@@ -17,10 +17,20 @@ const coerceRange = (
 
 export function withFilterDefaults(filters: Partial<Filters> | null | undefined): Filters {
   const defaults = createDefaultFilters()
+  // Copy only keys that Filters still has, so filters saved before a filter was
+  // removed do not carry its stale key back into the dashboard state.
+  const known: Partial<Filters> = {}
+  if (filters) {
+    for (const key of Object.keys(defaults) as Array<keyof Filters>) {
+      if (Object.prototype.hasOwnProperty.call(filters, key)) {
+        ;(known as Record<string, unknown>)[key] = filters[key]
+      }
+    }
+  }
 
   return {
     ...defaults,
-    ...filters,
+    ...known,
     accountHqRevenueRange: coerceRange(filters?.accountHqRevenueRange, DEFAULT_REVENUE_RANGE),
     accountYearsInIndiaRange: coerceRange(
       filters?.accountYearsInIndiaRange,
@@ -45,9 +55,6 @@ export function calculateActiveFilters(filters: Filters) {
     filters.accountHqRegionValues.length +
     filters.accountHqCountryValues.length +
     filters.accountHqIndustryValues.length +
-    filters.accountDataCoverageValues.length +
-    filters.accountSourceValues.length +
-    filters.accountTypeValues.length +
     filters.accountPrimaryCategoryValues.length +
     filters.accountPrimaryNatureValues.length +
     filters.accountNasscomStatusValues.length +
@@ -63,7 +70,6 @@ export function calculateActiveFilters(filters: Filters) {
     filters.centerFocusValues.length +
     filters.centerCityValues.length +
     filters.centerStateValues.length +
-    filters.centerCountryValues.length +
     filters.centerEmployeesRangeValues.length +
     filters.centerStatusValues.length +
     (centerIncYearFilterActive ? 1 : 0) +

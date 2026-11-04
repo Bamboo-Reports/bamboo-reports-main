@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { devError } from "@/lib/utils/dev-log"
 import { Checkbox } from "@/components/ui/checkbox"
-import { RiBriefcaseLine, RiBuildingLine, RiCheckboxCircleFill, RiDownloadLine, RiErrorWarningFill, RiGroupLine, RiLockLine, RiSparklingLine } from "@remixicon/react"
+import { RiBriefcaseLine, RiBuildingLine, RiCheckboxCircleFill, RiDownloadLine, RiErrorWarningFill, RiGroupLine, RiSparklingLine } from "@remixicon/react"
 import type { ExportDatasetKey } from "@/lib/utils/export-helpers"
 import {
   requestServerExport,
@@ -21,7 +21,6 @@ import {
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { toTrackedStringArray } from "@/lib/analytics/tracking"
-import { getDatasetUnavailableMessage, isDatasetEnabled } from "@/lib/config/dashboard-access"
 import { cn } from "@/lib/utils"
 import type { DescribedField } from "@/components/filters/filter-description"
 
@@ -215,10 +214,10 @@ export function ExportDialog({
     const allow = (key: ExportDatasetKey) =>
       (!allowedDatasets || allowedDatasets.includes(key)) && (!initialDatasets || initialDatasets.includes(key))
     const initialSelection = {
-      accounts: allow("accounts") && isDatasetEnabled("accounts") && countOf("accounts") > 0,
-      centers: allow("centers") && isDatasetEnabled("centers") && countOf("centers") > 0,
-      services: allow("services") && isDatasetEnabled("services") && countOf("services") > 0,
-      prospects: allow("prospects") && isDatasetEnabled("prospects") && countOf("prospects") > 0,
+      accounts: allow("accounts") && countOf("accounts") > 0,
+      centers: allow("centers") && countOf("centers") > 0,
+      services: allow("services") && countOf("services") > 0,
+      prospects: allow("prospects") && countOf("prospects") > 0,
     }
     setSelection(initialSelection)
     setIsExporting(false)
@@ -257,7 +256,7 @@ export function ExportDialog({
     [selection, data, rowCounts]
   )
   const handleToggle = (key: ExportDatasetKey) => {
-    if (isExporting || !isDatasetEnabled(key)) return
+    if (isExporting) return
     const next = { ...selection, [key]: !selection[key] }
     setSelection(next)
     const selectedDatasets = getSelectedDatasets(next)
@@ -272,14 +271,14 @@ export function ExportDialog({
   const handleSelectAll = (value: boolean) => {
     if (isExporting) return
     const next = {
-      accounts: isDatasetAllowed("accounts") && isDatasetEnabled("accounts") ? value : false,
-      centers: isDatasetAllowed("centers") && isDatasetEnabled("centers") ? value : false,
-      services: isDatasetAllowed("services") && isDatasetEnabled("services") ? value : false,
-      prospects: isDatasetAllowed("prospects") && isDatasetEnabled("prospects") ? value : false,
+      accounts: isDatasetAllowed("accounts") ? value : false,
+      centers: isDatasetAllowed("centers") ? value : false,
+      services: isDatasetAllowed("services") ? value : false,
+      prospects: isDatasetAllowed("prospects") ? value : false,
     }
     setSelection(next)
     // Report the datasets actually toggled on, not a hardcoded count: with
-    // allowed/disabled datasets a "select all" can enable fewer than four.
+    // a limited set of allowed datasets a "select all" can enable fewer than four.
     const nextSelectedDatasets = getSelectedDatasets(next)
     captureEvent(value ? ANALYTICS_EVENTS.EXPORT_SELECT_ALL_CLICKED : ANALYTICS_EVENTS.EXPORT_CLEAR_CLICKED, {
       selected_dataset_count: nextSelectedDatasets.length,
@@ -531,7 +530,7 @@ export function ExportDialog({
     )
   }
 
-  const allOn = visibleDatasetMeta.every((item) => !isDatasetEnabled(item.key) || selection[item.key])
+  const allOn = visibleDatasetMeta.every((item) => selection[item.key])
   const shownFilters = showAllFilters ? filterSummary : filterSummary.slice(0, 2)
   const hiddenFilters = filterSummary.length - shownFilters.length
 
@@ -585,9 +584,7 @@ export function ExportDialog({
           <div className="px-2 pb-3">
             {visibleDatasetMeta.map((item) => {
               const Icon = item.icon
-              const isAccessible = isDatasetEnabled(item.key)
-              const isChecked = selection[item.key] && isAccessible
-              const isDisabled = locked || !isAccessible
+              const isChecked = selection[item.key]
               const checkboxId = `export-dataset-${item.key}`
 
               // A label rather than a button: the checkbox is itself a button,
@@ -598,15 +595,14 @@ export function ExportDialog({
                   htmlFor={checkboxId}
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors",
-                    isDisabled ? "cursor-default" : "cursor-pointer hover:bg-muted/60",
-                    !isAccessible && "opacity-55"
+                    locked ? "cursor-default" : "cursor-pointer hover:bg-muted/60"
                   )}
                 >
                   <Checkbox
                     id={checkboxId}
                     checked={isChecked}
                     onCheckedChange={() => handleToggle(item.key)}
-                    disabled={isDisabled}
+                    disabled={locked}
                   />
                   <span className="min-w-0 flex-1">
                     <span className={cn("flex items-center gap-1.5 text-[13px] font-medium", !isChecked && "text-muted-foreground")}>
@@ -614,19 +610,12 @@ export function ExportDialog({
                       {item.label}
                     </span>
                     <span className="mt-0.5 block text-xs text-muted-foreground">
-                      {isAccessible ? item.description : getDatasetUnavailableMessage(item.key)}
+                      {item.description}
                     </span>
                   </span>
-                  {isAccessible ? (
-                    <span className={cn("whitespace-nowrap text-[13px] font-medium tabular-nums", !isChecked && "text-muted-foreground")}>
-                      {countOf(item.key).toLocaleString()} <span className="font-normal text-muted-foreground">rows</span>
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 whitespace-nowrap text-xs font-medium text-muted-foreground">
-                      <RiLockLine className="h-3.5 w-3.5" />
-                      Not procured
-                    </span>
-                  )}
+                  <span className={cn("whitespace-nowrap text-[13px] font-medium tabular-nums", !isChecked && "text-muted-foreground")}>
+                    {countOf(item.key).toLocaleString()} <span className="font-normal text-muted-foreground">rows</span>
+                  </span>
                 </label>
               )
             })}

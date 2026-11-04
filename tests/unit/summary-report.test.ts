@@ -33,7 +33,6 @@ const counts = {
   totalHeadcount: 1200000,
 }
 
-const allSections = { accounts: true, centers: true, prospects: true }
 
 describe("buildReportFilterRows", () => {
   it("always leads with the account visibility scope", () => {
@@ -102,16 +101,9 @@ describe("buildReportFilterRows", () => {
 })
 
 describe("buildReportMetrics", () => {
-  it("includes every metric when all sections are procured", () => {
-    const ids = buildReportMetrics(counts, allSections).map((metric) => metric.id)
+  it("includes every metric in dashboard order", () => {
+    const ids = buildReportMetrics(counts).map((metric) => metric.id)
     expect(ids).toEqual(["accounts", "centers", "upcomingCenters", "prospects", "headcount"])
-  })
-
-  it("drops metrics for sections that are not procured", () => {
-    const ids = buildReportMetrics(counts, { accounts: true, centers: false, prospects: false }).map(
-      (metric) => metric.id
-    )
-    expect(ids).toEqual(["accounts"])
   })
 })
 
@@ -127,7 +119,6 @@ describe("buildSummaryReport", () => {
       }),
       counts,
       baselineRanges,
-      enabledSections: allSections,
       activeView: "centers",
       activeFilterCount: 1,
       generatedBy: "ops@example.com",
@@ -194,7 +185,7 @@ describe("buildReportChartGroups", () => {
   }
 
   it("mirrors the dashboard tabs with four, four and two charts", () => {
-    const groups = buildReportChartGroups(sources, allSections, counts)
+    const groups = buildReportChartGroups(sources, counts)
     expect(groups.map((group) => [group.title, group.charts.length])).toEqual([
       ["Accounts", 4],
       ["Centers", 4],
@@ -207,10 +198,7 @@ describe("buildReportChartGroups", () => {
     ])
   })
 
-  it("skips sections that are not procured and missing sources", () => {
-    expect(
-      buildReportChartGroups(sources, { accounts: false, centers: true, prospects: false }, counts)
-    ).toHaveLength(1)
-    expect(buildReportChartGroups(undefined, allSections, counts)).toEqual([])
+  it("returns no groups when chart sources are missing", () => {
+    expect(buildReportChartGroups(undefined, counts)).toEqual([])
   })
 })

@@ -75,7 +75,7 @@ async function q(query: { text: string; values: unknown[] }) {
 
 async function assertMetrics(name: string, overrides: Partial<Filters>) {
   const filters = createDefaultFilters({ accountHqRevenueRange: WIDE, ...overrides })
-  const e = getFilteredData(accounts, centers, functions, [], prospects, tech, filters, {})
+  const e = getFilteredData(accounts, centers, functions, [], prospects, tech, filters)
   const engine = {
     accounts: e.filteredAccounts.length,
     centers: e.filteredCenters.length,
@@ -84,9 +84,9 @@ async function assertMetrics(name: string, overrides: Partial<Filters>) {
     prospects: e.filteredProspects.length,
   }
   const o = { materialized: false } as const
-  const accF = await q(buildEntityAggregateQuery("accounts", filters, {}, "count(*)::int as total", o))
-  const cenF = await q(buildEntityAggregateQuery("centers", filters, {}, CENTER_METRICS, o))
-  const proF = await q(buildEntityAggregateQuery("prospects", filters, {}, "count(*)::int as total", o))
+  const accF = await q(buildEntityAggregateQuery("accounts", filters, "count(*)::int as total", o))
+  const cenF = await q(buildEntityAggregateQuery("centers", filters, CENTER_METRICS, o))
+  const proF = await q(buildEntityAggregateQuery("prospects", filters, "count(*)::int as total", o))
   const sqlMetrics = {
     accounts: Number(accF[0]?.total ?? 0),
     centers: Number(cenF[0]?.centers ?? 0),

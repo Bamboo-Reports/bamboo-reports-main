@@ -24,19 +24,12 @@ import { accountNameMatchForms, hasAccountNameSearch } from "@/lib/utils/filter-
  *    filter; skipped entirely when an account name or keyword is included.
  *  - the bidirectional cascade: account filters narrow centers/prospects;
  *    prospect filters narrow back to accounts/centers; the services-offered
- *    (functions) and software (tech) filters narrow centers; and, when centers
- *    are enabled, an account only survives if it has at least one surviving
- *    center.
+ *    (functions) and software (tech) filters narrow centers; and an account
+ *    only survives if it has at least one surviving center.
  *
  * Cascade is expressed with NON-correlated `IN (SELECT ...)` CTEs, mirroring
  * the engine's Set logic (accountNameSet, centerKeySet) one-for-one.
  */
-
-export type FilterAccess = {
-  accountsEnabled?: boolean
-  centersEnabled?: boolean
-  prospectsEnabled?: boolean
-}
 
 export type SqlQuery = { text: string; values: unknown[] }
 
@@ -223,9 +216,6 @@ function accountPredicate(f: Filters, p: Params): string {
     valueClause("account_hq_region", f.accountHqRegionValues, p),
     valueClause("account_hq_country", f.accountHqCountryValues, p),
     valueClause("account_hq_industry", f.accountHqIndustryValues, p),
-    valueClause("account_data_coverage", f.accountDataCoverageValues, p),
-    valueClause("account_source", f.accountSourceValues, p),
-    valueClause("account_type", f.accountTypeValues, p),
     valueClause("account_primary_category", f.accountPrimaryCategoryValues, p),
     valueClause("account_primary_nature", f.accountPrimaryNatureValues, p),
     valueClause("account_nasscom_status", f.accountNasscomStatusValues, p),
@@ -285,20 +275,13 @@ function softwareClause(f: Filters, p: Params): string | null {
 
 type Flags = ReturnType<typeof computeFlags>
 
-function computeFlags(f: Filters, access: FilterAccess) {
-  const ae = access.accountsEnabled ?? true
-  const ce = access.centersEnabled ?? true
-  const pe = access.prospectsEnabled ?? true
-
+function computeFlags(f: Filters) {
   const hasNameSearch = hasAccountNameSearch(f.accountGlobalLegalNameKeywords, f.accountNameValues)
 
   const haf =
     f.accountHqRegionValues.length > 0 ||
     f.accountHqCountryValues.length > 0 ||
     f.accountHqIndustryValues.length > 0 ||
-    f.accountDataCoverageValues.length > 0 ||
-    f.accountSourceValues.length > 0 ||
-    f.accountTypeValues.length > 0 ||
     f.accountPrimaryCategoryValues.length > 0 ||
     f.accountPrimaryNatureValues.length > 0 ||
     f.accountNasscomStatusValues.length > 0 ||
@@ -314,7 +297,7 @@ function computeFlags(f: Filters, access: FilterAccess) {
     f.accountGlobalLegalNameKeywords.length > 0 ||
     f.accountNameValues.length > 0
 
-  const rawHpf =
+  const hpf =
     f.prospectDepartmentValues.length > 0 ||
     f.prospectHeadTypeValues.length > 0 ||
     f.prospectLevelValues.length > 0 ||
@@ -326,16 +309,11 @@ function computeFlags(f: Filters, access: FilterAccess) {
   const hsf = f.techSoftwareInUseKeywords.length > 0
 
   return {
-    ae,
-    ce,
-    pe,
     hasNameSearch,
     haf,
-    rawHpf,
+    hpf,
     hff,
     hsf,
-    effHpf: rawHpf && pe,
-    effHff: hff && ce,
   }
 }
 
@@ -352,14 +330,13 @@ function centerSurvivesPredicate(f: Filters, p: Params, flags: Flags): string {
     valueClause("center_focus", f.centerFocusValues, p),
     valueClause("center_city", f.centerCityValues, p),
     valueClause("center_state", f.centerStateValues, p),
-    valueClause("center_country", f.centerCountryValues, p),
     valueClause("center_employees_range", f.centerEmployeesRangeValues, p),
     valueClause("center_status", f.centerStatusValues, p),
     rangeClause("center_inc_year", f.centerIncYearRange, f.centerIncYearIncludeNull, p),
     flags.hsf ? softwareClause(f, p) : null,
     flags.haf ? memberIn("account_global_legal_name", "acc0") : null,
-    flags.effHff ? memberIn("cn_unique_key", "func_centers") : null,
-    flags.effHpf ? memberIn("account_global_legal_name", "prospect_accounts") : null,
+    flags.hff ? memberIn("cn_unique_key", "func_centers") : null,
+    flags.hpf ? memberIn("account_global_legal_name", "prospect_accounts") : null,
   ])
 }
 
@@ -375,13 +352,13 @@ function buildWith(roots: CteName[], f: Filters, p: Params, flags: Flags, materi
   // dependents last, so walk it in reverse).
   if (needed.has("final_accounts")) {
     needed.add("acc0")
-    if (flags.effHpf) needed.add("prospect_accounts")
-    if (flags.ce) needed.add("surviving_centers")
+    if (flags.hpf) needed.add("prospect_accounts")
+    needed.add("surviving_centers")
   }
   if (needed.has("surviving_centers")) {
     if (flags.haf) needed.add("acc0")
-    if (flags.effHff) needed.add("func_centers")
-    if (flags.effHpf) needed.add("prospect_accounts")
+    if (flags.hff) needed.add("func_centers")
+    if (flags.hpf) needed.add("prospect_accounts")
   }
 
   const builders: Record<CteName, () => string> = {
@@ -400,8 +377,8 @@ function buildWith(roots: CteName[], f: Filters, p: Params, flags: Flags, materi
       )})`,
     final_accounts: () =>
       `final_accounts as ${M}(select account_global_legal_name from acc0 where ${andAll([
-        flags.effHpf ? memberIn("account_global_legal_name", "prospect_accounts") : null,
-        flags.ce ? memberIn("account_global_legal_name", "surviving_centers") : null,
+        flags.hpf ? memberIn("account_global_legal_name", "prospect_accounts") : null,
+        memberIn("account_global_legal_name", "surviving_centers"),
       ])})`,
   }
 
@@ -412,10 +389,6 @@ function buildWith(roots: CteName[], f: Filters, p: Params, flags: Flags, materi
 // ---------------------------------------------------------------------------
 // Public entity query builders
 // ---------------------------------------------------------------------------
-
-function emptyQuery(columns: string, table: string): SqlQuery {
-  return { text: `select ${columns} from ${table} where false`, values: [] }
-}
 
 function withPagination(text: string, p: Params, opts: EntityQueryOptions): string {
   let out = text
@@ -428,11 +401,9 @@ function withPagination(text: string, p: Params, opts: EntityQueryOptions): stri
   return out
 }
 
-export function buildAccountsQuery(f: Filters, access: FilterAccess = {}, opts: EntityQueryOptions = {}): SqlQuery {
-  const flags = computeFlags(f, access)
+export function buildAccountsQuery(f: Filters, opts: EntityQueryOptions = {}): SqlQuery {
+  const flags = computeFlags(f)
   const columns = opts.columns ?? ACCOUNT_ID_COLUMN
-  if (!flags.ae) return emptyQuery(columns, "accounts")
-
   const p = new Params()
   const withClause = buildWith(["final_accounts"], f, p, flags, opts.materialized ?? true)
   const orderBy = opts.orderBy === undefined ? `${ACCOUNT_ID_COLUMN} asc` : opts.orderBy
@@ -445,19 +416,16 @@ export function buildAccountsQuery(f: Filters, access: FilterAccess = {}, opts: 
   return { text, values: p.values }
 }
 
-export function buildAccountsCountQuery(f: Filters, access: FilterAccess = {}): SqlQuery {
-  const flags = computeFlags(f, access)
-  if (!flags.ae) return { text: `select 0 as total`, values: [] }
+export function buildAccountsCountQuery(f: Filters): SqlQuery {
+  const flags = computeFlags(f)
   const p = new Params()
   const withClause = buildWith(["final_accounts"], f, p, flags, true)
   return { text: `${withClause} select count(*)::int as total from final_accounts`, values: p.values }
 }
 
-export function buildCentersQuery(f: Filters, access: FilterAccess = {}, opts: EntityQueryOptions = {}): SqlQuery {
-  const flags = computeFlags(f, access)
+export function buildCentersQuery(f: Filters, opts: EntityQueryOptions = {}): SqlQuery {
+  const flags = computeFlags(f)
   const columns = opts.columns ?? CENTER_ID_COLUMN
-  if (!flags.ce) return emptyQuery(columns, "centers")
-
   const p = new Params()
   const withClause = buildWith(["surviving_centers"], f, p, flags, opts.materialized ?? true)
   const orderBy = opts.orderBy === undefined ? `center_name asc` : opts.orderBy
@@ -467,42 +435,32 @@ export function buildCentersQuery(f: Filters, access: FilterAccess = {}, opts: E
   return { text, values: p.values }
 }
 
-export function buildCentersCountQuery(f: Filters, access: FilterAccess = {}): SqlQuery {
-  const flags = computeFlags(f, access)
-  if (!flags.ce) return { text: `select 0 as total`, values: [] }
+export function buildCentersCountQuery(f: Filters): SqlQuery {
+  const flags = computeFlags(f)
   const p = new Params()
   const withClause = buildWith(["surviving_centers"], f, p, flags, true)
   return { text: `${withClause} select count(*)::int as total from surviving_centers`, values: p.values }
 }
 
-// finalAccountNameSet source, mirroring getFilteredData's precedence
-// (accounts, else centers, else none when only prospects are enabled).
+// Prospects are narrowed to the final account set (getFilteredData's
+// finalAccountNameSet).
 function prospectsRoots(flags: Flags): CteName[] {
-  const roots: CteName[] = []
-  if (flags.ae) roots.push("final_accounts")
-  else if (flags.ce) roots.push("surviving_centers")
+  const roots: CteName[] = ["final_accounts"]
   if (flags.haf) roots.push("acc0")
   return roots
 }
 
 function prospectsWhereClause(f: Filters, p: Params, flags: Flags): string {
-  const source = flags.ae
-    ? memberIn("account_global_legal_name", "final_accounts")
-    : flags.ce
-      ? memberIn("account_global_legal_name", "surviving_centers")
-      : null
   return andAll([
     flags.haf ? memberIn("account_global_legal_name", "acc0") : null,
-    flags.rawHpf ? prospectPredicate(f, p) : null,
-    source,
+    flags.hpf ? prospectPredicate(f, p) : null,
+    memberIn("account_global_legal_name", "final_accounts"),
   ])
 }
 
-export function buildProspectsQuery(f: Filters, access: FilterAccess = {}, opts: EntityQueryOptions = {}): SqlQuery {
-  const flags = computeFlags(f, access)
+export function buildProspectsQuery(f: Filters, opts: EntityQueryOptions = {}): SqlQuery {
+  const flags = computeFlags(f)
   const columns = opts.columns ?? PROSPECT_ID_COLUMN
-  if (!flags.pe) return emptyQuery(columns, "prospects")
-
   const p = new Params()
   // The WITH is emitted before the WHERE, so build (and append params for) the
   // CTEs first, then the WHERE predicate, keeping param order aligned to text.
@@ -516,9 +474,8 @@ export function buildProspectsQuery(f: Filters, access: FilterAccess = {}, opts:
   return { text, values: p.values }
 }
 
-export function buildProspectsCountQuery(f: Filters, access: FilterAccess = {}): SqlQuery {
-  const flags = computeFlags(f, access)
-  if (!flags.pe) return { text: `select 0 as total`, values: [] }
+export function buildProspectsCountQuery(f: Filters): SqlQuery {
+  const flags = computeFlags(f)
   const p = new Params()
   const withClause = buildWith(prospectsRoots(flags), f, p, flags, true)
   const where = prospectsWhereClause(f, p, flags)
@@ -541,11 +498,10 @@ export type AggregateBranch = { select: string; where?: string; groupBy?: string
 export function buildEntityAggregateQuery(
   entity: AggregateEntity,
   f: Filters,
-  access: FilterAccess = {},
   select: string,
   opts: { groupBy?: string; where?: string; materialized?: boolean } = {}
 ): SqlQuery {
-  return buildEntityUnionQuery(entity, f, access, [{ select, where: opts.where, groupBy: opts.groupBy }], {
+  return buildEntityUnionQuery(entity, f, [{ select, where: opts.where, groupBy: opts.groupBy }], {
     materialized: opts.materialized,
   })
 }
@@ -560,23 +516,16 @@ export function buildEntityAggregateQuery(
 export function buildEntityUnionQuery(
   entity: AggregateEntity,
   f: Filters,
-  access: FilterAccess = {},
   branches: AggregateBranch[],
   opts: { materialized?: boolean } = {}
 ): SqlQuery {
-  const flags = computeFlags(f, access)
+  const flags = computeFlags(f)
   const materialized = opts.materialized ?? true
   const tail = (b: AggregateBranch) => `${b.where ? ` and (${b.where})` : ""}${b.groupBy ? ` group by ${b.groupBy}` : ""}`
-  const emptyText = branches
-    .map((b) => `select ${b.select} from ${entity} where false${b.groupBy ? ` group by ${b.groupBy}` : ""}`)
-    .join(" union all ")
   const p = new Params()
 
   // filteredFunctions = functions whose center survives (getFilteredData
   // re-filters functions by the final centerKeySet).
-  const enabled = entity === "accounts" ? flags.ae : entity === "prospects" ? flags.pe : flags.ce
-  if (!enabled) return { text: emptyText, values: [] }
-
   const roots: CteName[] =
     entity === "accounts" ? ["final_accounts"] : entity === "prospects" ? prospectsRoots(flags) : ["surviving_centers"]
   const withClause = buildWith(roots, f, p, flags, materialized)
@@ -597,29 +546,25 @@ export type FacetCountSpec = { id: number; entity: AggregateEntity; column: stri
 /**
  * Grouped counts for MANY facets in ONE statement: the cascade CTEs are
  * emitted once and each facet becomes a `union all` branch over them, so the
- * sidebar's 23 option lists cost one warehouse round trip and one cascade
+ * sidebar's 20 option lists cost one warehouse round trip and one cascade
  * evaluation instead of one of each per facet. Every spec must share the same
  * `filters` (the facets endpoint groups specs by their facet-excludes-itself
  * filters before calling this). Rows come back as `{ facet, value, count }`
- * with `facet` echoing the spec id. Specs for a disabled section are simply
- * absent from the output. `column` MUST be code-controlled, never user input.
+ * with `facet` echoing the spec id. `column` MUST be code-controlled, never
+ * user input.
  */
 export function buildFacetCountsQuery(
   specs: FacetCountSpec[],
   f: Filters,
-  access: FilterAccess = {},
   opts: { materialized?: boolean } = {}
 ): SqlQuery {
-  const flags = computeFlags(f, access)
-  const enabled = (entity: AggregateEntity) =>
-    entity === "accounts" ? flags.ae : entity === "prospects" ? flags.pe : flags.ce
-  const live = specs.filter((s) => enabled(s.entity))
-  if (live.length === 0) return { text: "select 0 as facet, '' as value, 0 as count where false", values: [] }
+  const flags = computeFlags(f)
+  if (specs.length === 0) return { text: "select 0 as facet, '' as value, 0 as count where false", values: [] }
 
   const roots = new Set<CteName>()
-  if (live.some((s) => s.entity === "accounts")) roots.add("final_accounts")
-  if (live.some((s) => s.entity === "centers" || s.entity === "functions")) roots.add("surviving_centers")
-  const needProspects = live.some((s) => s.entity === "prospects")
+  if (specs.some((s) => s.entity === "accounts")) roots.add("final_accounts")
+  if (specs.some((s) => s.entity === "centers" || s.entity === "functions")) roots.add("surviving_centers")
+  const needProspects = specs.some((s) => s.entity === "prospects")
   if (needProspects) for (const r of prospectsRoots(flags)) roots.add(r)
 
   const p = new Params()
@@ -632,7 +577,7 @@ export function buildFacetCountsQuery(
     functions: memberIn(CENTER_ID_COLUMN, "surviving_centers"),
     prospects: prospectsWhere ?? "false",
   }
-  const branches = live.map((s) => {
+  const branches = specs.map((s) => {
     const value = `coalesce(${s.column}, '')`
     return `select ${s.id} as facet, ${value} as value, count(*)::int as count from ${s.entity} where ${membership[s.entity]} group by ${value}`
   })

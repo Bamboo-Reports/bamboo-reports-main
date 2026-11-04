@@ -1,38 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
-import {
-  assertDatasetEnabled,
-  assertSectionEnabled,
-  canAccessAccountsMapView,
-  getAccessibleDefaultSection,
-  getDatasetUnavailableMessage,
-  getEnabledSections,
-  getSectionUnavailableMessage,
-  isDatasetEnabled,
-  isSectionDisabled,
-  isSectionEnabled,
-} from "@/lib/config/dashboard-access"
 import { getBrandfetchClientId, getEnvironmentLabel } from "@/lib/config/environment"
 import { canExportData, normalizeUserRole } from "@/lib/auth/roles"
 import { extractBearerToken } from "@/lib/auth/server"
 import { getClientInfo } from "@/lib/request/client-info"
 import { normalizeTickerForYahoo } from "@/lib/finance/tickers"
 
-describe("config, auth, request, and ticker helpers", () => {
+describe("environment, auth, request, and ticker helpers", () => {
   afterEach(() => {
     vi.unstubAllEnvs()
-  })
-
-  it("reports enabled dashboard sections and datasets", () => {
-    expect(getEnabledSections()).toEqual(["accounts", "centers", "prospects"])
-    expect(getAccessibleDefaultSection()).toBe("accounts")
-    expect(isSectionEnabled("accounts")).toBe(true)
-    expect(isSectionDisabled("accounts")).toBe(false)
-    expect(isDatasetEnabled("services")).toBe(true)
-    expect(canAccessAccountsMapView()).toBe(true)
-    expect(() => assertSectionEnabled("accounts")).not.toThrow()
-    expect(() => assertDatasetEnabled("accounts")).not.toThrow()
-    expect(getSectionUnavailableMessage("centers")).toBe("Centres is Not Procured.")
-    expect(getDatasetUnavailableMessage("services")).toBe("Services export is Not Procured.")
   })
 
   it("normalizes environment values", () => {

@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { RiArrowRightSLine, RiLockLine } from "@remixicon/react"
+import { RiArrowRightSLine } from "@remixicon/react"
 import { cn } from "@/lib/utils"
 
 interface FilterRowProps {
@@ -60,22 +60,11 @@ export function FilterRow({ label, summary, active, children }: FilterRowProps) 
 }
 
 /** Divider before the less-used filters (what used to sit behind "Show More"). */
-export function FilterMoreDivider({ locked = false, onLockedClick }: { locked?: boolean; onLockedClick?: () => void }) {
+export function FilterMoreDivider() {
   return (
     <div className="mx-2.5 mb-1 mt-3 flex items-center gap-2 text-xs font-medium text-muted-foreground">
       More
       <span className="h-px flex-1 bg-sidebar-border" />
-      {locked && (
-        <button
-          type="button"
-          onClick={onLockedClick}
-          className="inline-flex items-center gap-1 hover:text-foreground"
-          title="These filters are not part of your plan"
-        >
-          <RiLockLine className="h-3 w-3" />
-          Not procured
-        </button>
-      )}
     </div>
   )
 }

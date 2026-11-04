@@ -1,5 +1,4 @@
 import React from "react"
-import { toast } from "sonner"
 import { EnhancedMultiSelect } from "@/components/enhanced-multi-select"
 import { AccountAutocomplete } from "@/components/filters/account-autocomplete"
 import { TitleKeywordInput } from "@/components/filters/title-keyword-input"
@@ -10,7 +9,7 @@ import { FilterRangeField, formatRangeSummary, type RangePreset } from "@/compon
 import { isRangeActive } from "@/components/filters/filter-fields"
 import { useAccountLists } from "@/contexts/account-lists-context"
 import { withAccountLists } from "@/lib/accounts/account-lists"
-import { getPremiumFilterKeys, isFilterEnabled, isShowMoreEnabled } from "@/lib/config/filters"
+import { getMoreFilterKeys } from "@/lib/config/filters"
 import type { Alias, AvailableOptions, FilterOption, FilterValue, Filters } from "@/lib/types"
 
 interface FilterSectionBaseProps {
@@ -64,7 +63,6 @@ function ValuesRow({
   setPendingFilters,
   setActiveFilter,
 }: ValuesRowProps) {
-  if (!isFilterEnabled(filterKey)) return null
   const selected = pendingFilters[filterKey]
   const options: FilterOption[] = availableOptions[filterKey] ?? []
   return (
@@ -85,16 +83,10 @@ function ValuesRow({
   )
 }
 
-/** The "More" divider, or a locked one when the plan doesn't include those filters. */
+/** The "More" divider above a section's less-used filters. */
 function MoreFilters({ section }: { section: "accounts" | "centers" }) {
-  if (getPremiumFilterKeys(section).length === 0) return null
-  const procured = isShowMoreEnabled(section)
-  return (
-    <FilterMoreDivider
-      locked={!procured}
-      onLockedClick={() => toast.info("Premium filters are Not Procured.")}
-    />
-  )
+  if (getMoreFilterKeys(section).length === 0) return null
+  return <FilterMoreDivider />
 }
 
 const CURRENT_YEAR = new Date().getFullYear()
@@ -136,97 +128,79 @@ export function AccountFiltersSection(props: AccountFilterSectionProps) {
     ...item,
     value: lists.find((list) => list.id === item.value)?.name ?? "List",
   }))
-  const revenueIncludeNull = isFilterEnabled("accountHqRevenueIncludeNull")
-  const yearsIncludeNull = isFilterEnabled("yearsInIndiaIncludeNull")
 
   return (
     <div>
-      {isFilterEnabled("accountGlobalLegalNameKeywords") && (
-        <FilterRow
-          label="Account name"
-          active={pendingFilters.accountGlobalLegalNameKeywords.length > 0}
-          summary={<FilterValuesSummary values={pendingFilters.accountGlobalLegalNameKeywords} />}
-        >
-          <AccountAutocomplete
-            accountNames={accountNames}
-            aliases={aliases}
-            serverSuggest={serverMode}
-            selectedAccounts={pendingFilters.accountGlobalLegalNameKeywords}
-            onChange={(keywords) => setPendingFilters((prev) => ({ ...prev, accountGlobalLegalNameKeywords: keywords }))}
-            placeholder="Search account names"
-            trackingKey="accountGlobalLegalNameKeywords"
-          />
-        </FilterRow>
-      )}
+      <FilterRow
+        label="Account name"
+        active={pendingFilters.accountGlobalLegalNameKeywords.length > 0}
+        summary={<FilterValuesSummary values={pendingFilters.accountGlobalLegalNameKeywords} />}
+      >
+        <AccountAutocomplete
+          accountNames={accountNames}
+          aliases={aliases}
+          serverSuggest={serverMode}
+          selectedAccounts={pendingFilters.accountGlobalLegalNameKeywords}
+          onChange={(keywords) => setPendingFilters((prev) => ({ ...prev, accountGlobalLegalNameKeywords: keywords }))}
+          placeholder="Search account names"
+          trackingKey="accountGlobalLegalNameKeywords"
+        />
+      </FilterRow>
 
-      {isFilterEnabled("accountListValues") && (
-        <FilterRow
-          label="Account list"
-          active={pendingFilters.accountListValues.length > 0 || pendingFilters.accountNameValues.length > 0}
-          summary={
-            accountListNames.length > 0
-              ? <FilterValuesSummary values={accountListNames} />
-              : `${pendingFilters.accountNameValues.length.toLocaleString()} accounts`
-          }
-        >
-          <AccountListPicker
-            selected={pendingFilters.accountListValues}
-            accountNameCount={pendingFilters.accountNameValues.length}
-            onChange={(selection, nextLists) => setPendingFilters((prev) => withAccountLists(prev, selection, nextLists))}
-            onClearNames={() => setPendingFilters((prev) => ({ ...prev, accountListValues: [], accountNameValues: [] }))}
-          />
-        </FilterRow>
-      )}
+      <FilterRow
+        label="Account list"
+        active={pendingFilters.accountListValues.length > 0 || pendingFilters.accountNameValues.length > 0}
+        summary={
+          accountListNames.length > 0
+            ? <FilterValuesSummary values={accountListNames} />
+            : `${pendingFilters.accountNameValues.length.toLocaleString()} accounts`
+        }
+      >
+        <AccountListPicker
+          selected={pendingFilters.accountListValues}
+          accountNameCount={pendingFilters.accountNameValues.length}
+          onChange={(selection, nextLists) => setPendingFilters((prev) => withAccountLists(prev, selection, nextLists))}
+          onClearNames={() => setPendingFilters((prev) => ({ ...prev, accountListValues: [], accountNameValues: [] }))}
+        />
+      </FilterRow>
 
-      {isFilterEnabled("accountHqRevenueRange") && (
-        <FilterRow
+      <FilterRow
+        label="HQ revenue"
+        active={isRangeActive(pendingFilters.accountHqRevenueRange, revenueRange, pendingFilters.accountHqRevenueIncludeNull)}
+        summary={formatRangeSummary(pendingFilters.accountHqRevenueRange, revenueRange, pendingFilters.accountHqRevenueIncludeNull, "money")}
+      >
+        <FilterRangeField
           label="HQ revenue"
-          active={isRangeActive(pendingFilters.accountHqRevenueRange, revenueRange, !revenueIncludeNull || pendingFilters.accountHqRevenueIncludeNull)}
-          summary={formatRangeSummary(pendingFilters.accountHqRevenueRange, revenueRange, !revenueIncludeNull || pendingFilters.accountHqRevenueIncludeNull, "money")}
-        >
-          <FilterRangeField
-            label="HQ revenue"
-            unit="money"
-            value={pendingFilters.accountHqRevenueRange}
-            bounds={revenueRange}
-            onChange={handleRevenueRangeChange}
-            presets={REVENUE_PRESETS}
-            includeNull={revenueIncludeNull ? pendingFilters.accountHqRevenueIncludeNull : undefined}
-            onIncludeNullChange={
-              revenueIncludeNull
-                ? (includeNull) => setPendingFilters((prev) => ({ ...prev, accountHqRevenueIncludeNull: includeNull }))
-                : undefined
-            }
-            includeNullLabel="Include accounts with no revenue data"
-          />
-        </FilterRow>
-      )}
+          unit="money"
+          value={pendingFilters.accountHqRevenueRange}
+          bounds={revenueRange}
+          onChange={handleRevenueRangeChange}
+          presets={REVENUE_PRESETS}
+          includeNull={pendingFilters.accountHqRevenueIncludeNull}
+          onIncludeNullChange={(includeNull) => setPendingFilters((prev) => ({ ...prev, accountHqRevenueIncludeNull: includeNull }))}
+          includeNullLabel="Include accounts with no revenue data"
+        />
+      </FilterRow>
 
       <ValuesRow {...props} filterKey="accountCenterEmployeesRangeValues" label="GCC headcount (India)" ordered />
 
-      {isFilterEnabled("accountYearsInIndiaRange") && (
-        <FilterRow
+      <FilterRow
+        label="Years in India"
+        active={isRangeActive(pendingFilters.accountYearsInIndiaRange, yearsInIndiaRange, pendingFilters.yearsInIndiaIncludeNull)}
+        summary={formatRangeSummary(pendingFilters.accountYearsInIndiaRange, yearsInIndiaRange, pendingFilters.yearsInIndiaIncludeNull, "years")}
+      >
+        <FilterRangeField
           label="Years in India"
-          active={isRangeActive(pendingFilters.accountYearsInIndiaRange, yearsInIndiaRange, !yearsIncludeNull || pendingFilters.yearsInIndiaIncludeNull)}
-          summary={formatRangeSummary(pendingFilters.accountYearsInIndiaRange, yearsInIndiaRange, !yearsIncludeNull || pendingFilters.yearsInIndiaIncludeNull, "years")}
-        >
-          <FilterRangeField
-            label="Years in India"
-            unit="years"
-            value={pendingFilters.accountYearsInIndiaRange}
-            bounds={yearsInIndiaRange}
-            onChange={handleYearsInIndiaRangeChange}
-            presets={YEARS_IN_INDIA_PRESETS}
-            includeNull={yearsIncludeNull ? pendingFilters.yearsInIndiaIncludeNull : undefined}
-            onIncludeNullChange={
-              yearsIncludeNull
-                ? (includeNull) => setPendingFilters((prev) => ({ ...prev, yearsInIndiaIncludeNull: includeNull }))
-                : undefined
-            }
-            includeNullLabel="Include accounts with no start year"
-          />
-        </FilterRow>
-      )}
+          unit="years"
+          value={pendingFilters.accountYearsInIndiaRange}
+          bounds={yearsInIndiaRange}
+          onChange={handleYearsInIndiaRangeChange}
+          presets={YEARS_IN_INDIA_PRESETS}
+          includeNull={pendingFilters.yearsInIndiaIncludeNull}
+          onIncludeNullChange={(includeNull) => setPendingFilters((prev) => ({ ...prev, yearsInIndiaIncludeNull: includeNull }))}
+          includeNullLabel="Include accounts with no start year"
+        />
+      </FilterRow>
 
       <ValuesRow {...props} filterKey="accountPrimaryCategoryValues" label="Industry" />
       <ValuesRow {...props} filterKey="accountHqCountryValues" label="HQ country" />
@@ -237,16 +211,12 @@ export function AccountFiltersSection(props: AccountFilterSectionProps) {
       <ValuesRow {...props} filterKey="accountHqIndustryValues" label="Sub industry" />
       <ValuesRow {...props} filterKey="accountPrimaryNatureValues" label="Segment" />
       <ValuesRow {...props} filterKey="accountNasscomStatusValues" label="NASSCOM listing" />
-      <ValuesRow {...props} filterKey="accountSourceValues" label="Source" />
-      <ValuesRow {...props} filterKey="accountTypeValues" label="Type" />
-      <ValuesRow {...props} filterKey="accountDataCoverageValues" label="Coverage" />
     </div>
   )
 }
 
 export function CenterFiltersSection(props: CenterFilterSectionProps) {
   const { pendingFilters, setPendingFilters, centerIncYearRange, handleCenterIncYearRangeChange } = props
-  const incYearIncludeNull = isFilterEnabled("centerIncYearIncludeNull")
 
   return (
     <div>
@@ -255,50 +225,41 @@ export function CenterFiltersSection(props: CenterFilterSectionProps) {
       <ValuesRow {...props} filterKey="functionNameValues" label="Services offered" />
       <ValuesRow {...props} filterKey="centerCityValues" label="City" />
 
-      {isFilterEnabled("centerIncYearRange") && (
-        <FilterRow
+      <FilterRow
+        label="Incorporation year"
+        active={isRangeActive(pendingFilters.centerIncYearRange, centerIncYearRange, pendingFilters.centerIncYearIncludeNull)}
+        summary={formatRangeSummary(pendingFilters.centerIncYearRange, centerIncYearRange, pendingFilters.centerIncYearIncludeNull, "year")}
+      >
+        <FilterRangeField
           label="Incorporation year"
-          active={isRangeActive(pendingFilters.centerIncYearRange, centerIncYearRange, !incYearIncludeNull || pendingFilters.centerIncYearIncludeNull)}
-          summary={formatRangeSummary(pendingFilters.centerIncYearRange, centerIncYearRange, !incYearIncludeNull || pendingFilters.centerIncYearIncludeNull, "year")}
-        >
-          <FilterRangeField
-            label="Incorporation year"
-            unit="year"
-            value={pendingFilters.centerIncYearRange}
-            bounds={centerIncYearRange}
-            onChange={handleCenterIncYearRangeChange}
-            presets={INC_YEAR_PRESETS}
-            includeNull={incYearIncludeNull ? pendingFilters.centerIncYearIncludeNull : undefined}
-            onIncludeNullChange={
-              incYearIncludeNull
-                ? (includeNull) => setPendingFilters((prev) => ({ ...prev, centerIncYearIncludeNull: includeNull }))
-                : undefined
-            }
-            includeNullLabel="Include centres with no year"
-          />
-        </FilterRow>
-      )}
+          unit="year"
+          value={pendingFilters.centerIncYearRange}
+          bounds={centerIncYearRange}
+          onChange={handleCenterIncYearRangeChange}
+          presets={INC_YEAR_PRESETS}
+          includeNull={pendingFilters.centerIncYearIncludeNull}
+          onIncludeNullChange={(includeNull) => setPendingFilters((prev) => ({ ...prev, centerIncYearIncludeNull: includeNull }))}
+          includeNullLabel="Include centres with no year"
+        />
+      </FilterRow>
 
       <ValuesRow {...props} filterKey="centerEmployeesRangeValues" label="Centre headcount" ordered />
 
       <MoreFilters section="centers" />
       <ValuesRow {...props} filterKey="centerStateValues" label="State" />
       <ValuesRow {...props} filterKey="centerFocusValues" label="Centre focus" />
-      {isFilterEnabled("techSoftwareInUseKeywords") && (
-        <FilterRow
-          label="Software in use"
-          active={pendingFilters.techSoftwareInUseKeywords.length > 0}
-          summary={<FilterValuesSummary values={pendingFilters.techSoftwareInUseKeywords} />}
-        >
-          <TitleKeywordInput
-            keywords={pendingFilters.techSoftwareInUseKeywords}
-            onChange={(keywords) => setPendingFilters((prev) => ({ ...prev, techSoftwareInUseKeywords: keywords }))}
-            placeholder="e.g. SAP, Oracle, Workday"
-            trackingKey="techSoftwareInUseKeywords"
-          />
-        </FilterRow>
-      )}
-      <ValuesRow {...props} filterKey="centerCountryValues" label="Country" />
+      <FilterRow
+        label="Software in use"
+        active={pendingFilters.techSoftwareInUseKeywords.length > 0}
+        summary={<FilterValuesSummary values={pendingFilters.techSoftwareInUseKeywords} />}
+      >
+        <TitleKeywordInput
+          keywords={pendingFilters.techSoftwareInUseKeywords}
+          onChange={(keywords) => setPendingFilters((prev) => ({ ...prev, techSoftwareInUseKeywords: keywords }))}
+          placeholder="e.g. SAP, Oracle, Workday"
+          trackingKey="techSoftwareInUseKeywords"
+        />
+      </FilterRow>
     </div>
   )
 }
@@ -308,20 +269,18 @@ export function ProspectFiltersSection(props: ProspectFilterSectionProps) {
 
   return (
     <div>
-      {isFilterEnabled("prospectTitleKeywords") && (
-        <FilterRow
-          label="Job title"
-          active={pendingFilters.prospectTitleKeywords.length > 0}
-          summary={<FilterValuesSummary values={pendingFilters.prospectTitleKeywords} />}
-        >
-          <TitleKeywordInput
-            keywords={pendingFilters.prospectTitleKeywords}
-            onChange={(keywords) => setPendingFilters((prev) => ({ ...prev, prospectTitleKeywords: keywords }))}
-            placeholder="e.g. Manager, Director, VP"
-            trackingKey="prospectTitleKeywords"
-          />
-        </FilterRow>
-      )}
+      <FilterRow
+        label="Job title"
+        active={pendingFilters.prospectTitleKeywords.length > 0}
+        summary={<FilterValuesSummary values={pendingFilters.prospectTitleKeywords} />}
+      >
+        <TitleKeywordInput
+          keywords={pendingFilters.prospectTitleKeywords}
+          onChange={(keywords) => setPendingFilters((prev) => ({ ...prev, prospectTitleKeywords: keywords }))}
+          placeholder="e.g. Manager, Director, VP"
+          trackingKey="prospectTitleKeywords"
+        />
+      </FilterRow>
       <ValuesRow {...props} filterKey="prospectHeadTypeValues" label="Role" />
       <ValuesRow {...props} filterKey="prospectLevelValues" label="Seniority level" />
       <ValuesRow {...props} filterKey="prospectDepartmentValues" label="Department" />

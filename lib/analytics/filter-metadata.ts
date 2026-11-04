@@ -30,21 +30,6 @@ export const FILTER_METADATA = {
     group: "account",
     inputType: "multi_select",
   },
-  accountDataCoverageValues: {
-    label: "Coverage",
-    group: "account",
-    inputType: "multi_select",
-  },
-  accountSourceValues: {
-    label: "Source",
-    group: "account",
-    inputType: "multi_select",
-  },
-  accountTypeValues: {
-    label: "Type",
-    group: "account",
-    inputType: "multi_select",
-  },
   accountPrimaryCategoryValues: {
     label: "Industry",
     group: "account",
@@ -122,11 +107,6 @@ export const FILTER_METADATA = {
   },
   centerStateValues: {
     label: "State",
-    group: "center",
-    inputType: "multi_select",
-  },
-  centerCountryValues: {
-    label: "Country",
     group: "center",
     inputType: "multi_select",
   },

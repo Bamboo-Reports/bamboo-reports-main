@@ -64,9 +64,6 @@ export const buildTrackedFiltersSnapshot = (
   pushIfActive("accountVisibilityMode", (filters.accountVisibilityMode ?? "gcc") !== "gcc")
   pushIfActive("accountHqCountryValues", filters.accountHqCountryValues.length > 0)
   pushIfActive("accountHqIndustryValues", filters.accountHqIndustryValues.length > 0)
-  pushIfActive("accountDataCoverageValues", filters.accountDataCoverageValues.length > 0)
-  pushIfActive("accountSourceValues", filters.accountSourceValues.length > 0)
-  pushIfActive("accountTypeValues", filters.accountTypeValues.length > 0)
   pushIfActive("accountPrimaryCategoryValues", filters.accountPrimaryCategoryValues.length > 0)
   pushIfActive("accountPrimaryNatureValues", filters.accountPrimaryNatureValues.length > 0)
   pushIfActive("accountNasscomStatusValues", filters.accountNasscomStatusValues.length > 0)
@@ -93,7 +90,6 @@ export const buildTrackedFiltersSnapshot = (
   pushIfActive("centerFocusValues", filters.centerFocusValues.length > 0)
   pushIfActive("centerCityValues", filters.centerCityValues.length > 0)
   pushIfActive("centerStateValues", filters.centerStateValues.length > 0)
-  pushIfActive("centerCountryValues", filters.centerCountryValues.length > 0)
   pushIfActive("centerEmployeesRangeValues", filters.centerEmployeesRangeValues.length > 0)
   pushIfActive("centerStatusValues", filters.centerStatusValues.length > 0)
   pushIfActive(
@@ -129,9 +125,6 @@ export const buildTrackedFiltersSnapshot = (
     account_regions: toTrackedFilterValueArray(filters.accountHqRegionValues),
     account_countries: toTrackedFilterValueArray(filters.accountHqCountryValues),
     account_industries: toTrackedFilterValueArray(filters.accountHqIndustryValues),
-    account_data_coverage: toTrackedFilterValueArray(filters.accountDataCoverageValues),
-    account_sources: toTrackedFilterValueArray(filters.accountSourceValues),
-    account_types: toTrackedFilterValueArray(filters.accountTypeValues),
     account_primary_categories: toTrackedFilterValueArray(filters.accountPrimaryCategoryValues),
     account_primary_natures: toTrackedFilterValueArray(filters.accountPrimaryNatureValues),
     account_nasscom_statuses: toTrackedFilterValueArray(filters.accountNasscomStatusValues),
@@ -150,7 +143,6 @@ export const buildTrackedFiltersSnapshot = (
     center_focus: toTrackedFilterValueArray(filters.centerFocusValues),
     center_cities: toTrackedFilterValueArray(filters.centerCityValues),
     center_states: toTrackedFilterValueArray(filters.centerStateValues),
-    center_countries: toTrackedFilterValueArray(filters.centerCountryValues),
     center_employees: toTrackedFilterValueArray(filters.centerEmployeesRangeValues),
     center_statuses: toTrackedFilterValueArray(filters.centerStatusValues),
     center_inc_year_range_min: filters.centerIncYearRange[0],

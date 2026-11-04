@@ -1,5 +1,3 @@
-import { isSectionEnabled } from "@/lib/config/dashboard-access"
-import { isFilterEnabled, isSectionVisible } from "@/lib/config/filters"
 import { withFilterDefaults } from "@/lib/dashboard/filter-summary"
 import type { FilterValue, Filters } from "@/lib/types"
 
@@ -15,7 +13,7 @@ export interface FilterRangeBounds {
 }
 
 interface FieldCheck {
-  /** The filter key gated by the filter config. */
+  /** The filter key this check reads. */
   key: string
   isActive: (filters: Filters, bounds: FilterRangeBounds) => boolean
 }
@@ -54,9 +52,6 @@ const SECTION_FIELDS: Record<FilterSectionId, FieldCheck[]> = {
     values("accountHqIndustryValues"),
     values("accountPrimaryNatureValues"),
     values("accountNasscomStatusValues"),
-    values("accountSourceValues"),
-    values("accountTypeValues"),
-    values("accountDataCoverageValues"),
   ],
   centers: [
     values("centerStatusValues"),
@@ -71,7 +66,6 @@ const SECTION_FIELDS: Record<FilterSectionId, FieldCheck[]> = {
     values("centerStateValues"),
     values("centerFocusValues"),
     values("techSoftwareInUseKeywords"),
-    values("centerCountryValues"),
   ],
   prospects: [
     values("prospectTitleKeywords"),
@@ -83,9 +77,9 @@ const SECTION_FIELDS: Record<FilterSectionId, FieldCheck[]> = {
   ],
 }
 
-/** How many fields in a section are set (only fields the filter config enables). */
+/** How many fields in a section are set. */
 export function countActiveFields(section: FilterSectionId, filters: Filters, bounds: FilterRangeBounds) {
-  return SECTION_FIELDS[section].filter((field) => isFilterEnabled(field.key) && field.isActive(filters, bounds)).length
+  return SECTION_FIELDS[section].filter((field) => field.isActive(filters, bounds)).length
 }
 
 const DEFAULT_VISIBILITY_MODE = "gcc"
@@ -98,11 +92,8 @@ const DEFAULT_VISIBILITY_MODE = "gcc"
 export function countActiveFilters(source: Partial<Filters>, bounds: FilterRangeBounds) {
   // Saved filters can predate newer fields; fill those in before counting.
   const filters = withFilterDefaults(source)
-  const sections = (Object.keys(SECTION_FIELDS) as FilterSectionId[]).filter(
-    (section) => isSectionVisible(section) && isSectionEnabled(section)
-  )
+  const sections = Object.keys(SECTION_FIELDS) as FilterSectionId[]
   const fields = sections.reduce((sum, section) => sum + countActiveFields(section, filters, bounds), 0)
-  const visibility =
-    isFilterEnabled("accountVisibilityMode") && (filters.accountVisibilityMode ?? DEFAULT_VISIBILITY_MODE) !== DEFAULT_VISIBILITY_MODE
+  const visibility = (filters.accountVisibilityMode ?? DEFAULT_VISIBILITY_MODE) !== DEFAULT_VISIBILITY_MODE
   return fields + (visibility ? 1 : 0)
 }

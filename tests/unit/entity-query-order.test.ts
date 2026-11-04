@@ -93,7 +93,7 @@ describe("resolveOrder", () => {
   })
 
   it("keeps every ordering total in the emitted SQL", () => {
-    const q = buildCentersQuery(createDefaultFilters(), {}, {
+    const q = buildCentersQuery(createDefaultFilters(), {
       columns: "cn_unique_key",
       orderBy: resolveOrder("centers", { column: "center_state", direction: "asc" }),
       limit: 10,

@@ -51,12 +51,6 @@ import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { devError } from "@/lib/utils/dev-log"
 import { buildTrackedFiltersSnapshot } from "@/lib/analytics/tracking"
 import { canExportData } from "@/lib/auth/roles"
-import {
-  canAccessAccountsMapView,
-  getAccessibleDefaultSection,
-  getSectionUnavailableMessage,
-  isSectionEnabled,
-} from "@/lib/config/dashboard-access"
 import { useProductTour } from "@/hooks/use-product-tour"
 import type { SearchResult } from "@/lib/search"
 import { TAB_SORT_COLUMNS } from "@/lib/dashboard/entity-columns"
@@ -85,11 +79,7 @@ function toEntitySort(entity: "accounts" | "centers" | "prospects", sort: TabSor
 }
 
 function DashboardContent(): React.JSX.Element | null {
-  const accountsEnabled = isSectionEnabled("accounts")
-  const centersEnabled = isSectionEnabled("centers")
-  const prospectsEnabled = isSectionEnabled("prospects")
-  const defaultSection = getAccessibleDefaultSection()
-  const accountsMapEnabled = canAccessAccountsMapView()
+  const defaultSection = "accounts" as const
   const { authReady, userId, userEmail, userRole } = useAuthGuard()
 
   const accounts = NO_ACCOUNTS
@@ -145,7 +135,7 @@ function DashboardContent(): React.JSX.Element | null {
     setProspectsPage(1)
     window.localStorage.setItem(PAGE_SIZE_STORAGE_KEY, String(size))
   }, [])
-  const [accountsView, setAccountsView] = useState<"chart" | "data" | "map">(accountsMapEnabled ? "map" : "chart")
+  const [accountsView, setAccountsView] = useState<"chart" | "data" | "map">("map")
   const [centersView, setCentersView] = useState<"chart" | "data" | "map">("map")
   const [prospectsView, setProspectsView] = useState<"chart" | "data">("chart")
   const [chartLabelDisplay, setChartLabelDisplay] = useState<PieChartLabelDisplay>({
@@ -302,10 +292,10 @@ function DashboardContent(): React.JSX.Element | null {
     handleOpen: handleSearchOpen,
     handleClose: handleSearchClose,
   } = useGlobalSearch({
-    accounts: accountsEnabled ? accounts : [],
-    centers: centersEnabled ? centers : [],
-    prospects: prospectsEnabled ? prospects : [],
-    aliases: accountsEnabled ? aliases : [],
+    accounts,
+    centers,
+    prospects,
+    aliases,
     serverMode: true,
   })
 
@@ -336,7 +326,7 @@ function DashboardContent(): React.JSX.Element | null {
     centers: 1,
     prospects: 1,
   })
-  const previousAccountsViewRef = useRef<"chart" | "data" | "map">(accountsMapEnabled ? "map" : "chart")
+  const previousAccountsViewRef = useRef<"chart" | "data" | "map">("map")
   const previousCentersViewRef = useRef<"chart" | "data" | "map">("map")
   const previousProspectsViewRef = useRef<"chart" | "data">("chart")
   const viewSwitchCountRef = useRef(0)
@@ -419,9 +409,6 @@ function DashboardContent(): React.JSX.Element | null {
     activeSection,
     currentScreenView,
     activeFiltersCount,
-    accountsEnabled,
-    centersEnabled,
-    prospectsEnabled,
     filteredCounts,
   ])
 
@@ -564,10 +551,7 @@ function DashboardContent(): React.JSX.Element | null {
   }, [authReady, userId, userEmail, captureCurrentScreenTime, defaultSection])
 
   useEffect(() => {
-    const totalVisible =
-      (accountsEnabled ? filteredCounts.accounts : 0) +
-      (centersEnabled ? filteredCounts.centers : 0) +
-      (prospectsEnabled ? filteredCounts.prospects : 0)
+    const totalVisible = filteredCounts.accounts + filteredCounts.centers + filteredCounts.prospects
     const signature = `${activeFiltersCount}:${totalVisible}`
 
     if (activeFiltersCount > 0 && totalVisible === 0 && noResultsSignatureRef.current !== signature) {
@@ -590,9 +574,6 @@ function DashboardContent(): React.JSX.Element | null {
     }
   }, [
     activeFiltersCount,
-    accountsEnabled,
-    centersEnabled,
-    prospectsEnabled,
     filteredCounts,
     activeSection,
     currentScreenView,
@@ -697,8 +678,8 @@ function DashboardContent(): React.JSX.Element | null {
   const dataLoaded = !pageLoading && !pageError
 
   const hasMapView =
-    (activeSection === "accounts" && accountsMapEnabled && accountsView === "map") ||
-    (activeSection === "centers" && centersEnabled && centersView === "map")
+    (activeSection === "accounts" && accountsView === "map") ||
+    (activeSection === "centers" && centersView === "map")
   const { startTour } = useProductTour({ userId, dataLoaded, hasMapView, isSidebarCollapsed })
 
   useEffect(() => {
@@ -873,11 +854,6 @@ function DashboardContent(): React.JSX.Element | null {
           yearsInIndia: yearsInIndiaRange,
           centerIncYear: centerIncYearRange,
         },
-        enabledSections: {
-          accounts: accountsEnabled,
-          centers: centersEnabled,
-          prospects: prospectsEnabled,
-        },
         activeView: activeSection,
         activeFilterCount: activeFiltersCount,
         charts,
@@ -906,9 +882,6 @@ function DashboardContent(): React.JSX.Element | null {
     revenueRange,
     yearsInIndiaRange,
     centerIncYearRange,
-    accountsEnabled,
-    centersEnabled,
-    prospectsEnabled,
     activeSection,
     activeFiltersCount,
     serverRanges,
@@ -1030,10 +1003,6 @@ function DashboardContent(): React.JSX.Element | null {
   }, [])
 
   const handleSectionSelect = useCallback((section: "accounts" | "centers" | "prospects") => {
-    if (!isSectionEnabled(section)) {
-      toast.info(getSectionUnavailableMessage(section))
-      return
-    }
     setActiveSection(section)
   }, [])
 
@@ -1141,10 +1110,6 @@ function DashboardContent(): React.JSX.Element | null {
 
       // Fetch the record and open its dialog
       if (item.type === "account") {
-        if (!accountsEnabled) {
-          toast.info(getSectionUnavailableMessage("accounts"))
-          return
-        }
         openRecord({
           label: "account",
           load: () => getQueryClient().fetchQuery(accountRelatedQuery(item.id)).then((res) => res.account),
@@ -1157,10 +1122,6 @@ function DashboardContent(): React.JSX.Element | null {
           errorMessage: "This account is not available right now.",
         })
       } else if (item.type === "center") {
-        if (!centersEnabled) {
-          toast.info(getSectionUnavailableMessage("centers"))
-          return
-        }
         openRecord({
           label: "centre",
           load: () => getQueryClient().fetchQuery(centerDetailQuery(item.id)).then((res) => res.center),
@@ -1173,10 +1134,6 @@ function DashboardContent(): React.JSX.Element | null {
           errorMessage: "This centre is not available right now.",
         })
       } else if (item.type === "prospect") {
-        if (!prospectsEnabled) {
-          toast.info(getSectionUnavailableMessage("prospects"))
-          return
-        }
         openRecord({
           label: "prospect",
           load: () => fetchProspectById(item.id).then((res) => res.prospect),
@@ -1190,7 +1147,7 @@ function DashboardContent(): React.JSX.Element | null {
         })
       }
     },
-    [handleSearchClose, accountsEnabled, centersEnabled, prospectsEnabled, trackSearchRecordOpened, openRecord]
+    [handleSearchClose, trackSearchRecordOpened, openRecord]
   )
 
   const handleGlobalSearchRecentItemSelect = useCallback(
@@ -1298,11 +1255,6 @@ function DashboardContent(): React.JSX.Element | null {
     [handleSearchClose, handleSectionSelect, serverData, setTheme, resolvedTheme]
   )
 
-  useEffect(() => {
-    if (!accountsMapEnabled && accountsView === "map") {
-      setAccountsView("chart")
-    }
-  }, [accountsMapEnabled, accountsView])
 
   const handleSearchOpenChange = useCallback(
     (open: boolean) => {
@@ -1383,39 +1335,33 @@ function DashboardContent(): React.JSX.Element | null {
       />
 
       {/* Search-triggered detail dialogs */}
-      {accountsEnabled && (
-        <AccountDetailsDialog
-          account={searchSelectedAccount}
-          centers={centers}
-          prospects={prospects}
-          services={services}
-          tech={tech}
-          open={searchAccountDialogOpen}
-          onOpenChange={handleSearchAccountDialogOpenChange}
-          fetchRelated
-        />
-      )}
-      {centersEnabled && (
-        <CenterDetailsDialog
-          center={searchSelectedCenter}
-          services={services}
-          tech={tech}
-          open={searchCenterDialogOpen}
-          onOpenChange={handleSearchCenterDialogOpenChange}
-          fetchDetail
-          onAccountOpen={(accountName) => openSearchRelatedAccount("center", accountName)}
-        />
-      )}
-      {prospectsEnabled && (
-        <ProspectDetailsDialog
-          prospect={searchSelectedProspect}
-          allProspects={prospects}
-          open={searchProspectDialogOpen}
-          onOpenChange={handleSearchProspectDialogOpenChange}
-          fetchRelated
-          onAccountOpen={(accountName) => openSearchRelatedAccount("prospect", accountName)}
-        />
-      )}
+      <AccountDetailsDialog
+        account={searchSelectedAccount}
+        centers={centers}
+        prospects={prospects}
+        services={services}
+        tech={tech}
+        open={searchAccountDialogOpen}
+        onOpenChange={handleSearchAccountDialogOpenChange}
+        fetchRelated
+      />
+      <CenterDetailsDialog
+        center={searchSelectedCenter}
+        services={services}
+        tech={tech}
+        open={searchCenterDialogOpen}
+        onOpenChange={handleSearchCenterDialogOpenChange}
+        fetchDetail
+        onAccountOpen={(accountName) => openSearchRelatedAccount("center", accountName)}
+      />
+      <ProspectDetailsDialog
+        prospect={searchSelectedProspect}
+        allProspects={prospects}
+        open={searchProspectDialogOpen}
+        onOpenChange={handleSearchProspectDialogOpenChange}
+        fetchRelated
+        onAccountOpen={(accountName) => openSearchRelatedAccount("prospect", accountName)}
+      />
 
       {dataLoaded && (
         // The map and data panels end level with the filters sidebar. Their height is
@@ -1485,82 +1431,76 @@ function DashboardContent(): React.JSX.Element | null {
                 />
 
                 <Tabs value={activeSection} className="space-y-4" data-tour="tab-navigation">
-                  {accountsEnabled && (
-                    <AccountsTab
-                      accounts={viewAccounts}
-                      centers={NO_CENTERS}
-                      prospects={NO_PROSPECTS}
-                      services={NO_SERVICES}
-                      tech={tech}
-                      functions={functions}
-                      server={accountsServerProps}
-                      mapData={serverMapData}
-                      chartsLoading={serverData.pending.charts}
-                      mapLoading={serverData.pending.map}
-                      accountChartData={viewAccountChartData}
-                      chartLabelDisplay={chartLabelDisplay}
-                      onChartLabelDisplayChange={setChartLabelDisplay}
-                      accountsView={accountsView}
-                      setAccountsView={setAccountsView}
-                      currentPage={accountsPage}
-                      setCurrentPage={setAccountsPage}
-                      itemsPerPage={itemsPerPage}
-                      setItemsPerPage={setItemsPerPage}
-                      onDownloadSelection={canExport ? handleDownloadSelection : undefined}
-                      onExportAll={canExport ? openFullExport : undefined}
-                    />
-                  )}
+                  <AccountsTab
+                    accounts={viewAccounts}
+                    centers={NO_CENTERS}
+                    prospects={NO_PROSPECTS}
+                    services={NO_SERVICES}
+                    tech={tech}
+                    functions={functions}
+                    server={accountsServerProps}
+                    mapData={serverMapData}
+                    chartsLoading={serverData.pending.charts}
+                    mapLoading={serverData.pending.map}
+                    accountChartData={viewAccountChartData}
+                    chartLabelDisplay={chartLabelDisplay}
+                    onChartLabelDisplayChange={setChartLabelDisplay}
+                    accountsView={accountsView}
+                    setAccountsView={setAccountsView}
+                    currentPage={accountsPage}
+                    setCurrentPage={setAccountsPage}
+                    itemsPerPage={itemsPerPage}
+                    setItemsPerPage={setItemsPerPage}
+                    onDownloadSelection={canExport ? handleDownloadSelection : undefined}
+                    onExportAll={canExport ? openFullExport : undefined}
+                  />
 
-                  {centersEnabled && (
-                    <CentersTab
-                      accounts={NO_ACCOUNTS}
-                      centers={viewCenters}
-                      allCenters={centers}
-                      prospects={NO_PROSPECTS}
-                      functions={functions}
-                      services={NO_SERVICES}
-                      tech={tech}
-                      server={centersServerProps}
-                      mapData={serverMapData}
-                      chartsLoading={serverData.pending.charts}
-                      mapLoading={serverData.pending.map}
-                      centerChartData={viewCenterChartData}
-                      chartLabelDisplay={chartLabelDisplay}
-                      onChartLabelDisplayChange={setChartLabelDisplay}
-                      centersView={centersView}
-                      setCentersView={setCentersView}
-                      currentPage={centersPage}
-                      setCurrentPage={setCentersPage}
-                      itemsPerPage={itemsPerPage}
-                      setItemsPerPage={setItemsPerPage}
-                      onDownloadSelection={canExport ? handleDownloadSelection : undefined}
-                      onExportAll={canExport ? openFullExport : undefined}
-                    />
-                  )}
+                  <CentersTab
+                    accounts={NO_ACCOUNTS}
+                    centers={viewCenters}
+                    allCenters={centers}
+                    prospects={NO_PROSPECTS}
+                    functions={functions}
+                    services={NO_SERVICES}
+                    tech={tech}
+                    server={centersServerProps}
+                    mapData={serverMapData}
+                    chartsLoading={serverData.pending.charts}
+                    mapLoading={serverData.pending.map}
+                    centerChartData={viewCenterChartData}
+                    chartLabelDisplay={chartLabelDisplay}
+                    onChartLabelDisplayChange={setChartLabelDisplay}
+                    centersView={centersView}
+                    setCentersView={setCentersView}
+                    currentPage={centersPage}
+                    setCurrentPage={setCentersPage}
+                    itemsPerPage={itemsPerPage}
+                    setItemsPerPage={setItemsPerPage}
+                    onDownloadSelection={canExport ? handleDownloadSelection : undefined}
+                    onExportAll={canExport ? openFullExport : undefined}
+                  />
 
-                  {prospectsEnabled && (
-                    <ProspectsTab
-                      accounts={NO_ACCOUNTS}
-                      centers={NO_CENTERS}
-                      prospects={viewProspects}
-                      allProspects={prospects}
-                      services={NO_SERVICES}
-                      tech={tech}
-                      server={prospectsServerProps}
-                      chartsLoading={serverData.pending.charts}
-                      prospectChartData={viewProspectChartData}
-                      chartLabelDisplay={chartLabelDisplay}
-                      onChartLabelDisplayChange={setChartLabelDisplay}
-                      prospectsView={prospectsView}
-                      setProspectsView={setProspectsView}
-                      currentPage={prospectsPage}
-                      setCurrentPage={setProspectsPage}
-                      itemsPerPage={itemsPerPage}
-                      setItemsPerPage={setItemsPerPage}
-                      onDownloadSelection={canExport ? handleDownloadSelection : undefined}
-                      onExportAll={canExport ? openFullExport : undefined}
-                    />
-                  )}
+                  <ProspectsTab
+                    accounts={NO_ACCOUNTS}
+                    centers={NO_CENTERS}
+                    prospects={viewProspects}
+                    allProspects={prospects}
+                    services={NO_SERVICES}
+                    tech={tech}
+                    server={prospectsServerProps}
+                    chartsLoading={serverData.pending.charts}
+                    prospectChartData={viewProspectChartData}
+                    chartLabelDisplay={chartLabelDisplay}
+                    onChartLabelDisplayChange={setChartLabelDisplay}
+                    prospectsView={prospectsView}
+                    setProspectsView={setProspectsView}
+                    currentPage={prospectsPage}
+                    setCurrentPage={setProspectsPage}
+                    itemsPerPage={itemsPerPage}
+                    setItemsPerPage={setItemsPerPage}
+                    onDownloadSelection={canExport ? handleDownloadSelection : undefined}
+                    onExportAll={canExport ? openFullExport : undefined}
+                  />
                 </Tabs>
               </div>
             </div>

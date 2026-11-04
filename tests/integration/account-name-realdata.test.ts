@@ -25,7 +25,7 @@ gated("account name picks against the real Neon warehouse (#308)", () => {
   })
 
   async function names(overrides: Partial<Filters>): Promise<string[]> {
-    const q = buildAccountsQuery(createDefaultFilters(overrides), {}, { columns: "account_global_legal_name", orderBy: null })
+    const q = buildAccountsQuery(createDefaultFilters(overrides), { columns: "account_global_legal_name", orderBy: null })
     const rows = (await sql.query(q.text, q.values)) as { account_global_legal_name: string }[]
     return rows.map((r) => r.account_global_legal_name).sort()
   }

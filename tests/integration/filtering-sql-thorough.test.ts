@@ -50,7 +50,7 @@ gated("filtering-sql thorough cross-attribute report", () => {
       ["region", "accounts", "account_hq_region"], ["country", "accounts", "account_hq_country"],
       ["industry", "accounts", "account_hq_industry"], ["primaryCategory", "accounts", "account_primary_category"],
       ["primaryNature", "accounts", "account_primary_nature"], ["nasscom", "accounts", "account_nasscom_status"],
-      ["empRange", "accounts", "account_hq_employee_range"], ["type", "accounts", "account_type"],
+      ["empRange", "accounts", "account_hq_employee_range"],
       ["centerType", "centers", "center_type"], ["centerFocus", "centers", "center_focus"],
       ["centerCity", "centers", "center_city"], ["centerState", "centers", "center_state"],
       ["centerStatus", "centers", "center_status"], ["centerEmpRange", "centers", "center_employees_range"],
@@ -74,8 +74,8 @@ gated("filtering-sql thorough cross-attribute report", () => {
     }
     const mode = () => (rand() < 0.78 ? ("include" as const) : ("exclude" as const))
 
-    const accountAttrs: Array<keyof Filters> = ["accountHqCountryValues", "accountHqIndustryValues", "accountHqRegionValues", "accountPrimaryCategoryValues", "accountNasscomStatusValues", "accountHqEmployeeRangeValues", "accountTypeValues"]
-    const accountPool: Record<string, string> = { accountHqCountryValues: "country", accountHqIndustryValues: "industry", accountHqRegionValues: "region", accountPrimaryCategoryValues: "primaryCategory", accountNasscomStatusValues: "nasscom", accountHqEmployeeRangeValues: "empRange", accountTypeValues: "type" }
+    const accountAttrs: Array<keyof Filters> = ["accountHqCountryValues", "accountHqIndustryValues", "accountHqRegionValues", "accountPrimaryCategoryValues", "accountNasscomStatusValues", "accountHqEmployeeRangeValues"]
+    const accountPool: Record<string, string> = { accountHqCountryValues: "country", accountHqIndustryValues: "industry", accountHqRegionValues: "region", accountPrimaryCategoryValues: "primaryCategory", accountNasscomStatusValues: "nasscom", accountHqEmployeeRangeValues: "empRange" }
     const centerAttrs: Array<keyof Filters> = ["centerTypeValues", "centerFocusValues", "centerCityValues", "centerStateValues", "centerStatusValues", "centerEmployeesRangeValues"]
     const centerPool: Record<string, string> = { centerTypeValues: "centerType", centerFocusValues: "centerFocus", centerCityValues: "centerCity", centerStateValues: "centerState", centerStatusValues: "centerStatus", centerEmployeesRangeValues: "centerEmpRange" }
     const prospectAttrs: Array<keyof Filters> = ["prospectDepartmentValues", "prospectHeadTypeValues", "prospectLevelValues", "prospectCityValues"]
@@ -107,13 +107,13 @@ gated("filtering-sql thorough cross-attribute report", () => {
       if (rand() < 0.2 && pools.software.length) o.techSoftwareInUseKeywords = [{ value: pick(pools.software).value.split(/\s+/)[0].toLowerCase(), mode: "include" }]
 
       const filters = createDefaultFilters(o)
-      const engine = getFilteredData(accounts, centers, functions, [], prospects, tech, filters, {})
+      const engine = getFilteredData(accounts, centers, functions, [], prospects, tech, filters)
       // Count in the database: only the totals are compared, so do not transfer the rows.
       const countSql = async (q: { text: string; values: unknown[] }) =>
         ((await sql.query(`select count(*)::int as n from (${q.text}) t`, q.values)) as { n: number }[])[0].n
-      const a = await countSql(buildAccountsQuery(filters, {}, { orderBy: null }))
-      const c = await countSql(buildCentersQuery(filters, {}, { orderBy: null }))
-      const p = await countSql(buildProspectsQuery(filters, {}, { orderBy: null, columns: "ctid::text as _rid" }))
+      const a = await countSql(buildAccountsQuery(filters, { orderBy: null }))
+      const c = await countSql(buildCentersQuery(filters, { orderBy: null }))
+      const p = await countSql(buildProspectsQuery(filters, { orderBy: null, columns: "ctid::text as _rid" }))
       const eA = engine.filteredAccounts.length, eC = engine.filteredCenters.length, eP = engine.filteredProspects.length
       results.push({ i, vis: o.accountVisibilityMode as string, filters: label(o), eA, a, eC, c, eP, p, match: eA === a && eC === c && eP === p })
     }

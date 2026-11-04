@@ -1,7 +1,7 @@
 import { extractBearerToken, resolveAuthenticatedUserId } from "@/lib/auth/server"
 import { enforceRateLimit } from "@/lib/rate-limit/server"
 import { createLogger } from "@/lib/logger"
-import { parseFilters, resolveAccess } from "@/lib/dashboard/filters-request"
+import { parseFilters } from "@/lib/dashboard/filters-request"
 import { buildCentersMapQuery, splitCentersMapRows } from "@/lib/dashboard/centers-map"
 import { queryWarehouse } from "@/lib/db/warehouse"
 import { dashboardCacheTtlMs, getOrCompute } from "@/lib/cache/memory"
@@ -44,7 +44,6 @@ export async function POST(request: Request) {
     rawBody = {}
   }
   const filters = parseFilters((rawBody as { filters?: unknown })?.filters)
-  const access = resolveAccess()
 
   try {
     const body = await getOrCompute(
@@ -53,7 +52,7 @@ export async function POST(request: Request) {
       async () => {
         // One statement for both groupings (one cascade evaluation).
         const { cities: cityRows, states: stateRows } = splitCentersMapRows(
-          await queryWarehouse<Parameters<typeof splitCentersMapRows>[0][number]>(buildCentersMapQuery(filters, access))
+          await queryWarehouse<Parameters<typeof splitCentersMapRows>[0][number]>(buildCentersMapQuery(filters))
         )
         return {
           cities: cityRows.map((r) => ({

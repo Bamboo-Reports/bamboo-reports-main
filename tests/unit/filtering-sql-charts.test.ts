@@ -80,14 +80,14 @@ function countMap<T>(items: T[], field: keyof T): Array<[string, number]> {
 
 async function sqlCounts(entity: AggregateEntity, filters: Filters, column: string): Promise<Array<[string, number]>> {
   const name = `case when ${column} is null or ${column} = '' then 'Unknown' else ${column} end`
-  const q = buildEntityAggregateQuery(entity, filters, {}, `${name} as name, count(*)::int as value`, { groupBy: name, materialized: false })
+  const q = buildEntityAggregateQuery(entity, filters, `${name} as name, count(*)::int as value`, { groupBy: name, materialized: false })
   const rows = (await pool.query(q.text, q.values)).rows as { name: string; value: number }[]
   return rows.map((r) => [String(r.name), Number(r.value)] as [string, number]).sort((x, y) => y[1] - x[1] || (x[0] < y[0] ? -1 : 1))
 }
 
 async function assertChartCounts(overrides: Partial<Filters>) {
   const filters = createDefaultFilters({ accountHqRevenueRange: [0, Number.MAX_SAFE_INTEGER], ...overrides })
-  const e = getFilteredData(accounts, centers, functions, [], prospects, tech, filters, {})
+  const e = getFilteredData(accounts, centers, functions, [], prospects, tech, filters)
   const checks: Array<[AggregateEntity, string, Array<[string, number]>]> = [
     ["accounts", "account_hq_country", countMap(e.filteredAccounts, "account_hq_country")],
     ["accounts", "account_primary_category", countMap(e.filteredAccounts, "account_primary_category")],
@@ -106,7 +106,7 @@ async function assertChartCounts(overrides: Partial<Filters>) {
   }
   // Same lists from the single union-all statement the charts endpoint runs
   // ('' from coalesce becomes "Unknown", as in computeCharts).
-  const q = buildFacetCountsQuery(checks.map(([entity, column], id) => ({ id, entity, column })), filters, {}, { materialized: false })
+  const q = buildFacetCountsQuery(checks.map(([entity, column], id) => ({ id, entity, column })), filters, { materialized: false })
   const rows = (await pool.query(q.text, q.values)).rows as { facet: number; value: string | null; count: number }[]
   checks.forEach(([entity, column, expected], id) => {
     const got = rows

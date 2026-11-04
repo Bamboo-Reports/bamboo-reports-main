@@ -24,7 +24,6 @@ import { MapErrorBoundary } from "@/components/maps/map-error-boundary"
 import { ViewSwitcher } from "@/components/ui/view-switcher"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
-import { canAccessAccountsMapView } from "@/lib/config/dashboard-access"
 import type { CityAggregate, StateAggregate } from "@/lib/dashboard/api-client"
 import type { Account, Center, Prospect, Service, Function, Tech } from "@/lib/types"
 
@@ -99,7 +98,6 @@ export function AccountsTab({
   chartsLoading = false,
   mapLoading = false,
 }: AccountsTabProps) {
-  const allowMapView = canAccessAccountsMapView()
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [dataLayout, setDataLayout] = useDataLayoutPreference()
@@ -129,11 +127,6 @@ export function AccountsTab({
     scrollContainerRef.current?.scrollTo({ top: 0 })
   }, [currentPage])
 
-  useEffect(() => {
-    if (!allowMapView && accountsView === "map") {
-      setAccountsView("chart")
-    }
-  }, [allowMapView, accountsView, setAccountsView])
   const previousMapModeRef = React.useRef<"city" | "state">("state")
   const openedRecordRef = React.useRef<{
     recordId: string
@@ -240,15 +233,13 @@ export function AccountsTab({
                 <RiPieChartLine className="h-4 w-4" />
               ),
             },
-            ...(allowMapView
-              ? [{
-                  value: "map",
-                  label: "Map",
-                  icon: (
-                    <RiMapLine className="h-4 w-4" />
-                  ),
-                }]
-              : []),
+            {
+              value: "map",
+              label: "Map",
+              icon: (
+                <RiMapLine className="h-4 w-4" />
+              ),
+            },
             {
               value: "data",
               label: "Data",

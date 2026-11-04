@@ -153,7 +153,7 @@ Key components:
 The filter state is a complex object defined in `lib/types.ts` (`Filters` interface).
 -   **Source of Truth:** The top-level `DashboardContent` component in `app/page.tsx`.
 -   **Management:** `useDashboardFilters` hook handles all filter logic including include/exclude modes, range calculations, keyword debouncing, and filter counting.
--   **Configuration:** `lib/config/filters.ts` controls filter availability per section, including premium `Show More` behavior for Accounts and Centers.
+-   **Configuration:** `lib/config/filters.ts` holds the filter metadata per section, including which Account and Centre filters sit under the "More" divider.
 -   **Persistence:**
     -   **Short-term:** React `useState`.
     -   **Long-term:** Saved to Supabase via `SavedFiltersManager` with `withFilterDefaults` for backward compatibility.

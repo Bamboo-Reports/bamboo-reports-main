@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { calculateActiveFilters, withFilterDefaults } from "@/lib/dashboard/filter-summary"
 import { createDefaultFilters, DEFAULT_REVENUE_RANGE } from "@/lib/dashboard/defaults"
-import type { FilterValue } from "@/lib/types"
+import type { FilterValue, Filters } from "@/lib/types"
 
 const fv = (value: string): FilterValue => ({ value, mode: "include" })
 
@@ -25,6 +25,16 @@ describe("withFilterDefaults", () => {
       accountHqRevenueRange: ["100", "500"] as unknown as [number, number],
     })
     expect(result.accountHqRevenueRange).toEqual([100, 500])
+  })
+
+  it("drops keys for filters that no longer exist, as old saved filters may carry them", () => {
+    const merged = withFilterDefaults({
+      accountHqCountryValues: [fv("India")],
+      accountSourceValues: [fv("Web")],
+      centerCountryValues: [fv("India")],
+    } as unknown as Partial<Filters>)
+    expect(merged).toEqual(createDefaultFilters({ accountHqCountryValues: [fv("India")] }))
+    expect(calculateActiveFilters(merged)).toBe(1)
   })
 
   it("falls back to the default range for a malformed range", () => {

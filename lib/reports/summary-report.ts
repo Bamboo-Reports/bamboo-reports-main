@@ -121,7 +121,6 @@ export interface BuildSummaryReportInput {
     yearsInIndia: SummaryReportRange
     centerIncYear: SummaryReportRange
   }
-  enabledSections: Record<ReportSection, boolean>
   activeView: ReportSection
   activeFilterCount: number
   /** Chart data as shown on the dashboard tabs; omitted charts are skipped. */
@@ -150,16 +149,12 @@ const LIST_FILTER_KEYS = [
   "accountPrimaryCategoryValues",
   "accountHqIndustryValues",
   "accountPrimaryNatureValues",
-  "accountTypeValues",
-  "accountSourceValues",
-  "accountDataCoverageValues",
   "accountNasscomStatusValues",
   "accountHqEmployeeRangeValues",
   "accountCenterEmployeesRangeValues",
   "centerTypeValues",
   "centerFocusValues",
   "centerStatusValues",
-  "centerCountryValues",
   "centerStateValues",
   "centerCityValues",
   "centerEmployeesRangeValues",
@@ -299,58 +294,47 @@ export function buildReportFilterRows(
   return rows
 }
 
-export function buildReportMetrics(
-  counts: SummaryReportCounts,
-  enabledSections: Record<ReportSection, boolean>
-): ReportMetric[] {
+export function buildReportMetrics(counts: SummaryReportCounts): ReportMetric[] {
   const metrics: ReportMetric[] = []
 
-  if (enabledSections.accounts) {
-    metrics.push({
-      id: "accounts",
-      label: "Accounts",
-      description: "Companies matching the applied filters",
-      filtered: counts.filteredAccountsCount,
-      total: counts.totalAccountsCount,
-    })
-  }
+  metrics.push({
+    id: "accounts",
+    label: "Accounts",
+    description: "Companies matching the applied filters",
+    filtered: counts.filteredAccountsCount,
+    total: counts.totalAccountsCount,
+  })
 
-  if (enabledSections.centers) {
-    metrics.push({
-      id: "centers",
-      label: "Centers",
-      description: "Delivery and capability centers",
-      filtered: counts.filteredCentersCount,
-      total: counts.totalCentersCount,
-    })
-    metrics.push({
-      id: "upcomingCenters",
-      label: "Upcoming Centers",
-      description: "Centers with an Upcoming status",
-      filtered: counts.filteredUpcomingCentersCount,
-      total: counts.totalUpcomingCentersCount,
-    })
-  }
+  metrics.push({
+    id: "centers",
+    label: "Centers",
+    description: "Delivery and capability centers",
+    filtered: counts.filteredCentersCount,
+    total: counts.totalCentersCount,
+  })
+  metrics.push({
+    id: "upcomingCenters",
+    label: "Upcoming Centers",
+    description: "Centers with an Upcoming status",
+    filtered: counts.filteredUpcomingCentersCount,
+    total: counts.totalUpcomingCentersCount,
+  })
 
-  if (enabledSections.prospects) {
-    metrics.push({
-      id: "prospects",
-      label: "Prospects",
-      description: "Decision makers and contacts",
-      filtered: counts.filteredProspectsCount,
-      total: counts.totalProspectsCount,
-    })
-  }
+  metrics.push({
+    id: "prospects",
+    label: "Prospects",
+    description: "Decision makers and contacts",
+    filtered: counts.filteredProspectsCount,
+    total: counts.totalProspectsCount,
+  })
 
-  if (enabledSections.centers) {
-    metrics.push({
-      id: "headcount",
-      label: "Headcount",
-      description: "Employees across matching centers",
-      filtered: counts.filteredHeadcount,
-      total: counts.totalHeadcount,
-    })
-  }
+  metrics.push({
+    id: "headcount",
+    label: "Headcount",
+    description: "Employees across matching centers",
+    filtered: counts.filteredHeadcount,
+    total: counts.totalHeadcount,
+  })
 
   return metrics
 }
@@ -398,57 +382,50 @@ export function buildReportChart(title: string, countLabel: string, data: ChartD
 
 export function buildReportChartGroups(
   sources: SummaryReportChartSources | undefined,
-  enabledSections: Record<ReportSection, boolean>,
   counts: SummaryReportCounts
 ): ReportChartGroup[] {
   if (!sources) return []
   const groups: ReportChartGroup[] = []
 
-  if (enabledSections.accounts) {
-    const src = sources.accounts
-    groups.push({
-      section: "accounts",
-      title: "Accounts",
-      matching: counts.filteredAccountsCount,
-      databaseTotal: counts.totalAccountsCount,
-      charts: [
-        buildReportChart("Country", "Accounts", src.regionData),
-        buildReportChart("Industry", "Accounts", src.primaryNatureData),
-        buildReportChart("Revenue Range", "Accounts", src.revenueRangeData),
-        buildReportChart("GCC Aggregate Headcount (India)", "Accounts", src.employeesRangeData),
-      ],
-    })
-  }
+  const accountSrc = sources.accounts
+  groups.push({
+    section: "accounts",
+    title: "Accounts",
+    matching: counts.filteredAccountsCount,
+    databaseTotal: counts.totalAccountsCount,
+    charts: [
+      buildReportChart("Country", "Accounts", accountSrc.regionData),
+      buildReportChart("Industry", "Accounts", accountSrc.primaryNatureData),
+      buildReportChart("Revenue Range", "Accounts", accountSrc.revenueRangeData),
+      buildReportChart("GCC Aggregate Headcount (India)", "Accounts", accountSrc.employeesRangeData),
+    ],
+  })
 
-  if (enabledSections.centers) {
-    const src = sources.centers
-    groups.push({
-      section: "centers",
-      title: "Centers",
-      matching: counts.filteredCentersCount,
-      databaseTotal: counts.totalCentersCount,
-      charts: [
-        buildReportChart("Center Type", "Centers", src.centerTypeData),
-        buildReportChart("Center Headcount", "Centers", src.employeesRangeData),
-        buildReportChart("City", "Centers", src.cityData),
-        buildReportChart("Function", "Centers", src.functionData),
-      ],
-    })
-  }
+  const centerSrc = sources.centers
+  groups.push({
+    section: "centers",
+    title: "Centers",
+    matching: counts.filteredCentersCount,
+    databaseTotal: counts.totalCentersCount,
+    charts: [
+      buildReportChart("Center Type", "Centers", centerSrc.centerTypeData),
+      buildReportChart("Center Headcount", "Centers", centerSrc.employeesRangeData),
+      buildReportChart("City", "Centers", centerSrc.cityData),
+      buildReportChart("Function", "Centers", centerSrc.functionData),
+    ],
+  })
 
-  if (enabledSections.prospects) {
-    const src = sources.prospects
-    groups.push({
-      section: "prospects",
-      title: "Prospects",
-      matching: counts.filteredProspectsCount,
-      databaseTotal: counts.totalProspectsCount,
-      charts: [
-        buildReportChart("Department", "Prospects", src.departmentData),
-        buildReportChart("Level", "Prospects", src.levelData),
-      ],
-    })
-  }
+  const prospectSrc = sources.prospects
+  groups.push({
+    section: "prospects",
+    title: "Prospects",
+    matching: counts.filteredProspectsCount,
+    databaseTotal: counts.totalProspectsCount,
+    charts: [
+      buildReportChart("Department", "Prospects", prospectSrc.departmentData),
+      buildReportChart("Level", "Prospects", prospectSrc.levelData),
+    ],
+  })
 
   return groups
 }
@@ -461,9 +438,9 @@ export function buildSummaryReport(input: BuildSummaryReportInput): SummaryRepor
     generatedBy: input.generatedBy,
     activeView: input.activeView,
     activeFilterCount: input.activeFilterCount,
-    metrics: buildReportMetrics(input.counts, input.enabledSections),
+    metrics: buildReportMetrics(input.counts),
     filters: buildReportFilterRows(input.filters, input.baselineRanges),
-    chartGroups: buildReportChartGroups(input.charts, input.enabledSections, input.counts),
+    chartGroups: buildReportChartGroups(input.charts, input.counts),
   }
 }
 

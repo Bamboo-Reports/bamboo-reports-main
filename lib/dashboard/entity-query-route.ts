@@ -1,7 +1,7 @@
 import { extractBearerToken, resolveAuthenticatedUserId } from "@/lib/auth/server"
 import { enforceRateLimit } from "@/lib/rate-limit/server"
 import { createLogger } from "@/lib/logger"
-import { parseFilters, resolveAccess } from "@/lib/dashboard/filters-request"
+import { parseFilters } from "@/lib/dashboard/filters-request"
 import { queryEntity, type QueryEntity } from "@/lib/dashboard/entity-query"
 import { dashboardCacheTtlMs, getOrCompute } from "@/lib/cache/memory"
 
@@ -39,7 +39,6 @@ export async function handleEntityQuery(entity: QueryEntity, request: Request): 
     body = {}
   }
   const filters = parseFilters(body?.filters)
-  const access = resolveAccess()
 
   try {
     const cacheKey = `query:${entity}:${JSON.stringify({ f: filters, p: body?.page, s: body?.pageSize, o: body?.sort })}`
@@ -47,7 +46,7 @@ export async function handleEntityQuery(entity: QueryEntity, request: Request): 
       cacheKey,
       dashboardCacheTtlMs(),
       () =>
-        queryEntity(entity, filters, access, {
+        queryEntity(entity, filters, {
           page: body?.page,
           pageSize: body?.pageSize,
           sort: body?.sort,

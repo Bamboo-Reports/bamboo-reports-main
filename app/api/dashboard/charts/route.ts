@@ -1,7 +1,7 @@
 import { extractBearerToken, resolveAuthenticatedUserId } from "@/lib/auth/server"
 import { enforceRateLimit } from "@/lib/rate-limit/server"
 import { createLogger } from "@/lib/logger"
-import { parseFilters, resolveAccess } from "@/lib/dashboard/filters-request"
+import { parseFilters } from "@/lib/dashboard/filters-request"
 import { computeCharts } from "@/lib/dashboard/dashboard-core"
 
 export const dynamic = "force-dynamic"
@@ -39,10 +39,9 @@ export async function POST(request: Request) {
   const filters = parseFilters((rawBody as { filters?: unknown })?.filters)
   // full=true returns every bucket uncapped (used by the summary PDF report).
   const full = (rawBody as { full?: unknown })?.full === true
-  const access = resolveAccess()
 
   try {
-    const body = await computeCharts(filters, access, { full, bypassRead: request.headers.get("x-no-cache") === "1" })
+    const body = await computeCharts(filters, { full, bypassRead: request.headers.get("x-no-cache") === "1" })
     return json(body)
   } catch (err) {
     logger.error("charts_failed", { error: err })

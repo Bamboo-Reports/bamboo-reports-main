@@ -28,9 +28,7 @@ import { ProfileMenu } from '@/components/layout/profile-menu'
 import { useAccountLists } from '@/contexts/account-lists-context'
 import { Button } from '@/components/ui/button'
 import { useCurrentProfile } from '@/hooks/use-current-profile'
-import { getSectionUnavailableMessage, isSectionEnabled } from '@/lib/config/dashboard-access'
 import { cn } from '@/lib/utils'
-import { isFilterEnabled, isSectionVisible } from '@/lib/config/filters'
 import type { AccountVisibilityMode, Alias, AvailableOptions, Filters } from '@/lib/types'
 
 const ACCOUNT_VISIBILITY_OPTIONS: Array<{ value: AccountVisibilityMode; label: string }> = [
@@ -131,9 +129,8 @@ export function FiltersSidebar({
 
   const bounds: FilterRangeBounds = { revenue: revenueRange, yearsInIndia: yearsInIndiaRange, centerIncYear: centerIncYearRange }
   const listNames = new Map(accountLists.map((list) => [list.id, list.name]))
-  const visibleSections = SECTIONS.filter(({ id }) => isSectionVisible(id))
   const sectionCounts = Object.fromEntries(
-    visibleSections.map(({ id }) => [id, isSectionEnabled(id) ? countActiveFields(id, pendingFilters, bounds) : 0])
+    SECTIONS.map(({ id }) => [id, countActiveFields(id, pendingFilters, bounds)])
   ) as Record<FilterSectionId, number>
   const totalActiveFilters = countActiveFilters(pendingFilters, bounds)
 
@@ -196,13 +193,6 @@ export function FiltersSidebar({
   }
 
   const renderSection = (id: FilterSectionId) => {
-    if (!isSectionEnabled(id)) {
-      return (
-        <p className="mx-2.5 mb-2 rounded-lg border border-dashed border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-          {getSectionUnavailableMessage(id)}
-        </p>
-      )
-    }
     if (id === "accounts") {
       return (
         <AccountFiltersSection
@@ -288,7 +278,7 @@ export function FiltersSidebar({
         ) : (
           <span className="h-2" />
         )}
-        {visibleSections.map(({ id, label, icon: Icon }) => {
+        {SECTIONS.map(({ id, label, icon: Icon }) => {
           const count = sectionCounts[id]
           return (
             <button
@@ -296,7 +286,6 @@ export function FiltersSidebar({
               type="button"
               className={railButton}
               onClick={() => expandTo(id)}
-              disabled={!isSectionEnabled(id)}
               title={count ? `${label}: ${count} ${count === 1 ? "filter" : "filters"}` : label}
               aria-label={count ? `${label}, ${count} filters` : label}
             >
@@ -411,49 +400,47 @@ export function FiltersSidebar({
             />
           </div>
 
-          {isFilterEnabled("accountVisibilityMode") && (
-            <div>
-              <div className="mb-1 text-xs font-medium text-muted-foreground">Accounts to show</div>
-              <div className="grid grid-cols-3 rounded-lg bg-muted/80 p-0.5" role="radiogroup" aria-label="Accounts to show">
-                {ACCOUNT_VISIBILITY_OPTIONS.map((option) => {
-                  const isSelected = optimisticVisibilityMode === option.value
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      role="radio"
-                      aria-checked={isSelected}
-                      onClick={() => {
-                        setOptimisticVisibilityMode(option.value)
-                        setActiveFilter("accountVisibilityMode")
-                        React.startTransition(() => {
-                          setPendingFilters((prev) => ({ ...prev, accountVisibilityMode: option.value }))
-                        })
-                      }}
-                      className={cn(
-                        "h-7 rounded-md text-[13px] font-medium transition-colors duration-150",
-                        isSelected
-                          ? "bg-background text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.08),0_0_0_1px_hsl(var(--border)/0.6)]"
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      {option.label}
-                    </button>
-                  )
-                })}
-              </div>
+          <div>
+            <div className="mb-1 text-xs font-medium text-muted-foreground">Accounts to show</div>
+            <div className="grid grid-cols-3 rounded-lg bg-muted/80 p-0.5" role="radiogroup" aria-label="Accounts to show">
+              {ACCOUNT_VISIBILITY_OPTIONS.map((option) => {
+                const isSelected = optimisticVisibilityMode === option.value
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={isSelected}
+                    onClick={() => {
+                      setOptimisticVisibilityMode(option.value)
+                      setActiveFilter("accountVisibilityMode")
+                      React.startTransition(() => {
+                        setPendingFilters((prev) => ({ ...prev, accountVisibilityMode: option.value }))
+                      })
+                    }}
+                    className={cn(
+                      "h-7 rounded-md text-[13px] font-medium transition-colors duration-150",
+                      isSelected
+                        ? "bg-background text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.08),0_0_0_1px_hsl(var(--border)/0.6)]"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {option.label}
+                  </button>
+                )
+              })}
             </div>
-          )}
+          </div>
         </div>
 
         <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-y-auto scrollbar-gutter-stable px-2 pb-3 pt-2">
-          {visibleSections.map(({ id, label, icon: Icon }) => {
+          {SECTIONS.map(({ id, label, icon: Icon }) => {
             const open = openSection === id
             const count = sectionCounts[id]
             return (
               <section
                 key={id}
-                className={cn("border-sidebar-border [&+section]:border-t", !isSectionEnabled(id) && "opacity-80")}
+                className="border-sidebar-border [&+section]:border-t"
               >
                 <button
                   type="button"
