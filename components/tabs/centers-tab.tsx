@@ -281,19 +281,21 @@ export function CentersTab({
         <div className="w-full mb-6 view-content">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <PieChartCard
-              title="Centre Type"
+              title="Centre type"
+              analyticsTitle="Centre Type"
               data={centerChartData.centerTypeData}
-              countLabel="Total Centres"
+              countLabel="Total centres"
               showBigPercentage
               labelDisplay={chartLabelDisplay}
               onLabelDisplayChange={onChartLabelDisplayChange}
               loading={chartsLoading}
             />
             <PieChartCard
-              title="Centre Headcount"
+              title="Centre headcount"
+              analyticsTitle="Centre Headcount"
               order="range"
               data={centerChartData.employeesRangeData}
-              countLabel="Total Centres"
+              countLabel="Total centres"
               showBigPercentage
               labelDisplay={chartLabelDisplay}
               onLabelDisplayChange={onChartLabelDisplayChange}
@@ -302,7 +304,7 @@ export function CentersTab({
             <PieChartCard
               title="City"
               data={centerChartData.cityData}
-              countLabel="Total Centres"
+              countLabel="Total centres"
               showBigPercentage
               labelDisplay={chartLabelDisplay}
               onLabelDisplayChange={onChartLabelDisplayChange}
@@ -311,7 +313,7 @@ export function CentersTab({
             <PieChartCard
               title="Function"
               data={centerChartData.functionData}
-              countLabel="Total Centres"
+              countLabel="Total centres"
               showBigPercentage
               labelDisplay={chartLabelDisplay}
               onLabelDisplayChange={onChartLabelDisplayChange}

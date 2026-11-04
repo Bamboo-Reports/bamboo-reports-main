@@ -232,7 +232,7 @@ export function FiltersSidebar({
   const profileTrigger = (
     <button
       type="button"
-      className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-lg pl-1 pr-1.5 text-left transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-lg px-1.5 text-left transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       title="Account and settings"
       aria-label="Open profile menu"
     >

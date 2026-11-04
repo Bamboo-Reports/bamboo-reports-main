@@ -64,12 +64,12 @@ export default function ForgotPasswordPage() {
         }
       >
         <div className="py-1 text-center" role="status">
-          <span className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-full bg-primary/10 text-primary">
-            <RiMailSendLine className="h-[22px] w-[22px]" />
+          <span className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-full bg-muted text-foreground">
+            <RiMailSendLine className="h-6 w-6" />
           </span>
           <h1 className="text-xl font-semibold tracking-[-0.015em]">Check your email</h1>
-          <p className="mt-1.5 text-[13.5px] leading-relaxed text-muted-foreground">
-            If an account exists for <span className="font-semibold text-foreground">{sentTo}</span>, a link to set a new
+          <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+            If an account exists for <span className="font-medium text-foreground">{sentTo}</span>, a link to set a new
             password is on its way. It can take a few minutes; check spam too.
           </p>
           <p className="mt-4 text-[13px] text-muted-foreground">

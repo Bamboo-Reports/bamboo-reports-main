@@ -144,7 +144,7 @@ export function DataTable<TData extends RowData>({
             ) : (
               <TableRow className="hover:bg-transparent">
                 <TableCell colSpan={table.getAllLeafColumns().length} className="h-24 text-center text-muted-foreground">
-                  No results.
+                  No results
                 </TableCell>
               </TableRow>
             )}

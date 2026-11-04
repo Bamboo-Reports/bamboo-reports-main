@@ -159,7 +159,7 @@ export function AccountListUploadPanel({ existingList = null, onDone, onApply }:
       const parsed = lower.endsWith(".xlsx") || lower.endsWith(".xls") ? await readSpreadsheet(file) : parseDelimitedText(await file.text())
       if (parsed.rows.length === 0) {
         captureEvent(ANALYTICS_EVENTS.ACCOUNT_LIST_PARSE_FAILED, { reason: "empty_file", file_ext: fileExt })
-        setParseError("The file has no rows to import.")
+        setParseError("The file has no rows to import")
         return
       }
       setTable(parsed)
@@ -244,8 +244,8 @@ export function AccountListUploadPanel({ existingList = null, onDone, onApply }:
       })
       toast.success(
         unmappedCount > 0
-          ? `Saved "${name}" with ${mappedNames.length} accounts (${unmappedCount} skipped).`
-          : `Saved "${name}" with ${mappedNames.length} accounts.`
+          ? `Saved "${name}" with ${mappedNames.length} accounts (${unmappedCount} skipped)`
+          : `Saved "${name}" with ${mappedNames.length} accounts`
       )
       if (apply && onApply) onApply(saved)
       else onDone(saved)
@@ -301,7 +301,7 @@ export function AccountListUploadPanel({ existingList = null, onDone, onApply }:
               />
               {fileName ? (
                 <>
-                  <RiFileExcelLine className="h-6 w-6 text-primary" />
+                  <RiFileExcelLine className="h-6 w-6 text-muted-foreground" />
                   <p className="max-w-full truncate text-sm font-medium" title={fileName}>{fileName}</p>
                   <p className="text-xs text-muted-foreground">Click or drop another file to replace it</p>
                 </>
@@ -361,14 +361,14 @@ export function AccountListUploadPanel({ existingList = null, onDone, onApply }:
                 )}
                 <p className="mt-1 truncate text-xs text-muted-foreground" title={names.slice(0, 5).join(", ")}>
                   {names.slice(0, 5).join(", ")}
-                  {names.length > 5 ? ", ..." : ""}
+                  {names.length > 5 ? ", …" : ""}
                 </p>
               </div>
             )}
           </div>
         ) : (
           <div className="min-w-0 space-y-4">
-            <p className="text-[12.5px] text-muted-foreground">
+            <p className="text-[13px] text-muted-foreground">
               Check each match. Names without an account are left out of the list.
             </p>
             <div className="flex flex-wrap items-center gap-2">
@@ -383,16 +383,16 @@ export function AccountListUploadPanel({ existingList = null, onDone, onApply }:
                     onClick={() => setStatusFilter(key)}
                     aria-pressed={active}
                     className={cn(
-                      "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                      "rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
                       active ? "border-primary bg-primary text-primary-foreground" : "hover:bg-accent",
                       !active && key !== "all" && STATUS_META[key].className
                     )}
                   >
-                    {label} <span className="opacity-80">({count})</span>
+                    {label} <span className="tabular-nums opacity-80">{count}</span>
                   </button>
                 )
               })}
-              <span className="ml-auto text-xs text-muted-foreground">
+              <span className="ml-auto text-xs tabular-nums text-muted-foreground">
                 {mappedNames.length} account{mappedNames.length === 1 ? "" : "s"} will be saved to the list
               </span>
             </div>
@@ -410,7 +410,7 @@ export function AccountListUploadPanel({ existingList = null, onDone, onApply }:
                   {visibleRows.length === 0 ? (
                     <tr>
                       <td colSpan={3} className="px-3 py-6 text-center text-sm text-muted-foreground">
-                        No rows in this group.
+                        No rows in this group
                       </td>
                     </tr>
                   ) : (
@@ -427,7 +427,7 @@ export function AccountListUploadPanel({ existingList = null, onDone, onApply }:
                           </td>
                           <td className="whitespace-nowrap px-3 py-2">
                             <Badge variant="outline" className={cn("gap-1 font-medium", meta.className)}>
-                              <meta.Icon className="h-3 w-3" />
+                              <meta.Icon className="h-3.5 w-3.5" />
                               {meta.label}
                             </Badge>
                           </td>
@@ -446,7 +446,7 @@ export function AccountListUploadPanel({ existingList = null, onDone, onApply }:
                                     key={c.name}
                                     type="button"
                                     onClick={() => updateRow(index, c.name)}
-                                    className="max-w-[220px] truncate rounded-full border px-2 py-0.5 text-xs hover:bg-accent"
+                                    className="max-w-[220px] truncate rounded-md border px-2 py-0.5 text-xs transition-colors hover:bg-accent"
                                     title={c.aliasValue ? `${c.name} (known as ${c.aliasValue})` : c.name}
                                   >
                                     {c.name}
@@ -469,7 +469,7 @@ export function AccountListUploadPanel({ existingList = null, onDone, onApply }:
                 id="account-list-filter-name"
                 value={filterName}
                 onChange={(e) => setFilterName(e.target.value)}
-                placeholder="e.g., Acme target accounts Q4"
+                placeholder="Acme target accounts Q4"
               />
             </div>
           </div>
@@ -483,7 +483,7 @@ export function AccountListUploadPanel({ existingList = null, onDone, onApply }:
                 Cancel
               </Button>
               <Button onClick={handleMatch} disabled={names.length === 0} loading={matching} className="ml-auto">
-                {matching ? "Matching..." : "Match accounts"}
+                {matching ? "Matching…" : "Match accounts"}
               </Button>
             </>
           ) : (
@@ -493,7 +493,7 @@ export function AccountListUploadPanel({ existingList = null, onDone, onApply }:
                 Back
               </Button>
               <Button variant="outline" onClick={() => handleSave(false)} disabled={!filterName.trim() || mappedNames.length === 0 || saving}>
-                {saving ? "Saving..." : existingList ? "Update list" : "Save list"}
+                {saving ? "Saving…" : existingList ? "Update list" : "Save list"}
               </Button>
               {onApply && (
                 <Button onClick={() => handleSave(true)} disabled={!filterName.trim() || mappedNames.length === 0 || saving}>
@@ -507,13 +507,13 @@ export function AccountListUploadPanel({ existingList = null, onDone, onApply }:
   )
 }
 
-/** "1 Add names — 2 Check matches", marking the current step. */
+/** "1 Add names", then "2 Check matches", marking the current step. */
 function UploadSteps({ step }: { step: Step }) {
   const item = (index: number, label: string, state: "done" | "current" | "next") => (
     <span className={cn("inline-flex items-center gap-1.5", state === "current" && "font-medium text-foreground")}>
       <span
         className={cn(
-          "grid h-5 w-5 place-items-center rounded-full text-[11px] font-semibold",
+          "grid h-5 w-5 place-items-center rounded-full text-[11px] font-medium tabular-nums",
           state === "current" && "bg-primary text-primary-foreground",
           state === "done" && "bg-include/15 text-include",
           state === "next" && "bg-muted text-muted-foreground"

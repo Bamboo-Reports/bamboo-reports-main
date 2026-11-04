@@ -52,6 +52,8 @@ export function formatPieChartDataLabel(
 
 interface PieChartCardProps {
   title: string
+  /** Value sent as chart_title in analytics, when it differs from the shown title. */
+  analyticsTitle?: string
   data: ChartData[]
   dataKey?: string
   countLabel?: string
@@ -69,6 +71,7 @@ interface PieChartCardProps {
 
 export const PieChartCard = memo(({
   title,
+  analyticsTitle,
   data,
   dataKey = "value",
   countLabel = "Count",
@@ -200,14 +203,14 @@ export const PieChartCard = memo(({
           const percent = total > 0 ? Math.round((value / total) * 100) : 0
           const color = point.color || PIE_CHART_COLORS[0]
           return `
-            <div class="rounded-lg border border-border bg-background px-4 py-3 shadow-lg">
-              <p class="text-sm font-semibold text-foreground mb-2">${point.name}</p>
+            <div class="rounded-lg border border-border bg-popover px-3 py-2 shadow-float">
+              <p class="text-sm font-medium text-foreground mb-1">${point.name}</p>
               <div class="space-y-1">
                 <p class="text-xs text-muted-foreground">
-                  ${countLabel}: <span class="font-medium text-foreground" style="color:${color}">${Number(value).toLocaleString()}</span>
+                  ${countLabel}: <span class="font-medium tabular-nums text-foreground" style="color:${color}">${Number(value).toLocaleString()}</span>
                 </p>
                 <p class="text-xs text-muted-foreground">
-                  ${showBigPercentage ? `<span class="text-2xl font-medium" style="color:${color}">${percent}%</span>` : `<span class="font-medium" style="color:${color}">${percent}%</span>`}
+                  ${showBigPercentage ? `<span class="text-2xl font-medium tabular-nums" style="color:${color}">${percent}%</span>` : `<span class="font-medium tabular-nums" style="color:${color}">${percent}%</span>`}
                 </p>
               </div>
             </div>
@@ -229,7 +232,7 @@ export const PieChartCard = memo(({
             style: {
               color: "hsl(var(--foreground))",
               fontSize: "11px",
-              fontWeight: "600",
+              fontWeight: "500",
               fontFamily: "var(--font-sans), ui-sans-serif, system-ui, sans-serif",
               textOutline: "none",
               // One line per label: a wrapped label is twice as tall and
@@ -252,7 +255,7 @@ export const PieChartCard = memo(({
               click: function () {
                 const point = this as Point
                 captureEvent(ANALYTICS_EVENTS.CHART_SLICE_CLICKED, {
-                  chart_title: title,
+                  chart_title: analyticsTitle ?? title,
                   segment_name: point.name,
                   segment_value: point.y ?? 0,
                 })
@@ -296,13 +299,13 @@ export const PieChartCard = memo(({
         ],
       },
     }
-  }, [seriesData, total, countLabel, showBigPercentage, title, labelDisplay])
+  }, [seriesData, total, countLabel, showBigPercentage, title, analyticsTitle, labelDisplay])
 
   return (
     <Card className="border shadow-sm">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base font-semibold flex items-center gap-2">
-          <RiPieChartLine className="h-4 w-4 text-[hsl(var(--chart-1))]" />
+        <CardTitle className="text-base font-medium flex items-center gap-2">
+          <RiPieChartLine className="h-4 w-4 text-muted-foreground" />
           {title}
         </CardTitle>
       </CardHeader>

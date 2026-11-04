@@ -268,7 +268,7 @@ export function AccountsTab({
             <PieChartCard
               title="Country"
               data={accountChartData.regionData}
-              countLabel="Total Accounts"
+              countLabel="Total accounts"
               showBigPercentage
               labelDisplay={chartLabelDisplay}
               onLabelDisplayChange={onChartLabelDisplayChange}
@@ -277,27 +277,29 @@ export function AccountsTab({
             <PieChartCard
               title="Industry"
               data={accountChartData.primaryNatureData}
-              countLabel="Total Accounts"
+              countLabel="Total accounts"
               showBigPercentage
               labelDisplay={chartLabelDisplay}
               onLabelDisplayChange={onChartLabelDisplayChange}
               loading={chartsLoading}
             />
             <PieChartCard
-              title="Revenue Range"
+              title="Revenue range"
+              analyticsTitle="Revenue Range"
               order="range"
               data={accountChartData.revenueRangeData}
-              countLabel="Total Accounts"
+              countLabel="Total accounts"
               showBigPercentage
               labelDisplay={chartLabelDisplay}
               onLabelDisplayChange={onChartLabelDisplayChange}
               loading={chartsLoading}
             />
             <PieChartCard
-              title="GCC Aggregate Headcount (India)"
+              title="GCC aggregate headcount (India)"
+              analyticsTitle="GCC Aggregate Headcount (India)"
               order="range"
               data={accountChartData.employeesRangeData}
-              countLabel="Total Accounts"
+              countLabel="Total accounts"
               showBigPercentage
               labelDisplay={chartLabelDisplay}
               onLabelDisplayChange={onChartLabelDisplayChange}

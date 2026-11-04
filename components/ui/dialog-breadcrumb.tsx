@@ -43,7 +43,7 @@ export function DialogBreadcrumb({ items }: DialogBreadcrumbProps) {
                 {item.label}
               </span>
             )}
-            {!isLast && <RiArrowRightSLine className="h-3 w-3 shrink-0" />}
+            {!isLast && <RiArrowRightSLine className="h-3.5 w-3.5 shrink-0" />}
           </React.Fragment>
         )
       })}

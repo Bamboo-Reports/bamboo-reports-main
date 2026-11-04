@@ -52,7 +52,7 @@ export const CenterGridCard = memo(({ center, onClick }: CenterGridCardProps) =>
               />
               <div className="min-w-0">
                 <h3
-                  className="min-w-0 truncate text-base font-semibold leading-snug text-foreground flex items-center gap-2"
+                  className="min-w-0 truncate text-base font-medium leading-snug text-foreground flex items-center gap-2"
                   title={center.center_status ? `${centerName}: ${center.center_status}` : centerName}
                 >
                   <span className="truncate">{centerName}</span>
@@ -68,7 +68,7 @@ export const CenterGridCard = memo(({ center, onClick }: CenterGridCardProps) =>
             </div>
             <div className="space-y-2 text-sm">
               <div className="flex items-center justify-between gap-3 min-w-0">
-                <span className="text-muted-foreground">Centre Type</span>
+                <span className="text-muted-foreground">Centre type</span>
                 <span
                   className="font-medium text-foreground text-right truncate max-w-[160px]"
                   title={center.center_type || "-"}
@@ -86,7 +86,7 @@ export const CenterGridCard = memo(({ center, onClick }: CenterGridCardProps) =>
                 </span>
               </div>
               <div className="flex items-center justify-between gap-3 min-w-0">
-                <span className="text-muted-foreground">Headcount Range</span>
+                <span className="text-muted-foreground">Headcount range</span>
                 <span
                   className="font-medium text-foreground text-right truncate max-w-[160px]"
                   title={center.center_employees_range || "-"}
@@ -102,7 +102,7 @@ export const CenterGridCard = memo(({ center, onClick }: CenterGridCardProps) =>
               onClick={onClick}
               className="w-full justify-between"
             >
-              View Details
+              View details
               <RiArrowRightUpLine className="h-4 w-4" />
             </Button>
           </CardContent>
@@ -111,14 +111,14 @@ export const CenterGridCard = memo(({ center, onClick }: CenterGridCardProps) =>
       <ContextMenuContent className="w-48">
         <ContextMenuItem onClick={onClick}>
           <RiEyeLine className="h-4 w-4" />
-          View Details
+          View details
         </ContextMenuItem>
         {center.center_website && (
           <>
             <ContextMenuSeparator />
             <ContextMenuItem onClick={() => window.open(ensureAbsoluteUrl(center.center_website!), "_blank", "noopener,noreferrer")}>
               <RiGlobalLine className="h-4 w-4" />
-              Open Website
+              Open website
             </ContextMenuItem>
           </>
         )}

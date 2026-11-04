@@ -46,7 +46,7 @@ export function AccountAutocomplete({
   accountNames,
   selectedAccounts,
   onChange,
-  placeholder = "Type to search account names...",
+  placeholder = "Search account names",
   trackingKey,
   aliases,
   serverSuggest = false,
@@ -299,7 +299,7 @@ export function AccountAutocomplete({
     return (
       <>
         {text.slice(0, index)}
-        <span className="font-semibold text-foreground bg-yellow-200 dark:bg-yellow-900/50">
+        <span className="font-semibold text-foreground">
           {text.slice(index, index + query.length)}
         </span>
         {text.slice(index + query.length)}
@@ -347,6 +347,7 @@ export function AccountAutocomplete({
             aria-expanded={isOpen}
             aria-controls={listboxId}
             aria-activedescendant={activeOptionId}
+            className="h-8 text-[13px] md:text-[13px]"
           />
         </div>
 
@@ -354,7 +355,7 @@ export function AccountAutocomplete({
         {isSuggestionsOpen && (
           <div
             ref={dropdownRef}
-            className="relative z-50 w-full mt-1 bg-popover border rounded-md shadow-lg"
+            className="relative z-50 mt-1 w-full rounded-md border bg-popover shadow-float"
             role="listbox"
             id={listboxId}
             aria-label="Account suggestions"
@@ -384,15 +385,15 @@ export function AccountAutocomplete({
                       </span>
                       {suggestion.matchedAlias && (
                         <span className="mt-0.5 block text-xs text-muted-foreground">
-                          Known as: {highlightMatch(suggestion.matchedAlias.value, debouncedValue)}
+                          Known as {highlightMatch(suggestion.matchedAlias.value, debouncedValue)}
                         </span>
                       )}
                       {suggestion.visibility?.visibility === "exclude" && (
                         <span
                           className="mt-0.5 block truncate text-xs font-medium text-amber-700 dark:text-amber-300"
-                          title="NON-GCC"
+                          title="Non-GCC"
                         >
-                          NON-GCC
+                          Non-GCC
                         </span>
                       )}
                     </span>
@@ -401,7 +402,7 @@ export function AccountAutocomplete({
                         type="button"
                         variant="ghost"
                         size="icon-xs"
-                        className="hover:bg-green-500/15"
+                        className="hover:bg-include/15"
                         onClick={(e) => {
                           e.stopPropagation()
                           handleSelectAccount(suggestion.name, 'include')
@@ -409,13 +410,13 @@ export function AccountAutocomplete({
                         title="Include"
                         aria-label={`Include ${suggestion.name}`}
                       >
-                        <RiAddLine className="h-3 w-3 text-green-600" />
+                        <RiAddLine className="h-3.5 w-3.5 text-include" />
                       </Button>
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon-xs"
-                        className="hover:bg-red-500/15"
+                        className="hover:bg-exclude/15"
                         onClick={(e) => {
                           e.stopPropagation()
                           handleSelectAccount(suggestion.name, 'exclude')
@@ -423,7 +424,7 @@ export function AccountAutocomplete({
                         title="Exclude"
                         aria-label={`Exclude ${suggestion.name}`}
                       >
-                        <RiSubtractLine className="h-3 w-3 text-red-600" />
+                        <RiSubtractLine className="h-3.5 w-3.5 text-exclude" />
                       </Button>
                     </div>
                   </div>
@@ -444,7 +445,7 @@ export function AccountAutocomplete({
         {isOpen && (isFetching ? inputValue : debouncedValue).trim() && suggestions.length === 0 && (
           <div
             ref={dropdownRef}
-            className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg p-3 text-sm text-muted-foreground"
+            className="absolute z-50 mt-1 w-full rounded-md border bg-popover p-3 text-sm text-muted-foreground shadow-float"
             role="status"
             aria-live="polite"
           >

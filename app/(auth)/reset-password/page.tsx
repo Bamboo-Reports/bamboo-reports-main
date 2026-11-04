@@ -95,12 +95,9 @@ export default function ResetPasswordPage() {
     { label: "Both passwords match", met: password.length > 0 && password === confirmPassword },
   ]
   const backToSignIn = (
-    <>
-      Back to{" "}
-      <Link className="font-medium text-primary hover:underline" href="/signin">
-        sign in
-      </Link>
-    </>
+    <Link className="font-medium text-primary hover:underline" href="/signin">
+      Back to sign in
+    </Link>
   )
 
   if (status === "invalid") {
@@ -165,10 +162,10 @@ export default function ResetPasswordPage() {
             {errors.confirmPassword ? <p className="text-xs text-destructive">{errors.confirmPassword.message}</p> : null}
           </div>
           {/* The same rules the form checks on submit, ticked off as you type. */}
-          <ul id="password-rules" className="space-y-1 text-[12.5px]">
+          <ul id="password-rules" className="space-y-1 text-xs">
             {rules.map((rule) => (
               <li key={rule.label} className={cn("flex items-center gap-1.5", rule.met ? "text-include" : "text-muted-foreground")}>
-                {rule.met ? <RiCheckboxCircleFill className="h-[15px] w-[15px]" /> : <RiCheckboxBlankCircleLine className="h-[15px] w-[15px]" />}
+                {rule.met ? <RiCheckboxCircleFill className="h-4 w-4" /> : <RiCheckboxBlankCircleLine className="h-4 w-4" />}
                 {rule.label}
                 <span className="sr-only">{rule.met ? "(done)" : "(not yet)"}</span>
               </li>

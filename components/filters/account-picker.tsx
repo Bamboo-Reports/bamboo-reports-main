@@ -98,26 +98,26 @@ export function AccountPicker({ value, onChange, suggestions = [], placeholder =
           className={cn("w-full justify-between font-normal", !value && "text-muted-foreground", className)}
         >
           <span className="truncate">{value ?? placeholder}</span>
-          <RiExpandUpDownLine className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
+          <RiExpandUpDownLine className="ml-2 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[360px] p-0" align="start">
         <div className="flex items-center gap-2 border-b px-3">
-          <RiSearchLine className="h-4 w-4 shrink-0 opacity-50" />
+          <RiSearchLine className="h-4 w-4 shrink-0 text-muted-foreground" />
           <input
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search accounts..."
+            placeholder="Search accounts"
             aria-label="Search accounts"
             className="flex h-10 w-full bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground"
           />
-          {searching && <RiLoader4Line className="h-4 w-4 shrink-0 animate-spin opacity-60" />}
+          {searching && <RiLoader4Line className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />}
         </div>
         <div className="max-h-[260px] overflow-y-auto p-1" role="listbox">
           {options.length === 0 ? (
             <p className="px-3 py-4 text-center text-sm text-muted-foreground">
-              {showSuggestions ? "Type at least 2 characters to search" : searching ? "Searching..." : "No accounts found"}
+              {showSuggestions ? "Type at least 2 characters to search" : searching ? "Searching…" : "No accounts found"}
             </p>
           ) : (
             options.map((option) => (
@@ -140,7 +140,7 @@ export function AccountPicker({ value, onChange, suggestions = [], placeholder =
                   )}
                 </span>
                 {option.visibility?.visibility === "exclude" && (
-                  <span className="shrink-0 rounded-full border border-amber-500/40 bg-amber-500/10 px-1.5 text-[10px] font-medium text-amber-700 dark:text-amber-300">
+                  <span className="shrink-0 rounded-md bg-amber-500/10 px-1.5 text-[11px] font-medium text-amber-700 dark:text-amber-300">
                     Non-GCC
                   </span>
                 )}

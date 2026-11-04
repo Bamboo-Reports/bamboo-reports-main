@@ -56,7 +56,7 @@ export function FilterMenu({
         <button
           type="button"
           className={cn(
-            "inline-flex h-8 max-w-[240px] items-center gap-1.5 rounded-lg border px-2.5 text-[12.5px] font-medium transition-colors",
+            "inline-flex h-8 max-w-[240px] items-center gap-1.5 rounded-lg border px-2.5 text-[13px] font-medium transition-colors",
             active ? "border-primary/50 bg-primary/[0.08] text-primary" : "bg-card hover:border-foreground/25"
           )}
         >
@@ -75,7 +75,7 @@ export function FilterMenu({
             className="text-[13px]"
           >
             <span className="flex-1 truncate">{option.name}</span>
-            <span className="ml-3 text-[12px] tabular-nums text-muted-foreground">{option.count}</span>
+            <span className="ml-3 text-xs tabular-nums text-muted-foreground">{option.count}</span>
           </DropdownMenuCheckboxItem>
         ))}
         {active && (
@@ -110,7 +110,7 @@ export function SortHeader<K extends string>({
   const on = sort.key === sortKey
   return (
     <th
-      className={cn("sticky top-0 z-[1] h-9 whitespace-nowrap border-b bg-background px-3 text-left text-[12px] font-medium text-muted-foreground", className)}
+      className={cn("sticky top-0 z-[1] h-9 whitespace-nowrap border-b bg-background px-3 text-left text-xs font-medium text-muted-foreground", className)}
       aria-sort={on ? (sort.dir === 1 ? "ascending" : "descending") : "none"}
     >
       <button
@@ -119,7 +119,7 @@ export function SortHeader<K extends string>({
         className={cn("inline-flex items-center gap-1 hover:text-foreground", on && "text-foreground")}
       >
         {label}
-        {on && (sort.dir === 1 ? <RiArrowUpLine className="h-3 w-3" /> : <RiArrowDownLine className="h-3 w-3" />)}
+        {on && (sort.dir === 1 ? <RiArrowUpLine className="h-3.5 w-3.5" /> : <RiArrowDownLine className="h-3.5 w-3.5" />)}
       </button>
     </th>
   )
@@ -140,7 +140,7 @@ export function FactGroup({ title, rows }: { title: string; rows: Array<[string,
   if (present.length === 0) return null
   return (
     <section className="mb-5 last:mb-0">
-      <h4 className="mb-1 text-[12px] font-medium text-muted-foreground">{title}</h4>
+      <h4 className="mb-1 text-xs font-medium text-muted-foreground">{title}</h4>
       <dl className="text-[13px]">
         {present.map(([label, value]) => (
           <div key={label} className="flex items-start justify-between gap-4 border-b border-border/70 py-1.5 last:border-b-0">
@@ -159,14 +159,14 @@ export function StatRow({ stats }: { stats: Array<{ label: string; value: React.
   if (present.length === 0) return null
   return (
     <div
-      className="grid overflow-hidden rounded-[10px] border bg-card"
+      className="grid overflow-hidden rounded-xl border bg-card"
       style={{ gridTemplateColumns: `repeat(${Math.min(present.length, 4)}, minmax(0, 1fr))` }}
     >
       {present.map((stat, index) => (
-        <div key={stat.label} className={cn("min-w-0 px-3.5 py-3", index > 0 && "border-l")}>
-          <div className="text-[12px] text-muted-foreground">{stat.label}</div>
-          <div className="mt-0.5 truncate text-[19px] font-semibold tracking-[-0.02em]">{stat.value}</div>
-          {stat.caption && <div className="truncate text-[11.5px] text-muted-foreground">{stat.caption}</div>}
+        <div key={stat.label} className={cn("min-w-0 px-4 py-3", index > 0 && "border-l")}>
+          <div className="text-xs text-muted-foreground">{stat.label}</div>
+          <div className="mt-0.5 truncate text-xl font-semibold tabular-nums tracking-[-0.02em]">{stat.value}</div>
+          {stat.caption && <div className="truncate text-xs text-muted-foreground">{stat.caption}</div>}
         </div>
       ))}
     </div>
@@ -178,7 +178,7 @@ export function FactChip({ children, tone = "plain" }: { children: React.ReactNo
   return (
     <span
       className={cn(
-        "inline-flex h-6 items-center gap-1 whitespace-nowrap rounded-md border bg-card px-2 text-[12px] font-medium",
+        "inline-flex h-6 items-center gap-1 whitespace-nowrap rounded-md border bg-card px-2 text-xs font-medium",
         tone === "good" && "border-include/35 text-include",
         tone === "warn" && "border-amber-500/40 text-amber-700 dark:text-amber-300"
       )}

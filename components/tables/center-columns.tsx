@@ -43,7 +43,7 @@ export const centerColumns = columnHelper.columns([
   createSelectColumn<Center>(getCenterName),
   columnHelper.accessor((center) => center.center_name, {
     id: "name",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Centre Name" />,
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Centre name" />,
     cell: ({ row }) => <CenterNameCell center={row.original} />,
     sortFn: "text",
     meta: { className: "w-[260px]" },
@@ -57,14 +57,14 @@ export const centerColumns = columnHelper.columns([
   }),
   columnHelper.accessor((center) => center.center_type, {
     id: "type",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Centre Type" />,
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Centre type" />,
     cell: ({ getValue }) => <TruncatedText value={getValue()} />,
     sortFn: "text",
     meta: { className: "w-[200px]" },
   }),
   columnHelper.accessor((center) => center.center_employees_range, {
     id: "employees",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Centre Headcount" />,
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Centre headcount" />,
     cell: ({ getValue }) => <TruncatedText value={getValue()} />,
     sortFn: "text",
     meta: { className: "w-[160px]" },
@@ -76,14 +76,14 @@ export function CenterRowMenu({ center, onOpen }: { center: Center; onOpen: (cen
     <>
       <ContextMenuItem onClick={() => onOpen(center)}>
         <RiEyeLine className="h-4 w-4" />
-        View Details
+        View details
       </ContextMenuItem>
       {center.center_website && (
         <>
           <ContextMenuSeparator />
           <ContextMenuItem onClick={() => window.open(ensureAbsoluteUrl(center.center_website!), "_blank", "noopener,noreferrer")}>
             <RiGlobalLine className="h-4 w-4" />
-            Open Website
+            Open website
           </ContextMenuItem>
         </>
       )}

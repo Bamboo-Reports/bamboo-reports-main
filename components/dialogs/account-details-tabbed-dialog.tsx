@@ -96,9 +96,9 @@ interface AccountDetailsDialogProps {
 function Section({ title, meta, children }: { title: string; meta?: React.ReactNode; children: React.ReactNode }) {
   return (
     <section className="mt-7 first:mt-0">
-      <h3 className="mb-2.5 flex items-baseline gap-1.5 text-[14px] font-semibold">
+      <h3 className="mb-3 flex items-baseline gap-1.5 text-sm font-medium">
         {title}
-        {meta !== undefined && <span className="text-[12px] font-normal text-muted-foreground">{meta}</span>}
+        {meta !== undefined && <span className="text-xs font-normal tabular-nums text-muted-foreground">{meta}</span>}
       </h3>
       {children}
     </section>
@@ -401,7 +401,7 @@ export function AccountDetailsDialog({
         account.account_center_employees_range || account.account_primary_city || account.account_hub_structure || accountCenters.length > 0
     )
   const tabTriggerClass =
-    "relative h-10 rounded-none bg-transparent px-0 text-[13.5px] font-medium text-muted-foreground shadow-none hover:bg-transparent hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:inset-x-0 data-[state=active]:after:-bottom-px data-[state=active]:after:h-0.5 data-[state=active]:after:rounded-full data-[state=active]:after:bg-primary"
+    "relative h-10 rounded-none bg-transparent px-0 text-sm font-medium text-muted-foreground shadow-none hover:bg-transparent hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:inset-x-0 data-[state=active]:after:-bottom-px data-[state=active]:after:h-0.5 data-[state=active]:after:rounded-full data-[state=active]:after:bg-primary"
 
   return (
     <>
@@ -413,14 +413,14 @@ export function AccountDetailsDialog({
           </DialogDescription>
           <Tabs value={activeTab} onValueChange={handleTabChange} className="flex min-h-0 flex-1 flex-col">
             <div className="shrink-0 border-b px-6 pt-5">
-              <div className="flex items-start gap-3.5">
+              <div className="flex items-start gap-3">
                 <CompanyLogo domain={account.account_hq_website ?? undefined} companyName={account.account_global_legal_name} size="md" theme="auto" />
                 <div className="min-w-0 flex-1">
-                  <DialogTitle className="truncate text-[21px] font-semibold tracking-[-0.015em]">{account.account_global_legal_name}</DialogTitle>
+                  <DialogTitle className="truncate text-xl font-semibold tracking-[-0.015em]">{account.account_global_legal_name}</DialogTitle>
                   {hqLine && <p className="mt-0.5 text-[13px] text-muted-foreground">{hqLine}</p>}
                   {/* Industry, type, ticker, listings and rankings live in the fact sheet; only the Non-GCC flag is called out here. */}
                   {account.account_visibility === "exclude" && (
-                    <div className="mt-2.5">
+                    <div className="mt-2">
                       <FactChip tone="warn">Non-GCC</FactChip>
                     </div>
                   )}
@@ -451,15 +451,19 @@ export function AccountDetailsDialog({
                 {relatedLoading && canViewCenters && <Skeleton className="my-3 h-4 w-20" />}
                 {relatedLoading && canViewProspects && <Skeleton className="my-3 h-4 w-24" />}
                 {accountCenters.length > 0 && (
-                  <TabsTrigger value="centers" className={cn(tabTriggerClass, "gap-1.5")}>
-                    Centres
-                    <span className="text-[12px] font-semibold tabular-nums text-muted-foreground">{accountCenters.length.toLocaleString("en-US")}</span>
+                  <TabsTrigger value="centers" className={tabTriggerClass}>
+                    <span className="inline-flex items-baseline gap-1.5">
+                      Centres
+                      <span className="text-xs font-normal tabular-nums text-muted-foreground">{accountCenters.length.toLocaleString("en-US")}</span>
+                    </span>
                   </TabsTrigger>
                 )}
                 {accountProspects.length > 0 && (
-                  <TabsTrigger value="prospects" className={cn(tabTriggerClass, "gap-1.5")}>
-                    Prospects
-                    <span className="text-[12px] font-semibold tabular-nums text-muted-foreground">{accountProspects.length.toLocaleString("en-US")}</span>
+                  <TabsTrigger value="prospects" className={tabTriggerClass}>
+                    <span className="inline-flex items-baseline gap-1.5">
+                      Prospects
+                      <span className="text-xs font-normal tabular-nums text-muted-foreground">{accountProspects.length.toLocaleString("en-US")}</span>
+                    </span>
                   </TabsTrigger>
                 )}
               </TabsList>
@@ -477,7 +481,7 @@ export function AccountDetailsDialog({
                 <div className="min-w-0 px-6 py-5">
                   {account.account_about?.trim() && (
                     <Section title="About">
-                      <p className="max-w-[72ch] whitespace-pre-line text-[13.5px] leading-relaxed">{account.account_about}</p>
+                      <p className="max-w-[72ch] whitespace-pre-line text-sm leading-relaxed">{account.account_about}</p>
                     </Section>
                   )}
 
@@ -485,7 +489,7 @@ export function AccountDetailsDialog({
                     <Section title="Key offerings" meta={offerings.length}>
                       <div className="flex flex-wrap gap-1.5">
                         {shownOfferings.map((offering) => (
-                          <span key={offering} className="inline-flex h-[26px] items-center rounded-full bg-muted/80 px-2.5 text-[12.5px]">
+                          <span key={offering} className="inline-flex h-6 items-center rounded-md bg-muted px-2 text-xs">
                             {offering}
                           </span>
                         ))}
@@ -493,7 +497,7 @@ export function AccountDetailsDialog({
                           <button
                             type="button"
                             onClick={() => setShowAllOfferings((v) => !v)}
-                            className="inline-flex h-[26px] items-center rounded-full border border-dashed px-2.5 text-[12.5px] text-muted-foreground hover:text-foreground"
+                            className="inline-flex h-6 items-center rounded-md border border-dashed px-2 text-xs text-muted-foreground transition-colors hover:text-foreground"
                           >
                             {showAllOfferings ? "Show fewer" : `+${offerings.length - VISIBLE_OFFERINGS} more`}
                           </button>
@@ -504,7 +508,7 @@ export function AccountDetailsDialog({
 
                   <Section title="Scale and financials">
                     {financialLoading && !financialData ? (
-                      <Skeleton className="h-[74px] w-full rounded-[10px]" />
+                      <Skeleton className="h-[74px] w-full rounded-xl" />
                     ) : (
                       <StatRow
                         stats={[
@@ -521,8 +525,8 @@ export function AccountDetailsDialog({
                       />
                     )}
                     {ticker && !financialError && !financialLoading && financialData && financialData.annualRevenueSeries.length > 0 && (
-                      <div className="mt-3 rounded-[10px] border bg-card px-3.5 pb-2 pt-3">
-                        <div className="mb-1 flex justify-between text-[12px] text-muted-foreground">
+                      <div className="mt-3 rounded-xl border bg-card px-3.5 pb-2 pt-3">
+                        <div className="mb-1 flex justify-between text-xs text-muted-foreground">
                           <span>Annual revenue (FY)</span>
                         </div>
                         <ChartContainer config={revenueChartConfig} className="h-[200px] w-full">
@@ -563,7 +567,7 @@ export function AccountDetailsDialog({
                         ]}
                       />
                       {accountCenters.length > 0 && (
-                        <div className="mt-3 h-[320px] overflow-hidden rounded-[10px] border lg:h-[380px]">
+                        <div className="mt-3 h-[320px] overflow-hidden rounded-xl border lg:h-[380px]">
                           <CentersMap centers={accountCenters} heightClass="h-full" showAccountsCount={false} />
                         </div>
                       )}
@@ -572,12 +576,12 @@ export function AccountDetailsDialog({
 
                   {relatedLoading && (
                     <Section title="Technology stack">
-                      <Skeleton className="h-[320px] w-full rounded-[10px]" />
+                      <Skeleton className="h-[320px] w-full rounded-xl" />
                     </Section>
                   )}
                   {!relatedLoading && accountTech.length > 0 && (
                     <Section title="Technology stack">
-                      <div className="h-[320px] overflow-hidden rounded-[10px] border lg:h-[380px]">
+                      <div className="h-[320px] overflow-hidden rounded-xl border lg:h-[380px]">
                         <TechTreemap tech={accountTech} heightClass="h-full" showTitle={false} />
                       </div>
                     </Section>
@@ -616,7 +620,7 @@ export function AccountDetailsDialog({
             {/* Centres: the dashboard's TanStack table (or its grid), with search and filters above and the same pagination below. */}
             {accountCenters.length > 0 && (
               <TabsContent value="centers" data-record-list="centers" className="mt-0 flex min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
-                <div className="flex shrink-0 flex-wrap items-center gap-2 px-6 pb-2.5 pt-3.5">
+                <div className="flex shrink-0 flex-wrap items-center gap-2 px-6 py-3">
                   <label className="flex h-8 w-64 items-center gap-2 rounded-lg border border-transparent bg-muted/80 px-2.5 text-muted-foreground focus-within:border-primary/60 focus-within:ring-[3px] focus-within:ring-primary/15">
                     <RiSearchLine className="h-4 w-4 shrink-0" />
                     <input
@@ -630,10 +634,15 @@ export function AccountDetailsDialog({
                   <FilterMenu label="Type" options={centerTypeOptions} selected={centerTypeFilter} {...filterHandlers("center_type", setCenterTypeFilter)} />
                   <FilterMenu label="Headcount" options={centerHeadcountOptions} selected={centerHeadcountFilter} {...filterHandlers("center_headcount", setCenterHeadcountFilter)} />
                   <FilterMenu label="Status" options={centerStatusOptions} selected={centerStatusFilter} {...filterHandlers("center_status", setCenterStatusFilter)} />
-                  <span className="ml-auto text-[12.5px] text-muted-foreground">
-                    {filteredCenters.length === accountCenters.length
-                      ? `${accountCenters.length.toLocaleString("en-US")} centres`
-                      : `${filteredCenters.length.toLocaleString("en-US")} of ${accountCenters.length.toLocaleString("en-US")} centres`}
+                  <span className="ml-auto text-xs tabular-nums text-muted-foreground">
+                    {filteredCenters.length === accountCenters.length ? (
+                      `${accountCenters.length.toLocaleString("en-US")} centres`
+                    ) : (
+                      <>
+                        <span className="text-foreground">{filteredCenters.length.toLocaleString("en-US")}</span>
+                        {` of ${accountCenters.length.toLocaleString("en-US")} centres`}
+                      </>
+                    )}
                   </span>
                 </div>
                 <div className="flex min-h-0 flex-1 flex-col border-t">
@@ -654,7 +663,7 @@ export function AccountDetailsDialog({
                           ))}
                         </div>
                       ) : (
-                        <p className="px-6 py-10 text-center text-[13px] text-muted-foreground">No centres match these filters.</p>
+                        <p className="px-6 py-10 text-center text-[13px] text-muted-foreground">No centres match these filters</p>
                       )}
                     </div>
                   )}
@@ -671,7 +680,7 @@ export function AccountDetailsDialog({
             {/* Prospects: the same table and pagination, with LinkedIn and email on each row. */}
             {accountProspects.length > 0 && (
               <TabsContent value="prospects" data-record-list="prospects" className="mt-0 flex min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
-                <div className="flex shrink-0 flex-wrap items-center gap-2 px-6 pb-2.5 pt-3.5">
+                <div className="flex shrink-0 flex-wrap items-center gap-2 px-6 py-3">
                   <label className="flex h-8 w-64 items-center gap-2 rounded-lg border border-transparent bg-muted/80 px-2.5 text-muted-foreground focus-within:border-primary/60 focus-within:ring-[3px] focus-within:ring-primary/15">
                     <RiSearchLine className="h-4 w-4 shrink-0" />
                     <input
@@ -685,10 +694,15 @@ export function AccountDetailsDialog({
                   <FilterMenu label="Department" options={prospectDeptOptions} selected={prospectDeptFilter} {...filterHandlers("prospect_department", setProspectDeptFilter)} />
                   <FilterMenu label="Level" options={prospectLevelOptions} selected={prospectLevelFilter} {...filterHandlers("prospect_level", setProspectLevelFilter)} />
                   <FilterMenu label="Head type" options={prospectHeadTypeOptions} selected={prospectHeadTypeFilter} {...filterHandlers("prospect_head_type", setProspectHeadTypeFilter)} />
-                  <span className="ml-auto text-[12.5px] text-muted-foreground">
-                    {filteredProspects.length === accountProspects.length
-                      ? `${accountProspects.length.toLocaleString("en-US")} prospects`
-                      : `${filteredProspects.length.toLocaleString("en-US")} of ${accountProspects.length.toLocaleString("en-US")} prospects`}
+                  <span className="ml-auto text-xs tabular-nums text-muted-foreground">
+                    {filteredProspects.length === accountProspects.length ? (
+                      `${accountProspects.length.toLocaleString("en-US")} prospects`
+                    ) : (
+                      <>
+                        <span className="text-foreground">{filteredProspects.length.toLocaleString("en-US")}</span>
+                        {` of ${accountProspects.length.toLocaleString("en-US")} prospects`}
+                      </>
+                    )}
                   </span>
                 </div>
                 <div className="flex min-h-0 flex-1 flex-col border-t">
@@ -709,7 +723,7 @@ export function AccountDetailsDialog({
                           ))}
                         </div>
                       ) : (
-                        <p className="px-6 py-10 text-center text-[13px] text-muted-foreground">No prospects match these filters.</p>
+                        <p className="px-6 py-10 text-center text-[13px] text-muted-foreground">No prospects match these filters</p>
                       )}
                     </div>
                   )}

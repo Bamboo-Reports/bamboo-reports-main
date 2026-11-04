@@ -21,7 +21,7 @@ export function FilterChip({ item, onToggleMode, onRemove, className }: FilterCh
   return (
     <span
       className={cn(
-        "inline-flex h-[26px] min-w-0 max-w-full items-center gap-0.5 rounded-md border px-[3px] text-[12.5px] font-medium",
+        "inline-flex h-6 min-w-0 max-w-full items-center gap-0.5 rounded-md border px-0.5 text-xs font-medium",
         isInclude ? "border-include/35 bg-include/[0.08]" : "border-exclude/35 bg-exclude/[0.07]",
         className
       )}

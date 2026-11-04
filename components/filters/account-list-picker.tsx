@@ -73,22 +73,22 @@ export function AccountListPicker({ selected, accountNameCount, onChange, onClea
         options={options}
         selected={selectedByName}
         onChange={handleChange}
-        placeholder={lists.length === 0 ? "No account lists uploaded yet" : "Select account lists..."}
+        placeholder={lists.length === 0 ? "No account lists uploaded yet" : "Choose account lists"}
         trackingKey="accountListValues"
       />
       {selected.length === 0 && accountNameCount > 0 && (
         <button
           type="button"
           onClick={onClearNames}
-          className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent"
+          className="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent"
           title="This filter carries account names from a list that is not in your lists"
         >
           {accountNameCount} accounts from a shared list
-          <RiCloseLine className="h-3 w-3" />
+          <RiCloseLine className="h-3.5 w-3.5" />
         </button>
       )}
       {unknownSelected.length > 0 && (
-        <p className="text-[11px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           {unknownSelected.length} list{unknownSelected.length === 1 ? " is" : "s are"} not in your lists; their {accountNameCount} accounts still apply.
         </p>
       )}

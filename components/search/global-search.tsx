@@ -84,8 +84,8 @@ function Highlight({ text, query }: { text: string; query: string }) {
 
 function IconTile({ icon: Icon }: { icon: typeof RiBuildingLine }) {
   return (
-    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-[7px] border bg-card text-muted-foreground">
-      <Icon className="h-3.5 w-3.5" />
+    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md border bg-card text-muted-foreground">
+      <Icon className="h-4 w-4" />
     </span>
   )
 }
@@ -101,13 +101,13 @@ function SearchResultRow({ result, query }: { result: SearchResult; query: strin
             <Highlight text={result.title} query={query} />
           </span>
           {account?.account_visibility === "exclude" && (
-            <span className="shrink-0 text-[11px] font-semibold text-amber-700 dark:text-amber-300">Non-GCC</span>
+            <span className="shrink-0 text-[11px] font-medium text-amber-700 dark:text-amber-300">Non-GCC</span>
           )}
         </p>
         {result.matchedAlias && (
-          <p className="truncate text-[12px] text-muted-foreground">Also known as {result.matchedAlias.value}</p>
+          <p className="truncate text-xs text-muted-foreground">Also known as {result.matchedAlias.value}</p>
         )}
-        {result.subtitle && <p className="truncate text-[12px] text-muted-foreground">{result.subtitle}</p>}
+        {result.subtitle && <p className="truncate text-xs text-muted-foreground">{result.subtitle}</p>}
       </div>
     </>
   )
@@ -124,7 +124,7 @@ function GroupHeading({ label, count }: { label: string; count: number }) {
 
 function Kbd({ children }: { children: React.ReactNode }) {
   return (
-    <kbd className="inline-grid h-5 min-w-5 place-items-center rounded-[5px] border bg-muted/60 px-1 font-sans text-[11px] font-medium text-muted-foreground">
+    <kbd className="inline-grid h-5 min-w-5 place-items-center rounded border bg-muted/60 px-1 font-sans text-[11px] font-medium text-muted-foreground">
       {children}
     </kbd>
   )
@@ -151,9 +151,9 @@ export function GlobalSearch({
   const quickActions = useMemo(
     () =>
       [
-        { value: "action::go-accounts", label: "Go to Accounts", icon: RiBuildingLine, primary: true, section: "accounts" },
-        { value: "action::go-centers", label: "Go to Centres", icon: RiBriefcaseLine, primary: true, section: "centers" },
-        { value: "action::go-prospects", label: "Go to Prospects", icon: RiGroupLine, primary: true, section: "prospects" },
+        { value: "action::go-accounts", label: "Go to accounts", icon: RiBuildingLine, primary: true, section: "accounts" },
+        { value: "action::go-centers", label: "Go to centres", icon: RiBriefcaseLine, primary: true, section: "centers" },
+        { value: "action::go-prospects", label: "Go to prospects", icon: RiGroupLine, primary: true, section: "prospects" },
         { value: "action::refresh", label: "Refresh data", icon: RiRefreshLine, primary: false, section: null },
         { value: "action::toggle-theme", label: "Toggle theme", icon: RiContrastLine, primary: false, section: null },
       ].filter((action) => !action.section || enabledSectionSet.has(action.section as (typeof enabledSections)[number])),
@@ -251,12 +251,12 @@ export function GlobalSearch({
               disabled={chip.key !== null && chip.count === 0}
               onClick={() => onFocusChange?.(chip.key)}
               className={cn(
-                "inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[12.5px] font-medium transition-colors disabled:opacity-45",
+                "inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium transition-colors disabled:opacity-45",
                 on ? "border-primary/50 bg-primary/10 text-primary" : "bg-card text-muted-foreground enabled:hover:text-foreground"
               )}
             >
               {chip.label}
-              <span className={cn("font-semibold tabular-nums", on ? "text-primary" : "text-foreground")}>{chip.count.toLocaleString()}</span>
+              <span className={cn("font-medium tabular-nums", on ? "text-primary" : "text-foreground")}>{chip.count.toLocaleString()}</span>
             </button>
           )
         }
@@ -268,7 +268,7 @@ export function GlobalSearch({
     <CommandDialog open={open} onOpenChange={onOpenChange} className="max-w-[640px]" shouldFilter={false}>
       <CommandInput placeholder={searchPlaceholder} value={query} onValueChange={onQueryChange} className="h-12 text-[15px]" />
       {chips}
-      <CommandList className="max-h-[440px] px-1.5 pb-2 pt-1 [&_[cmdk-group-heading]]:px-2.5 [&_[cmdk-group-heading]]:pt-2.5 [&_[cmdk-group-heading]]:text-[12px]">
+      <CommandList className="max-h-[440px] px-1.5 pb-2 pt-1 [&_[cmdk-group-heading]]:px-2.5 [&_[cmdk-group-heading]]:pt-2.5 [&_[cmdk-group-heading]]:text-xs">
         <CommandEmpty>
           {hasQuery ? (
             isSearching ? (
@@ -277,16 +277,16 @@ export function GlobalSearch({
                 <p className="text-[13px] text-muted-foreground">Searching for &ldquo;{query.trim()}&rdquo;</p>
               </div>
             ) : query.trim().length < 2 ? (
-              <p className="text-[13px] text-muted-foreground">Type at least 2 letters.</p>
+              <p className="text-[13px] text-muted-foreground">Type at least 2 letters</p>
             ) : (
               <div className="px-6 py-8 text-center">
                 <RiSearchLine className="mx-auto h-5 w-5 text-muted-foreground" />
-                <p className="mt-1.5 text-[13px] font-semibold">Nothing matches &ldquo;{query.trim()}&rdquo;</p>
-                <p className="mt-0.5 text-[12.5px] text-muted-foreground">Check the spelling, or search by a shorter part of the name.</p>
+                <p className="mt-1.5 text-[13px] font-medium">Nothing matches &ldquo;{query.trim()}&rdquo;</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">Check the spelling, or search by a shorter part of the name.</p>
               </div>
             )
           ) : (
-            <p className="text-[13px] text-muted-foreground">Start typing to search.</p>
+            <p className="text-[13px] text-muted-foreground">Start typing to search</p>
           )}
         </CommandEmpty>
 
@@ -307,14 +307,14 @@ export function GlobalSearch({
                   <CommandItem
                     value={`showall::${key}`}
                     onSelect={handleSelect}
-                    className={cn(ITEM_CLASS, "py-1.5 text-[12.5px] font-medium text-primary data-[selected=true]:text-primary")}
+                    className={cn(ITEM_CLASS, "py-1.5 text-[13px] font-medium text-primary data-[selected=true]:text-primary")}
                   >
                     Show all {group.totalMatches.toLocaleString()} {TYPE_META[type].plural}
                     <RiArrowRightSLine className="h-4 w-4" />
                   </CommandItem>
                 )}
                 {hidden > 0 && focus && (
-                  <p className="px-2.5 py-2 text-[12px] text-muted-foreground">
+                  <p className="px-2.5 py-2 text-xs text-muted-foreground">
                     Showing the first {group.items.length.toLocaleString()} of {group.totalMatches.toLocaleString()}. Type more of the name to narrow it down.
                   </p>
                 )}
@@ -349,12 +349,12 @@ export function GlobalSearch({
                     <IconTile icon={TYPE_META[item.type].icon} />
                     <div className="min-w-0 flex-1">
                       <p className="result-title truncate text-[13px] font-medium">{item.title}</p>
-                      <p className="truncate text-[12px] text-muted-foreground">
+                      <p className="truncate text-xs text-muted-foreground">
                         {TYPE_META[item.type].label}
                         {item.subtitle ? ` · ${item.subtitle}` : ""}
                       </p>
                     </div>
-                    <span className="shrink-0 text-[11.5px] tabular-nums text-muted-foreground">{formatTimeAgo(item.viewedAt)}</span>
+                    <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{formatTimeAgo(item.viewedAt)}</span>
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -365,7 +365,7 @@ export function GlobalSearch({
         )}
       </CommandList>
 
-      <div className="flex items-center gap-3.5 border-t px-3.5 py-2 text-[12px] text-muted-foreground">
+      <div className="flex items-center gap-3.5 border-t px-3.5 py-2 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1">
           <Kbd>&uarr;</Kbd>
           <Kbd>&darr;</Kbd>

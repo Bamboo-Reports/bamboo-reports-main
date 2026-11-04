@@ -116,7 +116,7 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
         account_list_id: listToShare.id,
         accounts_count: listToShare.accounts.length,
       })
-      setShareSuccess(`Shared with ${shareEmail.trim()}.`)
+      setShareSuccess(`Shared with ${shareEmail.trim()}`)
       setShareEmail("")
       setCurrentShares(await getListShares(listToShare.id))
     } else {
@@ -145,7 +145,7 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
     async (list: AccountList, name: string) => {
       const updated = await updateList(list.id, { name })
       if (updated) captureEvent(ANALYTICS_EVENTS.ACCOUNT_LIST_RENAMED, { account_list_id: list.id })
-      else toast.error("Could not rename the list.")
+      else toast.error("Could not rename the list")
       setRenamingId(null)
     },
     [updateList]
@@ -154,8 +154,8 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
   const mapName = useCallback(
     async (list: AccountList, input: string, account: string) => {
       const updated = await updateList(list.id, mapUnmatchedName(list, input, account))
-      if (updated) toast.success(`Mapped "${input}" to ${account}.`)
-      else toast.error("Could not update the list.")
+      if (updated) toast.success(`Mapped "${input}" to ${account}`)
+      else toast.error("Could not update the list")
     },
     [updateList]
   )
@@ -168,8 +168,8 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
         account_list_id: listToDelete.id,
         accounts_count: listToDelete.accounts.length,
       })
-      toast.success(`Deleted "${listToDelete.name}".`)
-    } else toast.error("Could not delete the list.")
+      toast.success(`Deleted "${listToDelete.name}"`)
+    } else toast.error("Could not delete the list")
     setListToDelete(null)
   }, [listToDelete, deleteList])
 
@@ -204,8 +204,8 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
         />
       ))
     }
-    if (query.trim()) return <LibraryEmpty>No lists match &ldquo;{query.trim()}&rdquo;.</LibraryEmpty>
-    return <LibraryEmpty>{tab === "mine" ? "You haven't uploaded a list yet." : "No one has shared a list with you yet."}</LibraryEmpty>
+    if (query.trim()) return <LibraryEmpty>No lists match &ldquo;{query.trim()}&rdquo;</LibraryEmpty>
+    return <LibraryEmpty>{tab === "mine" ? "You haven't uploaded a list yet" : "No one has shared a list with you yet"}</LibraryEmpty>
   }
 
   const renderDetail = () => {
@@ -230,9 +230,9 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
       return (
         <div className="grid flex-1 place-items-center p-8">
           <div className="max-w-sm text-center">
-            <RiFileList3Line className="mx-auto h-7 w-7 text-primary" />
+            <RiFileList3Line className="mx-auto h-7 w-7 text-muted-foreground" />
             <p className="mt-3 text-sm font-medium">Filter by your own account lists</p>
-            <p className="mt-1 text-[12.5px] leading-relaxed text-muted-foreground">
+            <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
               Upload a CSV, TSV, TXT or XLSX file with company names. Each name is matched to an account and saved as a list you can apply any time.
             </p>
             <Button className="mt-4" onClick={() => openUpload(null)}>
@@ -309,21 +309,21 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
         ) : (
           <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
             {own && selected.source_file && (
-              <p className="mb-3 text-[12px] text-muted-foreground">
+              <p className="mb-3 text-xs text-muted-foreground">
                 This list was saved before uploaded names were kept. Replace it from its file to see what each name was matched to.
               </p>
             )}
             {selected.unmatched.length > 0 && (
-              <div className="mb-4 flex gap-2 rounded-lg border border-amber-500/30 bg-amber-500/[0.08] px-3 py-2.5 text-[12.5px]">
+              <div className="mb-4 flex gap-2 rounded-lg border border-amber-500/30 bg-amber-500/[0.08] px-3 py-2.5 text-[13px]">
                 <RiErrorWarningLine className="mt-px h-4 w-4 shrink-0 text-amber-600 dark:text-amber-300" />
                 <p className="min-w-0">
-                  <span className="font-semibold text-amber-700 dark:text-amber-300">{plural(selected.unmatched.length, "name")} not matched: </span>
+                  <span className="font-medium text-amber-700 dark:text-amber-300">{plural(selected.unmatched.length, "name")} not matched: </span>
                   <span className="break-words">{selected.unmatched.join(", ")}</span>
                 </p>
               </div>
           )}
           {selected.accounts.length > 8 && (
-            <label className="mb-3 flex h-[34px] items-center gap-2 rounded-lg border border-transparent bg-muted/80 px-2.5 text-muted-foreground transition-shadow focus-within:border-primary/60 focus-within:ring-[3px] focus-within:ring-primary/15">
+            <label className="mb-3 flex h-9 items-center gap-2 rounded-lg border border-transparent bg-muted/80 px-2.5 text-muted-foreground transition-shadow focus-within:border-primary/60 focus-within:ring-[3px] focus-within:ring-primary/15">
               <RiSearchLine className="h-4 w-4 shrink-0" />
               <input
                 value={accountQuery}
@@ -343,7 +343,7 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
               ))}
             </ul>
           ) : (
-            <p className="text-[12.5px] text-muted-foreground">No accounts match &ldquo;{accountQuery.trim()}&rdquo;.</p>
+            <p className="text-[13px] text-muted-foreground">No accounts match &ldquo;{accountQuery.trim()}&rdquo;</p>
           )}
         </div>
         )}
@@ -385,7 +385,7 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <RiShareLine className="h-5 w-5" />
-              Share List
+              Share list
             </DialogTitle>
             <DialogDescription>
               {listToShare ? `Share "${listToShare.name}" with a teammate by entering their email address.` : ""}
@@ -413,7 +413,7 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
                   }}
                 />
                 <Button onClick={handleShare} disabled={!shareEmail.trim() || sharing} size="lg" className="shrink-0">
-                  {sharing ? "Sharing..." : "Share"}
+                  {sharing ? "Sharing…" : "Share"}
                 </Button>
               </div>
               {shareError && <p className="text-sm text-destructive">{shareError}</p>}
@@ -441,7 +441,7 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
                 </div>
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground">Not shared with anyone yet.</p>
+              <p className="text-xs text-muted-foreground">Not shared with anyone yet</p>
             )}
           </div>
         </DialogContent>

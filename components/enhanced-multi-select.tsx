@@ -75,7 +75,7 @@ const EnhancedSelectItem = React.memo(({
         e.stopPropagation()
         handler()
       }}
-      className={cn("inline-flex h-[22px] items-center gap-0.5 rounded px-1.5 text-[11px] font-semibold", className)}
+      className={cn("inline-flex h-5 items-center gap-0.5 rounded px-1.5 text-[11px] font-medium", className)}
       title={label}
       aria-label={ariaLabel ?? `${label} ${value}`}
     >
@@ -89,7 +89,7 @@ const EnhancedSelectItem = React.memo(({
       onSelect={onSelect}
       disabled={disabled}
       className={cn(
-        "group gap-2 rounded-md py-1 pl-2 pr-1 text-[12.5px]",
+        "group gap-2 rounded-md py-1 pl-2 pr-1 text-[13px]",
         mode === "include" && "bg-include/[0.08] data-[selected=true]:bg-include/[0.13]",
         mode === "exclude" && "bg-exclude/[0.07] data-[selected=true]:bg-exclude/[0.11]"
       )}
@@ -101,7 +101,7 @@ const EnhancedSelectItem = React.memo(({
       )}
       <span className={cn("min-w-0 flex-1 truncate", mode === "exclude" && "text-exclude")}>{value}</span>
       {typeof count === "number" && (
-        <span className="shrink-0 text-[11.5px] tabular-nums text-muted-foreground group-hover:hidden group-data-[selected=true]:hidden">
+        <span className="shrink-0 text-xs tabular-nums text-muted-foreground group-hover:hidden group-data-[selected=true]:hidden">
           {count.toLocaleString()}
         </span>
       )}
@@ -109,7 +109,7 @@ const EnhancedSelectItem = React.memo(({
         <span className="hidden shrink-0 items-center gap-0.5 group-hover:flex group-data-[selected=true]:flex">
           {mode !== "include" && action("Include", onSelectInclude, "bg-include/[0.12] text-include", <><RiAddLine className="h-3 w-3" />Include</>)}
           {mode !== "exclude" && action("Exclude", onSelectExclude, "bg-exclude/10 text-exclude", <><RiSubtractLine className="h-3 w-3" />Exclude</>)}
-          {mode && action("Remove", onRemove, "w-[22px] justify-center bg-muted px-0 text-muted-foreground", <RiCloseLine className="h-3 w-3" />)}
+          {mode && action("Remove", onRemove, "w-5 justify-center bg-muted px-0 text-muted-foreground", <RiCloseLine className="h-3 w-3" />)}
         </span>
       )}
     </CommandItem>
@@ -121,7 +121,7 @@ export const EnhancedMultiSelect = React.memo(function EnhancedMultiSelect({
   options,
   selected,
   onChange,
-  placeholder = "Select items...",
+  placeholder = "Select values",
   trackingKey,
   className,
   isApplying = false,
@@ -345,7 +345,7 @@ export const EnhancedMultiSelect = React.memo(function EnhancedMultiSelect({
             aria-controls={listId}
             aria-expanded={open}
             aria-haspopup="listbox"
-            className="inline-flex h-[26px] items-center gap-1 rounded-md border border-dashed border-border bg-background px-2 text-[12.5px] text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex h-6 items-center gap-1 rounded-md border border-dashed border-border bg-background px-2 text-xs text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <RiAddLine className="h-3.5 w-3.5" />
             {selected.length > 0 ? "Add" : placeholder}

@@ -25,28 +25,28 @@ export function AuthShell({ title, description, children, footer, formCardClassN
       <Card className={cn("border-border/70 bg-card shadow-sm", formCardClassName)}>
         <div className="p-6 sm:p-7">
           {title && <h1 className="text-[22px] font-semibold tracking-[-0.015em] text-foreground">{title}</h1>}
-          {description && <p className="mt-1.5 text-[13.5px] leading-relaxed text-muted-foreground">{description}</p>}
+          {description && <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{description}</p>}
 
           <div className={title || description ? "mt-6" : undefined}>{children}</div>
         </div>
       </Card>
 
-      <p className="mt-5 text-center text-[13.5px] text-muted-foreground">{footer}</p>
+      <p className="mt-5 text-center text-sm text-muted-foreground">{footer}</p>
     </BrandPage>
   )
 }
 
-/** A message at the top of an auth card: a bold line, then what to do. */
+/** A message at the top of an auth card: a short headline, then what to do. */
 export function AuthNotice({ tone, title, children }: { tone: "success" | "error"; title: string; children?: ReactNode }) {
   const Icon = tone === "success" ? RiCheckboxCircleLine : RiErrorWarningLine
   return (
     <div
       role={tone === "error" ? "alert" : "status"}
-      className={cn("flex gap-2.5 rounded-[10px] px-3 py-2.5 text-[13px] leading-snug", tone === "success" ? "bg-include/[0.09]" : "bg-exclude/[0.07]")}
+      className={cn("flex gap-2.5 rounded-lg px-3 py-2.5 text-[13px] leading-snug", tone === "success" ? "bg-include/[0.09]" : "bg-exclude/[0.07]")}
     >
-      <Icon className={cn("mt-px h-[17px] w-[17px] shrink-0", tone === "success" ? "text-include" : "text-exclude")} />
+      <Icon className={cn("mt-px h-4 w-4 shrink-0", tone === "success" ? "text-include" : "text-exclude")} />
       <div>
-        <p className="font-semibold">{title}</p>
+        <p className="font-medium">{title}</p>
         {children && <div className="mt-0.5 text-foreground/85">{children}</div>}
       </div>
     </div>

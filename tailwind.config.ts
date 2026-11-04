@@ -11,6 +11,9 @@ const config: Config = {
   ],
   theme: {
   		extend: {
+  			boxShadow: {
+  				float: '0 8px 24px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04)'
+  			},
   		fontFamily: {
   			sans: [
   				'var(--font-sans)',

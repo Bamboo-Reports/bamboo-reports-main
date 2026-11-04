@@ -67,7 +67,7 @@ const present = (value: string | number | null | undefined) =>
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="mt-7 first:mt-0">
-      <h3 className="mb-2.5 text-[14px] font-semibold">{title}</h3>
+      <h3 className="mb-3 text-sm font-medium">{title}</h3>
       {children}
     </section>
   )
@@ -77,7 +77,7 @@ function Tags({ items }: { items: string[] }) {
   return (
     <div className="flex flex-wrap gap-1.5">
       {items.map((item, index) => (
-        <span key={`${item}-${index}`} className="inline-flex min-h-[26px] items-center rounded-full bg-muted/80 px-2.5 py-0.5 text-[12.5px]">
+        <span key={`${item}-${index}`} className="inline-flex min-h-6 items-center rounded-md bg-muted px-2 py-0.5 text-xs">
           {item}
         </span>
       ))}
@@ -145,13 +145,13 @@ export function CenterDetailsDialog({
               { label: center.center_name ?? "" },
             ]}
           />
-          <div className="mt-2.5 flex items-start gap-3.5">
+          <div className="mt-2 flex items-start gap-3">
             <CompanyLogo domain={center.center_account_website ?? undefined} companyName={center.account_global_legal_name} size="md" theme="auto" />
             <div className="min-w-0 flex-1">
               <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
-                <DialogTitle className="min-w-0 truncate text-[21px] font-semibold tracking-[-0.015em]">{center.center_name}</DialogTitle>
+                <DialogTitle className="min-w-0 truncate text-xl font-semibold tracking-[-0.015em]">{center.center_name}</DialogTitle>
                 {center.center_status && (
-                  <span className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-muted-foreground">
+                  <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground">
                     <span className={cn("h-2 w-2 rounded-full", statusDot(center.center_status))} />
                     {centerStatusLabel(center.center_status)}
                   </span>
@@ -233,16 +233,16 @@ export function CenterDetailsDialog({
 
               {detailLoading && (
                 <Section title="Services offered">
-                  <Skeleton className="h-[132px] w-full rounded-[10px]" />
+                  <Skeleton className="h-[132px] w-full rounded-xl" />
                 </Section>
               )}
               {!detailLoading && serviceCategories.length > 0 && (
                 <Section title="Services offered">
-                  <div className="overflow-hidden rounded-[10px] border bg-card">
+                  <div className="overflow-hidden rounded-xl border bg-card">
                     {serviceCategories.map((category, index) => (
-                      <div key={category.key} className={cn("grid gap-3 px-3.5 py-2.5 sm:grid-cols-[190px_minmax(0,1fr)]", index > 0 && "border-t border-border/70")}>
-                        <span className="flex items-center gap-2 pt-0.5 text-[12.5px] text-muted-foreground">
-                          <category.icon className="h-[15px] w-[15px] shrink-0" />
+                      <div key={category.key} className={cn("grid gap-3 px-4 py-3 sm:grid-cols-[190px_minmax(0,1fr)]", index > 0 && "border-t border-border/70")}>
+                        <span className="flex items-center gap-2 pt-0.5 text-[13px] text-muted-foreground">
+                          <category.icon className="h-4 w-4 shrink-0" />
                           {category.title}
                         </span>
                         <Tags items={category.items} />
@@ -254,12 +254,12 @@ export function CenterDetailsDialog({
 
               {detailLoading && (
                 <Section title="Technology stack">
-                  <Skeleton className="h-[320px] w-full rounded-[10px]" />
+                  <Skeleton className="h-[320px] w-full rounded-xl" />
                 </Section>
               )}
               {!detailLoading && centerTech.length > 0 && (
                 <Section title="Technology stack">
-                  <div className="h-[320px] overflow-hidden rounded-[10px] border lg:h-[380px]">
+                  <div className="h-[320px] overflow-hidden rounded-xl border lg:h-[380px]">
                     <TechTreemap tech={centerTech} heightClass="h-full" showTitle={false} />
                   </div>
                 </Section>
@@ -286,7 +286,7 @@ export function CenterDetailsDialog({
                 />
                 {present(center.center_address) && (
                   <section className="mb-5">
-                    <h4 className="mb-1 text-[12px] font-medium text-muted-foreground">Address</h4>
+                    <h4 className="mb-1 text-xs font-medium text-muted-foreground">Address</h4>
                     <p className="whitespace-pre-line text-[13px] leading-relaxed">{center.center_address}</p>
                   </section>
                 )}

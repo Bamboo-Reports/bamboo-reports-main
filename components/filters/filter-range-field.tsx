@@ -109,7 +109,7 @@ function RangeInput({
           event.currentTarget.blur()
         }
       }}
-      className="h-[34px] w-full min-w-0 rounded-md border border-input bg-background px-2.5 text-[13px] font-medium tabular-nums transition-shadow focus-visible:border-primary/60 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/15"
+      className="h-8 w-full min-w-0 rounded-md border border-input bg-background px-2.5 text-[13px] tabular-nums transition-[border-color,box-shadow] focus-visible:border-primary/60 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/15"
     />
   )
 }
@@ -180,10 +180,10 @@ export function FilterRangeField({
                 aria-pressed={selected}
                 onClick={() => onChange(selected ? [bounds.min, bounds.max] : preset.range)}
                 className={cn(
-                  "h-6 rounded-full border px-2 text-[11.5px] font-medium transition-colors",
+                  "h-6 rounded-md border px-2 text-xs tabular-nums transition-colors",
                   selected
                     ? "border-primary/50 bg-primary/10 text-primary"
-                    : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                    : "border-border bg-background text-muted-foreground hover:border-foreground/20 hover:text-foreground"
                 )}
               >
                 {preset.label}
@@ -208,8 +208,8 @@ export function FilterRangeField({
           >
             <span
               className={cn(
-                "absolute top-0.5 h-3 w-3 rounded-full bg-white shadow-sm transition-[left] duration-150",
-                includeNull ? "left-3.5" : "left-0.5"
+                "absolute top-0.5 h-3 w-3 rounded-full bg-white shadow-sm transition-transform duration-150 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                includeNull ? "left-0.5 translate-x-3" : "left-0.5"
               )}
             />
           </span>

@@ -143,7 +143,7 @@ export function ExportDialog({
   const [isExporting, setIsExporting] = useState(false)
   const [progress, setProgress] = useState(0)
   const [displayedProgress, setDisplayedProgress] = useState(0)
-  const [stage, setStage] = useState("Preparing export...")
+  const [stage, setStage] = useState("Preparing export")
   const [error, setError] = useState<string | null>(null)
   const [exportResult, setExportResult] = useState<ServerExportResponse | null>(null)
   // Result is held back until the progress bar visually fills to 100%.
@@ -224,7 +224,7 @@ export function ExportDialog({
     setIsExporting(false)
     setProgress(0)
     setDisplayedProgress(0)
-    setStage("Preparing export...")
+    setStage("Preparing export")
     setError(null)
     setExportResult(null)
     setIsComplete(false)
@@ -295,7 +295,7 @@ export function ExportDialog({
     setProgress(0)
     setDisplayedProgress(0)
     setIsComplete(false)
-    setStage("Requesting export...")
+    setStage("Requesting export")
     const startedAt = Date.now()
     const selectedDatasets = getSelectedDatasets(selection)
 
@@ -414,7 +414,7 @@ export function ExportDialog({
         source: "export_dialog",
         error_message: err instanceof Error ? err.message : "Unknown download error",
       })
-      setError(err instanceof Error ? err.message : "Failed to download export.")
+      setError(err instanceof Error ? err.message : "Could not download the export")
     }
   }
 
@@ -440,7 +440,7 @@ export function ExportDialog({
       {fillingBar ? (
         <>
           <div className="min-w-0 flex-1" role="status" aria-live="polite">
-            <div className="flex justify-between text-[12.5px]">
+            <div className="flex justify-between text-xs">
               <span>{stage}</span>
               <span className="tabular-nums text-muted-foreground">{Math.round(displayedProgress)}%</span>
             </div>
@@ -458,7 +458,7 @@ export function ExportDialog({
             <RiCheckboxCircleFill className="h-5 w-5 shrink-0 text-include" />
             <div className="min-w-0">
               <p className="truncate text-[13px] font-medium" title={exportResult.filename}>{exportResult.filename}</p>
-              <p className="text-[12px] text-muted-foreground">
+              <p className="text-xs tabular-nums text-muted-foreground">
                 {plural(exportResult.totalRows, "row")} · {plural(sheetCount, "sheet")}
               </p>
             </div>
@@ -475,10 +475,10 @@ export function ExportDialog({
         </>
       ) : error ? (
         <>
-          <div className="flex min-w-0 flex-1 items-center gap-2.5 text-[12.5px]" role="alert">
-            <RiErrorWarningFill className="h-[18px] w-[18px] shrink-0 text-exclude" />
+          <div className="flex min-w-0 flex-1 items-center gap-2.5 text-[13px]" role="alert">
+            <RiErrorWarningFill className="h-5 w-5 shrink-0 text-exclude" />
             <div className="min-w-0">
-              <p className="font-semibold">The export did not finish</p>
+              <p className="font-medium">The export did not finish</p>
               <p className="text-muted-foreground">{error}</p>
             </div>
           </div>
@@ -491,12 +491,12 @@ export function ExportDialog({
         </>
       ) : (
         <>
-          <p className="min-w-0 flex-1 text-[12.5px] text-muted-foreground">
+          <p className="min-w-0 flex-1 text-[13px] tabular-nums text-muted-foreground">
             {totalSelected === 0 ? (
-              "Pick at least one dataset."
+              "Pick at least one dataset"
             ) : (
               <>
-                <span className="font-semibold text-foreground">{plural(selectedRowCount, "row")}</span>
+                <span className="font-medium text-foreground">{plural(selectedRowCount, "row")}</span>
                 {compact ? "" : ` in ${plural(sheetCount, "sheet")}`} · Excel file
               </>
             )}
@@ -519,11 +519,11 @@ export function ExportDialog({
     return (
       <Dialog open={open} onOpenChange={handleDialogOpenChange}>
         <DialogContent className="max-w-[440px] grid-cols-[minmax(0,1fr)] gap-0 overflow-hidden p-0">
-          <DialogHeader className="space-y-1 px-5 pb-4 pt-[18px] pr-12 text-left">
+          <DialogHeader className="space-y-1 px-5 pb-4 pt-5 pr-12 text-left">
             <DialogTitle className="text-[17px] font-semibold tracking-[-0.01em]">
               Export {plural(selectedRowCount, noun)}
             </DialogTitle>
-            <DialogDescription className="text-[12.5px]">
+            <DialogDescription className="text-[13px]">
               Only the rows you selected in the {meta?.label ?? "data"} table.
             </DialogDescription>
           </DialogHeader>
@@ -540,19 +540,19 @@ export function ExportDialog({
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="max-w-[560px] grid-cols-[minmax(0,1fr)] gap-0 overflow-hidden p-0">
-        <DialogHeader className="space-y-1 px-5 pb-3.5 pt-[18px] pr-12 text-left">
+        <DialogHeader className="space-y-1 px-5 pb-4 pt-5 pr-12 text-left">
           <DialogTitle className="text-[17px] font-semibold tracking-[-0.01em]">Export data</DialogTitle>
-          <DialogDescription className="text-[12.5px]">
+          <DialogDescription className="text-[13px]">
             {isFiltered
               ? "Exports the filtered data across all pages, not just the rows on screen."
               : "Exports everything shown on the dashboard, with no filters applied."}
           </DialogDescription>
           {isFiltered && filterSummary.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5 pt-1.5">
+            <div className="flex flex-wrap items-center gap-1.5 pt-2">
               {shownFilters.map((field) => (
                 <span
                   key={field.label}
-                  className="inline-flex h-6 max-w-full items-center gap-1 rounded-md border bg-card px-2 text-[12px] font-medium"
+                  className="inline-flex h-6 max-w-full items-center gap-1 rounded-md border bg-card px-2 text-xs font-medium"
                   title={`${field.label}: ${fieldText(field)}`}
                 >
                   <span className="shrink-0 font-normal text-muted-foreground">{field.label}</span>
@@ -563,7 +563,7 @@ export function ExportDialog({
                 <button
                   type="button"
                   onClick={() => setShowAllFilters(true)}
-                  className="inline-flex h-6 items-center rounded-md border border-dashed px-2 text-[12px] font-medium text-muted-foreground hover:text-foreground"
+                  className="inline-flex h-6 items-center rounded-md border border-dashed px-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
                 >
                   +{hiddenFilters} more
                 </button>
@@ -573,7 +573,7 @@ export function ExportDialog({
         </DialogHeader>
 
         <div className="border-t">
-          <div className="flex items-center justify-between px-5 pb-1 pt-2.5 text-[12px] text-muted-foreground">
+          <div className="flex items-center justify-between px-5 pb-1 pt-3 text-xs text-muted-foreground">
             <span>Sheets in the file</span>
             <button
               type="button"
@@ -584,7 +584,7 @@ export function ExportDialog({
               {allOn ? "Clear" : "Select all"}
             </button>
           </div>
-          <div className="px-2 pb-2.5">
+          <div className="px-2 pb-3">
             {visibleDatasetMeta.map((item) => {
               const Icon = item.icon
               const isAccessible = isDatasetEnabled(item.key)
@@ -612,10 +612,10 @@ export function ExportDialog({
                   />
                   <span className="min-w-0 flex-1">
                     <span className={cn("flex items-center gap-1.5 text-[13px] font-medium", !isChecked && "text-muted-foreground")}>
-                      <Icon className="h-[15px] w-[15px] shrink-0 text-muted-foreground" />
+                      <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
                       {item.label}
                     </span>
-                    <span className="mt-0.5 block text-[12px] text-muted-foreground">
+                    <span className="mt-0.5 block text-xs text-muted-foreground">
                       {isAccessible ? item.description : getDatasetUnavailableMessage(item.key)}
                     </span>
                   </span>
@@ -624,7 +624,7 @@ export function ExportDialog({
                       {countOf(item.key).toLocaleString()} <span className="font-normal text-muted-foreground">rows</span>
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 whitespace-nowrap text-[11.5px] font-medium text-muted-foreground">
+                    <span className="inline-flex items-center gap-1 whitespace-nowrap text-xs font-medium text-muted-foreground">
                       <RiLockLine className="h-3.5 w-3.5" />
                       Not in plan
                     </span>

@@ -38,7 +38,7 @@ function AccountNameCell({ account }: { account: Account }) {
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
             {isNasscomVerified && (
               <div
-                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold bg-[#C03430]/15 text-[#C03430]"
+                className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground"
                 title="NASSCOM listed"
               >
                 <RiCheckboxCircleLine className="h-3 w-3" aria-hidden="true" />
@@ -47,7 +47,7 @@ function AccountNameCell({ account }: { account: Account }) {
             )}
             {visibilityNote && (
               <div
-                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 max-w-[220px]"
+                className="inline-flex max-w-[220px] items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300"
                 title={visibilityNote}
               >
                 <span className="truncate">{visibilityNote}</span>
@@ -67,28 +67,28 @@ export const accountColumns = columnHelper.columns([
   createSelectColumn<Account>(getAccountName),
   columnHelper.accessor((account) => account.account_global_legal_name, {
     id: "name",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Account Name" />,
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Account name" />,
     cell: ({ row }) => <AccountNameCell account={row.original} />,
     sortFn: "text",
     meta: { className: "w-[280px]" },
   }),
   columnHelper.accessor((account) => account.account_hq_industry, {
     id: "industry",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Sub Industry" />,
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Sub industry" />,
     cell: ({ getValue }) => <TruncatedText value={getValue()} />,
     sortFn: "text",
     meta: { className: "w-[220px]" },
   }),
   columnHelper.accessor((account) => account.account_hq_revenue_range, {
     id: "revenue",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Revenue Range" />,
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Revenue range" />,
     cell: ({ getValue }) => <TruncatedText value={getValue()} />,
     sortFn: "text",
     meta: { className: "w-[140px]" },
   }),
   columnHelper.accessor((account) => account.account_center_employees_range, {
     id: "employees",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="GCC Aggregate Headcount (India)" />,
+    header: ({ column }) => <DataTableColumnHeader column={column} title="GCC aggregate headcount (India)" />,
     cell: ({ getValue }) => <TruncatedText value={getValue()} />,
     sortFn: "text",
     meta: { className: "w-[200px]" },
@@ -100,14 +100,14 @@ export function AccountRowMenu({ account, onOpen }: { account: Account; onOpen: 
     <>
       <ContextMenuItem onClick={() => onOpen(account)}>
         <RiEyeLine className="h-4 w-4" />
-        View Details
+        View details
       </ContextMenuItem>
       {account.account_hq_website && (
         <>
           <ContextMenuSeparator />
           <ContextMenuItem onClick={() => window.open(ensureAbsoluteUrl(account.account_hq_website!), "_blank", "noopener,noreferrer")}>
             <RiGlobalLine className="h-4 w-4" />
-            Open Website
+            Open website
           </ContextMenuItem>
         </>
       )}

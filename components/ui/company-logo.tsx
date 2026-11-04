@@ -88,7 +88,7 @@ export function CompanyLogo({
   const renderFallback = () => (
     <div
       className={cn(
-        "rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden",
+        "rounded-xl bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden",
         sizeConfig.container,
         className
       )}
@@ -96,11 +96,11 @@ export function CompanyLogo({
       aria-label={`${companyName} logo fallback`}
     >
       {fallbackMode === "monogram" ? (
-        <span className={cn("font-semibold text-primary", size === "xl" ? "text-3xl" : "text-sm")}>
+        <span className={cn("font-semibold text-foreground", size === "xl" ? "text-3xl" : "text-sm")}>
           {companyMonogram}
         </span>
       ) : (
-        <RiBuilding2Line className={cn("text-primary", sizeConfig.icon)} />
+        <RiBuilding2Line className={cn("text-muted-foreground", sizeConfig.icon)} />
       )}
     </div>
   )
@@ -132,8 +132,8 @@ export function CompanyLogo({
     >
       {/* Fallback while loading */}
       {!imageLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center bg-primary/10">
-          <RiBuilding2Line className={cn("text-primary", sizeConfig.icon)} />
+        <div className="absolute inset-0 flex items-center justify-center bg-muted">
+          <RiBuilding2Line className={cn("text-muted-foreground", sizeConfig.icon)} />
         </div>
       )}
 

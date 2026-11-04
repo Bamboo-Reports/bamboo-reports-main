@@ -48,9 +48,9 @@ const RECORD_PAGE_SIZES = [12, 24, 48, 96] as const
 function Section({ title, meta, children }: { title: string; meta?: React.ReactNode; children: React.ReactNode }) {
   return (
     <section className="mt-7 first:mt-0">
-      <h3 className="mb-2.5 flex items-baseline gap-1.5 text-[14px] font-semibold">
+      <h3 className="mb-3 flex items-baseline gap-1.5 text-sm font-medium">
         {title}
-        {meta !== undefined && <span className="text-[12px] font-normal text-muted-foreground">{meta}</span>}
+        {meta !== undefined && <span className="text-xs font-normal tabular-nums text-muted-foreground">{meta}</span>}
       </h3>
       {children}
     </section>
@@ -228,16 +228,16 @@ export function ProspectDetailsDialog({
 
         <div className="shrink-0 border-b px-6 pb-4 pt-5">
           <DialogBreadcrumb items={breadcrumbItems} />
-          <div className="mt-2.5 flex items-start gap-3.5">
-            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-primary/10 text-base font-semibold text-primary">{initials || "?"}</div>
+          <div className="mt-2 flex items-start gap-3">
+            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-muted text-base font-semibold text-foreground">{initials || "?"}</div>
             <div className="min-w-0 flex-1">
               <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                <DialogTitle className="min-w-0 truncate text-[21px] font-semibold tracking-[-0.015em]">{fullName || "Prospect"}</DialogTitle>
+                <DialogTitle className="min-w-0 truncate text-xl font-semibold tracking-[-0.015em]">{fullName || "Prospect"}</DialogTitle>
                 {engaged && (
-                  <span className="rounded-[5px] bg-include/[0.12] px-1.5 text-[11.5px] font-semibold leading-5 text-include">Engaged</span>
+                  <span className="rounded-md bg-include/[0.12] px-1.5 text-xs font-medium leading-5 text-include">Engaged</span>
                 )}
                 {showHeadType && (
-                  <span className="rounded-[5px] bg-muted px-1.5 text-[11.5px] font-semibold leading-5 text-muted-foreground">{headType}</span>
+                  <span className="rounded-md bg-muted px-1.5 text-xs leading-5 text-muted-foreground">{headType}</span>
                 )}
               </div>
               <p className="mt-0.5 text-[13px] text-muted-foreground">
@@ -308,12 +308,12 @@ export function ProspectDetailsDialog({
                   {relatedError ? (
                     <RelatedLoadError message="Other contacts at this company could not load." onRetry={retryRelated} />
                   ) : relatedLoading ? (
-                    <Skeleton className="h-[320px] w-full rounded-[10px]" />
+                    <Skeleton className="h-[320px] w-full rounded-xl" />
                   ) : companyContacts.length === 0 ? (
-                    <p className="text-[13px] text-muted-foreground">No other contacts at this account.</p>
+                    <p className="text-[13px] text-muted-foreground">No other contacts at this account</p>
                   ) : (
                     <>
-                      <div className="mb-2.5 flex flex-wrap items-center gap-2">
+                      <div className="mb-3 flex flex-wrap items-center gap-2">
                         <label className="flex h-8 w-64 items-center gap-2 rounded-lg border border-transparent bg-muted/80 px-2.5 text-muted-foreground focus-within:border-primary/60 focus-within:ring-[3px] focus-within:ring-primary/15">
                           <RiSearchLine className="h-4 w-4 shrink-0" />
                           <input
@@ -328,7 +328,7 @@ export function ProspectDetailsDialog({
                         <FilterMenu label="Level" options={levelOptions} selected={levelFilter} {...filterHandlers("prospect_level", setLevelFilter)} />
                         <FilterMenu label="Head type" options={headTypeOptions} selected={headTypeFilter} {...filterHandlers("prospect_head_type", setHeadTypeFilter)} />
                       </div>
-                      <div className="flex flex-col overflow-hidden rounded-[10px] border bg-card">
+                      <div className="flex flex-col overflow-hidden rounded-xl border bg-card">
                         {listLayout === "table" ? (
                           <DataTable
                             key="table"
@@ -344,7 +344,7 @@ export function ProspectDetailsDialog({
                             ))}
                           </div>
                         ) : (
-                          <p className="px-6 py-10 text-center text-[13px] text-muted-foreground">No contacts match these filters.</p>
+                          <p className="px-6 py-10 text-center text-[13px] text-muted-foreground">No contacts match these filters</p>
                         )}
                         <DataTablePagination
                           table={contactTable}

@@ -61,17 +61,17 @@ export function LibraryDialog({
           if ((document.activeElement as HTMLElement | null)?.closest("[data-library-rename]")) event.preventDefault()
         }}
       >
-        <DialogHeader className="shrink-0 space-y-0 px-5 py-3.5 pr-12">
+        <DialogHeader className="shrink-0 space-y-0 px-5 py-4 pr-12">
           <div className="flex items-baseline gap-2.5">
             <DialogTitle className="text-base">{title}</DialogTitle>
-            {titleMeta && <span className="text-[12.5px] text-muted-foreground">{titleMeta}</span>}
+            {titleMeta && <span className="text-[13px] tabular-nums text-muted-foreground">{titleMeta}</span>}
           </div>
           <DialogDescription className="sr-only">{description}</DialogDescription>
         </DialogHeader>
         <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,38%)_minmax(0,1fr)] border-t sm:grid-cols-[288px_minmax(0,1fr)] sm:grid-rows-1">
           <aside className="flex min-h-0 flex-col border-b bg-muted/30 sm:border-b-0 sm:border-r">
             <div className="flex shrink-0 flex-col gap-2 p-3 pb-2">
-              <label className="flex h-[34px] items-center gap-2 rounded-lg border border-transparent bg-muted/80 px-2.5 text-muted-foreground transition-shadow focus-within:border-primary/60 focus-within:ring-[3px] focus-within:ring-primary/15">
+              <label className="flex h-9 items-center gap-2 rounded-lg border border-transparent bg-muted/80 px-2.5 text-muted-foreground transition-shadow focus-within:border-primary/60 focus-within:ring-[3px] focus-within:ring-primary/15">
                 <RiSearchLine className="h-4 w-4 shrink-0" />
                 <input
                   value={query}
@@ -82,7 +82,7 @@ export function LibraryDialog({
                 />
               </label>
               {tab && onTabChange && (
-              <div className="grid grid-cols-2 rounded-lg bg-muted/80 p-[3px]" role="tablist" aria-label={`${title} owner`}>
+              <div className="grid grid-cols-2 rounded-lg bg-muted/80 p-0.5" role="tablist" aria-label={`${title} owner`}>
                 {([
                   ["mine", "Mine", mineCount],
                   ["shared", "Shared with me", sharedCount],
@@ -94,14 +94,14 @@ export function LibraryDialog({
                     aria-selected={tab === value}
                     onClick={() => onTabChange(value)}
                     className={cn(
-                      "h-7 rounded-md text-[12.5px] font-medium transition-colors",
+                      "h-7 rounded-md text-xs font-medium transition-colors",
                       tab === value
                         ? "bg-background text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.08),0_0_0_1px_hsl(var(--border)/0.6)]"
                         : "text-muted-foreground hover:text-foreground"
                     )}
                   >
                     {label}
-                    <span className="ml-1 text-[11.5px] tabular-nums text-muted-foreground">{count ?? 0}</span>
+                    <span className="ml-1 text-xs font-normal tabular-nums text-muted-foreground">{count ?? 0}</span>
                   </button>
                 ))}
               </div>
@@ -140,7 +140,7 @@ export function LibraryItem({ selected, onSelect, icon, name, meta, badge }: Lib
       <span className={cn("grid h-4 w-4 shrink-0 place-items-center", selected ? "text-primary" : "text-muted-foreground")}>{icon}</span>
       <span className="min-w-0 flex-1">
         <span className={cn("block truncate text-[13px] font-medium", selected && "text-primary")} title={name}>{name}</span>
-        <span className="block truncate text-[11.5px] text-muted-foreground">{meta}</span>
+        <span className="block truncate text-xs tabular-nums text-muted-foreground">{meta}</span>
       </span>
       {badge}
     </button>
@@ -150,14 +150,14 @@ export function LibraryItem({ selected, onSelect, icon, name, meta, badge }: Lib
 /** A sticky heading over a run of items, such as "Today". Set --library-group-bg on a list whose background differs from the side column. */
 export function LibraryGroupLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="sticky top-0 z-[1] bg-[var(--library-group-bg,color-mix(in_srgb,hsl(var(--muted))_30%,hsl(var(--background))))] px-2.5 pb-1 pt-2.5 text-[11.5px] font-semibold text-muted-foreground">
+    <div className="sticky top-0 z-[1] bg-[var(--library-group-bg,color-mix(in_srgb,hsl(var(--muted))_30%,hsl(var(--background))))] px-2.5 pb-1 pt-3 text-xs font-medium text-muted-foreground">
       {children}
     </div>
   )
 }
 
 export function LibraryEmpty({ children }: { children: React.ReactNode }) {
-  return <p className="px-3 py-6 text-center text-[12.5px] leading-relaxed text-muted-foreground">{children}</p>
+  return <p className="px-3 py-6 text-center text-[13px] leading-relaxed text-muted-foreground">{children}</p>
 }
 
 interface LibraryPaneHeaderProps {
@@ -168,9 +168,9 @@ interface LibraryPaneHeaderProps {
 
 export function LibraryPaneHeader({ title, meta, actions }: LibraryPaneHeaderProps) {
   return (
-    <div className="shrink-0 border-b px-5 pb-3.5 pt-4">
+    <div className="shrink-0 border-b px-5 pb-4 pt-4">
       {title}
-      {meta && <div className="mt-1 text-[12.5px] text-muted-foreground">{meta}</div>}
+      {meta && <div className="mt-1 text-[13px] tabular-nums text-muted-foreground">{meta}</div>}
       {actions && <div className="mt-3 flex flex-wrap items-center gap-1.5">{actions}</div>}
     </div>
   )
@@ -234,7 +234,7 @@ export function LibraryRename({
 export function LibraryCountBadge({ count, title }: { count: number; title: string }) {
   return (
     <span
-      className="grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-amber-500/15 px-1.5 text-[11px] font-semibold tabular-nums text-amber-700 dark:text-amber-300"
+      className="grid h-5 min-w-5 shrink-0 place-items-center rounded-md bg-amber-500/15 px-1.5 text-[11px] font-medium tabular-nums text-amber-700 dark:text-amber-300"
       title={title}
     >
       {count}

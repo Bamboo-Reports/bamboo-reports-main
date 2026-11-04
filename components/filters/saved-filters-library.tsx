@@ -103,11 +103,11 @@ export function SavedFiltersLibrary({
       return (
         <div className="grid flex-1 place-items-center p-8">
           <div className="max-w-sm text-center">
-            <RiBookmarkLine className="mx-auto h-7 w-7 text-primary" />
+            <RiBookmarkLine className="mx-auto h-7 w-7 text-muted-foreground" />
             <p className="mt-3 text-sm font-medium">
               {tab === "mine" ? "Save filters you use often" : "Nothing shared with you yet"}
             </p>
-            <p className="mt-1 text-[12.5px] leading-relaxed text-muted-foreground">
+            <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
               {tab === "mine"
                 ? "Set up filters in the sidebar, then save them here to apply them again in one click."
                 : "When a teammate shares saved filters with you, they appear here."}
@@ -137,7 +137,7 @@ export function SavedFiltersLibrary({
               <LibraryPaneTitle
                 badge={
                   applied ? (
-                    <span className="inline-flex h-5 shrink-0 items-center rounded-full bg-primary/12 px-2 text-[11px] font-semibold text-primary">
+                    <span className="inline-flex h-5 shrink-0 items-center rounded-md bg-primary/10 px-1.5 text-xs font-medium text-primary">
                       {appliedModified ? "Applied · changed" : "Applied"}
                     </span>
                   ) : undefined
@@ -172,14 +172,14 @@ export function SavedFiltersLibrary({
         />
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
           {sections.length === 0 ? (
-            <p className="text-[12.5px] text-muted-foreground">No filters set. Applying this shows everything.</p>
+            <p className="text-[13px] text-muted-foreground">No filters set. Applying this shows everything.</p>
           ) : (
             sections.map(({ section, fields }, index) => {
               const { label, icon: Icon } = SECTION_META[section]
               return (
                 <div key={section} className={index > 0 ? "mt-4 border-t border-border/70 pt-4" : undefined}>
-                  <h4 className="mb-2.5 flex items-center gap-1.5 text-[13px] font-semibold">
-                    <Icon className="h-4 w-4 text-primary" />
+                  <h4 className="mb-3 flex items-center gap-1.5 text-[13px] font-medium">
+                    <Icon className="h-4 w-4 text-muted-foreground" />
                     {label}
                   </h4>
                   <dl className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)] gap-x-3 gap-y-2">
@@ -238,9 +238,9 @@ export function SavedFiltersLibrary({
             )
           })
         ) : query.trim() ? (
-          <LibraryEmpty>No saved filters match &ldquo;{query.trim()}&rdquo;.</LibraryEmpty>
+          <LibraryEmpty>No saved filters match &ldquo;{query.trim()}&rdquo;</LibraryEmpty>
         ) : (
-          <LibraryEmpty>{tab === "mine" ? "You haven't saved any filters yet." : "No one has shared filters with you yet."}</LibraryEmpty>
+          <LibraryEmpty>{tab === "mine" ? "You haven't saved any filters yet" : "No one has shared filters with you yet"}</LibraryEmpty>
         )
       }
       footer={

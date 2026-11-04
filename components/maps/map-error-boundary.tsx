@@ -35,15 +35,15 @@ export class MapErrorBoundary extends React.Component<Props, State> {
       return (
         <div className="flex items-center justify-center h-[600px] bg-muted rounded-lg">
           <div className="text-center p-6">
-            <p className="text-lg font-semibold text-red-500 mb-2">Map Error</p>
+            <p className="text-base font-medium text-destructive mb-2">The map stopped working</p>
             <p className="text-sm text-muted-foreground mb-4">
               {this.state.error?.message || "An error occurred while rendering the map"}
             </p>
             <details className="text-left max-w-md mx-auto">
               <summary className="text-xs text-muted-foreground cursor-pointer mb-2">
-                Error Details
+                Error details
               </summary>
-              <pre className="text-xs bg-background p-2 rounded overflow-auto max-h-40">
+              <pre className="text-xs bg-background p-2 rounded-md overflow-auto max-h-40">
                 {this.state.error?.stack || "No stack trace available"}
               </pre>
             </details>

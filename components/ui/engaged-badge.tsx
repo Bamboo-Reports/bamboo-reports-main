@@ -10,7 +10,7 @@ export function EngagedBadge({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full border border-transparent bg-emerald-100 px-2.5 py-0.5 text-xs font-normal text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+        "inline-flex items-center gap-1 rounded-md border border-transparent bg-emerald-100 px-2 py-0.5 text-xs font-normal text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
         className,
       )}
       title="Engaged with Bamboo Reports"

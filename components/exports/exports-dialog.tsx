@@ -198,8 +198,8 @@ export function ExportsDialog({ open, onOpenChange, describeFilters }: ExportsDi
       ))
     }
     if (visible.length === 0) {
-      if (query.trim()) return <LibraryEmpty>No exports match &ldquo;{query.trim()}&rdquo;.</LibraryEmpty>
-      return error ? null : <LibraryEmpty>Your exports will appear here.</LibraryEmpty>
+      if (query.trim()) return <LibraryEmpty>No exports match &ldquo;{query.trim()}&rdquo;</LibraryEmpty>
+      return error ? null : <LibraryEmpty>Your exports will appear here</LibraryEmpty>
     }
     return groupByDay(visible, (row) => row.created_at).map(({ group, rows }) => (
       <div key={group}>
@@ -227,8 +227,8 @@ export function ExportsDialog({ open, onOpenChange, describeFilters }: ExportsDi
         <div className="grid flex-1 place-items-center p-8 text-center" role="alert">
           <div>
             <RiErrorWarningLine className="mx-auto h-7 w-7 text-exclude" />
-            <p className="mt-2 text-sm font-semibold">Could not load your exports</p>
-            <p className="mt-1 text-[12.5px] text-muted-foreground">{error}</p>
+            <p className="mt-2 text-sm font-medium">Could not load your exports</p>
+            <p className="mt-1 text-[13px] text-muted-foreground">{error}</p>
             <Button variant="outline" size="sm" className="mt-3" onClick={() => void fetchExports()}>
               Try again
             </Button>
@@ -250,8 +250,8 @@ export function ExportsDialog({ open, onOpenChange, describeFilters }: ExportsDi
         <div className="grid flex-1 place-items-center p-8 text-center">
           <div className="max-w-xs">
             <RiFileExcel2Line className="mx-auto h-7 w-7 text-muted-foreground" />
-            <p className="mt-2 text-sm font-semibold">No exports yet</p>
-            <p className="mt-1 text-[12.5px] leading-relaxed text-muted-foreground">
+            <p className="mt-2 text-sm font-medium">No exports yet</p>
+            <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
               Use Export in the filters panel to download the dashboard as an Excel file. Every export is kept here so you can download it again.
             </p>
           </div>
@@ -277,26 +277,26 @@ export function ExportsDialog({ open, onOpenChange, describeFilters }: ExportsDi
         />
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-4">
           {downloadError && (
-            <p className="rounded-lg bg-exclude/[0.06] px-3 py-2 text-[12.5px] text-exclude" role="alert">
+            <p className="rounded-lg bg-exclude/[0.06] px-3 py-2 text-[13px] text-exclude" role="alert">
               {downloadError}
             </p>
           )}
           <section>
-            <h4 className="mb-1.5 text-[12px] font-medium text-muted-foreground">Sheets</h4>
+            <h4 className="mb-1.5 text-xs font-medium text-muted-foreground">Sheets</h4>
             <div className="text-[13px]">
               {datasets.map((key) => {
                 const Icon = SHEET_ICONS[key] ?? RiFileExcel2Line
                 return (
-                  <div key={key} className="flex items-center gap-2 border-b border-border/60 py-[7px]">
-                    <Icon className="h-[15px] w-[15px] shrink-0 text-muted-foreground" />
+                  <div key={key} className="flex items-center gap-2 border-b border-border/60 py-2">
+                    <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
                     <span className="flex-1">{datasetLabel(key)}</span>
                     <span className="font-medium tabular-nums">{(selected.row_counts?.[key] ?? 0).toLocaleString()}</span>
                   </div>
                 )
               })}
               {datasets.length > 1 && (
-                <div className="flex items-center gap-2 py-[7px] font-semibold">
-                  <span className="w-[15px] shrink-0" />
+                <div className="flex items-center gap-2 py-2 font-medium">
+                  <span className="w-4 shrink-0" />
                   <span className="flex-1">Total</span>
                   <span className="tabular-nums">{selected.total_rows.toLocaleString()}</span>
                 </div>
@@ -305,17 +305,17 @@ export function ExportsDialog({ open, onOpenChange, describeFilters }: ExportsDi
           </section>
 
           <section>
-            <h4 className="mb-2 text-[12px] font-medium text-muted-foreground">Filters it followed</h4>
+            <h4 className="mb-2 text-xs font-medium text-muted-foreground">Filters it followed</h4>
             {selection ? (
-              <p className="text-[12.5px]">Only the {selection} you selected.</p>
+              <p className="text-[13px]">Only the {selection} you selected.</p>
             ) : !selected.is_filtered ? (
-              <p className="text-[12.5px] text-muted-foreground">No filters. Everything shown on the dashboard at the time.</p>
+              <p className="text-[13px] text-muted-foreground">No filters. Everything shown on the dashboard at the time.</p>
             ) : fields.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
                 {fields.map((field) => (
                   <span
                     key={field.label}
-                    className="inline-flex h-6 max-w-full items-center gap-1 rounded-md border bg-card px-2 text-[12px] font-medium"
+                    className="inline-flex h-6 max-w-full items-center gap-1 rounded-md border bg-card px-2 text-xs font-medium"
                     title={`${field.label}: ${fieldText(field)}`}
                   >
                     <span className="shrink-0 font-normal text-muted-foreground">{field.label}</span>
@@ -324,20 +324,20 @@ export function ExportsDialog({ open, onOpenChange, describeFilters }: ExportsDi
                 ))}
               </div>
             ) : (
-              <p className="text-[12.5px] text-muted-foreground">Filtered, but the filters were not recorded for this export.</p>
+              <p className="text-[13px] text-muted-foreground">Filtered, but the filters were not recorded for this export.</p>
             )}
           </section>
 
           <details className="group">
-            <summary className="inline-flex cursor-pointer list-none items-center gap-1 text-[12px] font-medium text-muted-foreground hover:text-foreground [&::-webkit-details-marker]:hidden">
+            <summary className="inline-flex cursor-pointer list-none items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground [&::-webkit-details-marker]:hidden">
               <RiArrowRightSLine className="h-4 w-4 transition-transform group-open:rotate-90" />
               Request details
             </summary>
-            <dl className="mt-2 grid grid-cols-[110px_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-[12.5px]">
+            <dl className="mt-2 grid grid-cols-[110px_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-[13px]">
               <dt className="text-muted-foreground">File name</dt>
-              <dd className="break-all font-mono text-[12px]">{selected.filename}</dd>
+              <dd className="break-all font-mono text-xs">{selected.filename}</dd>
               <dt className="text-muted-foreground">IP address</dt>
-              <dd className="font-mono text-[12px]">{ip ?? "Not recorded"}</dd>
+              <dd className="font-mono text-xs">{ip ?? "Not recorded"}</dd>
               <dt className="text-muted-foreground">Browser</dt>
               <dd title={selected.user_agent ?? undefined}>{browser ?? "Not recorded"}</dd>
             </dl>

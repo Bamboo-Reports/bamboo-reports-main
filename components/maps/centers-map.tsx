@@ -389,7 +389,7 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
     return (
       <div className={`flex items-center justify-center ${heightClass} bg-muted rounded-lg`}>
         <div className="text-center">
-          <p className="text-lg font-semibold text-red-500 mb-2">Error Loading Map</p>
+          <p className="text-base font-medium text-destructive mb-2">Could not load the map</p>
           <p className="text-sm text-muted-foreground">{error}</p>
           <p className="text-xs text-muted-foreground mt-2">Check browser console for details</p>
         </div>
@@ -402,7 +402,7 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
     return (
       <div className={`flex items-center justify-center ${heightClass} bg-muted rounded-lg`}>
         <div className="text-center">
-          <p className="text-sm text-muted-foreground">Loading map...</p>
+          <p className="text-sm text-muted-foreground">Loading map…</p>
         </div>
       </div>
     )
@@ -413,7 +413,7 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
     return (
       <div className={`flex items-center justify-center ${heightClass} bg-muted rounded-lg`}>
         <div className="text-center">
-          <p className="text-lg font-semibold text-muted-foreground mb-2">No Location Data</p>
+          <p className="text-base font-medium text-foreground mb-2">No location data</p>
           <p className="text-sm text-muted-foreground">
             Centres do not have latitude and longitude information
           </p>
@@ -652,7 +652,7 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
     return (
       <div className={`flex items-center justify-center ${heightClass} bg-muted rounded-lg`}>
         <div className="text-center">
-          <p className="text-lg font-semibold text-red-500 mb-2">Map Rendering Error</p>
+          <p className="text-base font-medium text-destructive mb-2">Could not draw the map</p>
           <p className="text-sm text-muted-foreground">
             {err instanceof Error ? err.message : "Unknown error occurred"}
           </p>

@@ -36,7 +36,7 @@ const hexToRgba = (hex: string, alpha: number) => {
 
 export const TechTreemap = memo(({
   tech,
-  title = "Tech Stack",
+  title = "Tech stack",
   heightClass = "h-[320px] lg:h-[420px]",
   showTitle = true,
 }: TechTreemapProps) => {
@@ -134,7 +134,7 @@ export const TechTreemap = memo(({
   return (
     <div className="w-full h-full min-h-0">
       {showTitle && (
-        <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground mb-2">
+        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2">
           <RiStackLine className="h-4 w-4" />
           {title}
         </div>
@@ -185,9 +185,9 @@ export const TechTreemap = memo(({
                   ? `${roundedPercent.toFixed(0)}%`
                   : `${roundedPercent.toFixed(1)}%`
                 return `
-                  <div class="rounded-lg border border-border bg-background px-3 py-2 shadow-lg">
-                    <p class="text-xs font-semibold text-foreground">${softwareName}</p>
-                    ${value > 0 ? `<p class="text-sm font-semibold text-foreground">${percentText}</p>` : ""}
+                  <div class="rounded-lg border border-border bg-popover px-3 py-2 shadow-float">
+                    <p class="text-xs font-medium text-foreground">${softwareName}</p>
+                    ${value > 0 ? `<p class="text-sm font-medium tabular-nums text-foreground">${percentText}</p>` : ""}
                   </div>
                 `
               },
@@ -212,7 +212,7 @@ export const TechTreemap = memo(({
             series: [
               {
                 type: "treemap",
-                name: "Tech Stack",
+                name: "Tech stack",
                 data,
                 breadcrumbs: {
                   showFullPath: true,

@@ -392,7 +392,7 @@ export function CentersChoroplethMap({
     return (
       <div className={`flex items-center justify-center ${heightClass} bg-muted rounded-lg`}>
         <div className="text-center">
-          <p className="text-lg font-semibold text-red-500 mb-2">Error Loading Map</p>
+          <p className="text-base font-medium text-destructive mb-2">Could not load the map</p>
           <p className="text-sm text-muted-foreground">{error}</p>
           <p className="text-xs text-muted-foreground mt-2">Check browser console for details</p>
         </div>
@@ -404,7 +404,7 @@ export function CentersChoroplethMap({
     return (
       <div className={`flex items-center justify-center ${heightClass} bg-muted rounded-lg`}>
         <div className="text-center">
-          <p className="text-sm text-muted-foreground">Loading map...</p>
+          <p className="text-sm text-muted-foreground">Loading map…</p>
         </div>
       </div>
     )
@@ -414,7 +414,7 @@ export function CentersChoroplethMap({
     return (
       <div className={`flex items-center justify-center ${heightClass} bg-muted rounded-lg`}>
         <div className="text-center">
-          <p className="text-sm text-muted-foreground">No state boundaries to display.</p>
+          <p className="text-sm text-muted-foreground">No state boundaries to show</p>
         </div>
       </div>
     )
@@ -575,14 +575,14 @@ export function CentersChoroplethMap({
         </Source>
 
         <div
-          className="absolute bottom-4 left-4 z-10 rounded-lg border bg-card p-3 shadow-sm min-w-[220px]"
+          className="absolute bottom-4 left-4 z-10 min-w-[220px] rounded-lg border bg-card p-3 shadow-float"
           style={{
             fontFamily:
               "var(--font-sans), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
           }}
         >
           <div className="mb-2 text-xs font-medium text-muted-foreground">Total centres</div>
-          <div className="flex items-center gap-2 text-[11px] text-muted-foreground dark:text-white">
+          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
             <span className="tabular-nums">{countRange.min.toLocaleString()}</span>
             <div
               className="h-2 flex-1 rounded-full"

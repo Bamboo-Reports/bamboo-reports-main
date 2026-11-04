@@ -82,9 +82,9 @@ export function NotificationDropdown() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[380px] overflow-hidden p-0">
         <div className="flex items-center gap-2.5 border-b px-3.5 py-3">
-          <p className="text-sm font-semibold text-foreground">Updates</p>
+          <p className="text-sm font-medium text-foreground">Updates</p>
           {showList && (
-            <span className="text-[12px] text-muted-foreground">
+            <span className="text-xs tabular-nums text-muted-foreground">
               {totalRecords.toLocaleString()} record{totalRecords === 1 ? "" : "s"} changed
             </span>
           )}
@@ -93,7 +93,7 @@ export function NotificationDropdown() {
             <button
               type="button"
               onClick={handleMarkAllRead}
-              className="text-[12.5px] font-medium text-primary hover:underline hover:underline-offset-2"
+              className="text-xs font-medium text-primary hover:underline hover:underline-offset-2"
             >
               Mark all as read
             </button>
@@ -102,7 +102,7 @@ export function NotificationDropdown() {
 
         <div className="max-h-[420px] overflow-y-auto p-1">
           {!isLoading && error ? (
-            <p className="m-2 rounded-lg bg-exclude/[0.06] px-3 py-2.5 text-[12.5px] text-exclude" role="alert">
+            <p className="m-2 rounded-lg bg-exclude/[0.06] px-3 py-2.5 text-[13px] text-exclude" role="alert">
               Could not load updates. {error}
             </p>
           ) : null}
@@ -110,8 +110,8 @@ export function NotificationDropdown() {
           {!isLoading && !error && notificationSummaries.length === 0 ? (
             <div className="px-5 py-8 text-center">
               <RiCheckDoubleLine className="mx-auto h-5 w-5 text-muted-foreground" />
-              <p className="mt-1.5 text-[13px] font-semibold">You&apos;re up to date</p>
-              <p className="mt-0.5 text-[12.5px] text-muted-foreground">
+              <p className="mt-1.5 text-[13px] font-medium">You&apos;re up to date</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
                 New and changed accounts, centres and prospects from data updates appear here.
               </p>
             </div>
@@ -122,7 +122,7 @@ export function NotificationDropdown() {
             <div>
               {[1, 2, 3].map((i) => (
                 <div key={i} className="flex items-start gap-2.5 px-2.5 py-2.5">
-                  <Skeleton className="h-7 w-7 shrink-0 rounded-[7px]" />
+                  <Skeleton className="h-7 w-7 shrink-0 rounded-md" />
                   <div className="min-w-0 flex-1">
                     <Skeleton className="h-3.5 w-1/2" />
                     <Skeleton className="mt-2 h-3 w-4/5" />
@@ -134,31 +134,25 @@ export function NotificationDropdown() {
 
           {showList
             ? notificationSummaries.map((summary) => {
-                const isAdded = summary.change_type === "added"
                 const Icon = TABLE_ICONS[summary.table_name.trim().toLowerCase()] ?? RiFileList2Line
                 const more = summary.record_count - summary.record_labels.length
                 return (
                   <div key={`${summary.table_name}:${summary.change_type}`} className="flex items-start gap-2.5 rounded-lg px-2.5 py-2.5">
-                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-[7px] border text-muted-foreground">
-                      <Icon className="h-3.5 w-3.5" />
+                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md border text-muted-foreground">
+                      <Icon className="h-4 w-4" />
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline justify-between gap-2">
-                        <p className="flex items-center gap-1.5 text-[13px] font-medium text-foreground">
-                          {itemTitle(summary)}
-                          {isAdded && (
-                            <span className="rounded-[5px] bg-include/[0.12] px-1.5 text-[11px] font-semibold leading-[18px] text-include">New</span>
-                          )}
-                        </p>
+                        <p className="text-[13px] font-medium tabular-nums text-foreground">{itemTitle(summary)}</p>
                         <p
-                          className="shrink-0 text-[11.5px] text-muted-foreground"
+                          className="shrink-0 text-xs tabular-nums text-muted-foreground"
                           title={formatAbsoluteEventDate(summary.latest_changed_at)}
                         >
                           {formatRelativeEventDate(summary.latest_changed_at)}
                         </p>
                       </div>
                       {summary.record_labels.length > 0 ? (
-                        <p className="mt-0.5 truncate text-[12px] text-muted-foreground" title={summary.record_labels.join(", ")}>
+                        <p className="mt-0.5 truncate text-xs text-muted-foreground" title={summary.record_labels.join(", ")}>
                           {summary.record_labels.join(", ")}
                           {more > 0 ? ` and ${more.toLocaleString()} more` : ""}
                         </p>

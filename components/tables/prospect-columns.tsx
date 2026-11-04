@@ -26,8 +26,8 @@ function ProspectAvatar({ prospect }: { prospect: Prospect }) {
     .map((part) => part[0])
     .join("")
   return (
-    <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
-      <span className="text-sm font-semibold text-primary">{initials}</span>
+    <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
+      <span className="text-sm font-semibold text-foreground">{initials}</span>
     </div>
   )
 }
@@ -77,7 +77,7 @@ export const prospectColumns = columnHelper.columns([
   ),
   columnHelper.accessor((prospect) => prospect.prospect_title, {
     id: "title",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Job Title" />,
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Job title" />,
     cell: ({ getValue }) => <TruncatedText value={getValue()} />,
     sortFn: "text",
     meta: { className: "w-[180px]" },
@@ -97,14 +97,14 @@ export function ProspectRowMenu({ prospect, onOpen }: { prospect: Prospect; onOp
     <>
       <ContextMenuItem onClick={() => onOpen(prospect)}>
         <RiEyeLine className="h-4 w-4" />
-        View Details
+        View details
       </ContextMenuItem>
       {prospect.prospect_email && (
         <>
           <ContextMenuSeparator />
           <ContextMenuItem onClick={() => copy(prospect.prospect_email!, "Email")}>
             <RiFileCopyLine className="h-4 w-4" />
-            Copy Email
+            Copy email
           </ContextMenuItem>
         </>
       )}

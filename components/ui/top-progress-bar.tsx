@@ -44,13 +44,13 @@ export function TopProgressBar({ active }: { active: boolean }) {
   if (!visible && progress === 0) return null
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-0 z-[100] h-1" aria-hidden="true">
+    <div className="pointer-events-none fixed inset-x-0 top-0 z-[100] h-0.5" aria-hidden="true">
       <div
         className={cn(
-          "h-full bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.6)] transition-[width,opacity] duration-300 ease-out",
+          "h-full origin-left bg-primary transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
           visible ? "opacity-100" : "opacity-0"
         )}
-        style={{ width: `${progress}%` }}
+        style={{ transform: `scaleX(${progress / 100})` }}
       />
     </div>
   )

@@ -38,13 +38,13 @@ export function AccountListMatches({ matches, onMap }: AccountListMatchesProps) 
 
   return (
     <>
-      <div className="shrink-0 space-y-2.5 px-5 pb-2.5 pt-3">
-        <label className="flex h-[34px] items-center gap-2 rounded-lg border border-transparent bg-muted/80 px-2.5 text-muted-foreground transition-shadow focus-within:border-primary/60 focus-within:ring-[3px] focus-within:ring-primary/15">
+      <div className="shrink-0 space-y-3 px-5 pb-3 pt-3">
+        <label className="flex h-9 items-center gap-2 rounded-lg border border-transparent bg-muted/80 px-2.5 text-muted-foreground transition-shadow focus-within:border-primary/60 focus-within:ring-[3px] focus-within:ring-primary/15">
           <RiSearchLine className="h-4 w-4 shrink-0" />
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search uploaded names and accounts"
+            placeholder="Search names and accounts"
             aria-label="Search uploaded names and accounts"
             className="min-w-0 flex-1 bg-transparent text-[13px] text-foreground placeholder:text-muted-foreground focus:outline-none"
           />
@@ -61,13 +61,13 @@ export function AccountListMatches({ matches, onMap }: AccountListMatchesProps) 
                 aria-pressed={on}
                 onClick={() => setFilter(f.id)}
                 className={cn(
-                  "inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[12.5px] font-medium transition-colors",
+                  "inline-flex h-7 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors",
                   on ? "border-primary/50 bg-primary/10 text-primary" : "border-border bg-card text-muted-foreground hover:text-foreground"
                 )}
               >
-                {f.dot && <span className={cn("h-[7px] w-[7px] rounded-full", f.dot)} />}
+                {f.dot && <span className={cn("h-2 w-2 rounded-full", f.dot)} />}
                 {f.label}
-                <span className={cn("font-semibold tabular-nums", on ? "text-primary" : "text-foreground")}>{count}</span>
+                <span className={cn("tabular-nums", on ? "text-primary" : "text-foreground")}>{count}</span>
               </button>
             )
           })}
@@ -82,8 +82,8 @@ export function AccountListMatches({ matches, onMap }: AccountListMatchesProps) 
               <col />
             </colgroup>
             <thead>
-              <tr className="text-left text-[12px] text-muted-foreground">
-                <th className="sticky top-0 z-[1] h-[34px] border-b bg-background px-2 font-medium">Uploaded name</th>
+              <tr className="text-left text-xs text-muted-foreground">
+                <th className="sticky top-0 z-[1] h-9 border-b bg-background px-2 font-medium">Uploaded name</th>
                 <th className="sticky top-0 z-[1] border-b bg-background" aria-hidden />
                 <th className="sticky top-0 z-[1] border-b bg-background px-2 font-medium">Matched account</th>
               </tr>
@@ -114,8 +114,8 @@ export function AccountListMatches({ matches, onMap }: AccountListMatchesProps) 
             </tbody>
           </table>
         ) : (
-          <p className="px-2 py-7 text-center text-[12.5px] text-muted-foreground">
-            {query.trim() ? <>Nothing matches &ldquo;{query.trim()}&rdquo;.</> : "Nothing to show here."}
+          <p className="px-2 py-7 text-center text-[13px] text-muted-foreground">
+            {query.trim() ? <>Nothing matches &ldquo;{query.trim()}&rdquo;</> : "Nothing to show here"}
           </p>
         )}
       </div>

@@ -42,7 +42,7 @@ const centerHelper = createColumnHelper<DataTableFeatures, Center>()
 export const accountCenterColumns = centerHelper.columns([
   centerHelper.accessor((center) => center.center_name, {
     id: "name",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Centre Name" />,
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Centre name" />,
     cell: ({ row }) => {
       const center = row.original
       return (
@@ -72,14 +72,14 @@ export const accountCenterColumns = centerHelper.columns([
   }),
   centerHelper.accessor((center) => center.center_type, {
     id: "type",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Centre Type" />,
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Centre type" />,
     cell: ({ getValue }) => <TruncatedText value={getValue()} />,
     sortFn: "text",
     meta: { className: "w-[160px]" },
   }),
   centerHelper.accessor((center) => center.center_employees_range, {
     id: "employees",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Centre Headcount" />,
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Centre headcount" />,
     cell: ({ getValue }) => <TruncatedText value={getValue()} />,
     sortFn: "text",
     meta: { className: "w-[160px]" },
@@ -96,7 +96,7 @@ export const accountCenterColumns = centerHelper.columns([
     header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
     cell: ({ row, getValue }) => (
       <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-        <span className={cn("h-[7px] w-[7px] shrink-0 rounded-full", statusDot(row.original.center_status))} />
+        <span className={cn("h-2 w-2 shrink-0 rounded-full", statusDot(row.original.center_status))} />
         {getValue()}
       </span>
     ),
@@ -134,7 +134,7 @@ function ProspectActions({ prospect }: { prospect: Prospect }) {
               await navigator.clipboard.writeText(email)
               toast.success(`Copied ${email}`)
             } catch {
-              toast.error("Could not copy the email address.")
+              toast.error("Could not copy the email address")
             }
           }}
         >
@@ -159,8 +159,8 @@ export const accountProspectColumns = prospectHelper.columns([
         .map((part) => part[0])
         .join("")
       return (
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
-          <span className="text-sm font-semibold text-primary">{initials || "?"}</span>
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
+          <span className="text-sm font-semibold text-foreground">{initials || "?"}</span>
         </div>
       )
     },
@@ -179,7 +179,7 @@ export const accountProspectColumns = prospectHelper.columns([
               {prospectFullName(prospect) || "N/A"}
             </span>
             {engaged && (
-              <span className="shrink-0 rounded-[5px] bg-include/[0.12] px-1.5 text-[11px] font-semibold leading-[18px] text-include">Engaged</span>
+              <span className="shrink-0 rounded-md bg-include/[0.12] px-1.5 text-[11px] font-medium leading-5 text-include">Engaged</span>
             )}
           </div>
           <div className="truncate text-xs text-muted-foreground" title={prospect.prospect_title || undefined}>

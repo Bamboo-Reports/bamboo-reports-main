@@ -50,7 +50,7 @@ export const AccountGridCard = memo(({ account, onClick }: AccountGridCardProps)
               />
               <div className="min-w-0">
                 <h3
-                  className="min-w-0 truncate text-base font-semibold leading-snug text-foreground"
+                  className="min-w-0 truncate text-base font-medium leading-snug text-foreground"
                   title={accountName}
                 >
                   {accountName}
@@ -65,7 +65,7 @@ export const AccountGridCard = memo(({ account, onClick }: AccountGridCardProps)
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
                     {isNasscomVerified && (
                       <div
-                        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold bg-[#C03430]/15 text-[#C03430]"
+                        className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground"
                         title="NASSCOM listed"
                       >
                         <RiCheckboxCircleLine className="h-3 w-3" aria-hidden="true" />
@@ -74,7 +74,7 @@ export const AccountGridCard = memo(({ account, onClick }: AccountGridCardProps)
                     )}
                     {visibilityNote && (
                       <div
-                        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 max-w-[220px]"
+                        className="inline-flex max-w-[220px] items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300"
                         title={visibilityNote}
                       >
                         <span className="truncate">{visibilityNote}</span>
@@ -112,7 +112,7 @@ export const AccountGridCard = memo(({ account, onClick }: AccountGridCardProps)
                 onClick={onClick}
                 className="w-full justify-between"
               >
-                View Details
+                View details
                 <RiArrowRightUpLine className="h-4 w-4" />
               </Button>
             </div>
@@ -122,14 +122,14 @@ export const AccountGridCard = memo(({ account, onClick }: AccountGridCardProps)
       <ContextMenuContent className="w-48">
         <ContextMenuItem onClick={onClick}>
           <RiEyeLine className="h-4 w-4" />
-          View Details
+          View details
         </ContextMenuItem>
         {account.account_hq_website && (
           <>
             <ContextMenuSeparator />
             <ContextMenuItem onClick={() => window.open(ensureAbsoluteUrl(account.account_hq_website!), "_blank", "noopener,noreferrer")}>
               <RiGlobalLine className="h-4 w-4" />
-              Open Website
+              Open website
             </ContextMenuItem>
           </>
         )}

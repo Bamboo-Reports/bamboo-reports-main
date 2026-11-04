@@ -72,7 +72,7 @@ export function DebugLocationSearch({ mapRef }: DebugLocationSearchProps) {
   return (
     <>
       <div className="absolute top-3 right-3 z-20 w-[260px]">
-        <div className="flex items-center gap-1 rounded-lg border border-border/80 bg-popover px-2 py-1 shadow-md">
+        <div className="flex items-center gap-1 rounded-lg border border-border/80 bg-popover px-2 py-1 shadow-float">
           <input
             autoFocus
             value={query}
@@ -81,7 +81,7 @@ export function DebugLocationSearch({ mapRef }: DebugLocationSearchProps) {
               if (e.key === "Enter") handleSearch()
               if (e.key === "Escape") setOpen(false)
             }}
-            placeholder="Search a location (debug)..."
+            placeholder="Find a location (debug)"
             className="w-full bg-transparent px-1 py-1 text-sm outline-none placeholder:text-muted-foreground"
           />
           {pin && (
@@ -106,19 +106,19 @@ export function DebugLocationSearch({ mapRef }: DebugLocationSearchProps) {
             size="xs"
             onClick={handleSearch}
             loading={searching}
-            className="shrink-0 text-primary"
+            className="shrink-0"
           >
             Search
           </Button>
         </div>
         {results.length > 0 && (
-          <ul className="mt-1 max-h-64 overflow-auto rounded-lg border border-border/80 bg-popover shadow-lg">
+          <ul className="mt-1 max-h-64 overflow-auto rounded-lg border border-border/80 bg-popover shadow-float">
             {results.map((r, i) => (
               <li key={`${r.lat}-${r.lng}-${i}`}>
                 <button
                   type="button"
                   onClick={() => handleSelect(r)}
-                  className="block w-full px-3 py-2 text-left text-xs text-popover-foreground hover:bg-accent"
+                  className="block w-full px-3 py-2 text-left text-xs text-popover-foreground transition-colors hover:bg-accent"
                 >
                   {r.label}
                 </button>

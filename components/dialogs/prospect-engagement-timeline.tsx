@@ -86,17 +86,17 @@ export function ProspectEngagementTimeline({ psUniqueKey }: { psUniqueKey: strin
 
   return (
     <section aria-busy={loading}>
-      <div className="mb-2.5 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-        <h3 className="text-[14px] font-semibold">Bamboo Reports activity</h3>
+      <div className="mb-3 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <h3 className="text-sm font-medium">Bamboo Reports activity</h3>
         {touchpoints.length > 0 ? (
-          <p className="text-[12px] text-muted-foreground tabular-nums">
+          <p className="text-xs text-muted-foreground tabular-nums">
             {touchpoints.length > 1 ? `${touchpoints.length} touchpoints · ` : ""}
             {lastActiveDays !== null ? `Last active ${formatDaysAgo(lastActiveDays)}` : `Last active ${latest!.dateLabel}`}
           </p>
         ) : null}
       </div>
 
-      <div className="rounded-[10px] border bg-card p-4">
+      <div className="rounded-xl border bg-card p-4">
         {loading ? (
           <div className="flex items-center">
             <span className="flex w-[5.5rem] shrink-0 justify-end">

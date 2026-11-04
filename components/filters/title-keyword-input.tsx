@@ -20,7 +20,7 @@ interface TitleKeywordInputProps {
 export function TitleKeywordInput({
   keywords,
   onChange,
-  placeholder = "e.g., Manager, Director, VP...",
+  placeholder = "e.g. Manager, Director, VP",
   trackingKey,
 }: TitleKeywordInputProps) {
   const [inputValue, setInputValue] = useState("")
@@ -97,7 +97,7 @@ export function TitleKeywordInput({
           })
         }}
         onKeyDown={handleKeyDown}
-        className="h-[34px] text-[13px]"
+        className="h-8 text-[13px] md:text-[13px]"
       />
       {keywords.length > 0 && (
         <div className="flex flex-wrap gap-1.5">

@@ -48,12 +48,12 @@ export const ProspectGridCard = memo(({ prospect, onClick }: ProspectGridCardPro
         >
           <CardContent className="p-4 flex flex-col gap-4">
             <div className="flex items-start gap-3">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <span className="text-sm font-semibold text-primary">{initials || "?"}</span>
+              <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center shrink-0">
+                <span className="text-sm font-semibold text-foreground">{initials || "?"}</span>
               </div>
               <div className="min-w-0 flex-1">
                 <h3
-                  className="min-w-0 truncate text-base font-semibold leading-snug text-foreground"
+                  className="min-w-0 truncate text-base font-medium leading-snug text-foreground"
                   title={fullName || "Prospect"}
                 >
                   {fullName || "Prospect"}
@@ -66,20 +66,16 @@ export const ProspectGridCard = memo(({ prospect, onClick }: ProspectGridCardPro
                 </p>
               </div>
               {prospect.head_type === "GCC Head" && (
-                <Badge
-                  className="shrink-0 font-normal border-transparent bg-blue-100 text-blue-700 hover:bg-blue-100/80 dark:bg-blue-500/15 dark:text-blue-300"
-                >
+                <Badge variant="secondary" className="shrink-0 px-1.5">
                   GCC Head
                 </Badge>
               )}
               {prospect.head_type === "HR Head" && (
-                <Badge
-                  className="shrink-0 font-normal border-transparent bg-orange-100 text-orange-700 hover:bg-orange-100/80 dark:bg-orange-500/15 dark:text-orange-300"
-                >
+                <Badge variant="secondary" className="shrink-0 px-1.5">
                   HR Head
                 </Badge>
               )}
-              {isEngagedProspect(prospect) && <EngagedIcon className="mt-[3px]" />}
+              {isEngagedProspect(prospect) && <EngagedIcon className="mt-0.5" />}
             </div>
             <div className="space-y-2 text-sm">
               <div className="flex items-center justify-between gap-3 min-w-0">
@@ -117,7 +113,7 @@ export const ProspectGridCard = memo(({ prospect, onClick }: ProspectGridCardPro
               onClick={onClick}
               className="w-full justify-between"
             >
-              View Details
+              View details
               <RiArrowRightUpLine className="h-4 w-4" />
             </Button>
           </CardContent>
@@ -126,14 +122,14 @@ export const ProspectGridCard = memo(({ prospect, onClick }: ProspectGridCardPro
       <ContextMenuContent className="w-48">
         <ContextMenuItem onClick={onClick}>
           <RiEyeLine className="h-4 w-4" />
-          View Details
+          View details
         </ContextMenuItem>
         {prospect.prospect_email && (
           <>
             <ContextMenuSeparator />
             <ContextMenuItem onClick={() => copy(prospect.prospect_email!, "Email")}>
               <RiFileCopyLine className="h-4 w-4" />
-              Copy Email
+              Copy email
             </ContextMenuItem>
           </>
         )}

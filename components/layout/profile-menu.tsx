@@ -23,15 +23,15 @@ const THEME_OPTIONS: Array<{ value: ThemeMode; label: string }> = [
   { value: 'system', label: 'System' },
 ]
 
-const SEGMENT_GROUP_CLASS = "inline-grid grid-cols-3 rounded-lg bg-muted/80 p-[3px]"
-const SEGMENT_BUTTON_CLASS = "h-[26px] rounded-md px-2.5 text-[12px] font-medium transition-colors disabled:pointer-events-none disabled:opacity-60"
+const SEGMENT_GROUP_CLASS = "inline-grid grid-cols-3 rounded-lg bg-muted/80 p-0.5"
+const SEGMENT_BUTTON_CLASS = "h-6 rounded-md px-2.5 text-xs font-medium transition-colors disabled:pointer-events-none disabled:opacity-60"
 const SEGMENT_ACTIVE_CLASS = `${SEGMENT_BUTTON_CLASS} bg-background text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.08),0_0_0_1px_hsl(var(--border)/0.6)]`
 const SEGMENT_IDLE_CLASS = `${SEGMENT_BUTTON_CLASS} text-muted-foreground hover:text-foreground`
 
 function PreferenceRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-3 px-3.5 py-1.5">
-      <span className="text-[12.5px]">{label}</span>
+    <div className="flex items-center justify-between gap-3 px-4 py-1.5">
+      <span className="text-[13px]">{label}</span>
       {children}
     </div>
   )
@@ -121,7 +121,7 @@ function ProfileNumberFormatSwitcher() {
           })}
         </div>
       </PreferenceRow>
-      <p className="px-3.5 pb-2.5 pt-1 text-[11.5px] text-muted-foreground">{active.hint}</p>
+      <p className="px-4 pb-3 pt-1 text-xs text-muted-foreground">{active.hint}</p>
     </>
   )
 }
@@ -137,7 +137,7 @@ interface ProfileMenuProps {
   onOpenHistory?: () => void
 }
 
-const ITEM_CLASS = "h-[34px] cursor-pointer gap-2.5 rounded-md px-2.5 text-[13px] [&_svg]:h-4 [&_svg]:w-4 [&_svg]:text-muted-foreground"
+const ITEM_CLASS = "h-8 cursor-pointer gap-2.5 rounded-md px-3 text-[13px] [&_svg]:h-4 [&_svg]:w-4 [&_svg]:text-muted-foreground"
 
 /** Who you are, theme and number format, then My exports, History, the tour and Sign out. */
 export function ProfileMenu({ user, children, side = 'bottom', align = 'end', onStartTour, onOpenExports, onOpenHistory }: ProfileMenuProps) {
@@ -149,24 +149,18 @@ export function ProfileMenu({ user, children, side = 'bottom', align = 'end', on
     >
       <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
       <DropdownMenuContent side={side} align={align} sideOffset={8} className="w-[300px] overflow-hidden p-0">
-        <div className="flex items-center gap-3 p-3.5">
+        <div className="flex items-center gap-3 p-4">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-[13px] font-semibold text-foreground">
             {user.initials}
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 items-center gap-1.5">
-              <span className="truncate text-[13px] font-semibold text-foreground">{user.displayName}</span>
-              <span
-                className={
-                  user.role === 'admin'
-                    ? 'shrink-0 rounded-[5px] bg-primary/10 px-1.5 text-[11px] font-semibold leading-[18px] text-primary'
-                    : 'shrink-0 rounded-[5px] bg-muted px-1.5 text-[11px] font-semibold leading-[18px] text-muted-foreground'
-                }
-              >
+              <span className="truncate text-sm font-medium text-foreground">{user.displayName}</span>
+              <span className="shrink-0 rounded-md bg-muted px-1.5 text-xs leading-5 text-muted-foreground">
                 {user.roleLabel}
               </span>
             </div>
-            <div className="truncate text-[12px] text-muted-foreground">{user.displayEmail}</div>
+            <div className="truncate text-xs text-muted-foreground">{user.displayEmail}</div>
           </div>
         </div>
 

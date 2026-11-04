@@ -228,7 +228,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
 
     const result = await shareFilter(filterToShare.id, shareEmail)
     if (result.success) {
-      setShareSuccess(`Shared with ${shareEmail.trim()}!`)
+      setShareSuccess(`Shared with ${shareEmail.trim()}`)
       setShareEmail("")
       // Refresh shares list
       const shares = await getFilterShares(filterToShare.id)
@@ -376,9 +376,12 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
             {(myFilters.length > 0 || sharedWithMeFilters.length > 0) && (
               <DropdownMenuItem className="gap-2.5" onSelect={() => setManageDialogOpen(true)}>
                 <RiSettings4Line className="h-4 w-4 shrink-0 text-muted-foreground" />
-                {myFilters.length > 5 || sharedWithMeFilters.length > 5
-                  ? `Manage all filters (${myFilters.length + sharedWithMeFilters.length})`
-                  : "Manage all filters"}
+                Manage all filters
+                {(myFilters.length > 5 || sharedWithMeFilters.length > 5) && (
+                  <span className="ml-auto text-xs tabular-nums text-muted-foreground">
+                    {myFilters.length + sharedWithMeFilters.length}
+                  </span>
+                )}
               </DropdownMenuItem>
             )}
           </DropdownMenuContent>
@@ -387,7 +390,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
         <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Save Filter Configuration</DialogTitle>
+              <DialogTitle>Save filters</DialogTitle>
               <DialogDescription>
                 {totalActiveFilters === 1 ? "Save this filter so you can apply it again later." : `Save these ${totalActiveFilters} filters so you can apply them again later.`}
               </DialogDescription>
@@ -397,7 +400,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
                 <Label htmlFor="filter-name">Name</Label>
                 <Input
                   id="filter-name"
-                  placeholder="e.g., Q4 Prospect List, Tech Hiring..."
+                  placeholder="e.g. Q4 prospects, tech hiring"
                   value={filterName}
                   onChange={(e) => setFilterName(e.target.value)}
                   className="col-span-3"
@@ -409,7 +412,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
                 Cancel
               </Button>
               <Button onClick={handleSaveFilter} disabled={!filterName.trim() || loading}>
-                {loading ? "Saving..." : "Save Filter"}
+                {loading ? "Saving…" : "Save filters"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -459,7 +462,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Filter Set</AlertDialogTitle>
+            <AlertDialogTitle>Delete saved filter</AlertDialogTitle>
             <AlertDialogDescription>
               {`Are you sure you want to delete "${filterToDelete?.name ?? ""}"? This action cannot be undone.`}
             </AlertDialogDescription>
@@ -471,7 +474,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
               className={buttonVariants({ variant: "destructive" })}
               disabled={loading}
             >
-              {loading ? "Deleting..." : "Delete"}
+              {loading ? "Deleting…" : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -494,8 +497,8 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <RiShareLine className="h-5 w-5" />
-              Share Filter
+              <RiShareLine className="h-5 w-5 text-muted-foreground" />
+              Share filter
             </DialogTitle>
             <DialogDescription>
               {filterToShare
@@ -530,7 +533,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
                   size="lg"
                   className="shrink-0"
                 >
-                  {loading ? "Sharing..." : "Share"}
+                  {loading ? "Sharing…" : "Share"}
                 </Button>
               </div>
               {shareError && (

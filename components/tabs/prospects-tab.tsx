@@ -267,7 +267,7 @@ export function ProspectsTab({
             <PieChartCard
               title="Department"
               data={prospectChartData.departmentData}
-              countLabel="Total Prospects"
+              countLabel="Total prospects"
               showBigPercentage
               labelDisplay={chartLabelDisplay}
               onLabelDisplayChange={onChartLabelDisplayChange}
@@ -276,7 +276,7 @@ export function ProspectsTab({
             <PieChartCard
               title="Level"
               data={prospectChartData.levelData}
-              countLabel="Total Prospects"
+              countLabel="Total prospects"
               showBigPercentage
               labelDisplay={chartLabelDisplay}
               onLabelDisplayChange={onChartLabelDisplayChange}

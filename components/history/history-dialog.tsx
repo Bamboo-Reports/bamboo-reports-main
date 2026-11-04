@@ -104,9 +104,9 @@ export function HistoryDialog({
         className="flex h-[min(620px,88vh)] w-[calc(100%-2rem)] max-w-[680px] flex-col gap-0 overflow-hidden p-0"
       >
         <DialogHeader className="shrink-0 space-y-0 border-b px-5 py-3 pr-12">
-          <div className="flex min-h-[30px] items-center gap-2.5">
+          <div className="flex min-h-8 items-center gap-2.5">
             <DialogTitle className="text-base">History</DialogTitle>
-            {!empty && <span className="text-[12.5px] text-muted-foreground">{plural(recentItems.length, "record")}</span>}
+            {!empty && <span className="text-[13px] tabular-nums text-muted-foreground">{plural(recentItems.length, "record")}</span>}
             <span className="flex-1" />
             {!empty && (
               <Button variant="ghost-destructive" size="sm" onClick={clearAll}>
@@ -122,8 +122,8 @@ export function HistoryDialog({
           <div className="grid flex-1 place-items-center p-8 text-center">
             <div className="max-w-xs">
               <RiHistoryLine className="mx-auto h-7 w-7 text-muted-foreground" />
-              <p className="mt-2 text-sm font-semibold">No history yet</p>
-              <p className="mt-1 text-[12.5px] leading-relaxed text-muted-foreground">
+              <p className="mt-2 text-sm font-medium">No history yet</p>
+              <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
                 Accounts, centres and prospects you open from the dashboard will appear here, so you can get back to them quickly.
               </p>
             </div>
@@ -131,7 +131,7 @@ export function HistoryDialog({
         ) : (
           <>
             <div className="shrink-0 space-y-2 px-5 pb-1.5 pt-3">
-              <label className="flex h-[34px] items-center gap-2 rounded-lg border border-transparent bg-muted/80 px-2.5 text-muted-foreground transition-shadow focus-within:border-primary/60 focus-within:ring-[3px] focus-within:ring-primary/15">
+              <label className="flex h-9 items-center gap-2 rounded-lg border border-transparent bg-muted/80 px-2.5 text-muted-foreground transition-shadow focus-within:border-primary/60 focus-within:ring-[3px] focus-within:ring-primary/15">
                 <RiSearchLine className="h-4 w-4 shrink-0" />
                 <input
                   ref={searchRef}
@@ -142,7 +142,7 @@ export function HistoryDialog({
                   className="min-w-0 flex-1 bg-transparent text-[13px] text-foreground placeholder:text-muted-foreground focus:outline-none"
                 />
               </label>
-              <div className="grid grid-cols-4 rounded-lg bg-muted/80 p-[3px]" role="tablist" aria-label="Record type">
+              <div className="grid grid-cols-4 rounded-lg bg-muted/80 p-0.5" role="tablist" aria-label="Record type">
                 {TYPE_FILTERS.map((filter) => (
                   <button
                     key={filter.id}
@@ -151,14 +151,14 @@ export function HistoryDialog({
                     aria-selected={type === filter.id}
                     onClick={() => setType(filter.id)}
                     className={cn(
-                      "h-7 rounded-md px-1 text-[12.5px] font-medium transition-colors",
+                      "h-7 rounded-md px-1 text-xs font-medium transition-colors",
                       type === filter.id
                         ? "bg-background text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.08),0_0_0_1px_hsl(var(--border)/0.6)]"
                         : "text-muted-foreground hover:text-foreground"
                     )}
                   >
                     {filter.label}
-                    <span className="ml-1 text-[11.5px] tabular-nums text-muted-foreground">{counts[filter.id]}</span>
+                    <span className="ml-1 text-xs font-normal tabular-nums text-muted-foreground">{counts[filter.id]}</span>
                   </button>
                 ))}
               </div>
@@ -166,7 +166,7 @@ export function HistoryDialog({
 
             <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 [--library-group-bg:hsl(var(--background))]">
               {visible.length === 0 ? (
-                <LibraryEmpty>{query.trim() ? <>Nothing matches &ldquo;{query.trim()}&rdquo;.</> : "Nothing of this type yet."}</LibraryEmpty>
+                <LibraryEmpty>{query.trim() ? <>Nothing matches &ldquo;{query.trim()}&rdquo;</> : "Nothing of this type yet"}</LibraryEmpty>
               ) : (
                 groupByDay(visible, (item) => item.viewedAt).map(({ group, rows }) => (
                   <div key={group}>
@@ -185,14 +185,14 @@ export function HistoryDialog({
                             className="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                           >
                             <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border bg-card text-muted-foreground">
-                              <Icon className="h-[15px] w-[15px]" />
+                              <Icon className="h-4 w-4" />
                             </span>
                             <span className="min-w-0 flex-1">
                               <span className="block truncate text-[13px] font-medium">{item.title}</span>
-                              {item.subtitle && <span className="block truncate text-[12px] text-muted-foreground">{item.subtitle}</span>}
+                              {item.subtitle && <span className="block truncate text-xs text-muted-foreground">{item.subtitle}</span>}
                             </span>
-                            <span className="hidden w-16 shrink-0 text-[12px] text-muted-foreground sm:block">{meta.label}</span>
-                            <span className="w-16 shrink-0 text-right text-[12px] tabular-nums text-muted-foreground group-focus-within:invisible group-hover:invisible">
+                            <span className="hidden w-16 shrink-0 text-xs text-muted-foreground sm:block">{meta.label}</span>
+                            <span className="w-16 shrink-0 text-right text-xs tabular-nums text-muted-foreground group-focus-within:invisible group-hover:invisible">
                               {describeWhen(item.viewedAt).short}
                             </span>
                           </button>

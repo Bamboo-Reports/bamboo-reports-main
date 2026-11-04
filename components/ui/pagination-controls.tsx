@@ -31,8 +31,8 @@ export function PaginationControls({
   return (
     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-6 py-4 border-t shrink-0 bg-muted/20">
       <div className="flex flex-wrap items-center gap-3">
-        <p className="text-sm text-muted-foreground">
-          {pageInfo.startItem}-{pageInfo.endItem} of {totalItems}
+        <p className="text-sm text-muted-foreground tabular-nums">
+          {pageInfo.startItem.toLocaleString()}-{pageInfo.endItem.toLocaleString()} of {totalItems.toLocaleString()}
         </p>
         {onExport && (
           <Button
@@ -55,7 +55,7 @@ export function PaginationControls({
           >
             Previous
           </Button>
-          <span className="text-sm text-muted-foreground min-w-[60px] text-center">
+          <span className="min-w-16 text-center text-sm text-muted-foreground tabular-nums">
             {currentPage}/{totalPages}
           </span>
           <Button
