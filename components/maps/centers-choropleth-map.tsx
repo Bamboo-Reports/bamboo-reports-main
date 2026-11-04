@@ -4,7 +4,9 @@ import React, { useMemo, useState, useEffect, useLayoutEffect } from "react"
 import { Map as MapGL, Source, Layer, NavigationControl, FullscreenControl } from "@vis.gl/react-maplibre"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
-import { MAPLIBRE_WORKER_URL, prepareBasemap, useBasemapStyleUrl } from "@/lib/maps/basemap"
+import { MAPLIBRE_WORKER_URL, prepareBasemap, transformMapRequest, useBasemapStyleUrl } from "@/lib/maps/basemap"
+import { useMapRecovery } from "@/lib/maps/use-map-recovery"
+import { MapErrorState } from "@/components/maps/map-error-state"
 import { DebugLocationSearch } from "@/components/maps/debug-location-search"
 import { devError } from "@/lib/utils/dev-log"
 import type { Center } from "@/lib/types"
@@ -208,7 +210,10 @@ export function CentersChoroplethMap({
   scaleStates,
   heightClass = "h-[750px]",
 }: CentersChoroplethMapProps) {
-  const [error, setError] = useState<string | null>(null)
+  const { mapKey, ready, error, errorKind, handleFatalError, handleLoad, reload } = useMapRecovery({
+    map_kind: "state",
+    map_name: "centers_choropleth_map",
+  })
   const [isClient, setIsClient] = useState(false)
   const [hoverInfo, setHoverInfo] = useState<{
     x: number
@@ -389,18 +394,11 @@ export function CentersChoroplethMap({
   }
 
   if (error) {
-    return (
-      <div className={`flex items-center justify-center ${heightClass} bg-muted rounded-lg`}>
-        <div className="text-center">
-          <p className="text-base font-medium text-destructive mb-2">Could not load the map</p>
-          <p className="text-sm text-muted-foreground">{error}</p>
-          <p className="text-xs text-muted-foreground mt-2">Check browser console for details</p>
-        </div>
-      </div>
-    )
+    return <MapErrorState heightClass={heightClass} kind={errorKind} onReload={reload} />
   }
 
-  if (!isClient) {
+  // Wait for the worker file to be cached before MapLibre starts its workers.
+  if (!isClient || !ready) {
     return (
       <div className={`flex items-center justify-center ${heightClass} bg-muted rounded-lg`}>
         <div className="text-center">
@@ -426,6 +424,7 @@ export function CentersChoroplethMap({
       className={`relative w-full ${heightClass} rounded-lg overflow-hidden outline-none bg-muted`}
     >
       <MapGL
+        key={mapKey}
         ref={mapRef}
         style={{ width: "100%", height: "100%" }}
         initialViewState={{
@@ -435,10 +434,12 @@ export function CentersChoroplethMap({
         }}
         mapStyle={mapStyle}
         workerUrl={MAPLIBRE_WORKER_URL}
+        transformRequest={transformMapRequest}
         // Switching theme swaps the basemap style, which resets borders and colours.
         onStyleData={(e) => prepareBasemap(e.target)}
         projection="mercator"
         onLoad={(e) => {
+          handleLoad()
           // Hide the basemap's de-facto international borders; India boundaries
           // come from the SOI overlay below.
           prepareBasemap(e.target)
@@ -516,12 +517,8 @@ export function CentersChoroplethMap({
             return
           }
           devError("[CentersChoroplethMap] Map error:", message)
-          setError(`Map error: ${message}`)
-          captureEvent(ANALYTICS_EVENTS.MAP_ERROR_SHOWN, {
-            map_kind: "state",
-            map_name: "centers_choropleth_map",
-            error_message: message,
-          })
+          // Retries once silently, then shows the error state (useMapRecovery).
+          handleFatalError(message)
         }}
       >
         <NavigationControl position="top-left" showCompass={true} showZoom={true} />

@@ -45,6 +45,9 @@ export const ANALYTICS_EVENTS = {
   MAP_ZOOM_CHANGED: "map_zoom_changed",
   MAP_TOOLTIP_VIEWED: "map_tooltip_viewed",
   MAP_ERROR_SHOWN: "map_error_shown",
+  // A map failed once and was remounted silently; map_error_shown only fires if the retry fails too.
+  MAP_ERROR_AUTO_RETRIED: "map_error_auto_retried",
+  MAP_RELOAD_CLICKED: "map_reload_clicked",
   RECORD_CLOSED: "record_closed",
   CHART_SLICE_CLICKED: "chart_slice_clicked",
   EXPORT_DIALOG_OPENED: "export_dialog_opened",

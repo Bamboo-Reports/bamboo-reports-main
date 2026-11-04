@@ -23,6 +23,71 @@ export function useBasemapStyleUrl(): string {
 // literal new URL() lets Turbopack emit the worker file and rewrite the path.
 export const MAPLIBRE_WORKER_URL = new URL("maplibre-gl/dist/maplibre-gl-worker.mjs", import.meta.url).toString()
 
+// MapLibre starts its workers once per page and keeps them for every later
+// map, so a worker that fails to download stays broken until a full reload.
+// Fetch the worker file ourselves first, retrying through brief network drops:
+// the response is immutable, so the browser caches it and MapLibre then starts
+// its workers from the cache. Resolves either way, so a map is never blocked
+// for longer than the retries take.
+const WORKER_PRELOAD_DELAYS_MS = [0, 600, 1800]
+let workerPreload: Promise<void> | null = null
+
+export function preloadMapWorker(): Promise<void> {
+  if (typeof window === "undefined") return Promise.resolve()
+  workerPreload ??= (async () => {
+    for (const delay of WORKER_PRELOAD_DELAYS_MS) {
+      if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay))
+      try {
+        const res = await fetch(MAPLIBRE_WORKER_URL, { cache: "force-cache" })
+        if (res.ok) {
+          await res.arrayBuffer()
+          return
+        }
+      } catch {
+        // Network error: try again after the next delay.
+      }
+    }
+  })()
+  return workerPreload
+}
+
+/** True when the map failed because its worker could not start. */
+export const isWorkerLoadError = (message: string) => /worker failed to load/i.test(message)
+
+// Map label fonts ("glyphs") we serve ourselves from public/map-glyphs, so
+// labels do not depend on Carto's font server, which some client networks
+// block or drop. Only Latin ranges are hosted: basic Latin, accented letters,
+// combining marks and general punctuation. Any other request still goes to
+// Carto, and if that fails MapLibre draws the character with a local font.
+// To refresh, re-download the same stacks and ranges from the glyphs URL in
+// the Carto style.json.
+const HOSTED_GLYPH_STACKS = new Set([
+  "Montserrat Medium,Open Sans Regular,Noto Sans Regular,Noto Sans CJK JP Regular",
+  "Montserrat Regular Italic,Open Sans Italic,Noto Sans Regular,Noto Sans CJK JP Regular",
+  "Montserrat SemiBold Italic,Open Sans Italic,Noto Sans Regular,Noto Sans CJK JP Regular",
+  "Montserrat SemiBold,Open Sans Bold,Noto Sans Regular,Noto Sans CJK JP Regular",
+  // Our own city bubble labels (components/maps/centers-map.tsx).
+  "Open Sans Bold,Open Sans Regular",
+])
+const HOSTED_GLYPH_RANGES = new Set(["0-255", "256-511", "512-767", "768-1023", "8192-8447"])
+const GLYPH_URL_PATTERN = /\/fonts\/([^/]+)\/(\d+-\d+)\.pbf(?:[?#].*)?$/
+
+/** MapLibre transformRequest: points hosted glyph requests at our own server. */
+export function transformMapRequest(url: string, resourceType?: string): { url: string } {
+  if (resourceType !== "Glyphs" || typeof window === "undefined") return { url }
+  const match = url.match(GLYPH_URL_PATTERN)
+  if (!match) return { url }
+  let stack: string
+  try {
+    stack = decodeURIComponent(match[1])
+  } catch {
+    return { url }
+  }
+  if (!HOSTED_GLYPH_STACKS.has(stack) || !HOSTED_GLYPH_RANGES.has(match[2])) return { url }
+  const path = stack.split(",").map(encodeURIComponent).join(",")
+  return { url: `${window.location.origin}/map-glyphs/${path}/${match[2]}.pbf` }
+}
+
 // Carto basemaps draw OSM de-facto international borders (dotted Kashmir, Aksai
 // Chin as China, etc.) from the "boundary" source-layer. Hide those so only our
 // Survey of India GeoJSON overlay draws boundaries. Safe no-op on other styles.

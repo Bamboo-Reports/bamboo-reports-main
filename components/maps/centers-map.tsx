@@ -4,7 +4,9 @@ import React, { useMemo, useState, useEffect, useCallback, useLayoutEffect } fro
 import { Map as MapGL, Source, Layer, NavigationControl, FullscreenControl } from "@vis.gl/react-maplibre"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
-import { MAPLIBRE_WORKER_URL, prepareBasemap, useBasemapStyleUrl } from "@/lib/maps/basemap"
+import { MAPLIBRE_WORKER_URL, prepareBasemap, transformMapRequest, useBasemapStyleUrl } from "@/lib/maps/basemap"
+import { useMapRecovery } from "@/lib/maps/use-map-recovery"
+import { MapErrorState } from "@/components/maps/map-error-state"
 import { DebugLocationSearch } from "@/components/maps/debug-location-search"
 import { createLogger } from "@/lib/logger"
 import type { Center } from "@/lib/types"
@@ -63,7 +65,13 @@ const logger = createLogger("components/CentersMap")
 export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAccountsCount = true }: CentersMapProps) {
   const [hoveredCity, setHoveredCity] = useState<string | null>(null)
   const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  // Data problems (bad city aggregates) and map failures are handled separately:
+  // only the map gets the silent retry and Reload map button.
+  const [dataError, setDataError] = useState<string | null>(null)
+  const { mapKey, ready, error, errorKind, handleFatalError, handleLoad, reload } = useMapRecovery({
+    map_kind: "city",
+    map_name: "centers_map",
+  })
   const [isClient, setIsClient] = useState(false)
   const [isMapReady, setIsMapReady] = useState(false)
   const [visibleGeojsonData, setVisibleGeojsonData] = useState<CityFeatureCollection | null>(null)
@@ -169,7 +177,7 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
       return result
     } catch (err) {
       logger.error("city_data_calculation_failed", { error: err })
-      setError(err instanceof Error ? err.message : "Error calculating city data")
+      setDataError(err instanceof Error ? err.message : "Error calculating city data")
       return []
     }
   }, [cities, centers])
@@ -385,20 +393,24 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
   }
 
   // Show error if any
-  if (error) {
+  if (dataError) {
     return (
       <div className={`flex items-center justify-center ${heightClass} bg-muted rounded-lg`}>
         <div className="text-center">
           <p className="text-base font-medium text-destructive mb-2">Could not load the map</p>
-          <p className="text-sm text-muted-foreground">{error}</p>
-          <p className="text-xs text-muted-foreground mt-2">Check browser console for details</p>
+          <p className="text-sm text-muted-foreground">{dataError}</p>
         </div>
       </div>
     )
   }
 
+  if (error) {
+    return <MapErrorState heightClass={heightClass} kind={errorKind} onReload={reload} />
+  }
+
   // Wait for client-side rendering
-  if (!isClient) {
+  // Wait for the worker file to be cached before MapLibre starts its workers.
+  if (!isClient || !ready) {
     return (
       <div className={`flex items-center justify-center ${heightClass} bg-muted rounded-lg`}>
         <div className="text-center">
@@ -460,15 +472,18 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
         className={`relative w-full ${heightClass} rounded-lg overflow-hidden outline-none bg-muted`}
       >
         <MapGL
+        key={mapKey}
         ref={mapRef}
         style={{ width: "100%", height: "100%" }}
         initialViewState={initialViewState}
         mapStyle={mapStyle}
         workerUrl={MAPLIBRE_WORKER_URL}
+        transformRequest={transformMapRequest}
         // Switching theme swaps the basemap style, which resets borders and colours.
         onStyleData={(e) => prepareBasemap(e.target)}
         projection="mercator"
         onLoad={() => {
+          handleLoad()
           const map = mapRef.current?.getMap?.() ?? mapRef.current
           // Hide the basemap's de-facto international borders; India boundaries
           // come from the SOI overlay below.
@@ -510,12 +525,8 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
             return
           }
           logger.error("map_runtime_error", { message })
-          setError(`Map error: ${message}`)
-          captureEvent(ANALYTICS_EVENTS.MAP_ERROR_SHOWN, {
-            map_kind: "city",
-            map_name: "centers_map",
-            error_message: message,
-          })
+          // Retries once silently, then shows the error state (useMapRecovery).
+          handleFatalError(message)
         }}
       >
         {/* Navigation Controls - Zoom and Rotation */}
