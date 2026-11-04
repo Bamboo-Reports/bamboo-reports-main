@@ -476,3 +476,5 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
     reload,
   }
 }
+
+export type ServerDashboardData = ReturnType<typeof useServerDashboardData>
