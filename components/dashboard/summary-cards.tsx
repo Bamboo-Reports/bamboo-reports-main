@@ -9,19 +9,19 @@ import { useNumberFormatPreference } from '@/hooks/use-number-format-preference'
 import { HEADCOUNT_EXCLUDED_CENTER_TYPES } from '@/lib/dashboard/headcount'
 import { cn } from '@/lib/utils'
 
-// Truncate to one decimal instead of rounding, so 2,459 reads as 2.4K (not 2.5K)
-// and the compact value never overstates the real count.
-function truncateToOneDecimal(val: number): string {
-  const truncated = Math.floor(val * 10) / 10
-  return truncated % 1 === 0 ? truncated.toFixed(0) : truncated.toFixed(1)
+// Rounded to one decimal: 2,459 reads as 2.5K and 3,974,487 as 4M.
+function oneDecimal(val: number): string {
+  const rounded = Math.round(val * 10) / 10
+  return rounded % 1 === 0 ? rounded.toFixed(0) : rounded.toFixed(1)
 }
 
-function formatCompactNumber(num: number): string {
-  if (num >= 1_000_000) {
-    return `${truncateToOneDecimal(num / 1_000_000)}M`
+export function formatCompactNumber(num: number): string {
+  // From 999,950 the thousands would round up to "1000K", so switch to millions.
+  if (num >= 999_950) {
+    return `${oneDecimal(num / 1_000_000)}M`
   }
   if (num >= 1_000) {
-    return `${truncateToOneDecimal(num / 1_000)}K`
+    return `${oneDecimal(num / 1_000)}K`
   }
   return num.toLocaleString()
 }

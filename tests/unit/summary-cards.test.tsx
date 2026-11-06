@@ -224,3 +224,16 @@ describe("summary-cards", () => {
     )
   })
 })
+
+describe("formatCompactNumber", () => {
+  it("rounds to one decimal and moves up a unit when it rounds to 1000", async () => {
+    const { formatCompactNumber } = await import("@/components/dashboard/summary-cards")
+    expect(formatCompactNumber(2498)).toBe("2.5K")
+    expect(formatCompactNumber(2440)).toBe("2.4K")
+    expect(formatCompactNumber(3974487)).toBe("4M")
+    expect(formatCompactNumber(1550000)).toBe("1.6M")
+    expect(formatCompactNumber(999949)).toBe("999.9K")
+    expect(formatCompactNumber(999950)).toBe("1M")
+    expect(formatCompactNumber(950)).toBe("950")
+  })
+})
