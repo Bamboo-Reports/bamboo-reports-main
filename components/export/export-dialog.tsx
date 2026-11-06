@@ -201,6 +201,8 @@ export function ExportDialog({
     () => (allowedDatasets ? DATASET_META.filter((meta) => allowedDatasets.includes(meta.key)) : DATASET_META),
     [allowedDatasets]
   )
+  // Every dataset is empty: the filters match nothing, so no choice of sheets helps.
+  const nothingMatches = visibleDatasetMeta.every((meta) => countOf(meta.key) === 0)
 
   useEffect(() => {
     if (!open) {
@@ -288,7 +290,7 @@ export function ExportDialog({
   }
 
   const handleExport = async () => {
-    if (isExporting || totalSelected === 0) return
+    if (isExporting || totalSelected === 0 || selectedRowCount === 0) return
 
     setIsExporting(true)
     setError(null)
@@ -483,14 +485,16 @@ export function ExportDialog({
           <Button variant="outline" onClick={() => handleDialogOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleExport} disabled={totalSelected === 0}>
+          <Button onClick={handleExport} disabled={totalSelected === 0 || selectedRowCount === 0}>
             Try again
           </Button>
         </>
       ) : (
         <>
           <p className="min-w-0 flex-1 text-[13px] tabular-nums text-muted-foreground">
-            {totalSelected === 0 ? (
+            {nothingMatches ? (
+              "Nothing matches the filters, so there is nothing to export"
+            ) : totalSelected === 0 ? (
               "Pick at least one dataset"
             ) : (
               <>
@@ -502,7 +506,7 @@ export function ExportDialog({
           <Button variant="outline" onClick={() => handleDialogOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleExport} disabled={totalSelected === 0}>
+          <Button onClick={handleExport} disabled={totalSelected === 0 || selectedRowCount === 0}>
             <RiDownloadLine />
             Export
           </Button>
@@ -543,7 +547,7 @@ export function ExportDialog({
           <DialogDescription className="text-[13px]">
             {isFiltered
               ? "Exports the filtered data across all pages, not just the rows on screen"
-              : "Exports everything shown on the dashboard, with no filters applied"}
+              : "Exports everything shown on the dashboard, across all pages"}
           </DialogDescription>
           {isFiltered && filterSummary.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5 pt-2">
