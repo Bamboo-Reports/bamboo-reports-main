@@ -16,10 +16,15 @@ interface TruncatedTextProps extends React.HTMLAttributes<HTMLSpanElement> {
  * tooltip showing it in full. The tooltip only opens when the text is actually
  * cut off. The full text is in the DOM either way, so screen readers already
  * read it; the tooltip adds no description.
+ *
+ * Tables render hundreds of these, so the tooltip is only mounted once the
+ * pointer or keyboard focus reaches text that is cut off; until then this is a
+ * plain span.
  */
 export const TruncatedText = React.forwardRef<HTMLSpanElement, TruncatedTextProps>(
-  ({ text, side = "top", align = "start", className, ...props }, forwardedRef) => {
+  ({ text, side = "top", align = "start", className, onPointerEnter, onFocus, ...props }, forwardedRef) => {
     const ref = React.useRef<HTMLSpanElement | null>(null)
+    const [armed, setArmed] = React.useState(false)
     const [open, setOpen] = React.useState(false)
 
     const setRefs = (node: HTMLSpanElement | null) => {
@@ -28,16 +33,50 @@ export const TruncatedText = React.forwardRef<HTMLSpanElement, TruncatedTextProp
       else if (forwardedRef) forwardedRef.current = node
     }
 
-    const onOpenChange = (next: boolean) => {
+    const isCutOff = () => {
       const node = ref.current
-      if (next && (!node || node.scrollWidth <= node.clientWidth)) return
+      return Boolean(node && node.scrollWidth > node.clientWidth)
+    }
+
+    const onOpenChange = (next: boolean) => {
+      if (next && !isCutOff()) return
       setOpen(next)
+    }
+
+    if (!armed) {
+      return (
+        <span
+          ref={setRefs}
+          className={cn("block truncate", className)}
+          onPointerEnter={(event) => {
+            onPointerEnter?.(event)
+            // The tooltip opens on the next pointer move, after its usual delay.
+            if (isCutOff()) setArmed(true)
+          }}
+          onFocus={(event) => {
+            onFocus?.(event)
+            if (isCutOff()) {
+              setArmed(true)
+              setOpen(true)
+            }
+          }}
+          {...props}
+        >
+          {text}
+        </span>
+      )
     }
 
     return (
       <Tooltip open={open} onOpenChange={onOpenChange}>
         <TooltipTrigger asChild>
-          <span ref={setRefs} className={cn("block truncate", className)} {...props}>
+          <span
+            ref={setRefs}
+            className={cn("block truncate", className)}
+            onPointerEnter={onPointerEnter}
+            onFocus={onFocus}
+            {...props}
+          >
             {text}
           </span>
         </TooltipTrigger>
