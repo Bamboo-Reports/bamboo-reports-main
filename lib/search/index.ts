@@ -1,6 +1,11 @@
 import type { Account, Alias, Center, Prospect } from "@/lib/types"
 import { aliasSearchText, buildAliasMap, findAliasMatch, type AliasMatch } from "@/lib/search/alias-utils"
 import { searchKey } from "@/lib/search/normalize"
+import { knownText } from "@/lib/utils/helpers"
+
+// Blank and "TBA" parts are left out of result subtitles.
+const joinKnown = (parts: Array<string | null | undefined>, sep: string) =>
+  parts.map(knownText).filter((p): p is string => p !== null).join(sep)
 
 export type SearchResultType = "account" | "center" | "prospect"
 
@@ -51,7 +56,7 @@ export function buildSearchIndex(
         type: "account" as const,
         id: name,
         title: name,
-        subtitle: [industry, country].filter(Boolean).join(" · "),
+        subtitle: joinKnown([industry, country], " · "),
         meta: "",
         data: a,
       },
@@ -70,7 +75,7 @@ export function buildSearchIndex(
         type: "center" as const,
         id: c.cn_unique_key,
         title: name,
-        subtitle: [city, state, c.center_country].filter(Boolean).join(", "),
+        subtitle: joinKnown([city, state, c.center_country], ", "),
         meta: "",
         data: c,
       },
@@ -92,7 +97,7 @@ export function buildSearchIndex(
         type: "prospect" as const,
         id: uniqueKey || `${account}::${fullName}`,
         title: fullName || "Unknown",
-        subtitle: [title, account].filter(Boolean).join(" · "),
+        subtitle: joinKnown([title, account], " · "),
         meta: "",
         data: p,
       },

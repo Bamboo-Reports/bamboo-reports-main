@@ -2,6 +2,7 @@ import { authenticateRequest } from "@/lib/auth/request"
 import { enforceRateLimit } from "@/lib/rate-limit/server"
 import { createLogger } from "@/lib/logger"
 import { queryWarehouse } from "@/lib/db/warehouse"
+import { knownText } from "@/lib/utils/helpers"
 import { buildAccountSearch, buildCenterSearch, buildProspectSearch, MAX_PER_GROUP, MAX_SINGLE_GROUP, MIN_QUERY_LENGTH } from "@/lib/search/search-sql"
 import { ACCOUNT_PROJECTION, CENTER_COLUMNS, PROSPECT_COLUMNS } from "@/lib/dashboard/entity-columns"
 import { dashboardCacheTtlMs, getOrCompute } from "@/lib/cache/memory"
@@ -24,8 +25,9 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } })
 }
 
+// Blank and "TBA" parts are left out, so a centre with no city yet reads "India", not "TBA, TBA, India".
 const joinParts = (parts: Array<string | null | undefined>, sep: string) =>
-  parts.filter((p): p is string => Boolean(p)).join(sep)
+  parts.map(knownText).filter((p): p is string => p !== null).join(sep)
 
 const total = (rows: Record<string, unknown>[]) => Number(rows[0]?.total ?? 0)
 

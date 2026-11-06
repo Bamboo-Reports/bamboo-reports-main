@@ -39,4 +39,17 @@ describe("search index", () => {
     expect(result.accounts.totalMatches).toBe(12)
     expect(result.total).toBe(12)
   })
+
+  it("leaves TBA and blank location parts out of centre subtitles", () => {
+    const index = buildSearchIndex(
+      [],
+      [
+        makeCenter({ cn_unique_key: "c-tba", center_name: "Acme Upcoming", center_city: "TBA", center_state: "tba", center_country: "India" }),
+        makeCenter({ cn_unique_key: "c-state", center_name: "Acme Pune", center_city: "TBA", center_state: "Maharashtra", center_country: "India" }),
+      ],
+      []
+    )
+    const subtitles = searchIndex(index, "acme").centers.items.map((item) => item.subtitle)
+    expect(subtitles.sort()).toEqual(["India", "Maharashtra, India"])
+  })
 })

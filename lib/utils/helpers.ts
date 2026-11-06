@@ -47,17 +47,17 @@ export const copyToClipboard = (text: string) => {
   navigator.clipboard.writeText(text)
 }
 
-/**
- * Builds a human-readable location string for a prospect.
- * Values that are null, empty, or exactly "TBA" (case-insensitive) are ignored.
- * If nothing meaningful remains after filtering, falls back to `country`, then "India".
- */
 /** A trimmed value, or null when it is blank or the "TBA" placeholder. */
 export const knownText = (value: string | null | undefined): string | null => {
   const trimmed = value?.trim()
   return trimmed && trimmed.toUpperCase() !== "TBA" ? trimmed : null
 }
 
+/**
+ * Builds a human-readable location string for a prospect.
+ * Values that are null, empty, or exactly "TBA" (case-insensitive) are ignored.
+ * If nothing meaningful remains after filtering, falls back to `country`, then "India".
+ */
 export const formatProspectLocation = (
   city: string | null | undefined,
   state: string | null | undefined,
