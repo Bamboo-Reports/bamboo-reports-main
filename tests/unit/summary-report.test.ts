@@ -229,3 +229,13 @@ describe("buildReportChart in range order", () => {
     expect(chart.othersMembers).toEqual([])
   })
 })
+
+describe("accountHeadcountChartTitle", () => {
+  it("only says GCC when the view is limited to GCCs", async () => {
+    const { accountHeadcountChartTitle } = await import("@/lib/utils/chart-helpers")
+    expect(accountHeadcountChartTitle("gcc")).toBe("GCC aggregate headcount (India)")
+    expect(accountHeadcountChartTitle(undefined)).toBe("GCC aggregate headcount (India)")
+    expect(accountHeadcountChartTitle("nonGcc")).toBe("Aggregate headcount (India)")
+    expect(accountHeadcountChartTitle("all")).toBe("Aggregate headcount (India)")
+  })
+})

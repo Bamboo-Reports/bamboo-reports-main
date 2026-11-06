@@ -1,4 +1,4 @@
-import type { Center, Function, ChartData } from "../types"
+import type { AccountVisibilityMode, Center, Function, ChartData } from "../types"
 
 // Chart colours (donuts, treemap, maps, PDF): the orange-to-yellow scheme in six steps far enough
 // apart that neighbouring slices read as different (OKLCH lightness gap >= 0.06).
@@ -11,6 +11,13 @@ export const DONUT_CHART_COLORS = [
   "#f17c1d",
   "#dd6516",
 ]
+
+/**
+ * Title of the account chart of India centre headcount ranges. Every account
+ * has the figure, so "GCC" is only said when the view is limited to GCCs.
+ */
+export const accountHeadcountChartTitle = (mode: AccountVisibilityMode | undefined): string =>
+  (mode ?? "gcc") === "gcc" ? "GCC aggregate headcount (India)" : "Aggregate headcount (India)"
 
 /**
  * Calculate chart data from accounts

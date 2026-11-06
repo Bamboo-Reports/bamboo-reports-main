@@ -1,6 +1,7 @@
 import type { AccountVisibilityMode, ChartData, Filters, FilterValue } from "@/lib/types"
 import { FILTER_METADATA } from "@/lib/analytics/filter-metadata"
 import { compareRangeLabels } from "@/lib/utils/range-order"
+import { accountHeadcountChartTitle } from "@/lib/utils/chart-helpers"
 import { formatRevenueInMillions } from "@/lib/utils/helpers"
 
 /**
@@ -430,7 +431,8 @@ export function buildReportChart(
 
 export function buildReportChartGroups(
   sources: SummaryReportChartSources | undefined,
-  counts: SummaryReportCounts
+  counts: SummaryReportCounts,
+  visibilityMode?: AccountVisibilityMode
 ): ReportChartGroup[] {
   if (!sources) return []
   const groups: ReportChartGroup[] = []
@@ -445,7 +447,7 @@ export function buildReportChartGroups(
       buildReportChart("Country", "Accounts", accountSrc.regionData),
       buildReportChart("Industry", "Accounts", accountSrc.primaryNatureData),
       buildReportChart("Revenue range", "Accounts", accountSrc.revenueRangeData, "range"),
-      buildReportChart("GCC aggregate headcount (India)", "Accounts", accountSrc.employeesRangeData, "range"),
+      buildReportChart(accountHeadcountChartTitle(visibilityMode), "Accounts", accountSrc.employeesRangeData, "range"),
     ],
   })
 
@@ -488,7 +490,7 @@ export function buildSummaryReport(input: BuildSummaryReportInput): SummaryRepor
     activeFilterCount: input.activeFilterCount,
     metrics: buildReportMetrics(input.counts),
     filters: buildReportFilterRows(input.filters, input.baselineRanges),
-    chartGroups: buildReportChartGroups(input.charts, input.counts),
+    chartGroups: buildReportChartGroups(input.charts, input.counts, input.filters.accountVisibilityMode),
   }
 }
 

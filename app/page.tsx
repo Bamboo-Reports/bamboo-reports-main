@@ -353,6 +353,7 @@ function DashboardContent(): React.JSX.Element | null {
                     chartsLoading={serverData.pending.charts}
                     mapLoading={serverData.pending.map}
                     accountChartData={viewAccountChartData}
+                    visibilityMode={filters.accountVisibilityMode}
                     chartLabelDisplay={chartLabelDisplay}
                     onChartLabelDisplayChange={setChartLabelDisplay}
                     accountsView={accountsView}

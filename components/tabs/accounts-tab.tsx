@@ -25,7 +25,8 @@ import { ViewSwitcher } from "@/components/ui/view-switcher"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import type { CityAggregate, StateAggregate } from "@/lib/dashboard/api-client"
-import type { Account, Center, Prospect, Service, Function, Tech } from "@/lib/types"
+import type { Account, AccountVisibilityMode, Center, Prospect, Service, Function, Tech } from "@/lib/types"
+import { accountHeadcountChartTitle } from "@/lib/utils/chart-helpers"
 
 export type TabSort = { key: string; direction: "asc" | "desc" }
 
@@ -73,6 +74,8 @@ interface AccountsTabProps {
   server?: TabServerProps | null
   mapData?: { cities: CityAggregate[]; states: StateAggregate[]; scaleStates?: StateAggregate[] | null } | null
   chartsLoading?: boolean
+  /** The applied "Accounts to show" choice; sets the headcount chart's title. */
+  visibilityMode?: AccountVisibilityMode
   mapLoading?: boolean
 }
 
@@ -96,6 +99,7 @@ export function AccountsTab({
   server,
   mapData,
   chartsLoading = false,
+  visibilityMode,
   mapLoading = false,
 }: AccountsTabProps) {
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null)
@@ -286,7 +290,7 @@ export function AccountsTab({
               loading={chartsLoading}
             />
             <PieChartCard
-              title="GCC aggregate headcount (India)"
+              title={accountHeadcountChartTitle(visibilityMode)}
               analyticsTitle="GCC Aggregate Headcount (India)"
               order="range"
               data={accountChartData.employeesRangeData}
