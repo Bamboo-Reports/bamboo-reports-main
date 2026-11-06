@@ -59,7 +59,7 @@ const SECTION_SPECS: Record<FilterSectionId, FieldSpec[]> = {
   prospects: [
     { kind: "values", key: "prospectTitleKeywords", label: "Job title" },
     { kind: "values", key: "prospectHeadTypeValues", label: "Role" },
-    { kind: "values", key: "prospectLevelValues", label: "Seniority level" },
+    { kind: "values", key: "prospectLevelValues", label: "Level" },
     { kind: "values", key: "prospectDepartmentValues", label: "Department" },
     { kind: "values", key: "prospectCityValues", label: "City" },
     { kind: "values", key: "prospectEngagedValues", label: "Engaged" },

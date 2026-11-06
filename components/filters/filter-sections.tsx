@@ -285,7 +285,7 @@ export function ProspectFiltersSection(props: ProspectFilterSectionProps) {
         />
       </FilterRow>
       <ValuesRow {...props} filterKey="prospectHeadTypeValues" label="Role" />
-      <ValuesRow {...props} filterKey="prospectLevelValues" label="Seniority level" />
+      <ValuesRow {...props} filterKey="prospectLevelValues" label="Level" />
       <ValuesRow {...props} filterKey="prospectDepartmentValues" label="Department" />
       <ValuesRow {...props} filterKey="prospectCityValues" label="City" />
       <ValuesRow {...props} filterKey="prospectEngagedValues" label="Engaged" />

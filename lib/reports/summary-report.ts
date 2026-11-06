@@ -162,7 +162,7 @@ const REPORT_LABEL: Partial<Record<keyof Filters, string>> = {
   techSoftwareInUseKeywords: "Software in use",
   prospectTitleKeywords: "Job title",
   prospectHeadTypeValues: "Role",
-  prospectLevelValues: "Seniority level",
+  prospectLevelValues: "Level",
   prospectDepartmentValues: "Department",
   prospectCityValues: "City",
 }
