@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Donut charts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..600&display=swap" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css" rel="stylesheet" />
+<style>
+  /* Surface tokens copied from app/globals.css */
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 214 45% 15%;
+    --card: 0 0% 100%;
+    --primary: 204 100% 38%;
+    --muted: 210 25% 94%;
+    --muted-foreground: 215 20% 39%;
+    --border: 212 24% 86%;
+    --ring: 204 100% 38%;
+    --shadow: 0 1px 2px rgba(15, 30, 50, .06);
+
+    /* The orange-to-yellow scheme from PIE_CHART_COLORS, re-spaced so neighbours read apart
+       (validated ordinal: adjacent dL >= 0.06, one hue family). #f17c1d stays the anchor. */
+    --o1: #fef0c3; --o2: #f9d996; --o3: #f7bd6b; --o4: #f69d3d; --o5: #f17c1d; --o6: #dd6516;
+    --o-other: #fef0c3;
+    --o-quiet1: #fef0c3; --o-quiet2: #f9d996;
+    --o-focus: #f17c1d;
+  }
+  .dark {
+    --background: 0 0% 10%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 12%;
+    --primary: 204 92% 56%;
+    --muted: 0 0% 16%;
+    --muted-foreground: 0 0% 65%;
+    --border: 0 0% 24%;
+    --ring: 0 0% 83.1%;
+    --shadow: none;
+
+    /* Same scheme on dark; the pale end is brightest here, so it is kept for the smallest slices and Others. */
+  }
+
+  * { box-sizing: border-box; }
+  html { color-scheme: light; }
+  html.dark { color-scheme: dark; }
+  body {
+    margin: 0;
+    font-family: "DM Sans", system-ui, sans-serif;
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+    -webkit-font-smoothing: antialiased;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.5;
+  }
+  ::selection { background: hsl(var(--primary) / .2); }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; border-radius: 6px; }
+
+  .page { max-width: 1240px; margin: 0 auto; padding: 32px 24px 96px; }
+  .top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; margin-bottom: 8px; }
+  .top h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .intro { margin: 0 0 24px; max-width: 78ch; font-size: 14px; color: hsl(var(--muted-foreground)); }
+  .toggle {
+    display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px;
+    border-radius: 8px; border: 1px solid hsl(var(--border)); background: hsl(var(--card));
+    font-size: 13px; font-weight: 500; cursor: pointer; transition: background-color .15s ease;
+  }
+  .toggle:hover { background: hsl(var(--muted)); }
+
+  .variant { padding: 28px 0 32px; border-top: 1px solid hsl(var(--border)); }
+  .vh { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-bottom: 4px; }
+  .vh h2 { margin: 0; font-size: 16px; font-weight: 600; }
+  .pick { font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: 6px; background: hsl(var(--primary) / .12); color: hsl(var(--primary)); }
+  .note { margin: 0 0 16px; max-width: 80ch; font-size: 13px; color: hsl(var(--muted-foreground)); }
+  .note b { font-weight: 500; color: hsl(var(--foreground)); }
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+
+  /* Card, matching the app's chart cards */
+  .card {
+    border: 1px solid hsl(var(--border)); border-radius: 12px; background: hsl(var(--card));
+    box-shadow: var(--shadow); padding: 20px; min-width: 0;
+  }
+  .card-h { display: flex; align-items: baseline; gap: 8px; margin-bottom: 16px; }
+  .card-h h3 { margin: 0; font-size: 15px; font-weight: 500; }
+  .card-h .meta { margin-left: auto; font-size: 13px; color: hsl(var(--muted-foreground)); }
+
+  svg.donut { display: block; overflow: visible; }
+  svg.donut path { transition: opacity .18s cubic-bezier(.22,1,.36,1); cursor: pointer; }
+  svg.donut.has-hover path:not(.on) { opacity: .28; }
+  .center-n { font-size: 26px; font-weight: 600; letter-spacing: -0.01em; fill: hsl(var(--foreground)); }
+  .center-l { font-size: 12px; fill: hsl(var(--muted-foreground)); }
+
+  /* A: today */
+  .a .body { position: relative; height: 340px; }
+  .a .body svg { width: 100%; height: 100%; }
+  .a .lbl { font-size: 11px; font-weight: 500; fill: hsl(var(--foreground)); }
+
+  /* A2 / A3: today's chart, refined */
+  .ar .body svg { display: block; width: 100%; height: auto; }
+  .conn { fill: none; stroke: hsl(var(--muted-foreground) / .45); stroke-width: 1; }
+  .lb, .lb-p, .lb-m { font-size: 12px; }
+  .lb-n { fill: hsl(var(--foreground)); }
+  .lb-p { font-weight: 600; fill: hsl(var(--foreground)); }
+  .lb-p.big { font-size: 14px; }
+  .lb-m { fill: hsl(var(--muted-foreground)); }
+  .is-other .lb-n, .lb-p.is-other, .is-other.lb-p { fill: hsl(var(--muted-foreground)); }
+  .lbl-g { cursor: default; transition: opacity .18s cubic-bezier(.22,1,.36,1); }
+  svg.donut.has-hover .lbl-g:not(.on) { opacity: .3; }
+  svg.donut.has-hover .conn { opacity: 1; }
+
+  /* B: ring + ranked list */
+  .b .body { display: grid; grid-template-columns: 196px minmax(0, 1fr); align-items: center; gap: 24px; min-height: 260px; }
+  .rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  .row {
+    display: grid; grid-template-columns: 10px minmax(0, 1fr) auto 44px; align-items: center; gap: 10px;
+    width: 100%; height: 36px; padding: 0 8px; border: 0; border-radius: 8px; background: transparent;
+    text-align: left; cursor: pointer; transition: background-color .15s ease, opacity .15s ease;
+  }
+  .row:hover, .row.on { background: hsl(var(--muted)); }
+  .rows.has-hover .row:not(.on) { opacity: .5; }
+  /* Hairline edge so the pale cream swatch still shows on a white card */
+  .sw { width: 10px; height: 10px; border-radius: 3px; box-shadow: inset 0 0 0 1px hsl(var(--foreground) / .1); }
+  .nm { min-width: 0; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative; }
+  .ct { font-size: 13px; color: hsl(var(--muted-foreground)); text-align: right; }
+  .pc { font-size: 13px; font-weight: 500; text-align: right; }
+  .bar { grid-column: 2 / 5; height: 2px; margin-top: -6px; border-radius: 2px; background: hsl(var(--muted)); overflow: hidden; display: none; }
+  .row.with-bar { height: 44px; grid-template-rows: 1fr auto; row-gap: 0; padding-top: 4px; padding-bottom: 8px; }
+  .row.with-bar .bar { display: block; margin-top: 4px; }
+  .bar i { display: block; height: 100%; border-radius: 2px; }
+
+  /* C: big ring, readout in the middle, legend below */
+  .c .body { display: grid; justify-items: center; gap: 16px; }
+  .legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 16px; max-width: 460px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 6px; border: 0; border-radius: 6px;
+    background: transparent; font-size: 13px; cursor: pointer; transition: background-color .15s ease, opacity .15s ease;
+  }
+  .chip:hover, .chip.on { background: hsl(var(--muted)); }
+  .legend.has-hover .chip:not(.on) { opacity: .5; }
+  .chip .pc { font-weight: 500; }
+  .chip .sw { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* D: focus */
+  .d .body { display: grid; grid-template-columns: 196px minmax(0, 1fr); align-items: center; gap: 24px; min-height: 260px; }
+  .d .row { grid-template-columns: 10px minmax(0, 1fr) auto 44px; }
+  .d .row.focus .nm { font-weight: 500; }
+
+  /* Hidden table for screen readers */
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  .spec { margin: 16px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 13px; color: hsl(var(--muted-foreground)); max-width: 90ch; }
+  .spec li { display: flex; gap: 8px; }
+  .spec i { color: hsl(var(--muted-foreground)); font-size: 14px; line-height: 20px; }
+
+  @media (max-width: 520px) {
+    .b .body, .d .body { grid-template-columns: 1fr; justify-items: center; }
+    .b .rows, .d .rows { width: 100%; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<main class="page">
+  <div class="top">
+    <h1>Donut charts</h1>
+    <button class="toggle" id="theme" type="button" aria-pressed="false"><i class="ri-moon-line" aria-hidden="true"></i><span>Dark</span></button>
+  </div>
+  <p class="intro">Four directions for the ten part-to-whole charts on the Accounts, Centres and Prospects tabs. Each shows one category chart (Industry) and one range chart (Revenue range) side by side, the way the tabs lay them out. Hover a ring or a row to link the two.</p>
+
+  <section class="variant" id="va">
+    <div class="vh"><h2>A. Today</h2></div>
+    <p class="note">For reference. The orange steps today are only a few shades apart, so neighbouring slices look alike. The labels sit outside on connector lines and fight for room. The total and each slice's figure only appear in the tooltip.</p>
+    <div class="grid" data-variant="a"></div>
+  </section>
+
+  <section class="variant" id="va2">
+    <div class="vh"><h2>A2. Today, refined</h2><span class="pick">New</span></div>
+    <p class="note">Same chart, same labels outside the ring, nothing added beside it. The labels now line up in two clean columns instead of floating at odd spots, each with a short bent connector. The name reads in full ink and the share sits next to it in a heavier weight. The centre stays empty. Hovering a slice dims the other slices and labels, so its own label stands out.</p>
+    <div class="grid" data-variant="ar"></div>
+  </section>
+
+  <section class="variant" id="va3">
+    <div class="vh"><h2>A3. Today, refined, share first</h2></div>
+    <p class="note">As A2, but each label puts the share on top and the name underneath in a quieter grey, so a glance down either column reads the numbers first. Takes slightly more height per label.</p>
+    <div class="grid" data-variant="ar2"></div>
+  </section>
+
+  <section class="variant" id="vb">
+    <div class="vh"><h2>B. Ring with a ranked list</h2><span class="pick">Recommended</span></div>
+    <p class="note">A thin ring with the total in the middle, beside a list that reads like a table: name, count and share, largest first. With one hue, the list carries each slice's name and figures, so the ring only has to give the shape, and a deeper orange means a bigger slice, fading to yellow for the small ones. <b>Hovering a row lights its arc and swaps the centre to that slice.</b> No labels on the ring, no connector lines, no tooltip needed.</p>
+    <div class="grid" data-variant="b"></div>
+    <ul class="spec">
+      <li><i class="ri-checkbox-circle-line" aria-hidden="true"></i>Today's orange-to-yellow scheme, cut from nine near-identical shades to six that sit far enough apart to tell neighbours apart. The brand orange #f17c1d stays the anchor and "Others" keeps the pale cream, always last</li>
+      <li><i class="ri-checkbox-circle-line" aria-hidden="true"></i>Category charts: the largest slice gets the deepest orange, fading to yellow. Range charts: yellow to orange in range order, starting at 12 o'clock</li>
+      <li><i class="ri-checkbox-circle-line" aria-hidden="true"></i>A 2px gap between slices keeps them separate even where two steps sit close</li>
+      <li><i class="ri-checkbox-circle-line" aria-hidden="true"></i>The list is a real list of buttons, so it works by keyboard and replaces the right-click label menu</li>
+    </ul>
+  </section>
+
+  <section class="variant" id="vb2">
+    <div class="vh"><h2>B2. Ring with a ranked list and share bars</h2></div>
+    <p class="note">Same as B with a hairline bar under each row. Close values (Healthcare against Manufacturing) become easy to tell apart. Costs a little height: rows go from 36 to 44px.</p>
+    <div class="grid" data-variant="b2"></div>
+  </section>
+
+  <section class="variant" id="vc">
+    <div class="vh"><h2>C. Large ring with a readout</h2></div>
+    <p class="note">The ring is the hero. The centre names the largest slice by default and follows the hover. Shares sit in a compact legend underneath. Closest to today's card shape, but counts only show in the centre, one at a time.</p>
+    <div class="grid" data-variant="c"></div>
+  </section>
+
+  <section class="variant" id="vd">
+    <div class="vh"><h2>D. Focus on one slice</h2></div>
+    <p class="note">Every slice is pale yellow except the one that matters, in brand orange. Click a row to move the focus. Answers "what share is Technology" instantly, and keeps the page calm when ten donuts sit on one tab, at the cost of telling the other slices apart.</p>
+    <div class="grid" data-variant="d"></div>
+  </section>
+</main>
+
+<script>
+const CHARTS = [
+  {
+    title: "Industry", unit: "accounts", order: "size",
+    data: [
+      ["Technology", 612], ["Banking and financial services", 448], ["Manufacturing", 286],
+      ["Healthcare and life sciences", 241], ["Retail and consumer goods", 167], ["Others", 246],
+    ],
+  },
+  {
+    title: "Revenue range", unit: "accounts", order: "range",
+    data: [
+      ["Under $100M", 142], ["$100M to $500M", 318], ["$500M to $1B", 274],
+      ["$1B to $5B", 521], ["$5B to $10B", 233], ["Over $10B", 512],
+    ],
+  },
+];
+
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const fmt = (n) => n.toLocaleString("en-US");
+const NS = "http://www.w3.org/2000/svg";
+const el = (tag, attrs = {}, parent) => {
+  const node = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+  if (parent) parent.appendChild(node);
+  return node;
+};
+
+function segments(chart, variant) {
+  const total = chart.data.reduce((s, d) => s + d[1], 0);
+  let rows = chart.data.map(([name, value]) => ({ name, value, pct: Math.round((value / total) * 100) }));
+  if (chart.order === "size") {
+    const others = rows.filter((r) => r.name === "Others");
+    rows = rows.filter((r) => r.name !== "Others").sort((a, b) => b.value - a.value).concat(others);
+  }
+  const named = rows.filter((r) => r.name !== "Others").length;
+  rows.forEach((r, i) => {
+    if (variant === "a") r.color = ORANGE[Math.min(i, ORANGE.length - 1)];
+    else if (r.name === "Others") r.color = "var(--o-other)";
+    else if (variant === "d") r.color = `var(--o-quiet${(i % 2) + 1})`;
+    // Ranges: range order, weakest to strongest. Categories: largest gets the strongest step.
+    else if (chart.order === "range") r.color = `var(--o${stepFor(i, named, 1)})`;
+    else r.color = `var(--o${stepFor(named - 1 - i, named, 2)})`;
+  });
+  return { rows, total };
+}
+// Spread n slices over the six steps so a short list still uses the full range.
+// Categories use steps 2 to 6 (step 1 is kept for Others); ranges use all six.
+const stepFor = (i, n, from) => (n <= 1 ? 6 : from + Math.round((i * (6 - from)) / (n - 1)));
+const ORANGE = ["#f17c1d", "#f28d2f", "#f29e42", "#f3ad55", "#f5bb69", "#fff0c2"];
+
+function arcPath(cx, cy, r0, r1, a0, a1) {
+  const p = (r, a) => [cx + r * Math.sin(a), cy - r * Math.cos(a)];
+  const large = a1 - a0 > Math.PI ? 1 : 0;
+  const [x0, y0] = p(r1, a0), [x1, y1] = p(r1, a1), [x2, y2] = p(r0, a1), [x3, y3] = p(r0, a0);
+  return `M${x0} ${y0}A${r1} ${r1} 0 ${large} 1 ${x1} ${y1}L${x2} ${y2}A${r0} ${r0} 0 ${large} 0 ${x3} ${y3}Z`;
+}
+
+function drawRing(svg, rows, total, { size, thickness, gap = 2 }) {
+  const c = size / 2, r1 = size / 2, r0 = r1 - thickness;
+  const padA = gap / ((r0 + r1) / 2);
+  let a = 0;
+  return rows.map((row) => {
+    const span = (row.value / total) * Math.PI * 2;
+    const a0 = a + padA / 2, a1 = a + span - padA / 2;
+    row.mid = a + span / 2;
+    a += span;
+    return el("path", { d: arcPath(c, c, r0, r1, a0, a1), fill: row.color }, svg);
+  });
+}
+
+function link(card, svg, paths, items, onChange) {
+  const set = (i) => {
+    const on = i !== null;
+    svg.classList.toggle("has-hover", on);
+    items.parent?.classList.toggle("has-hover", on);
+    paths.forEach((p, j) => p.classList.toggle("on", j === i));
+    items.list.forEach((n, j) => n.classList.toggle("on", j === i));
+    onChange(i);
+  };
+  paths.forEach((p, i) => { p.addEventListener("pointerenter", () => set(i)); p.addEventListener("pointerleave", () => set(null)); });
+  items.list.forEach((n, i) => {
+    n.addEventListener("pointerenter", () => set(i)); n.addEventListener("pointerleave", () => set(null));
+    n.addEventListener("focus", () => set(i)); n.addEventListener("blur", () => set(null));
+  });
+}
+
+function srTable(chart, rows) {
+  const t = document.createElement("table");
+  t.className = "sr";
+  t.innerHTML = `<caption>${chart.title}</caption><tr><th>Name</th><th>${chart.unit}</th><th>Share</th></tr>` +
+    rows.map((r) => `<tr><td>${r.name}</td><td>${fmt(r.value)}</td><td>${r.pct}%</td></tr>`).join("");
+  return t;
+}
+
+function header(chart, total, meta = true) {
+  return `<div class="card-h"><h3>${chart.title}</h3>${meta ? `<span class="meta">${fmt(total)} ${chart.unit}</span>` : ""}</div>`;
+}
+
+function centerText(svg, size, big, small) {
+  const c = size / 2;
+  const n = el("text", { x: c, y: c + 2, "text-anchor": "middle", class: "center-n" }, svg);
+  const l = el("text", { x: c, y: c + 22, "text-anchor": "middle", class: "center-l" }, svg);
+  const set = (b, s) => { n.textContent = b; l.textContent = s; };
+  set(big, small);
+  return set;
+}
+
+function trunc(s, n) { return s.length > n ? s.slice(0, n - 1).trimEnd() + "…" : s; }
+
+const RENDER = {
+  a(card, chart) {
+    const { rows, total } = segments(chart, "a");
+    card.innerHTML = `<div class="card-h"><h3><i class="ri-pie-chart-line" style="color:hsl(var(--muted-foreground));font-size:16px;vertical-align:-2px;margin-right:8px" aria-hidden="true"></i>${chart.title}</h3></div><div class="body"></div>`;
+    const body = card.querySelector(".body");
+    const W = 520, H = 340, size = 210;
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, class: "donut", "aria-hidden": "true" }, body);
+    const g = el("g", { transform: `translate(${W / 2 - size / 2} ${H / 2 - size / 2})` }, svg);
+    drawRing(g, rows, total, { size, thickness: size * 0.175, gap: 1 });
+    rows.forEach((r) => {
+      const cx = W / 2, cy = H / 2, ro = size / 2 + 4, rl = size / 2 + 22;
+      const sx = cx + ro * Math.sin(r.mid), sy = cy - ro * Math.cos(r.mid);
+      const ex = cx + rl * Math.sin(r.mid), ey = cy - rl * Math.cos(r.mid);
+      const right = Math.sin(r.mid) >= 0;
+      const tx = ex + (right ? 14 : -14);
+      el("path", { d: `M${sx} ${sy}L${ex} ${ey}L${tx} ${ey}`, fill: "none", stroke: "hsl(var(--border))", "stroke-width": 1 }, svg);
+      const t = el("text", { x: tx + (right ? 4 : -4), y: ey + 4, "text-anchor": right ? "start" : "end", class: "lbl" }, svg);
+      t.textContent = `${trunc(r.name, 20)}: ${r.pct}%`;
+    });
+    card.appendChild(srTable(chart, rows));
+  },
+
+  b(card, chart, opts = {}) {
+    const { rows, total } = segments(chart, "b");
+    card.innerHTML = header(chart, total, false) + `<div class="body"><div class="ring"></div><ul class="rows"></ul></div>`;
+    const size = 196;
+    const svg = el("svg", { width: size, height: size, viewBox: `0 0 ${size} ${size}`, class: "donut", role: "img", "aria-label": `${chart.title}, ${fmt(total)} ${chart.unit}` }, card.querySelector(".ring"));
+    const paths = drawRing(svg, rows, total, { size, thickness: 22 });
+    const setC = centerText(svg, size, fmt(total), chart.unit);
+    const list = card.querySelector(".rows");
+    const max = Math.max(...rows.map((r) => r.value));
+    const btns = rows.map((r) => {
+      const li = document.createElement("li");
+      li.innerHTML = `<button type="button" class="row${opts.bars ? " with-bar" : ""}"><span class="sw" style="background:${r.color}"></span><span class="nm" title="${r.name}">${r.name}</span><span class="ct">${fmt(r.value)}</span><span class="pc">${r.pct}%</span>${opts.bars ? `<span class="bar"><i style="width:${(r.value / max) * 100}%;background:${r.color}"></i></span>` : ""}</button>`;
+      list.appendChild(li);
+      return li.firstChild;
+    });
+    link(card, svg, paths, { list: btns, parent: list }, (i) => i === null ? setC(fmt(total), chart.unit) : setC(`${rows[i].pct}%`, trunc(rows[i].name, 22)));
+  },
+
+  b2(card, chart) { RENDER.b(card, chart, { bars: true }); },
+
+  // Today's chart, refined: labels in two aligned columns, bent connectors, total in the hole.
+  ar(card, chart, opts = {}) {
+    const { rows, total } = segments(chart, "b");
+    card.innerHTML = `<div class="card-h"><h3><i class="ri-pie-chart-line" style="color:hsl(var(--muted-foreground));font-size:16px;vertical-align:-2px;margin-right:8px" aria-hidden="true"></i>${chart.title}</h3></div><div class="body"></div>`;
+    // Draw at the card's real width so labels stay 12px and never run past the edge.
+    const body = card.querySelector(".body");
+    const W = Math.max(400, body.clientWidth || 520), H = 320, size = 188, r = size / 2, cx = W / 2, cy = H / 2;
+    const NAME_MAX = W < 480 ? 12 : 18;
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, class: "donut", role: "img", "aria-label": `${chart.title}, ${fmt(total)} ${chart.unit}` }, body);
+    const ring = el("g", { transform: `translate(${cx - r} ${cy - r})` }, svg);
+    const paths = drawRing(ring, rows, total, { size, thickness: 24 });
+
+    // Place labels: one column per side, pushed apart so they never touch.
+    const gap = opts.shareFirst ? 34 : 22;
+    const sides = { left: [], right: [] };
+    rows.forEach((row, i) => {
+      const side = Math.sin(row.mid) >= 0 ? "right" : "left";
+      sides[side].push({ row, i, want: cy - (r + 14) * Math.cos(row.mid) });
+    });
+    Object.values(sides).forEach((list) => {
+      list.sort((a, b) => a.want - b.want);
+      list.forEach((l, k) => { l.y = Math.max(l.want, k ? list[k - 1].y + gap : 16); });
+      const over = list.length ? list[list.length - 1].y - (H - 16) : 0;
+      if (over > 0) list.forEach((l) => (l.y -= over));
+    });
+    const labels = [];
+    for (const [side, list] of Object.entries(sides)) {
+      const right = side === "right";
+      const colX = right ? cx + r + 32 : cx - r - 32;
+      list.forEach(({ row, i, y }) => {
+        const sx = cx + (r + 4) * Math.sin(row.mid), sy = cy - (r + 4) * Math.cos(row.mid);
+        const ex = cx + (r + 18) * Math.sin(row.mid);
+        const g = el("g", { class: "lbl-g" }, svg);
+        el("path", { d: `M${sx} ${sy}L${ex} ${y}L${colX + (right ? -6 : 6)} ${y}`, class: "conn" }, g);
+        const anchor = right ? "start" : "end";
+        const muted = row.name === "Others" ? " is-other" : "";
+        if (opts.shareFirst) {
+          el("text", { x: colX, y: y - 2, "text-anchor": anchor, class: "lb-p big" + muted }, g).textContent = `${row.pct}%`;
+          el("text", { x: colX, y: y + 13, "text-anchor": anchor, class: "lb-m" }, g).textContent = trunc(row.name, NAME_MAX);
+        } else {
+          const t = el("text", { x: colX, y: y + 4, "text-anchor": anchor, class: "lb" + muted }, g);
+          el("tspan", { class: "lb-n" }, t).textContent = trunc(row.name, NAME_MAX) + " ";
+          el("tspan", { class: "lb-p" }, t).textContent = `${row.pct}%`;
+        }
+        labels[i] = g;
+      });
+    }
+    const set = (i) => {
+      svg.classList.toggle("has-hover", i !== null);
+      paths.forEach((p, j) => p.classList.toggle("on", j === i));
+      labels.forEach((g, j) => g.classList.toggle("on", j === i));
+    };
+    [paths, labels].forEach((arr) => arr.forEach((n, i) => {
+      n.addEventListener("pointerenter", () => set(i));
+      n.addEventListener("pointerleave", () => set(null));
+    }));
+    card.appendChild(srTable(chart, rows));
+  },
+
+  ar2(card, chart) { RENDER.ar(card, chart, { shareFirst: true }); },
+
+  c(card, chart) {
+    const { rows, total } = segments(chart, "c");
+    card.innerHTML = header(chart, total) + `<div class="body"><div class="ring"></div><div class="legend"></div></div>`;
+    const size = 232;
+    const svg = el("svg", { width: size, height: size, viewBox: `0 0 ${size} ${size}`, class: "donut", role: "img", "aria-label": `${chart.title}, ${fmt(total)} ${chart.unit}` }, card.querySelector(".ring"));
+    const paths = drawRing(svg, rows, total, { size, thickness: 30 });
+    const lead = rows.reduce((a, b) => (b.value > a.value && b.name !== "Others" ? b : a));
+    const show = (r) => setC(`${r.pct}%`, `${trunc(r.name, 22)}, ${fmt(r.value)}`);
+    const setC = centerText(svg, size, "", "");
+    show(lead);
+    const legend = card.querySelector(".legend");
+    const chips = rows.map((r) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "chip";
+      b.innerHTML = `<span class="sw" style="background:${r.color}"></span><span>${trunc(r.name, 24)}</span><span class="pc">${r.pct}%</span>`;
+      legend.appendChild(b);
+      return b;
+    });
+    link(card, svg, paths, { list: chips, parent: legend }, (i) => show(i === null ? lead : rows[i]));
+  },
+
+  d(card, chart) {
+    const { rows, total } = segments(chart, "d");
+    card.innerHTML = header(chart, total, false) + `<div class="body"><div class="ring"></div><ul class="rows"></ul></div>`;
+    const size = 196;
+    const svg = el("svg", { width: size, height: size, viewBox: `0 0 ${size} ${size}`, class: "donut", role: "img", "aria-label": chart.title }, card.querySelector(".ring"));
+    let focus = chart.order === "range" ? rows.reduce((m, r, i) => (r.value > rows[m].value ? i : m), 0) : 0;
+    const base = rows.map((r) => r.color);
+    const paths = drawRing(svg, rows, total, { size, thickness: 22 });
+    const setC = centerText(svg, size, "", "");
+    const list = card.querySelector(".rows");
+    const btns = rows.map((r) => {
+      const li = document.createElement("li");
+      li.innerHTML = `<button type="button" class="row"><span class="sw"></span><span class="nm" title="${r.name}">${r.name}</span><span class="ct">${fmt(r.value)}</span><span class="pc">${r.pct}%</span></button>`;
+      list.appendChild(li);
+      return li.firstChild;
+    });
+    const paint = () => {
+      rows.forEach((r, i) => {
+        const col = i === focus ? "var(--o-focus)" : base[i];
+        paths[i].setAttribute("fill", col);
+        btns[i].querySelector(".sw").style.background = col;
+        btns[i].classList.toggle("focus", i === focus);
+        btns[i].setAttribute("aria-pressed", String(i === focus));
+      });
+      setC(`${rows[focus].pct}%`, trunc(rows[focus].name, 22));
+    };
+    const select = (i) => { focus = i; paint(); };
+    btns.forEach((b, i) => b.addEventListener("click", () => select(i)));
+    paths.forEach((p, i) => p.addEventListener("click", () => select(i)));
+    paint();
+  },
+};
+
+function renderAll() {
+  document.querySelectorAll("[data-variant]").forEach((grid) => {
+    grid.innerHTML = "";
+    CHARTS.forEach((chart) => {
+      const card = document.createElement("article");
+      card.className = `card ${grid.dataset.variant.replace("2", "")}`;
+      grid.appendChild(card);
+      RENDER[grid.dataset.variant](card, chart);
+    });
+  });
+}
+
+const themeBtn = document.getElementById("theme");
+function setTheme(dark) {
+  document.documentElement.classList.toggle("dark", dark);
+  themeBtn.setAttribute("aria-pressed", String(dark));
+  themeBtn.querySelector("span").textContent = dark ? "Light" : "Dark";
+  themeBtn.querySelector("i").className = dark ? "ri-sun-line" : "ri-moon-line";
+}
+themeBtn.addEventListener("click", () => setTheme(!document.documentElement.classList.contains("dark")));
+setTheme(new URLSearchParams(location.search).has("dark") || matchMedia("(prefers-color-scheme: dark)").matches);
+renderAll();
+</script>
+</body>
+</html>

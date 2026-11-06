@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { RiPieChartLine } from "@remixicon/react"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
-import { PIE_CHART_COLORS } from "@/lib/utils/chart-helpers"
+import { DONUT_CHART_COLORS } from "@/lib/utils/chart-helpers"
 import { ChartWaveSkeleton } from "@/components/ui/chart-wave-skeleton"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -25,29 +25,87 @@ export interface PieChartLabelDisplay {
   showPercentages: boolean
 }
 
-// Longer names are shortened in the slice label (the tooltip shows them in
-// full) so the percentage is never cut off.
-const MAX_LABEL_CATEGORY_LENGTH = 20
+// Long names break onto a second line at a space. A name that still does not
+// fit in two lines is shortened at the end (the tooltip shows it in full).
+const LABEL_LINE_LENGTH = 18
+const MAX_LABEL_NAME_LINES = 2
 
-export function formatPieChartDataLabel(
+const shortenLine = (text: string) =>
+  text.length > LABEL_LINE_LENGTH
+    ? `${text.slice(0, LABEL_LINE_LENGTH - 1).trimEnd()}…`
+    : text
+
+export function wrapPieChartLabelName(name: string): string[] {
+  const lines: string[] = []
+  let current = ""
+  for (const word of name.trim().split(/\s+/)) {
+    if (!current) {
+      current = word
+    } else if (`${current} ${word}`.length <= LABEL_LINE_LENGTH) {
+      current = `${current} ${word}`
+    } else {
+      lines.push(current)
+      current = word
+    }
+  }
+  if (current) lines.push(current)
+  const kept = lines.slice(0, MAX_LABEL_NAME_LINES - 1)
+  const rest = lines.slice(MAX_LABEL_NAME_LINES - 1).join(" ")
+  if (rest) kept.push(rest)
+  return kept.map(shortenLine)
+}
+
+export interface PieChartLabelParts {
+  share: string | null
+  /** The name, already broken into lines. */
+  nameLines: string[] | null
+}
+
+/** The parts of a slice label: the share on top, the name underneath. */
+export function getPieChartLabelParts(
   categoryName: string,
   percent: number,
   display: PieChartLabelDisplay
-) {
-  const category =
-    categoryName.length > MAX_LABEL_CATEGORY_LENGTH
-      ? `${categoryName.slice(0, MAX_LABEL_CATEGORY_LENGTH - 1).trimEnd()}…`
-      : categoryName
-  if (display.showCategoryLabels && display.showPercentages) {
-    return `${category}: ${percent}%`
+): PieChartLabelParts {
+  return {
+    share: display.showPercentages ? `${percent}%` : null,
+    nameLines: display.showCategoryLabels ? wrapPieChartLabelName(categoryName) : null,
   }
-  if (display.showCategoryLabels) {
-    return category
+}
+
+const escapeLabelText = (text: string) =>
+  text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+
+// Highcharts turns these spans into SVG tspans. The share leads in full ink;
+// the name sits under it in muted grey. "Others" is the leftover group, so its
+// share is muted too.
+function renderPieChartLabel({ share, nameLines }: PieChartLabelParts, isOthers: boolean) {
+  const shareColor = isOthers ? "hsl(var(--muted-foreground))" : "hsl(var(--foreground))"
+  const lines: string[] = []
+  if (share) {
+    lines.push(
+      `<span style="font-size:14px;font-weight:600;color:${shareColor}">${share}</span>`
+    )
   }
-  if (display.showPercentages) {
-    return `${percent}%`
+  const nameStyle = share
+    ? "font-weight:400;color:hsl(var(--muted-foreground))"
+    : "font-weight:500;color:hsl(var(--foreground))"
+  for (const line of nameLines ?? []) {
+    lines.push(`<span style="${nameStyle}">${escapeLabelText(line)}</span>`)
   }
-  return ""
+  return lines.join("<br/>")
+}
+
+const OTHERS_COLOR = DONUT_CHART_COLORS[0]
+
+/**
+ * Spread `count` slices over the colour steps from `firstStep` to the deepest,
+ * so a short list still runs from pale to deep. `index` 0 gets the palest.
+ */
+function donutStep(index: number, count: number, firstStep: number) {
+  const last = DONUT_CHART_COLORS.length - 1
+  if (count <= 1) return DONUT_CHART_COLORS[last]
+  return DONUT_CHART_COLORS[firstStep + Math.round((index * (last - firstStep)) / (count - 1))]
 }
 
 interface PieChartCardProps {
@@ -124,12 +182,13 @@ export const PieChartCard = memo(({
   }, [safeData, dataKey])
 
   const seriesData = React.useMemo(() => {
-    const mappedData = safeData.map((item, index) => {
+    const mappedData = safeData.map((item) => {
       const rawValue = (item as unknown as Record<string, number | undefined>)[dataKey]
       return {
         name: item.name,
         y: typeof rawValue === "number" ? rawValue : 0,
-        color: item.fill || PIE_CHART_COLORS[index % PIE_CHART_COLORS.length],
+        // Set from the slice's rank below, unless the data brings its own fill.
+        color: item.fill ?? "",
       }
     })
 
@@ -150,23 +209,28 @@ export const PieChartCard = memo(({
       }
     })
 
+    // The palest step belongs to "Others"; without it, range charts may use it.
+    const hasOthers = othersTotal > 0
+    const count = majorSegments.length
     if (order === "range") {
-      // Still the largest buckets, shown in range order on a light-to-dark
-      // scale; the lightest shade stays reserved for "Others".
+      // Still the largest buckets, shown in range order from pale to deep.
       majorSegments.sort((a, b) => compareRangeLabels(a.name, b.name))
-      const darkest = 0
-      const lightest = PIE_CHART_COLORS.length - 2
       majorSegments.forEach((segment, index) => {
-        const step = majorSegments.length > 1 ? index / (majorSegments.length - 1) : 1
-        segment.color = PIE_CHART_COLORS[Math.round(lightest - step * (lightest - darkest))]
+        segment.color ||= donutStep(index, count, hasOthers ? 1 : 0)
+      })
+    } else {
+      // Largest first, clockwise from 12 o'clock; the largest gets the deepest orange.
+      majorSegments.sort((a, b) => b.y - a.y)
+      majorSegments.forEach((segment, index) => {
+        segment.color ||= donutStep(count - 1 - index, count, 1)
       })
     }
 
-    if (othersTotal > 0) {
+    if (hasOthers) {
       majorSegments.push({
         name: "Others",
         y: othersTotal,
-        color: PIE_CHART_COLORS[PIE_CHART_COLORS.length - 1],
+        color: OTHERS_COLOR,
       })
     }
 
@@ -201,7 +265,7 @@ export const PieChartCard = memo(({
           const point = this as unknown as Point
           const value = typeof point.y === "number" ? point.y : 0
           const percent = total > 0 ? Math.round((value / total) * 100) : 0
-          const color = point.color || PIE_CHART_COLORS[0]
+          const color = point.color || DONUT_CHART_COLORS[DONUT_CHART_COLORS.length - 1]
           return `
             <div class="rounded-lg border border-border bg-popover px-3 py-2 shadow-float">
               <p class="text-sm font-medium text-foreground mb-1">${point.name}</p>
@@ -219,24 +283,30 @@ export const PieChartCard = memo(({
       },
       plotOptions: {
         pie: {
-          innerSize: "65%",
-          size: "68%",
+          // A thin ring with an empty centre.
+          innerSize: "75%",
+          size: "62%",
+          startAngle: 0,
           dataLabels: {
             enabled: labelDisplay.showCategoryLabels || labelDisplay.showPercentages,
-            distance: 12,
+            // Labels stand in one column per side, each joined to its slice by
+            // a short bent connector.
+            alignTo: "connectors",
+            connectorShape: "crookedLine",
+            distance: 16,
+            connectorPadding: 4,
             // Highcharts already spreads pie labels apart; its extra overlap
             // check is conservative and hid labels that did not touch.
             allowOverlap: true,
             connectorWidth: 1,
-            connectorColor: "hsl(var(--border))",
+            connectorColor: "hsl(var(--muted-foreground) / 0.45)",
             style: {
               color: "hsl(var(--foreground))",
-              fontSize: "11px",
-              fontWeight: "500",
+              fontSize: "12px",
+              fontWeight: "400",
               fontFamily: "var(--font-sans), ui-sans-serif, system-ui, sans-serif",
               textOutline: "none",
-              // One line per label: a wrapped label is twice as tall and
-              // crowds its neighbours (names are shortened in the formatter).
+              // Lines break only where the formatter puts a <br/> (long names are wrapped there).
               whiteSpace: "nowrap",
             },
             formatter: function () {
@@ -244,12 +314,22 @@ export const PieChartCard = memo(({
               const value = typeof point.y === "number" ? point.y : 0
               if (value <= 0 || total <= 0) return ""
               const percent = Math.round((value / total) * 100)
-              return formatPieChartDataLabel(point.name, percent, labelDisplay)
+              return renderPieChartLabel(
+                getPieChartLabelParts(point.name, percent, labelDisplay),
+                point.name === "Others"
+              )
             },
           },
           showInLegend: false,
-          borderWidth: 1,
-          borderColor: "hsl(var(--background))",
+          // A 2px gap in the card colour keeps neighbouring slices apart.
+          borderWidth: 2,
+          borderColor: "hsl(var(--card))",
+          // Hovering a slice dims the other slices and their labels.
+          inactiveOtherPoints: true,
+          states: {
+            hover: { halo: { size: 0 }, brightness: 0 },
+            inactive: { opacity: 0.3 },
+          },
           point: {
             events: {
               click: function () {
@@ -274,8 +354,8 @@ export const PieChartCard = memo(({
       responsive: {
         rules: [
           {
-            // On narrow charts a name plus percentage gets trimmed to "IT: …",
-            // losing the number; show only the percentage (the tooltip has the name).
+            // On narrow charts there is no room for a name under every share;
+            // show only the percentage (the tooltip has the name).
             condition: { maxWidth: 420 },
             chartOptions: {
               plotOptions: {
@@ -286,10 +366,13 @@ export const PieChartCard = memo(({
                       const value = typeof point.y === "number" ? point.y : 0
                       if (value <= 0 || total <= 0) return ""
                       const percent = Math.round((value / total) * 100)
-                      return formatPieChartDataLabel(point.name, percent, {
-                        showCategoryLabels: labelDisplay.showCategoryLabels && !labelDisplay.showPercentages,
-                        showPercentages: labelDisplay.showPercentages,
-                      })
+                      return renderPieChartLabel(
+                        getPieChartLabelParts(point.name, percent, {
+                          showCategoryLabels: labelDisplay.showCategoryLabels && !labelDisplay.showPercentages,
+                          showPercentages: labelDisplay.showPercentages,
+                        }),
+                        point.name === "Others"
+                      )
                     },
                   },
                 },
@@ -325,7 +408,11 @@ export const PieChartCard = memo(({
                   <chartLib.HighchartsReact
                     highcharts={chartLib.Highcharts}
                     options={options}
-                    containerProps={{ style: { height: "100%", width: "100%" } }}
+                    // The label columns sit at the chart's edges, so a capped width keeps
+                    // the connector lines short on wide cards.
+                    containerProps={{
+                      style: { height: "100%", width: "100%", maxWidth: 520, margin: "0 auto" },
+                    }}
                   />
                 </div>
               </ContextMenuTrigger>

@@ -13,6 +13,18 @@ export const PIE_CHART_COLORS = [
   "#fff0c2",
 ]
 
+// Donut slices: the same orange-to-yellow scheme, cut to six steps far enough
+// apart that neighbouring slices read as different (OKLCH lightness gap >= 0.06).
+// Lightest first. The lightest step is kept for "Others".
+export const DONUT_CHART_COLORS = [
+  "#fef0c3",
+  "#f9d996",
+  "#f7bd6b",
+  "#f69d3d",
+  "#f17c1d",
+  "#dd6516",
+]
+
 /**
  * Calculate chart data from accounts
  */
