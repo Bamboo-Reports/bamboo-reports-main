@@ -6,12 +6,15 @@ import {
   calculateFunctionChartData,
 } from "@/lib/utils/chart-helpers"
 
+// Range charts keep every bucket (no top-ten cap) so their scale stays whole.
+const ALL = Number.POSITIVE_INFINITY
+
 export function getAccountChartData(accounts: Account[]) {
   return {
     regionData: calculateChartData(accounts, "account_hq_country"),
     primaryNatureData: calculateChartData(accounts, "account_primary_category"),
-    revenueRangeData: calculateChartData(accounts, "account_hq_revenue_range"),
-    employeesRangeData: calculateChartData(accounts, "account_center_employees_range"),
+    revenueRangeData: calculateChartData(accounts, "account_hq_revenue_range", ALL),
+    employeesRangeData: calculateChartData(accounts, "account_center_employees_range", ALL),
   }
 }
 
@@ -20,7 +23,7 @@ export function getCenterChartData(centers: Center[], functions: Function[]) {
 
   return {
     centerTypeData: calculateCenterChartData(centers, "center_type"),
-    employeesRangeData: calculateCenterChartData(centers, "center_employees_range"),
+    employeesRangeData: calculateCenterChartData(centers, "center_employees_range", ALL),
     cityData: calculateCityChartData(centers),
     functionData: calculateFunctionChartData(functions, centerKeys),
   }

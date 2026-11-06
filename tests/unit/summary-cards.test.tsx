@@ -1,19 +1,25 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest"
-import { render, fireEvent, cleanup, act } from "@testing-library/react"
+import { render as rtlRender, fireEvent, cleanup, act } from "@testing-library/react"
+import type { ReactElement } from "react"
 import { SummaryCards } from "@/components/dashboard/summary-cards"
-import * as dashboardAccess from "@/lib/config/dashboard-access"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import { toast } from "sonner"
 import { NUMBER_FORMAT_STORAGE_KEY } from "@/hooks/use-number-format-preference"
-
-vi.mock("@/lib/config/dashboard-access", () => ({
-  isSectionEnabled: vi.fn(),
-  getSectionUnavailableMessage: vi.fn(),
-}))
 
 vi.mock("sonner", () => ({
   toast: { info: vi.fn() },
 }))
+
+const render = (ui: ReactElement) => rtlRender(ui, { wrapper: TooltipProvider })
+
+/** Focuses a figure and returns the text of the tooltip it opens, or null when none opens. */
+function tooltipFor(el: HTMLElement): string | null {
+  act(() => { fireEvent.focus(el) })
+  const text = document.querySelector('[role="tooltip"]')?.textContent ?? null
+  act(() => { fireEvent.blur(el) })
+  return text
+}
 
 describe("summary-cards", () => {
   beforeEach(() => {
@@ -45,7 +51,6 @@ describe("summary-cards", () => {
   })
 
   it("renders the summary cards and handles click events on enabled sections", () => {
-    vi.mocked(dashboardAccess.isSectionEnabled).mockReturnValue(true)
     const onSelect = vi.fn()
     
     const { getByText } = render(
@@ -76,7 +81,6 @@ describe("summary-cards", () => {
   })
 
   it("shows a new count immediately without animating", () => {
-    vi.mocked(dashboardAccess.isSectionEnabled).mockReturnValue(true)
     const props = {
       filteredAccountsCount: 10,
       totalAccountsCount: 20,
@@ -100,7 +104,6 @@ describe("summary-cards", () => {
   })
 
   it("shortens only the figures that do not fit their own card", () => {
-    vi.mocked(dashboardAccess.isSectionEnabled).mockReturnValue(true)
     // Fake layout: every card row is 150px wide and text is 10px per character.
     // Measure copies carry their text in data-text, so width comes from that.
     const clientWidth = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(150)
@@ -131,8 +134,8 @@ describe("summary-cards", () => {
 
       // "1,500,000 of 2,000,000" is too wide, "1,500,000 of 2M" fits: only the total shortens.
       // Expected strings use toLocaleString, matching the component, so any locale passes.
-      expect(getByText((1500000).toLocaleString()).title).toBe("")
-      expect(getByText("of 2M").title).toBe(`of ${(2000000).toLocaleString()}`)
+      expect(tooltipFor(getByText((1500000).toLocaleString()))).toBeNull()
+      expect(tooltipFor(getByText("of 2M"))).toBe(`of ${(2000000).toLocaleString()}`)
       expect(queryByText(`of ${(2000000).toLocaleString()}`)).toBeNull()
       // Short figures on the other cards stay exact.
       expect(getByText("of 20")).not.toBeNull()
@@ -143,7 +146,6 @@ describe("summary-cards", () => {
   })
 
   it("follows the Full and Short number format preferences", () => {
-    vi.mocked(dashboardAccess.isSectionEnabled).mockReturnValue(true)
     // Fake a narrow card (100px, 10px per character) where Auto would shorten.
     const clientWidth = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(100)
     const rect = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
@@ -172,7 +174,11 @@ describe("summary-cards", () => {
       const { getByText, rerender } = render(<SummaryCards {...props} />)
       expect(getByText((1500000).toLocaleString())).not.toBeNull()
       // A cut-off total keeps its full value on hover in Full mode.
-      expect(getByText(`of ${(2000000).toLocaleString()}`).title).toBe(`of ${(2000000).toLocaleString()}`)
+      const fullTotal = getByText(`of ${(2000000).toLocaleString()}`)
+      expect(tooltipFor(fullTotal)).toBeNull()
+      const scrollWidth = vi.spyOn(fullTotal, "scrollWidth", "get").mockReturnValue(200)
+      expect(tooltipFor(fullTotal)).toBe(`of ${(2000000).toLocaleString()}`)
+      scrollWidth.mockRestore()
 
       // Another tab changing the setting applies without a reload.
       act(() => {
@@ -180,7 +186,7 @@ describe("summary-cards", () => {
         window.dispatchEvent(new StorageEvent("storage", { key: NUMBER_FORMAT_STORAGE_KEY }))
       })
       rerender(<SummaryCards {...props} />)
-      expect(getByText("1.5M").title).toBe((1500000).toLocaleString())
+      expect(tooltipFor(getByText("1.5M"))).toBe((1500000).toLocaleString())
       expect(getByText("of 2M")).not.toBeNull()
       // Counts under 1,000 have no short form.
       expect(getByText("10")).not.toBeNull()
@@ -190,10 +196,7 @@ describe("summary-cards", () => {
     }
   })
 
-  it("renders read-only cards and shows toast on click when sections are disabled", () => {
-    vi.mocked(dashboardAccess.isSectionEnabled).mockImplementation((section) => section !== "accounts")
-    vi.mocked(dashboardAccess.getSectionUnavailableMessage).mockReturnValue("Not available")
-    
+  it("shows a toast when an overview-only card is clicked", () => {
     const { getByText } = render(
       <SummaryCards
         filteredAccountsCount={10}
@@ -204,16 +207,33 @@ describe("summary-cards", () => {
         totalUpcomingCentersCount={2}
         filteredProspectsCount={50}
         totalProspectsCount={100}
-        filteredHeadcount={5000} // Test >1K compact formatting
+        filteredHeadcount={5000}
         totalHeadcount={10000}
         activeView="centers"
         onSelect={vi.fn()}
       />
     )
 
-    const accountsCardTitle = getByText("Accounts")
-    const accountsCard = accountsCardTitle.closest(".rounded-xl")
-    if (accountsCard) fireEvent.click(accountsCard)
-    expect(toast.info).toHaveBeenCalledWith("Not available", expect.any(Object))
+    const headcountCard = getByText("Headcount").closest(".rounded-xl")
+    if (headcountCard) fireEvent.click(headcountCard)
+    expect(toast.info).toHaveBeenCalledWith(
+      "Headcount is an overview figure",
+      expect.objectContaining({
+        description: "Employees at the centres shown, leaving out manufacturing, sales & marketing, BPO and distribution centres",
+      })
+    )
+  })
+})
+
+describe("formatCompactNumber", () => {
+  it("rounds to one decimal and moves up a unit when it rounds to 1000", async () => {
+    const { formatCompactNumber } = await import("@/components/dashboard/summary-cards")
+    expect(formatCompactNumber(2498)).toBe("2.5K")
+    expect(formatCompactNumber(2440)).toBe("2.4K")
+    expect(formatCompactNumber(3974487)).toBe("4M")
+    expect(formatCompactNumber(1550000)).toBe("1.6M")
+    expect(formatCompactNumber(999949)).toBe("999.9K")
+    expect(formatCompactNumber(999950)).toBe("1M")
+    expect(formatCompactNumber(950)).toBe("950")
   })
 })

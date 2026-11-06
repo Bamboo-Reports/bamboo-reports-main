@@ -44,7 +44,7 @@ describe("AccountPicker", () => {
     const onChange = vi.fn()
     const input = openPicker(onChange)
     fireEvent.change(input, { target: { value: "Infosys" } })
-    expect(screen.getByText("Searching...")).toBeTruthy()
+    expect(screen.getByText("Searching…")).toBeTruthy()
 
     fireEvent.click(await screen.findByRole("option", { name: /Infosys Ltd\./ }))
     expect(fetchMock).toHaveBeenCalledTimes(1)

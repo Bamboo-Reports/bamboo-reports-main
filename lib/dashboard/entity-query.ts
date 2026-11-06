@@ -6,18 +6,17 @@ import {
   buildCentersCountQuery,
   buildProspectsQuery,
   buildProspectsCountQuery,
-  type FilterAccess,
   type SqlQuery,
 } from "@/lib/dashboard/filtering-sql"
 import { queryWarehouse } from "@/lib/db/warehouse"
 import { ACCOUNT_COLUMNS, CENTER_COLUMNS, PROSPECT_COLUMNS, ACCOUNT_PROJECTION } from "@/lib/dashboard/entity-columns"
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "@/lib/dashboard/page-size"
 
 export { ACCOUNT_COLUMNS, CENTER_COLUMNS, PROSPECT_COLUMNS }
 
 export type QueryEntity = "accounts" | "centers" | "prospects"
 
-export const MAX_PAGE_SIZE = 100
-export const DEFAULT_PAGE_SIZE = 51
+export { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE }
 
 type EntityConfig = {
   projection: string
@@ -25,8 +24,8 @@ type EntityConfig = {
   defaultColumn: string
   /** Columns appended to every ORDER BY to make it total. See resolveOrder. */
   tiebreak: string[]
-  rows: (f: Filters, a: FilterAccess, o: { columns: string; orderBy: string; limit: number; offset: number; withTotal?: boolean }) => SqlQuery
-  count: (f: Filters, a: FilterAccess) => SqlQuery
+  rows: (f: Filters, o: { columns: string; orderBy: string; limit: number; offset: number; withTotal?: boolean }) => SqlQuery
+  count: (f: Filters) => SqlQuery
 }
 
 const CONFIG: Record<QueryEntity, EntityConfig> = {
@@ -171,7 +170,6 @@ export type EntityQueryResult = { rows: Record<string, unknown>[]; total: number
 export async function queryEntity(
   entity: QueryEntity,
   filters: Filters,
-  access: FilterAccess,
   opts: { page?: unknown; pageSize?: unknown; sort?: SortSpec } = {}
 ): Promise<EntityQueryResult> {
   const cfg = CONFIG[entity]
@@ -184,7 +182,7 @@ export async function queryEntity(
   // query plus a count query. An empty page past the first cannot carry it
   // (the client can be left on a stale page number after a filter change), so
   // only that case falls back to the count query.
-  const rowsQuery = cfg.rows(filters, access, {
+  const rowsQuery = cfg.rows(filters, {
     columns: cfg.projection,
     orderBy,
     limit: pageSize,
@@ -199,7 +197,7 @@ export async function queryEntity(
   } else if (page === 1) {
     total = 0
   } else {
-    const countRows = await queryWarehouse<{ total: number }>(cfg.count(filters, access))
+    const countRows = await queryWarehouse<{ total: number }>(cfg.count(filters))
     total = Number(countRows[0]?.total ?? 0)
   }
 

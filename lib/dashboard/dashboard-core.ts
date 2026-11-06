@@ -1,6 +1,6 @@
 import "server-only"
 
-import { buildCentersQuery, buildEntityAggregateQuery, buildFacetCountsQuery, type AggregateEntity, type FilterAccess, type SqlQuery } from "@/lib/dashboard/filtering-sql"
+import { buildCentersQuery, buildEntityAggregateQuery, buildFacetCountsQuery, type AggregateEntity, type SqlQuery } from "@/lib/dashboard/filtering-sql"
 import { queryWarehouse } from "@/lib/db/warehouse"
 import { HEADCOUNT_SUM_SQL } from "@/lib/dashboard/headcount"
 import { dashboardCacheTtlMs, getOrCompute } from "@/lib/cache/memory"
@@ -22,9 +22,6 @@ export const FACETS: FacetSpec[] = [
   { key: "accountHqRegionValues", entity: "accounts", column: "account_hq_region" },
   { key: "accountHqCountryValues", entity: "accounts", column: "account_hq_country" },
   { key: "accountHqIndustryValues", entity: "accounts", column: "account_hq_industry" },
-  { key: "accountDataCoverageValues", entity: "accounts", column: "account_data_coverage" },
-  { key: "accountSourceValues", entity: "accounts", column: "account_source" },
-  { key: "accountTypeValues", entity: "accounts", column: "account_type" },
   { key: "accountPrimaryCategoryValues", entity: "accounts", column: "account_primary_category" },
   { key: "accountPrimaryNatureValues", entity: "accounts", column: "account_primary_nature" },
   { key: "accountNasscomStatusValues", entity: "accounts", column: "account_nasscom_status" },
@@ -34,7 +31,6 @@ export const FACETS: FacetSpec[] = [
   { key: "centerFocusValues", entity: "centers", column: "center_focus" },
   { key: "centerCityValues", entity: "centers", column: "center_city" },
   { key: "centerStateValues", entity: "centers", column: "center_state" },
-  { key: "centerCountryValues", entity: "centers", column: "center_country" },
   { key: "centerEmployeesRangeValues", entity: "centers", column: "center_employees_range" },
   { key: "centerStatusValues", entity: "centers", column: "center_status" },
   { key: "functionNameValues", entity: "functions", column: "function_name" },
@@ -49,12 +45,12 @@ const sortOptions = (rows: FilterOption[]) =>
   rows.sort((a, b) => b.count - a.count || (a.value < b.value ? -1 : a.value > b.value ? 1 : 0))
 
 /**
- * All 23 facet option lists. Facets are grouped by their effective filters
+ * All 20 facet option lists. Facets are grouped by their effective filters
  * (facet-excludes-itself: an active facet does not constrain its own list),
  * and each group runs as ONE union-all statement over a single cascade, so
  * the common case (no active facets) is one warehouse query.
  */
-async function facetOptions(filters: Filters, access: FilterAccess): Promise<AvailableOptions> {
+async function facetOptions(filters: Filters): Promise<AvailableOptions> {
   const groups = new Map<string, { filters: Filters; specs: { id: number; entity: AggregateEntity; column: string }[] }>()
   FACETS.forEach((spec, id) => {
     const active = ((filters[spec.key as keyof Filters] as FilterValue[] | undefined)?.length ?? 0) > 0
@@ -69,7 +65,7 @@ async function facetOptions(filters: Filters, access: FilterAccess): Promise<Ava
   await Promise.all(
     [...groups.values()].map(async (group) => {
       const rows = await queryWarehouse<{ facet: number; value: string | null; count: number }>(
-        buildFacetCountsQuery(group.specs, group.filters, access)
+        buildFacetCountsQuery(group.specs, group.filters)
       )
       for (const r of rows) {
         lists[Number(r.facet)]?.push({ value: String(r.value ?? ""), count: Number(r.count) })
@@ -101,12 +97,12 @@ async function facetRanges(): Promise<FacetsResponse["ranges"]> {
   return { revenue: pick("revenue"), yearsInIndia: pick("yearsInIndia"), centerIncYear: pick("centerIncYear") }
 }
 
-export function computeFacets(filters: Filters, access: FilterAccess, opts: { bypassRead?: boolean } = {}): Promise<FacetsResponse> {
+export function computeFacets(filters: Filters, opts: { bypassRead?: boolean } = {}): Promise<FacetsResponse> {
   return getOrCompute(
     `facets:${JSON.stringify(filters)}`,
     dashboardCacheTtlMs(),
     async () => {
-      const [options, ranges] = await Promise.all([facetOptions(filters, access), facetRanges()])
+      const [options, ranges] = await Promise.all([facetOptions(filters), facetRanges()])
       return { options, ranges }
     },
     opts
@@ -122,14 +118,14 @@ const CENTER_METRICS =
 
 const num = (rows: Record<string, unknown>[], key: string) => Number(rows[0]?.[key] ?? 0)
 
-export function computeSummary(filters: Filters, access: FilterAccess, opts: { bypassRead?: boolean } = {}): Promise<SummaryResponse> {
+export function computeSummary(filters: Filters, opts: { bypassRead?: boolean } = {}): Promise<SummaryResponse> {
   return getOrCompute(
     `summary:${JSON.stringify(filters)}`,
     dashboardCacheTtlMs(),
     async () => {
       // Filtered services = services rows of the surviving centers (services
       // have no filter engine of their own). Used by the export-by-filter dialog.
-      const centersSub = buildCentersQuery(filters, access, { columns: "cn_unique_key", orderBy: null })
+      const centersSub = buildCentersQuery(filters, { columns: "cn_unique_key", orderBy: null })
       const servicesFilteredQuery: SqlQuery = {
         text: `select count(*)::int as total from services where cn_unique_key in (${centersSub.text})`,
         values: centersSub.values,
@@ -143,9 +139,9 @@ export function computeSummary(filters: Filters, access: FilterAccess, opts: { b
       }
 
       const [accF, cenF, proF, svcF, all] = await Promise.all([
-        queryWarehouse(buildEntityAggregateQuery("accounts", filters, access, "count(*)::int as total")),
-        queryWarehouse(buildEntityAggregateQuery("centers", filters, access, CENTER_METRICS)),
-        queryWarehouse(buildEntityAggregateQuery("prospects", filters, access, "count(*)::int as total")),
+        queryWarehouse(buildEntityAggregateQuery("accounts", filters, "count(*)::int as total")),
+        queryWarehouse(buildEntityAggregateQuery("centers", filters, CENTER_METRICS)),
+        queryWarehouse(buildEntityAggregateQuery("prospects", filters, "count(*)::int as total")),
         queryWarehouse(servicesFilteredQuery),
         queryWarehouse(fullQuery),
       ])
@@ -220,7 +216,6 @@ const cityBucket = (rows: ChartData[]): ChartData[] => topWithOthers(rows, 5)
  */
 export function computeCharts(
   filters: Filters,
-  access: FilterAccess,
   opts: { full?: boolean; bypassRead?: boolean } = {}
 ): Promise<ChartsResponse> {
   const full = opts.full === true
@@ -229,7 +224,7 @@ export function computeCharts(
     dashboardCacheTtlMs(),
     async () => {
       const rows = await queryWarehouse<{ facet: number; value: string | null; count: number }>(
-        buildFacetCountsQuery(CHARTS.map((c, id) => ({ id, ...c })), filters, access)
+        buildFacetCountsQuery(CHARTS.map((c, id) => ({ id, ...c })), filters)
       )
       const lists: ChartData[][] = CHARTS.map(() => [])
       for (const r of rows) {
@@ -238,6 +233,8 @@ export function computeCharts(
       const [accCountry, accCategory, accRevenue, accEmployees, cenType, cenEmployees, cenCity, cenFunction, proDept, proLevel, proCity] =
         lists.map(sortBuckets)
 
+      // Range charts (revenue, headcount) are never capped: their buckets form
+      // one ordered scale, and folding the ends into Others would break it.
       const cap = full ? (list: ChartData[]) => list : top10
       const cities = full ? (list: ChartData[]) => list : cityBucket
 
@@ -245,12 +242,12 @@ export function computeCharts(
         account: {
           regionData: cap(accCountry),
           primaryNatureData: cap(accCategory),
-          revenueRangeData: cap(accRevenue),
-          employeesRangeData: cap(accEmployees),
+          revenueRangeData: accRevenue,
+          employeesRangeData: accEmployees,
         },
         center: {
           centerTypeData: cap(cenType),
-          employeesRangeData: cap(cenEmployees),
+          employeesRangeData: cenEmployees,
           cityData: cities(cenCity),
           functionData: cap(cenFunction),
         },

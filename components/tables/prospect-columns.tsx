@@ -3,6 +3,7 @@
 import { createColumnHelper } from "@tanstack/react-table"
 import { RiExternalLinkLine, RiEyeLine, RiFileCopyLine } from "@remixicon/react"
 import { ContextMenuItem, ContextMenuSeparator } from "@/components/ui/context-menu"
+import { TruncatedText as TruncatedSpan } from "@/components/ui/truncated-text"
 import { TruncatedText, createSelectColumn } from "@/components/tables/data-table"
 import { DataTableColumnHeader } from "@/components/tables/data-table-column-header"
 import type { DataTableFeatures } from "@/components/tables/data-table-features"
@@ -26,8 +27,8 @@ function ProspectAvatar({ prospect }: { prospect: Prospect }) {
     .map((part) => part[0])
     .join("")
   return (
-    <div className="flex size-8 items-center justify-center rounded-full bg-primary/10">
-      <span className="text-sm font-bold text-primary">{initials}</span>
+    <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
+      <span className="text-sm font-semibold text-foreground">{initials}</span>
     </div>
   )
 }
@@ -37,12 +38,8 @@ function ProspectNameCell({ prospect }: { prospect: Prospect }) {
   const accountName = prospect.account_global_legal_name || "N/A"
   return (
     <div className="min-w-0">
-      <div className="truncate font-medium" title={fullName}>
-        {fullName}
-      </div>
-      <div className="truncate text-xs text-muted-foreground" title={accountName}>
-        {accountName}
-      </div>
+      <TruncatedSpan text={fullName} className="font-medium" />
+      <TruncatedSpan text={accountName} className="text-xs text-muted-foreground" />
     </div>
   )
 }
@@ -56,7 +53,7 @@ export const prospectColumns = columnHelper.columns([
     id: "avatar",
     header: () => <span className="sr-only">Avatar</span>,
     cell: ({ row }) => <ProspectAvatar prospect={row.original} />,
-    meta: { className: "w-16" },
+    meta: { className: "w-[72px]" },
   }),
   columnHelper.accessor(getFullName, {
     id: "name",
@@ -77,7 +74,7 @@ export const prospectColumns = columnHelper.columns([
   ),
   columnHelper.accessor((prospect) => prospect.prospect_title, {
     id: "title",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="Job Title" />,
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Job title" />,
     cell: ({ getValue }) => <TruncatedText value={getValue()} />,
     sortFn: "text",
     meta: { className: "w-[180px]" },
@@ -97,14 +94,14 @@ export function ProspectRowMenu({ prospect, onOpen }: { prospect: Prospect; onOp
     <>
       <ContextMenuItem onClick={() => onOpen(prospect)}>
         <RiEyeLine className="h-4 w-4" />
-        View Details
+        View details
       </ContextMenuItem>
       {prospect.prospect_email && (
         <>
           <ContextMenuSeparator />
           <ContextMenuItem onClick={() => copy(prospect.prospect_email!, "Email")}>
             <RiFileCopyLine className="h-4 w-4" />
-            Copy Email
+            Copy email
           </ContextMenuItem>
         </>
       )}

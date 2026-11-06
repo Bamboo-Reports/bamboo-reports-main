@@ -6,7 +6,7 @@ import * as SliderPrimitive from "@radix-ui/react-slider"
 import { cn } from "@/lib/utils"
 
 const THUMB_CLASS =
-  "block h-5 w-5 rounded-full border-2 border-primary bg-background ring-offset-background transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 cursor-grab active:cursor-grabbing"
+  "block h-4 w-4 rounded-full border border-foreground/15 bg-background shadow-[0_1px_2px_rgba(0,0,0,0.12)] ring-offset-background transition-[border-color,box-shadow] duration-150 hover:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 cursor-grab active:cursor-grabbing"
 
 const Slider = React.forwardRef<
   React.ElementRef<typeof SliderPrimitive.Root>,
@@ -33,8 +33,8 @@ const Slider = React.forwardRef<
       disabled={disabled || !hasRange}
       {...props}
     >
-      <SliderPrimitive.Track className="relative h-2 w-full grow overflow-hidden rounded-full bg-secondary transition-all duration-150">
-        <SliderPrimitive.Range className="absolute h-full bg-primary transition-all duration-150" />
+      <SliderPrimitive.Track className="relative h-1 w-full grow overflow-hidden rounded-full bg-foreground/10">
+        <SliderPrimitive.Range className="absolute h-full bg-primary" />
       </SliderPrimitive.Track>
       {Array.from({ length: thumbCount }).map((_, index) => (
         <SliderPrimitive.Thumb key={index} className={THUMB_CLASS} />

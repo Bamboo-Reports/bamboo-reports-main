@@ -1,15 +1,16 @@
 "use client"
 
 import React, { useEffect, useRef, useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { TabsContent } from "@/components/ui/tabs"
 import { GridSkeletonCards, MapUpdatingPill } from "@/components/ui/data-skeletons"
 import { cn } from "@/lib/utils"
-import { RiLayoutGridLine, RiMapLine, RiMapPinLine, RiPieChartLine, RiStackLine, RiTableLine } from "@remixicon/react"
+import { RiMapLine, RiMapPinLine, RiPieChartLine, RiStackLine, RiTableLine } from "@remixicon/react"
 import { AccountRowMenu, accountColumns, getAccountKey } from "@/components/tables/account-columns"
-import { DataGridSortBar, DataTable, DataTablePagination } from "@/components/tables/data-table"
+import { DataGridSortBar, DataLayoutSwitcher, DataTable, DataTablePagination, type DataLayout } from "@/components/tables/data-table"
 import { SelectionActionBar } from "@/components/tables/selection-action-bar"
 import { useDataTable } from "@/components/tables/use-data-table"
+import { useDataLayoutPreference } from "@/hooks/use-data-layout-preference"
 import { AccountGridCard } from "@/components/cards/account-grid-card"
 import {
   PieChartCard,
@@ -23,9 +24,10 @@ import { MapErrorBoundary } from "@/components/maps/map-error-boundary"
 import { ViewSwitcher } from "@/components/ui/view-switcher"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
-import { canAccessAccountsMapView } from "@/lib/config/dashboard-access"
 import type { CityAggregate, StateAggregate } from "@/lib/dashboard/api-client"
-import type { Account, Center, Prospect, Service, Function, Tech } from "@/lib/types"
+import type { Account, AccountVisibilityMode, Center, Prospect, Service, Function, Tech } from "@/lib/types"
+import { accountHeadcountChartTitle } from "@/lib/utils/chart-helpers"
+import { formatRevenueRange } from "@/lib/utils/helpers"
 
 export type TabSort = { key: string; direction: "asc" | "desc" }
 
@@ -73,8 +75,13 @@ interface AccountsTabProps {
   server?: TabServerProps | null
   mapData?: { cities: CityAggregate[]; states: StateAggregate[]; scaleStates?: StateAggregate[] | null } | null
   chartsLoading?: boolean
+  /** The applied "Accounts to show" choice; sets the headcount chart's title. */
+  visibilityMode?: AccountVisibilityMode
   mapLoading?: boolean
 }
+
+const getAccountRowLabel = (account: Account) =>
+  `View account details for ${account.account_global_legal_name || "account"}`
 
 export function AccountsTab({
   accounts,
@@ -96,12 +103,12 @@ export function AccountsTab({
   server,
   mapData,
   chartsLoading = false,
+  visibilityMode,
   mapLoading = false,
 }: AccountsTabProps) {
-  const allowMapView = canAccessAccountsMapView()
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [dataLayout, setDataLayout] = useState<"table" | "grid">("table")
+  const [dataLayout, setDataLayout] = useDataLayoutPreference()
   const [mapMode, setMapMode] = useState<"city" | "state">("state")
   const {
     table,
@@ -121,19 +128,12 @@ export function AccountsTab({
   })
   const allPageSelected = table.getIsAllPageRowsSelected()
   const pageAccounts = table.getRowModel().rows.map((row) => row.original)
-  const nameColumn = table.getColumn("name")
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     scrollContainerRef.current?.scrollTo({ top: 0 })
   }, [currentPage])
 
-  useEffect(() => {
-    if (!allowMapView && accountsView === "map") {
-      setAccountsView("chart")
-    }
-  }, [allowMapView, accountsView, setAccountsView])
-  const previousDataLayoutRef = React.useRef<"table" | "grid">("table")
   const previousMapModeRef = React.useRef<"city" | "state">("state")
   const openedRecordRef = React.useRef<{
     recordId: string
@@ -171,18 +171,6 @@ export function AccountsTab({
   }, [isDialogOpen, accountsView, dataLayout])
 
 
-  React.useEffect(() => {
-    if (previousDataLayoutRef.current === dataLayout) {
-      return
-    }
-
-    captureEvent(ANALYTICS_EVENTS.DATA_LAYOUT_CHANGED, {
-      screen: "accounts",
-      data_layout: dataLayout,
-    })
-
-    previousDataLayoutRef.current = dataLayout
-  }, [dataLayout])
 
   React.useEffect(() => {
     if (previousMapModeRef.current === mapMode) {
@@ -213,9 +201,21 @@ export function AccountsTab({
   }, [isDialogOpen])
 
 
+  const handleDataLayoutChange = React.useCallback((layout: DataLayout) => {
+    setDataLayout(layout)
+    captureEvent(ANALYTICS_EVENTS.DATA_LAYOUT_CHANGED, {
+      screen: "accounts",
+      data_layout: layout,
+    })
+  }, [setDataLayout])
+
   const handleRowOpen = React.useCallback(
     (account: Account) => handleAccountClick(account, "table_row"),
     [handleAccountClick]
+  )
+  const renderAccountRowMenu = React.useCallback(
+    (account: Account) => <AccountRowMenu account={account} onOpen={handleRowOpen} />,
+    [handleRowOpen]
   )
 
   if (server ? server.total === 0 && !server.loading : accounts.length === 0) {
@@ -230,8 +230,8 @@ export function AccountsTab({
     <TabsContent value="accounts">
       {/* Header with View Toggle */}
       <div className="flex items-center gap-2 mb-4">
-        <RiPieChartLine className="h-5 w-5 text-primary" />
-        <h2 className="text-lg font-semibold text-foreground">Account Analytics</h2>
+        <RiPieChartLine className="h-[18px] w-[18px] text-muted-foreground" />
+        <h2 className="text-lg font-medium text-foreground">Account analytics</h2>
         <ViewSwitcher
           data-tour="view-switcher"
           value={accountsView}
@@ -244,15 +244,13 @@ export function AccountsTab({
                 <RiPieChartLine className="h-4 w-4" />
               ),
             },
-            ...(allowMapView
-              ? [{
-                  value: "map",
-                  label: "Map",
-                  icon: (
-                    <RiMapLine className="h-4 w-4" />
-                  ),
-                }]
-              : []),
+            {
+              value: "map",
+              label: "Map",
+              icon: (
+                <RiMapLine className="h-4 w-4" />
+              ),
+            },
             {
               value: "data",
               label: "Data",
@@ -272,7 +270,7 @@ export function AccountsTab({
             <PieChartCard
               title="Country"
               data={accountChartData.regionData}
-              countLabel="Total Accounts"
+              countLabel="Total accounts"
               showBigPercentage
               labelDisplay={chartLabelDisplay}
               onLabelDisplayChange={onChartLabelDisplayChange}
@@ -281,27 +279,30 @@ export function AccountsTab({
             <PieChartCard
               title="Industry"
               data={accountChartData.primaryNatureData}
-              countLabel="Total Accounts"
+              countLabel="Total accounts"
               showBigPercentage
               labelDisplay={chartLabelDisplay}
               onLabelDisplayChange={onChartLabelDisplayChange}
               loading={chartsLoading}
             />
             <PieChartCard
-              title="Revenue Range"
+              title="Revenue range"
+              analyticsTitle="Revenue Range"
               order="range"
+              formatName={formatRevenueRange}
               data={accountChartData.revenueRangeData}
-              countLabel="Total Accounts"
+              countLabel="Total accounts"
               showBigPercentage
               labelDisplay={chartLabelDisplay}
               onLabelDisplayChange={onChartLabelDisplayChange}
               loading={chartsLoading}
             />
             <PieChartCard
-              title="GCC Aggregate Headcount (India)"
+              title={accountHeadcountChartTitle(visibilityMode)}
+              analyticsTitle="GCC Aggregate Headcount (India)"
               order="range"
               data={accountChartData.employeesRangeData}
-              countLabel="Total Accounts"
+              countLabel="Total accounts"
               showBigPercentage
               labelDisplay={chartLabelDisplay}
               onLabelDisplayChange={onChartLabelDisplayChange}
@@ -313,10 +314,11 @@ export function AccountsTab({
 
       {/* Map Section */}
       {accountsView === "map" && (
-        <Card data-tour="map-view" className="w-full flex flex-col h-[var(--dashboard-panel-height)] border shadow-sm view-content">
-          <CardHeader className="shrink-0 px-6 py-3">
-            <div className="flex items-center gap-3">
-              <CardTitle className="text-base">Accounts Map</CardTitle>
+        <Card data-tour="map-view" className="w-full flex flex-col h-[var(--dashboard-panel-height)] overflow-hidden border shadow-sm view-content">
+          <CardContent className="relative p-0 flex flex-col flex-1 overflow-hidden">
+            {mapLoading && <MapUpdatingPill />}
+            {/* Top-right is the one free corner: zoom and fullscreen sit top-left, the legend bottom-left. */}
+            <div className="absolute right-3 top-3 z-20">
               <ViewSwitcher
                 value={mapMode}
                 onValueChange={(value) => setMapMode(value as "city" | "state")}
@@ -332,12 +334,8 @@ export function AccountsTab({
                     icon: <RiStackLine className="h-4 w-4" />,
                   },
                 ]}
-                className="ml-auto"
               />
             </div>
-          </CardHeader>
-          <CardContent className="relative p-0 flex flex-col flex-1 overflow-hidden">
-            {mapLoading && <MapUpdatingPill />}
             <MapErrorBoundary>
               {mapMode === "city" ? (
                 <CentersMap centers={centers} cities={mapData?.cities} heightClass="h-full" />
@@ -356,35 +354,8 @@ export function AccountsTab({
 
       {/* Data View */}
       {accountsView === "data" && (
-        <Card className="w-full flex flex-col h-[var(--dashboard-panel-height)] border shadow-sm view-content">
-          <CardHeader className="shrink-0 px-6 py-3">
-            <div className="flex flex-wrap items-center gap-3">
-              <CardTitle className="text-base">Accounts Data</CardTitle>
-              <div className="ml-auto flex items-center gap-2">
-                <ViewSwitcher
-                  value={dataLayout}
-                  onValueChange={(value) => setDataLayout(value as "table" | "grid")}
-                  options={[
-                    {
-                      value: "table",
-                      label: "Table",
-                      icon: (
-                        <RiTableLine className="h-4 w-4" />
-                      ),
-                    },
-                    {
-                      value: "grid",
-                      label: "Grid",
-                      icon: (
-                        <RiLayoutGridLine className="h-4 w-4" />
-                      ),
-                    },
-                  ]}
-                />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="flex min-h-0 flex-1 flex-col px-6 pb-0">
+        <Card className="w-full flex flex-col h-[var(--dashboard-panel-height)] overflow-hidden border shadow-sm view-content">
+          <CardContent className="flex min-h-0 flex-1 flex-col p-0">
             {dataLayout === "table" ? (
               <DataTable
                 key="table"
@@ -392,13 +363,12 @@ export function AccountsTab({
                 loading={server?.loading}
                 refreshing={server?.refreshing}
                 onRowOpen={handleRowOpen}
-                getRowLabel={(account) => `View account details for ${account.account_global_legal_name || "account"}`}
-                renderRowMenu={(account) => <AccountRowMenu account={account} onOpen={handleRowOpen} />}
+                getRowLabel={getAccountRowLabel}
+                renderRowMenu={renderAccountRowMenu}
                 scrollRef={scrollContainerRef}
               />
             ) : (
-              <div key="grid" ref={scrollContainerRef} className="view-content min-h-0 flex-1 overflow-auto rounded-md border">
-                <DataGridSortBar column={nameColumn} label="account name" />
+              <div key="grid" ref={scrollContainerRef} className="view-content min-h-0 flex-1 overflow-auto">
                 <div
                   className={cn(
                     "grid grid-cols-1 gap-4 p-4 transition-opacity sm:grid-cols-2 lg:grid-cols-3",
@@ -416,7 +386,16 @@ export function AccountsTab({
                 </div>
               </div>
             )}
-            <DataTablePagination table={table} totalRows={totalRows} />
+            <DataTablePagination
+                table={table}
+                totalRows={totalRows}
+                leading={
+                  <>
+                    <DataLayoutSwitcher value={dataLayout} onValueChange={handleDataLayoutChange} />
+                    {dataLayout === "grid" && <DataGridSortBar column={table.getColumn("name")} label="account name" />}
+                  </>
+                }
+              />
           </CardContent>
         </Card>
       )}

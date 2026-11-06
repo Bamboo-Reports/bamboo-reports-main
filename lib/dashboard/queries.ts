@@ -5,6 +5,7 @@ import {
   fetchCenterDetail,
   fetchProspectEngagements,
   fetchSearch,
+  type SearchFocus,
 } from "@/lib/dashboard/api-client"
 
 /**
@@ -36,10 +37,10 @@ export const prospectEngagementsQuery = (psUniqueKey: string) =>
 // Search lookups. Callers debounce the input and pass only the settled term,
 // so the key changes once per pause in typing; revisited terms are instant.
 
-export const searchQuery = (term: string) =>
+export const searchQuery = (term: string, type: SearchFocus | null = null) =>
   queryOptions({
-    queryKey: ["search", term],
-    queryFn: () => fetchSearch(term),
+    queryKey: ["search", term, type ?? "all"],
+    queryFn: () => fetchSearch(term, type),
   })
 
 /** Shared by the account filter autocomplete and the account picker. */

@@ -3,8 +3,9 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback, useId } from "react"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
+import { FilterChip } from "@/components/filters/filter-chip"
 import { Button } from "@/components/ui/button"
+import { HintTooltip } from "@/components/ui/tooltip"
 import { RiAddLine, RiCloseLine, RiLoader4Line, RiSubtractLine } from "@remixicon/react"
 import { cn } from "@/lib/utils"
 import { captureEvent } from "@/lib/analytics/client"
@@ -46,7 +47,7 @@ export function AccountAutocomplete({
   accountNames,
   selectedAccounts,
   onChange,
-  placeholder = "Type to search account names...",
+  placeholder = "Search account names",
   trackingKey,
   aliases,
   serverSuggest = false,
@@ -299,7 +300,7 @@ export function AccountAutocomplete({
     return (
       <>
         {text.slice(0, index)}
-        <span className="font-semibold text-foreground bg-yellow-200 dark:bg-yellow-900/50">
+        <span className="font-semibold text-foreground">
           {text.slice(index, index + query.length)}
         </span>
         {text.slice(index + query.length)}
@@ -311,51 +312,15 @@ export function AccountAutocomplete({
     <div className="space-y-2">
       {/* Selected Accounts as Badges */}
       {selectedAccounts.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-2">
-          {selectedAccounts.map((account, index) => {
-            const isInclude = account.mode === 'include'
-            return (
-              <Badge
+        <div className="flex flex-wrap gap-1.5">
+          {selectedAccounts.map((account, index) => (
+              <FilterChip
                 key={`${account.value}-${index}`}
-                variant="secondary"
-                className={cn(
-                  "group flex items-center gap-1 pr-1 max-w-full",
-                  isInclude
-                    ? "bg-green-500/20 text-green-700 dark:bg-green-500/30 dark:text-green-300 border-green-500/50 hover:bg-green-500/30"
-                    : "bg-red-500/20 text-red-700 dark:bg-red-500/30 dark:text-red-300 border-red-500/50 hover:bg-red-500/30"
-                )}
-              >
-                <button
-                  type="button"
-                  onClick={() => handleToggleMode(index)}
-                  className={cn(
-                    "flex items-center justify-center w-4 h-4 rounded-sm shrink-0",
-                    isInclude
-                      ? "bg-green-600/30 hover:bg-green-600/50"
-                      : "bg-red-600/30 hover:bg-red-600/50"
-                  )}
-                  title={isInclude ? 'Click to exclude' : 'Click to include'}
-                  aria-label={isInclude ? `Exclude ${account.value}` : `Include ${account.value}`}
-                >
-                  {isInclude ? (
-                    <RiAddLine className="h-3 w-3" />
-                  ) : (
-                    <RiSubtractLine className="h-3 w-3" />
-                  )}
-                </button>
-                <span className="text-xs truncate max-w-[240px]" title={account.value}>{account.value}</span>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveAccount(index)}
-                  className="ml-1 rounded-sm opacity-70 hover:opacity-100 hover:bg-accent p-0.5 shrink-0"
-                  title="Remove"
-                  aria-label={`Remove ${account.value}`}
-                >
-                  <RiCloseLine className="h-3 w-3" />
-                </button>
-              </Badge>
-            )
-          })}
+                item={account}
+                onToggleMode={() => handleToggleMode(index)}
+                onRemove={() => handleRemoveAccount(index)}
+              />
+          ))}
         </div>
       )}
 
@@ -383,6 +348,7 @@ export function AccountAutocomplete({
             aria-expanded={isOpen}
             aria-controls={listboxId}
             aria-activedescendant={activeOptionId}
+            className="h-8 text-[13px] md:text-[13px]"
           />
         </div>
 
@@ -390,7 +356,7 @@ export function AccountAutocomplete({
         {isSuggestionsOpen && (
           <div
             ref={dropdownRef}
-            className="relative z-50 w-full mt-1 bg-popover border rounded-md shadow-lg"
+            className="relative z-50 mt-1 w-full rounded-lg border bg-popover shadow-float"
             role="listbox"
             id={listboxId}
             aria-label="Account suggestions"
@@ -420,47 +386,44 @@ export function AccountAutocomplete({
                       </span>
                       {suggestion.matchedAlias && (
                         <span className="mt-0.5 block text-xs text-muted-foreground">
-                          Known as: {highlightMatch(suggestion.matchedAlias.value, debouncedValue)}
+                          Known as {highlightMatch(suggestion.matchedAlias.value, debouncedValue)}
                         </span>
                       )}
                       {suggestion.visibility?.visibility === "exclude" && (
-                        <span
-                          className="mt-0.5 block truncate text-xs font-medium text-amber-700 dark:text-amber-300"
-                          title="NON-GCC"
-                        >
-                          NON-GCC
+                        <span className="mt-0.5 block truncate text-xs font-medium text-amber-700 dark:text-amber-300">
+                          Non-GCC
                         </span>
                       )}
                     </span>
                     <div className="flex gap-1 ml-2">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-xs"
-                        className="hover:bg-green-500/15"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleSelectAccount(suggestion.name, 'include')
-                        }}
-                        title="Include"
-                        aria-label={`Include ${suggestion.name}`}
-                      >
-                        <RiAddLine className="h-3 w-3 text-green-600" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-xs"
-                        className="hover:bg-red-500/15"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleSelectAccount(suggestion.name, 'exclude')
-                        }}
-                        title="Exclude"
-                        aria-label={`Exclude ${suggestion.name}`}
-                      >
-                        <RiSubtractLine className="h-3 w-3 text-red-600" />
-                      </Button>
+                      <HintTooltip label={`Include ${suggestion.name}`}>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
+                          className="hover:bg-include/15"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleSelectAccount(suggestion.name, 'include')
+                          }}
+                        >
+                          <RiAddLine className="h-3.5 w-3.5 text-include" />
+                        </Button>
+                      </HintTooltip>
+                      <HintTooltip label={`Exclude ${suggestion.name}`}>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
+                          className="hover:bg-exclude/15"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleSelectAccount(suggestion.name, 'exclude')
+                          }}
+                        >
+                          <RiSubtractLine className="h-3.5 w-3.5 text-exclude" />
+                        </Button>
+                      </HintTooltip>
                     </div>
                   </div>
                 ))}
@@ -480,7 +443,7 @@ export function AccountAutocomplete({
         {isOpen && (isFetching ? inputValue : debouncedValue).trim() && suggestions.length === 0 && (
           <div
             ref={dropdownRef}
-            className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg p-3 text-sm text-muted-foreground"
+            className="absolute z-50 mt-1 w-full rounded-lg border bg-popover p-3 text-sm text-muted-foreground shadow-float"
             role="status"
             aria-live="polite"
           >

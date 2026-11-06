@@ -5,15 +5,14 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { devError } from "@/lib/utils/dev-log"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Badge } from "@/components/ui/badge"
-import { RiBriefcaseLine, RiBuildingLine, RiCheckboxCircleLine, RiDownloadLine, RiGroupLine, RiSparklingLine } from "@remixicon/react"
+import { TruncatedText } from "@/components/ui/truncated-text"
+import { RiBriefcaseLine, RiBuildingLine, RiCheckboxCircleFill, RiDownloadLine, RiErrorWarningFill, RiGroupLine, RiSparklingLine } from "@remixicon/react"
 import type { ExportDatasetKey } from "@/lib/utils/export-helpers"
 import {
   requestServerExport,
@@ -23,8 +22,9 @@ import {
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { toTrackedStringArray } from "@/lib/analytics/tracking"
-import { getDatasetUnavailableMessage, isDatasetEnabled } from "@/lib/config/dashboard-access"
 import { cn } from "@/lib/utils"
+import { fieldText, type DescribedField } from "@/components/filters/filter-description"
+import { plural } from "@/lib/utils/helpers"
 
 type ExportData = {
   accounts: object[]
@@ -68,43 +68,42 @@ interface ExportDialogProps {
   compact?: boolean
   /** Whether the dialog exports the whole (filtered) dataset or a row selection; analytics only. */
   exportScope?: "all" | "selection"
+  /** The filters the export follows, as the sidebar describes them; shown as chips. */
+  filterSummary?: DescribedField[]
   onExportCompleted?: () => void
 }
+
+const SINGULAR: Record<ExportDatasetKey, string> = { accounts: "account", centers: "centre", services: "service", prospects: "prospect" }
 
 const DATASET_META: Array<{
   key: ExportDatasetKey
   label: string
   description: string
   icon: typeof RiBuildingLine
-  accent: string
 }> = [
   {
     key: "accounts",
     label: "Accounts",
     description: "Legal names, HQ details, revenue ranges",
     icon: RiBuildingLine,
-    accent: "text-primary",
   },
   {
     key: "centers",
     label: "Centres",
     description: "Locations, type, employees, status",
     icon: RiBriefcaseLine,
-    accent: "text-primary",
   },
   {
     key: "services",
     label: "Services",
     description: "Service lines, focus, software stack",
     icon: RiSparklingLine,
-    accent: "text-primary",
   },
   {
     key: "prospects",
     label: "Prospects",
     description: "Decision makers, titles, departments",
     icon: RiGroupLine,
-    accent: "text-primary",
   },
 ]
 
@@ -124,6 +123,7 @@ export function ExportDialog({
   initialDatasets,
   compact = false,
   exportScope = "all",
+  filterSummary = [],
   onExportCompleted,
 }: ExportDialogProps) {
   const countOf = (key: ExportDatasetKey) => rowCounts?.[key] ?? data[key].length
@@ -136,11 +136,12 @@ export function ExportDialog({
   const [isExporting, setIsExporting] = useState(false)
   const [progress, setProgress] = useState(0)
   const [displayedProgress, setDisplayedProgress] = useState(0)
-  const [stage, setStage] = useState("Preparing export...")
+  const [stage, setStage] = useState("Preparing export")
   const [error, setError] = useState<string | null>(null)
   const [exportResult, setExportResult] = useState<ServerExportResponse | null>(null)
   // Result is held back until the progress bar visually fills to 100%.
   const [isComplete, setIsComplete] = useState(false)
+  const [showAllFilters, setShowAllFilters] = useState(false)
   const wasOpenRef = useRef(false)
   const rafRef = useRef<number | null>(null)
 
@@ -193,6 +194,8 @@ export function ExportDialog({
     () => (allowedDatasets ? DATASET_META.filter((meta) => allowedDatasets.includes(meta.key)) : DATASET_META),
     [allowedDatasets]
   )
+  // Every dataset is empty: the filters match nothing, so no choice of sheets helps.
+  const nothingMatches = visibleDatasetMeta.every((meta) => countOf(meta.key) === 0)
 
   useEffect(() => {
     if (!open) {
@@ -207,19 +210,20 @@ export function ExportDialog({
     const allow = (key: ExportDatasetKey) =>
       (!allowedDatasets || allowedDatasets.includes(key)) && (!initialDatasets || initialDatasets.includes(key))
     const initialSelection = {
-      accounts: allow("accounts") && isDatasetEnabled("accounts") && countOf("accounts") > 0,
-      centers: allow("centers") && isDatasetEnabled("centers") && countOf("centers") > 0,
-      services: allow("services") && isDatasetEnabled("services") && countOf("services") > 0,
-      prospects: allow("prospects") && isDatasetEnabled("prospects") && countOf("prospects") > 0,
+      accounts: allow("accounts") && countOf("accounts") > 0,
+      centers: allow("centers") && countOf("centers") > 0,
+      services: allow("services") && countOf("services") > 0,
+      prospects: allow("prospects") && countOf("prospects") > 0,
     }
     setSelection(initialSelection)
     setIsExporting(false)
     setProgress(0)
     setDisplayedProgress(0)
-    setStage("Preparing export...")
+    setStage("Preparing export")
     setError(null)
     setExportResult(null)
     setIsComplete(false)
+    setShowAllFilters(false)
 
     const initiallySelectedDatasets = getSelectedDatasets(initialSelection)
 
@@ -247,18 +251,8 @@ export function ExportDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [selection, data, rowCounts]
   )
-  const readinessItems = useMemo(
-    () => visibleDatasetMeta.map((item) => ({
-      ...item,
-      count: selection[item.key] ? countOf(item.key) : 0,
-      selected: selection[item.key],
-    })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [selection, data, rowCounts, visibleDatasetMeta]
-  )
-
   const handleToggle = (key: ExportDatasetKey) => {
-    if (isExporting || !isDatasetEnabled(key)) return
+    if (isExporting) return
     const next = { ...selection, [key]: !selection[key] }
     setSelection(next)
     const selectedDatasets = getSelectedDatasets(next)
@@ -273,14 +267,14 @@ export function ExportDialog({
   const handleSelectAll = (value: boolean) => {
     if (isExporting) return
     const next = {
-      accounts: isDatasetAllowed("accounts") && isDatasetEnabled("accounts") ? value : false,
-      centers: isDatasetAllowed("centers") && isDatasetEnabled("centers") ? value : false,
-      services: isDatasetAllowed("services") && isDatasetEnabled("services") ? value : false,
-      prospects: isDatasetAllowed("prospects") && isDatasetEnabled("prospects") ? value : false,
+      accounts: isDatasetAllowed("accounts") ? value : false,
+      centers: isDatasetAllowed("centers") ? value : false,
+      services: isDatasetAllowed("services") ? value : false,
+      prospects: isDatasetAllowed("prospects") ? value : false,
     }
     setSelection(next)
     // Report the datasets actually toggled on, not a hardcoded count: with
-    // allowed/disabled datasets a "select all" can enable fewer than four.
+    // a limited set of allowed datasets a "select all" can enable fewer than four.
     const nextSelectedDatasets = getSelectedDatasets(next)
     captureEvent(value ? ANALYTICS_EVENTS.EXPORT_SELECT_ALL_CLICKED : ANALYTICS_EVENTS.EXPORT_CLEAR_CLICKED, {
       selected_dataset_count: nextSelectedDatasets.length,
@@ -289,14 +283,14 @@ export function ExportDialog({
   }
 
   const handleExport = async () => {
-    if (isExporting || totalSelected === 0) return
+    if (isExporting || totalSelected === 0 || selectedRowCount === 0) return
 
     setIsExporting(true)
     setError(null)
     setProgress(0)
     setDisplayedProgress(0)
     setIsComplete(false)
-    setStage("Requesting export...")
+    setStage("Requesting export")
     const startedAt = Date.now()
     const selectedDatasets = getSelectedDatasets(selection)
 
@@ -316,9 +310,9 @@ export function ExportDialog({
     let rampCancelled = false
     const ramp = async () => {
       const stages: Array<{ to: number; stage: string; duration: number }> = [
-        { to: 25, stage: "Fetching data from database", duration: 900 },
+        { to: 25, stage: "Fetching data", duration: 900 },
         { to: 65, stage: "Generating spreadsheet", duration: 2200 },
-        { to: 88, stage: "Uploading archive", duration: 1400 },
+        { to: 88, stage: "Saving the file", duration: 1400 },
       ]
       let current = 0
       for (const s of stages) {
@@ -399,267 +393,233 @@ export function ExportDialog({
     onOpenChange(nextOpen)
   }
 
-  const compactLabel = visibleDatasetMeta[0]?.label ?? "data"
+  const handleDownload = async () => {
+    if (!exportResult) return
+    captureEvent(ANALYTICS_EVENTS.EXPORT_DOWNLOAD_CLICKED, {
+      export_id: exportResult.id,
+      source: "export_dialog",
+      total_rows: exportResult.totalRows,
+    })
+    try {
+      const url = await resolveExportDownloadUrl(exportResult.id)
+      window.open(url, "_self")
+    } catch (err) {
+      captureEvent(ANALYTICS_EVENTS.EXPORT_DOWNLOAD_FAILED, {
+        export_id: exportResult.id,
+        source: "export_dialog",
+        error_message: err instanceof Error ? err.message : "Unknown download error",
+      })
+      setError(err instanceof Error ? err.message : "Could not download the export")
+    }
+  }
+
+  const resetToChoose = () => {
+    setExportResult(null)
+    setIsComplete(false)
+    setError(null)
+    setProgress(0)
+    setDisplayedProgress(0)
+  }
 
   // After the server responds we keep showing the progress bar until it
   // visually fills, only then revealing the download view.
   const showResult = Boolean(exportResult) && isComplete
   const fillingBar = isExporting || (Boolean(exportResult) && !isComplete)
+  const locked = fillingBar || showResult
+  const sheetCount = totalSelected
 
-  const statusBlock = showResult && exportResult ? (
-    <div className="flex flex-col items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-6 py-5 text-center">
-      <RiCheckboxCircleLine className="h-9 w-9 text-emerald-500" />
-      <div>
-        <p className="text-sm font-semibold">Your file is ready</p>
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          {exportResult.filename}
-          {exportResult.totalRows > 0 && (
-            <span className="ml-1">({exportResult.totalRows.toLocaleString()} rows)</span>
-          )}
-        </p>
-      </div>
-      <Button
-        size="sm"
-        onClick={async () => {
-          captureEvent(ANALYTICS_EVENTS.EXPORT_DOWNLOAD_CLICKED, {
-            export_id: exportResult.id,
-            source: "export_dialog",
-            total_rows: exportResult.totalRows,
-          })
-          try {
-            const url = await resolveExportDownloadUrl(exportResult.id)
-            window.open(url, "_self")
-          } catch (err) {
-            captureEvent(ANALYTICS_EVENTS.EXPORT_DOWNLOAD_FAILED, {
-              export_id: exportResult.id,
-              source: "export_dialog",
-              error_message: err instanceof Error ? err.message : "Unknown download error",
-            })
-            setError(err instanceof Error ? err.message : "Failed to download export.")
-          }
-        }}
-      >
-        <RiDownloadLine className="h-4 w-4" />
-        Download file
-      </Button>
-    </div>
-  ) : (fillingBar || error) ? (
-    <div className="rounded-lg border bg-muted/20 p-4">
-      {fillingBar && (
+  // Progress, the finished file and errors all live in the footer, so the
+  // window keeps its size from start to finish.
+  const footer = (
+    <div className="flex flex-wrap items-center gap-3 border-t px-5 py-3 sm:flex-nowrap">
+      {fillingBar ? (
         <>
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>{stage}</span>
-            <span className="tabular-nums">{Math.round(displayedProgress)}%</span>
-          </div>
-          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
-            <div
-              className="h-full rounded-full bg-primary"
-              style={{ width: `${displayedProgress}%` }}
-            />
+          <div className="min-w-0 flex-1" role="status" aria-live="polite">
+            <div className="flex justify-between text-xs">
+              <span>{stage}</span>
+              <span className="tabular-nums text-muted-foreground">{Math.round(displayedProgress)}%</span>
+            </div>
+            <div className="mt-2 h-1 overflow-hidden rounded-full bg-muted">
+              <div className="h-full origin-left rounded-full bg-primary" style={{ transform: `scaleX(${displayedProgress / 100})` }} />
+            </div>
           </div>
         </>
-      )}
-      {error && <p className={fillingBar ? "mt-2 text-xs text-destructive" : "text-xs text-destructive"}>{error}</p>}
-    </div>
-  ) : null
-
-  if (compact) {
-    return (
-      <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-xl">Export {compactLabel.toLowerCase()}</DialogTitle>
-            <DialogDescription>
-              {selectedRowCount.toLocaleString()} {compactLabel.toLowerCase()} {selectedRowCount === 1 ? "row" : "rows"} will be exported.
-            </DialogDescription>
-          </DialogHeader>
-
-          {statusBlock && <div className="space-y-4">{statusBlock}</div>}
-
-          <DialogFooter className="gap-2 sm:gap-0">
-            {showResult ? (
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Close
-              </Button>
+      ) : showResult && exportResult ? (
+        <>
+          <div className="flex min-w-0 flex-1 items-center gap-2.5" role="status">
+            <RiCheckboxCircleFill className="h-5 w-5 shrink-0 text-include" />
+            <div className="min-w-0">
+              <p className="text-[13px] font-medium">Ready to download</p>
+              <p className="truncate text-xs tabular-nums text-muted-foreground">
+                {plural(exportResult.totalRows, "row")}
+                {compact ? "" : ` · ${plural(sheetCount, "sheet")}`} · Excel file
+              </p>
+            </div>
+          </div>
+          {!compact && (
+            <Button variant="ghost" onClick={resetToChoose}>
+              Export again
+            </Button>
+          )}
+          <Button onClick={handleDownload}>
+            <RiDownloadLine />
+            Download
+          </Button>
+        </>
+      ) : error ? (
+        <>
+          <div className="flex min-w-0 flex-1 items-center gap-2.5 text-[13px]" role="alert">
+            <RiErrorWarningFill className="h-5 w-5 shrink-0 text-exclude" />
+            <div className="min-w-0">
+              <p className="font-medium">The export did not finish</p>
+              <p className="text-muted-foreground">{error}</p>
+            </div>
+          </div>
+          <Button variant="outline" onClick={() => handleDialogOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleExport} disabled={totalSelected === 0 || selectedRowCount === 0}>
+            Try again
+          </Button>
+        </>
+      ) : (
+        <>
+          <p className="min-w-0 flex-1 text-[13px] tabular-nums text-muted-foreground">
+            {nothingMatches ? (
+              "Nothing matches the filters, so there is nothing to export"
+            ) : totalSelected === 0 ? (
+              "Pick at least one dataset"
             ) : (
               <>
-                <Button variant="outline" onClick={() => handleDialogOpenChange(false)} disabled={fillingBar}>
-                  Cancel
-                </Button>
-                <Button onClick={handleExport} disabled={fillingBar || totalSelected === 0}>
-                  {fillingBar ? "Exporting..." : "Export"}
-                </Button>
+                <span className="font-medium text-foreground">{plural(selectedRowCount, "row")}</span>
+                {compact ? "" : ` in ${plural(sheetCount, "sheet")}`} · Excel file
               </>
             )}
-          </DialogFooter>
+          </p>
+          <Button variant="outline" onClick={() => handleDialogOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleExport} disabled={totalSelected === 0 || selectedRowCount === 0}>
+            <RiDownloadLine />
+            Export
+          </Button>
+        </>
+      )}
+    </div>
+  )
+
+  if (compact) {
+    const meta = visibleDatasetMeta[0]
+    const noun = meta ? SINGULAR[meta.key] : "row"
+    return (
+      <Dialog open={open} onOpenChange={handleDialogOpenChange}>
+        <DialogContent className="max-w-[440px] grid-cols-[minmax(0,1fr)] gap-0 overflow-hidden p-0">
+          <DialogHeader className="space-y-1 px-5 pb-4 pt-5 pr-12 text-left">
+            <DialogTitle className="text-[17px] font-semibold tracking-[-0.01em]">
+              Export {plural(selectedRowCount, noun)}
+            </DialogTitle>
+            <DialogDescription className="text-[13px]">
+              Only the rows you selected in the {meta?.label ?? "data"} table
+            </DialogDescription>
+          </DialogHeader>
+          {footer}
         </DialogContent>
       </Dialog>
     )
   }
 
+  const allOn = visibleDatasetMeta.every((item) => selection[item.key])
+  const shownFilters = showAllFilters ? filterSummary : filterSummary.slice(0, 2)
+  const hiddenFilters = filterSummary.length - shownFilters.length
+
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="text-xl">Export data</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="max-w-[560px] grid-cols-[minmax(0,1fr)] gap-0 overflow-hidden p-0">
+        <DialogHeader className="space-y-1 px-5 pb-4 pt-5 pr-12 text-left">
+          <DialogTitle className="text-[17px] font-semibold tracking-[-0.01em]">Export data</DialogTitle>
+          <DialogDescription className="text-[13px]">
             {isFiltered
-              ? "You are exporting the filtered dataset across all pages."
-              : "You are exporting the full dataset from the database."}
+              ? "Exports the filtered data across all pages, not just the rows on screen"
+              : "Exports everything shown on the dashboard, across all pages"}
           </DialogDescription>
+          {isFiltered && filterSummary.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 pt-2">
+              {shownFilters.map((field) => (
+                <span
+                  key={field.key ?? field.label}
+                  className="inline-flex h-6 max-w-full items-center gap-1 rounded-md border bg-card px-2 text-xs font-medium"
+                >
+                  <span className="shrink-0 font-normal text-muted-foreground">{field.label}</span>
+                  <TruncatedText text={fieldText(field)} />
+                </span>
+              ))}
+              {hiddenFilters > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllFilters(true)}
+                  className="inline-flex h-6 items-center rounded-md border border-dashed px-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  +{hiddenFilters} more
+                </button>
+              )}
+            </div>
+          )}
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div className="flex items-center justify-between rounded-lg border bg-muted/10 px-4 py-2">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <span>Selections</span>
-              <Badge variant="secondary">{totalSelected} selected</Badge>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="xs"
-                onClick={() => handleSelectAll(true)}
-                disabled={isExporting}
-              >
-                Select all
-              </Button>
-              <Button
-                variant="ghost"
-                size="xs"
-                onClick={() => handleSelectAll(false)}
-                disabled={isExporting}
-              >
-                Clear
-              </Button>
-            </div>
+        <div className="border-t">
+          <div className="flex items-center justify-between px-5 pb-1 pt-3 text-xs text-muted-foreground">
+            <span>Sheets in the file</span>
+            <button
+              type="button"
+              onClick={() => handleSelectAll(!allOn)}
+              disabled={locked}
+              className="font-medium text-primary hover:underline hover:underline-offset-2 disabled:text-muted-foreground disabled:no-underline"
+            >
+              {allOn ? "Clear" : "Select all"}
+            </button>
           </div>
-
-          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <p className="text-sm font-semibold text-foreground">Export readiness summary</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {selectedRowCount.toLocaleString()} rows will be included in this export.
-                </p>
-              </div>
-            </div>
-            <div className="mt-3 grid gap-2 sm:grid-cols-4">
-              {readinessItems.map((item) => {
-                const Icon = item.icon
-                return (
-                  <div
-                    key={item.key}
-                    className={cn(
-                      "rounded-lg border px-3 py-2",
-                      item.selected
-                        ? "border-border/70 bg-background/70"
-                        : "border-border/40 bg-background/30 opacity-60"
-                    )}
-                  >
-                    <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
-                      <Icon className={cn("h-3.5 w-3.5", item.accent)} />
-                      {item.label}
-                    </div>
-                    <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">
-                      {item.count.toLocaleString()}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="px-2 pb-3">
             {visibleDatasetMeta.map((item) => {
               const Icon = item.icon
-              const count = countOf(item.key)
               const isChecked = selection[item.key]
-              const isAccessible = isDatasetEnabled(item.key)
-              const isDisabled = isExporting || !isAccessible
               const checkboxId = `export-dataset-${item.key}`
 
               // A label rather than a button: the checkbox is itself a button,
-              // and buttons cannot nest. Clicking anywhere on the card toggles it.
+              // and buttons cannot nest. Clicking anywhere on the row toggles it.
               return (
                 <label
                   key={item.key}
                   htmlFor={checkboxId}
                   className={cn(
-                    "group relative flex items-start gap-3 rounded-xl border bg-background px-4 py-3 text-left shadow-sm transition-all duration-150",
-                    isChecked ? "border-primary/40 bg-primary/5" : "hover:border-muted-foreground/40",
-                    isDisabled ? "cursor-not-allowed opacity-70" : "cursor-pointer"
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors",
+                    locked ? "cursor-default" : "cursor-pointer hover:bg-muted/60"
                   )}
                 >
                   <Checkbox
                     id={checkboxId}
                     checked={isChecked}
                     onCheckedChange={() => handleToggle(item.key)}
-                    disabled={isDisabled}
-                    className="mt-1"
+                    disabled={locked}
                   />
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Icon className={cn("h-4 w-4", item.accent)} />
-                        <span className="text-sm font-semibold">{item.label}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {!isAccessible && (
-                          <Badge variant="secondary" className="text-[10px]">
-                            Not Procured
-                          </Badge>
-                        )}
-                        <Badge variant="outline" className="text-[10px]">
-                          {count.toLocaleString()} rows
-                        </Badge>
-                      </div>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {isAccessible ? item.description : getDatasetUnavailableMessage(item.key)}
-                    </p>
-                  </div>
+                  <span className="min-w-0 flex-1">
+                    <span className={cn("flex items-center gap-1.5 text-[13px] font-medium", !isChecked && "text-muted-foreground")}>
+                      <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      {item.label}
+                    </span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">
+                      {item.description}
+                    </span>
+                  </span>
+                  <span className={cn("whitespace-nowrap text-[13px] font-medium tabular-nums", !isChecked && "text-muted-foreground")}>
+                    {countOf(item.key).toLocaleString()} <span className="font-normal text-muted-foreground">rows</span>
+                  </span>
                 </label>
               )
             })}
           </div>
-
-          {statusBlock}
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
-          {showResult ? (
-            <>
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Close
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setExportResult(null)
-                  setIsComplete(false)
-                  setProgress(0)
-                  setDisplayedProgress(0)
-                }}
-              >
-                Export again
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button
-                variant="outline"
-                onClick={() => handleDialogOpenChange(false)}
-                disabled={fillingBar}
-              >
-                Cancel
-              </Button>
-              <Button onClick={handleExport} disabled={fillingBar || totalSelected === 0}>
-                {fillingBar ? "Exporting..." : "Export Selected"}
-              </Button>
-            </>
-          )}
-        </DialogFooter>
+        {footer}
       </DialogContent>
     </Dialog>
   )

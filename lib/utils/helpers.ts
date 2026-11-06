@@ -14,10 +14,40 @@ export const formatRevenueInMillions = (value: number): string => {
   return `${value.toLocaleString()}M`
 }
 
+const REVENUE_AMOUNT = /^(\d+(?:\.\d+)?)\s*(Mn|Bn|M|B)$/i
+
+const revenueAmount = (part: string): string | null => {
+  const match = part.trim().match(REVENUE_AMOUNT)
+  return match ? `$${match[1]}${match[2][0].toUpperCase()}` : null
+}
+
+/**
+ * A stored revenue range ("10Mn - 50Mn", "<10Mn", ">50Bn") in the form the
+ * revenue filter uses: "$10M to $50M", "Under $10M", "$50B+". Anything else
+ * is returned as it is.
+ */
+export const formatRevenueRange = (raw: string | null | undefined): string => {
+  const text = raw?.trim() ?? ""
+  if (text.startsWith("<")) {
+    const amount = revenueAmount(text.slice(1))
+    return amount ? `Under ${amount}` : text
+  }
+  if (text.startsWith(">")) {
+    const amount = revenueAmount(text.slice(1))
+    return amount ? `${amount}+` : text
+  }
+  const parts = text.split(/\s*-\s*/)
+  if (parts.length === 2) {
+    const [from, to] = parts.map(revenueAmount)
+    if (from && to) return `${from} to ${to}`
+  }
+  return text
+}
+
 /**
  * Get paginated data
  */
-export const getPaginatedData = (data: any[], page: number, itemsPerPage: number) => {
+export const getPaginatedData = <T,>(data: T[], page: number, itemsPerPage: number): T[] => {
   const startIndex = (page - 1) * itemsPerPage
   const endIndex = startIndex + itemsPerPage
   return data.slice(startIndex, endIndex)
@@ -45,6 +75,12 @@ export const getPageInfo = (currentPage: number, totalItems: number, itemsPerPag
  */
 export const copyToClipboard = (text: string) => {
   navigator.clipboard.writeText(text)
+}
+
+/** A trimmed value, or null when it is blank or the "TBA" placeholder. */
+export const knownText = (value: string | null | undefined): string | null => {
+  const trimmed = value?.trim()
+  return trimmed && trimmed.toUpperCase() !== "TBA" ? trimmed : null
 }
 
 /**
@@ -83,3 +119,6 @@ export const formatCenterLocation = (
   }
   return "India"
 }
+
+/** "1 account", "2,400 accounts". */
+export const plural = (n: number, word: string) => `${n.toLocaleString()} ${word}${n === 1 ? "" : "s"}`

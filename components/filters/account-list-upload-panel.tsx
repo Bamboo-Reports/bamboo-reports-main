@@ -1,13 +1,15 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { RiArrowLeftLine, RiCheckboxCircleLine, RiCloseCircleLine, RiErrorWarningLine, RiFileExcelLine, RiLoader4Line, RiQuestionLine, RiUploadLine } from "@remixicon/react"
+import { RiArrowLeftLine, RiCheckLine, RiCheckboxCircleLine, RiCloseCircleLine, RiErrorWarningLine, RiFileExcelLine, RiLoader4Line, RiQuestionLine, RiUploadLine } from "@remixicon/react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { HintTooltip } from "@/components/ui/tooltip"
+import { TruncatedText } from "@/components/ui/truncated-text"
+import { LibraryPaneHeader, LibraryPaneTitle } from "@/components/filters/library-dialog"
 import { AccountPicker, type AccountPickerOption } from "@/components/filters/account-picker"
 import { cn } from "@/lib/utils"
 import { captureEvent } from "@/lib/analytics/client"
@@ -18,13 +20,13 @@ import { MAX_MATCH_NAMES, type AccountMatchCandidate, type AccountMatchResult, t
 import { extractNames, guessNameColumn, parseDelimitedText, tableFromRows, type ParsedAccountTable } from "@/lib/accounts/account-list-parser"
 import { devError } from "@/lib/utils/dev-log"
 import { useAccountLists } from "@/contexts/account-lists-context"
-import type { AccountList } from "@/lib/accounts/account-lists"
+import type { AccountList, AccountListMatch, AccountListMatchVia } from "@/lib/accounts/account-lists"
 
-interface AccountListUploadDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+interface AccountListUploadPanelProps {
   /** When set, the upload replaces the accounts of this existing list instead of creating a new one. */
   existingList?: AccountList | null
+  /** Leaves the panel: with the saved list, or null when cancelled. */
+  onDone: (saved: AccountList | null) => void
   /** Called after the list is saved when the user chose "Save and apply". */
   onApply?: (list: AccountList) => void
 }
@@ -103,7 +105,25 @@ function viaLabel(candidate: AccountMatchCandidate | null): string | null {
   return null
 }
 
-export function AccountListUploadDialog({ open, onOpenChange, existingList = null, onApply }: AccountListUploadDialogProps) {
+/** How a reviewed row became an account, as stored on the saved list. */
+function matchVia(row: ReviewRow): AccountListMatchVia {
+  if (!row.selected) return "none"
+  if (!row.auto || row.auto.name !== row.selected) return "manual"
+  if (row.auto.via === "name") return "exact"
+  if (row.auto.via === "normalized") return "suffix"
+  if (row.auto.via === "alias") return "alias"
+  return "close"
+}
+
+function rowsToMatches(rows: ReviewRow[]): AccountListMatch[] {
+  return rows.map((row) => ({ input: row.input, account: row.selected, via: matchVia(row) }))
+}
+
+/**
+ * Upload or paste account names, check how each one matched, and save the
+ * list. Rendered inside the account lists window, in place of a list's details.
+ */
+export function AccountListUploadPanel({ existingList = null, onDone, onApply }: AccountListUploadPanelProps) {
   const { createList, updateList, loading: saving } = useAccountLists()
   const [step, setStep] = useState<Step>("input")
   const [fileName, setFileName] = useState<string | null>(null)
@@ -113,33 +133,14 @@ export function AccountListUploadDialog({ open, onOpenChange, existingList = nul
   const [parseError, setParseError] = useState<string | null>(null)
   const [matching, setMatching] = useState(false)
   const [rows, setRows] = useState<ReviewRow[]>([])
-  const [filterName, setFilterName] = useState("")
+  const [filterName, setFilterName] = useState(existingList?.name ?? "")
   const [statusFilter, setStatusFilter] = useState<AccountMatchStatus | "all">("all")
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
 
-  const reset = useCallback(() => {
-    setStep("input")
-    setFileName(null)
-    setTable(null)
-    setColumn(0)
-    setPasted("")
-    setParseError(null)
-    setMatching(false)
-    setRows([])
-    setFilterName("")
-    setStatusFilter("all")
-    setDragging(false)
-  }, [])
-
   useEffect(() => {
-    if (!open) {
-      reset()
-      return
-    }
-    if (existingList) setFilterName(existingList.name)
     captureEvent(ANALYTICS_EVENTS.ACCOUNT_LIST_UPLOAD_OPENED, { mode: existingList ? "update" : "create" })
-  }, [open, reset, existingList])
+  }, [existingList])
 
   const names = useMemo(() => {
     if (table) return extractNames(table, column)
@@ -160,7 +161,7 @@ export function AccountListUploadDialog({ open, onOpenChange, existingList = nul
       const parsed = lower.endsWith(".xlsx") || lower.endsWith(".xls") ? await readSpreadsheet(file) : parseDelimitedText(await file.text())
       if (parsed.rows.length === 0) {
         captureEvent(ANALYTICS_EVENTS.ACCOUNT_LIST_PARSE_FAILED, { reason: "empty_file", file_ext: fileExt })
-        setParseError("The file has no rows to import.")
+        setParseError("The file has no rows to import")
         return
       }
       setTable(parsed)
@@ -193,7 +194,7 @@ export function AccountListUploadDialog({ open, onOpenChange, existingList = nul
       })
     } catch (err) {
       devError("account list match failed:", err)
-      toast.error(err instanceof Error ? err.message : "Could not match the account list. Please try again.")
+      toast.error("Could not match the list", err instanceof Error && err.message ? { description: err.message } : undefined)
     } finally {
       setMatching(false)
     }
@@ -228,10 +229,10 @@ export function AccountListUploadDialog({ open, onOpenChange, existingList = nul
       const name = filterName.trim()
       if (!name || mappedNames.length === 0) return
       const unmatched = rows.filter((r) => !r.selected).map((r) => r.input)
-      const input = { name, accounts: mappedNames, unmatched, sourceFile: fileName }
+      const input = { name, accounts: mappedNames, unmatched, matches: rowsToMatches(rows), sourceFile: fileName }
       const saved = existingList ? await updateList(existingList.id, input) : await createList(input)
       if (!saved) {
-        toast.error("Could not save the account list. Please try again.")
+        toast.error("Could not save the list", { description: "Try again in a moment" })
         return
       }
       captureEvent(ANALYTICS_EVENTS.ACCOUNT_LIST_FILTER_SAVED, {
@@ -243,35 +244,27 @@ export function AccountListUploadDialog({ open, onOpenChange, existingList = nul
         unmapped_count: unmappedCount,
         applied: apply,
       })
+      toast.success(`Saved "${name}"`, {
+        description:
+          unmappedCount > 0
+            ? `${mappedNames.length.toLocaleString()} accounts matched, ${unmappedCount.toLocaleString()} skipped`
+            : `${mappedNames.length.toLocaleString()} accounts matched`,
+      })
       if (apply && onApply) onApply(saved)
-      toast.success(
-        unmappedCount > 0
-          ? `Saved "${name}" with ${mappedNames.length} accounts (${unmappedCount} skipped).`
-          : `Saved "${name}" with ${mappedNames.length} accounts.`
-      )
-      onOpenChange(false)
+      else onDone(saved)
     },
-    [filterName, mappedNames, rows, fileName, existingList, updateList, createList, unmappedCount, onApply, onOpenChange]
+    [filterName, mappedNames, rows, fileName, existingList, updateList, createList, unmappedCount, onApply, onDone]
   )
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={cn("max-h-[90vh] w-[calc(100%-2rem)] overflow-x-hidden overflow-y-auto", step === "review" ? "max-w-4xl" : "max-w-lg")}>
-        <DialogHeader>
-          <DialogTitle>
-            {step === "input" ? (existingList ? `Update "${existingList.name}"` : "Upload account list") : "Review account matches"}
-          </DialogTitle>
-          {step === "input" ? (
-            <DialogDescription className="sr-only">Upload an account list file or paste account names.</DialogDescription>
-          ) : (
-            <DialogDescription>
-              Confirm the mapping for each uploaded name. Rows without a selected account are left out of the list.
-            </DialogDescription>
-          )}
-        </DialogHeader>
-
+    <>
+      <LibraryPaneHeader
+        title={<LibraryPaneTitle>{existingList ? `Replace "${existingList.name}"` : "Upload a list"}</LibraryPaneTitle>}
+        meta={<UploadSteps step={step} />}
+      />
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
         {step === "input" ? (
-          <div className="min-w-0 space-y-4 py-1">
+          <div className="min-w-0 space-y-4">
             <div
               role="button"
               tabIndex={0}
@@ -311,8 +304,8 @@ export function AccountListUploadDialog({ open, onOpenChange, existingList = nul
               />
               {fileName ? (
                 <>
-                  <RiFileExcelLine className="h-6 w-6 text-primary" />
-                  <p className="max-w-full truncate text-sm font-medium" title={fileName}>{fileName}</p>
+                  <RiFileExcelLine className="h-6 w-6 text-muted-foreground" />
+                  <TruncatedText text={fileName} className="max-w-full text-sm font-medium" />
                   <p className="text-xs text-muted-foreground">Click or drop another file to replace it</p>
                 </>
               ) : (
@@ -369,15 +362,18 @@ export function AccountListUploadDialog({ open, onOpenChange, existingList = nul
                 {names.length > MAX_MATCH_NAMES && (
                   <span className="text-muted-foreground"> (only the first {MAX_MATCH_NAMES} will be used)</span>
                 )}
-                <p className="mt-1 truncate text-xs text-muted-foreground" title={names.slice(0, 5).join(", ")}>
-                  {names.slice(0, 5).join(", ")}
-                  {names.length > 5 ? ", ..." : ""}
-                </p>
+                <TruncatedText
+                  text={`${names.slice(0, 5).join(", ")}${names.length > 5 ? ", …" : ""}`}
+                  className="mt-1 text-xs text-muted-foreground"
+                />
               </div>
             )}
           </div>
         ) : (
-          <div className="min-w-0 space-y-4 py-1">
+          <div className="min-w-0 space-y-4">
+            <p className="text-[13px] text-muted-foreground">
+              Check each match. Names without an account are left out of the list.
+            </p>
             <div className="flex flex-wrap items-center gap-2">
               {(["all", "matched", "review", "not_found"] as const).map((key) => {
                 const count = key === "all" ? rows.length : counts[key]
@@ -390,24 +386,24 @@ export function AccountListUploadDialog({ open, onOpenChange, existingList = nul
                     onClick={() => setStatusFilter(key)}
                     aria-pressed={active}
                     className={cn(
-                      "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                      "rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
                       active ? "border-primary bg-primary text-primary-foreground" : "hover:bg-accent",
                       !active && key !== "all" && STATUS_META[key].className
                     )}
                   >
-                    {label} <span className="opacity-80">({count})</span>
+                    {label} <span className="tabular-nums opacity-80">{count}</span>
                   </button>
                 )
               })}
-              <span className="ml-auto text-xs text-muted-foreground">
+              <span className="ml-auto text-xs tabular-nums text-muted-foreground">
                 {mappedNames.length} account{mappedNames.length === 1 ? "" : "s"} will be saved to the list
               </span>
             </div>
 
-            <div className="max-h-[46vh] min-w-0 overflow-auto rounded-md border">
+            <div className="min-w-0 overflow-x-auto rounded-md border">
               <table className="w-full text-sm">
-                <thead className="sticky top-0 z-10 bg-muted/80 backdrop-blur">
-                  <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <thead className="sticky top-0 z-10 bg-muted">
+                  <tr className="text-left text-xs font-medium text-muted-foreground">
                     <th className="px-3 py-2 font-medium">Uploaded name</th>
                     <th className="px-3 py-2 font-medium">Status</th>
                     <th className="px-3 py-2 font-medium">Account in database</th>
@@ -417,7 +413,7 @@ export function AccountListUploadDialog({ open, onOpenChange, existingList = nul
                   {visibleRows.length === 0 ? (
                     <tr>
                       <td colSpan={3} className="px-3 py-6 text-center text-sm text-muted-foreground">
-                        No rows in this group.
+                        No rows in this group
                       </td>
                     </tr>
                   ) : (
@@ -427,14 +423,12 @@ export function AccountListUploadDialog({ open, onOpenChange, existingList = nul
                       return (
                         <tr key={`${row.input}-${index}`} className="border-t align-top">
                           <td className="max-w-[240px] px-3 py-2">
-                            <span className="block truncate font-medium" title={row.input}>
-                              {row.input}
-                            </span>
+                            <TruncatedText text={row.input} className="font-medium" />
                             {hint && <span className="block text-xs text-muted-foreground">{hint}</span>}
                           </td>
                           <td className="whitespace-nowrap px-3 py-2">
                             <Badge variant="outline" className={cn("gap-1 font-medium", meta.className)}>
-                              <meta.Icon className="h-3 w-3" />
+                              <meta.Icon className="h-3.5 w-3.5" />
                               {meta.label}
                             </Badge>
                           </td>
@@ -449,15 +443,15 @@ export function AccountListUploadDialog({ open, onOpenChange, existingList = nul
                             {row.candidates.length > 0 && !row.selected && (
                               <div className="mt-1.5 flex flex-wrap gap-1">
                                 {row.candidates.slice(0, 3).map((c) => (
-                                  <button
-                                    key={c.name}
-                                    type="button"
-                                    onClick={() => updateRow(index, c.name)}
-                                    className="max-w-[220px] truncate rounded-full border px-2 py-0.5 text-xs hover:bg-accent"
-                                    title={c.aliasValue ? `${c.name} (known as ${c.aliasValue})` : c.name}
-                                  >
-                                    {c.name}
-                                  </button>
+                                  <HintTooltip key={c.name} label={c.name} hint={c.aliasValue ? `Known as ${c.aliasValue}` : undefined}>
+                                    <button
+                                      type="button"
+                                      onClick={() => updateRow(index, c.name)}
+                                      className="max-w-[220px] truncate rounded-md border px-2 py-0.5 text-xs transition-colors hover:bg-accent"
+                                    >
+                                      {c.name}
+                                    </button>
+                                  </HintTooltip>
                                 ))}
                               </div>
                             )}
@@ -476,30 +470,31 @@ export function AccountListUploadDialog({ open, onOpenChange, existingList = nul
                 id="account-list-filter-name"
                 value={filterName}
                 onChange={(e) => setFilterName(e.target.value)}
-                placeholder="e.g., Acme target accounts Q4"
+                placeholder="Acme target accounts Q4"
               />
             </div>
           </div>
         )}
 
-        <DialogFooter className="gap-2 sm:gap-2">
+      </div>
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-t px-5 py-3">
           {step === "input" ? (
             <>
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
+              <Button variant="outline" onClick={() => onDone(null)}>
                 Cancel
               </Button>
-              <Button onClick={handleMatch} disabled={names.length === 0} loading={matching}>
-                {matching ? "Matching..." : "Match accounts"}
+              <Button onClick={handleMatch} disabled={names.length === 0} loading={matching} className="ml-auto">
+                {matching ? "Matching…" : "Match accounts"}
               </Button>
             </>
           ) : (
             <>
-              <Button variant="ghost" onClick={() => setStep("input")} disabled={saving} className="sm:mr-auto">
+              <Button variant="ghost" onClick={() => setStep("input")} disabled={saving} className="mr-auto">
                 <RiArrowLeftLine className="h-4 w-4" />
                 Back
               </Button>
               <Button variant="outline" onClick={() => handleSave(false)} disabled={!filterName.trim() || mappedNames.length === 0 || saving}>
-                {saving ? "Saving..." : existingList ? "Update list" : "Save list"}
+                {saving ? "Saving…" : existingList ? "Update list" : "Save list"}
               </Button>
               {onApply && (
                 <Button onClick={() => handleSave(true)} disabled={!filterName.trim() || mappedNames.length === 0 || saving}>
@@ -508,9 +503,34 @@ export function AccountListUploadDialog({ open, onOpenChange, existingList = nul
               )}
             </>
           )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </>
+  )
+}
+
+/** "1 Add names", then "2 Check matches", marking the current step. */
+function UploadSteps({ step }: { step: Step }) {
+  const item = (index: number, label: string, state: "done" | "current" | "next") => (
+    <span className={cn("inline-flex items-center gap-1.5", state === "current" && "font-medium text-foreground")}>
+      <span
+        className={cn(
+          "grid h-5 w-5 place-items-center rounded-full text-[11px] font-medium tabular-nums",
+          state === "current" && "bg-primary text-primary-foreground",
+          state === "done" && "bg-include/15 text-include",
+          state === "next" && "bg-muted text-muted-foreground"
+        )}
+      >
+        {state === "done" ? <RiCheckLine className="h-3 w-3" /> : index}
+      </span>
+      {label}
+    </span>
+  )
+  return (
+    <span className="mt-1 inline-flex items-center gap-2 text-xs">
+      {item(1, "Add names", step === "input" ? "current" : "done")}
+      <span className="h-px w-6 bg-border" aria-hidden="true" />
+      {item(2, "Check matches", step === "review" ? "current" : "next")}
+    </span>
   )
 }
 

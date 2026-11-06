@@ -57,10 +57,10 @@ export function SelectionActionBar({
   if (!mounted) return null
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4">
+    <div className="pointer-events-none fixed inset-x-0 bottom-16 z-50 flex justify-center px-4">
       <div
         className={
-          "pointer-events-auto flex items-center gap-3 rounded-full border bg-background/70 px-4 py-2 shadow-lg backdrop-blur-md supports-[backdrop-filter]:bg-background/60 ease-out " +
+          "pointer-events-auto flex items-center gap-3 rounded-xl border bg-card px-3 py-2 shadow-float ease-[cubic-bezier(0.22,1,0.36,1)] " +
           (exiting
             ? "animate-out fade-out slide-out-to-bottom-4 duration-200"
             : "animate-in fade-in slide-in-from-bottom-4 duration-300")
@@ -69,7 +69,6 @@ export function SelectionActionBar({
         <Button
           variant="ghost"
           size="icon-sm"
-          className="rounded-full"
           onClick={() => {
             captureEvent(ANALYTICS_EVENTS.ROW_SELECTION_CLEARED, { entity, selected_count: count })
             onClear()
@@ -78,7 +77,7 @@ export function SelectionActionBar({
         >
           <RiCloseLine className="h-4 w-4" />
         </Button>
-        <span className="text-sm font-medium">{displayCount} selected</span>
+        <span className="text-sm font-medium tabular-nums">{displayCount.toLocaleString()} selected</span>
         {matchingCount !== undefined && onExportAll && (
           <Button
             variant="link"
@@ -96,11 +95,11 @@ export function SelectionActionBar({
             Need all {matchingCount.toLocaleString()}? Export all
           </Button>
         )}
-        <Button size="sm" className="rounded-full px-4" onClick={() => {
+        <Button size="sm" onClick={() => {
             captureEvent(ANALYTICS_EVENTS.SELECTION_EXPORT_CLICKED, { entity, selected_count: count })
             onExport()
           }}>
-          <RiDownloadLine className="h-3.5 w-3.5" />
+          <RiDownloadLine className="h-4 w-4" />
           Export
         </Button>
       </div>

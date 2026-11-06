@@ -1,0 +1,694 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tooltips</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..600&display=swap" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css" rel="stylesheet" />
+<style>
+  /* Surface tokens copied from app/globals.css */
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 214 45% 15%;
+    --card: 0 0% 100%;
+    --popover: 0 0% 100%;
+    --primary: 204 100% 38%;
+    --primary-strong: 204 100% 33%;
+    --muted: 210 25% 94%;
+    --muted-foreground: 215 20% 39%;
+    --border: 212 24% 86%;
+    --ring: 204 100% 38%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-accent: 210 30% 96%;
+    --sidebar-border: 212 24% 86%;
+    --sidebar-ring: 28 88% 53%;
+    /* Chart colours: DONUT_CHART_COLORS, pale to deep */
+    --o1: #fef0c3; --o2: #f9d996; --o3: #f7bd6b; --o4: #f69d3d; --o5: #f17c1d; --o6: #dd6516;
+
+    /* Proposed: tooltip tokens (new in globals.css) */
+    --tooltip: 0 0% 100%;
+    --tooltip-foreground: 214 45% 15%;
+    --tooltip-shadow: 0 8px 24px rgba(0, 0, 0, .08), 0 1px 2px rgba(0, 0, 0, .04);
+  }
+  .dark {
+    --background: 0 0% 10%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 12%;
+    --popover: 0 0% 12%;
+    --primary: 204 92% 56%;
+    --primary-strong: 204 92% 56%;
+    --muted: 0 0% 16%;
+    --muted-foreground: 0 0% 65%;
+    --border: 0 0% 24%;
+    --ring: 0 0% 83.1%;
+    --sidebar-background: 0 0% 10%;
+    --sidebar-accent: 0 0% 16%;
+    --sidebar-border: 0 0% 24%;
+    --sidebar-ring: 28 88% 60%;
+
+    /* 17%: clear of the 12% card, so a tooltip over a card reads as a layer. */
+    --tooltip: 0 0% 17%;
+    --tooltip-foreground: 0 0% 98%;
+    --tooltip-shadow: 0 8px 24px rgba(0, 0, 0, .45), 0 1px 2px rgba(0, 0, 0, .3);
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: light; }
+  html.dark { color-scheme: dark; }
+  body {
+    margin: 0; font-family: "DM Sans", system-ui, sans-serif; line-height: 1.5;
+    background: hsl(var(--background)); color: hsl(var(--foreground));
+    -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums;
+  }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; border-radius: 6px; }
+
+  /* Page type scale: 13 / 16 / 20 / 26 (steps of 1.25 or more) */
+  .page { max-width: 1140px; margin: 0 auto; padding: 32px 24px 96px; }
+  .top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; margin-bottom: 8px; }
+  .top h1 { margin: 0; font-size: 26px; line-height: 32px; font-weight: 600; letter-spacing: -0.015em; }
+  .intro { margin: 0 0 8px; max-width: 80ch; font-size: 14px; color: hsl(var(--muted-foreground)); }
+  .toggle {
+    display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 8px;
+    border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 13px; font-weight: 500; cursor: pointer;
+    transition: background-color .15s ease;
+  }
+  .toggle:hover { background: hsl(var(--muted)); }
+  .part { margin: 48px 0 0; font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em; }
+  .part-note { margin: 4px 0 0; max-width: 80ch; font-size: 13px; color: hsl(var(--muted-foreground)); }
+
+  .variant { padding: 24px 0 8px; border-top: 1px solid hsl(var(--border)); margin-top: 20px; }
+  .vh { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-bottom: 8px; }
+  .vh h3 { margin: 0; font-size: 16px; font-weight: 600; }
+  .src { font-size: 12px; color: hsl(var(--muted-foreground)); overflow-wrap: anywhere; }
+  .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+  @media (max-width: 900px) { .pair { grid-template-columns: minmax(0, 1fr); gap: 24px; } }
+  .case { font-size: 12px; font-weight: 500; color: hsl(var(--muted-foreground)); margin: 0 0 6px; }
+  .case.new { color: hsl(var(--primary-strong)); }
+  .stage {
+    position: relative; overflow: hidden; border: 1px solid hsl(var(--border)); border-radius: 12px;
+    background: hsl(var(--card));
+  }
+  .issues { margin: 8px 0 0; padding-left: 18px; font-size: 12px; color: hsl(var(--muted-foreground)); }
+  .issues li + li { margin-top: 2px; }
+
+  /* ---------- Proposed tooltip system ---------- */
+  .tip {
+    position: absolute; z-index: 5; pointer-events: none;
+    background: hsl(var(--tooltip)); color: hsl(var(--tooltip-foreground));
+    border: 1px solid hsl(var(--border)); border-radius: 8px; box-shadow: var(--tooltip-shadow);
+    font-size: 12px; line-height: 16px; text-align: left; white-space: normal; overflow-wrap: break-word;
+  }
+  /* Label: icons, buttons, truncated text, status hints */
+  .tip-label { padding: 6px 10px; width: max-content; max-width: 240px; font-size: 13px; line-height: 18px; font-weight: 500; }
+  .tip-label .sub { display: block; font-size: 12px; line-height: 16px; font-weight: 400; color: hsl(var(--muted-foreground)); }
+  /* Anchors: placed from the trigger with a 6px gap. Top is the default. */
+  .at-top-start { bottom: calc(100% + 6px); left: 0; }
+  .at-bottom { top: calc(100% + 6px); left: 50%; transform: translateX(-50%); }
+  .at-bottom-end { top: calc(100% + 6px); right: 0; }
+  .at-right { left: calc(100% + 6px); top: 50%; transform: translateY(-50%); }
+  /* In the header the gap is measured from the bar's bottom edge, so the tooltip clears the divider. */
+  .hdr .below-bar { top: calc(100% + 18px); }
+  /* Chart: title over label and value rows */
+  .tip-chart { padding: 8px 12px; min-width: 140px; max-width: 260px; width: max-content; }
+  /* The current chart tooltip's shape: name on top, muted detail lines, an optional large figure. */
+  .tip-title { display: flex; align-items: center; gap: 6px; font-size: 14px; line-height: 20px; font-weight: 500; }
+  .tip-lines { display: grid; gap: 2px; margin-top: 2px; }
+  .tip-line { color: hsl(var(--muted-foreground)); }
+  .tip-line b { font-weight: 500; color: hsl(var(--tooltip-foreground)); font-variant-numeric: tabular-nums; }
+  .tip-lead { display: block; margin-top: 2px; font-size: 20px; line-height: 28px; font-weight: 500; font-variant-numeric: tabular-nums; color: hsl(var(--tooltip-foreground)); }
+  .sw {
+    flex: none; width: 10px; height: 10px; border-radius: 2px; background: var(--sw);
+    box-shadow: inset 0 0 0 1px hsl(var(--foreground) / .25);
+  }
+  .nb { white-space: nowrap; }
+  /* Card: map hover */
+  .tip-card { padding: 8px 12px; min-width: 180px; max-width: 280px; width: max-content; }
+  .tip-card .tip-lead span { margin-left: 4px; font-size: 12px; font-weight: 400; color: hsl(var(--muted-foreground)); }
+
+  /* Live demo: opens after 400ms hover or at once on focus; the pointer can move onto it; closes 100ms after leaving. */
+  .has-tip { position: relative; }
+  .has-tip > .tip.live { opacity: 0; transition: opacity .12s ease-out .1s; }
+  .has-tip:hover > .tip.live { opacity: 1; pointer-events: auto; transition-delay: .4s; }
+  .has-tip:focus-visible > .tip.live { opacity: 1; transition-delay: 0s; }
+  .has-tip > .tip.live.pin { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) { .has-tip > .tip.live { transition: none; } }
+
+  /* The pointer, drawn where a pointer-following tooltip is measured from. */
+  .ptr { position: absolute; z-index: 6; width: 14px; height: 14px; margin: -1px 0 0 -2px; pointer-events: none; }
+
+  /* ---------- Today's surfaces, reproduced ---------- */
+  /* Native title attribute: drawn by the browser and OS, not by the app. */
+  .native {
+    position: absolute; z-index: 5; pointer-events: none; padding: 2px 6px; font: 12px/16px system-ui, sans-serif;
+    background: #f7f7f7; color: #1a1a1a; border: 1px solid #8a8a8a; border-radius: 2px;
+    box-shadow: 1px 2px 3px rgba(0,0,0,.25); white-space: nowrap;
+  }
+  .native.cur { left: 60%; top: calc(100% + 14px); }
+  .native.cur-dot { left: 4px; }
+  .native.cur-mid { left: 40%; }
+  .dark .native { background: #2b2b2b; color: #f0f0f0; border-color: #5a5a5a; }
+  .t-pie { position: absolute; z-index: 5; padding: 8px 12px; border: 1px solid hsl(var(--border)); border-radius: 8px; background: hsl(var(--popover)); box-shadow: 0 8px 24px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04); white-space: nowrap; }
+  .t-pie .n { margin: 0 0 4px; font-size: 14px; line-height: 20px; font-weight: 500; }
+  .t-pie p { margin: 0; font-size: 12px; line-height: 16px; color: hsl(var(--muted-foreground)); }
+  .t-pie p + p { margin-top: 4px; }
+  .t-pie .big { font-size: 24px; line-height: 32px; font-weight: 500; }
+  .t-tm { position: absolute; z-index: 5; padding: 8px 12px; border: 1px solid hsl(var(--border)); border-radius: 8px; background: hsl(var(--popover)); box-shadow: 0 8px 24px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04); white-space: nowrap; }
+  .t-tm .n { font-size: 12px; line-height: 16px; font-weight: 500; }
+  .t-tm .v { font-size: 14px; line-height: 20px; font-weight: 500; }
+  .t-rc { position: absolute; z-index: 5; display: grid; gap: 6px; min-width: 128px; padding: 6px 10px; border: 1px solid hsl(var(--border) / .5); border-radius: 8px; background: hsl(var(--background)); box-shadow: 0 8px 24px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04); font-size: 12px; line-height: 16px; }
+  .t-rc .n { font-weight: 500; }
+  .t-map { position: absolute; z-index: 5; display: flex; min-width: 220px; overflow: hidden; border: 1px solid hsl(var(--border) / .8); border-radius: 8px; background: hsl(var(--popover)); box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+  .t-map .bar { width: 2px; background: rgb(249 115 22 / .8); }
+  .t-map .body { flex: 1; padding: 16px; display: grid; gap: 12px; }
+  .t-map .city { font-size: 14px; line-height: 1.25; font-weight: 500; }
+  .t-map .ctry { margin-top: 4px; font-size: 12px; color: hsl(var(--muted-foreground)); }
+  .t-map .hero { display: flex; align-items: baseline; gap: 8px; }
+  .t-map .hero b { font-size: 24px; line-height: 1; font-weight: 500; }
+  .t-map .hero span { font-size: 12px; color: hsl(var(--muted-foreground)); }
+  .t-map .rows { display: grid; gap: 4px; padding-top: 8px; border-top: 1px solid hsl(var(--border) / .6); font-size: 12px; }
+  .t-map .rows div { display: flex; justify-content: space-between; }
+  .t-map .rows span { color: hsl(var(--muted-foreground)); }
+  .t-map .rows b { font-weight: 500; }
+
+  /* ---------- Context pieces ---------- */
+  .hdr { display: flex; align-items: center; gap: 8px; height: 56px; padding: 0 16px; border-bottom: 1px solid hsl(var(--border)); }
+  .brand { min-width: 0; margin-right: auto; font-size: 17px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .search {
+    display: inline-flex; flex: 0 1 200px; min-width: 0; overflow: hidden; align-items: center; gap: 8px; height: 32px; padding: 0 6px 0 12px; border-radius: 8px;
+    border: 1px solid hsl(var(--border) / .6); background: hsl(var(--muted) / .3); font-size: 13px; color: hsl(var(--muted-foreground));
+  }
+  .search .k { margin-left: auto; display: inline-grid; place-items: center; height: 20px; min-width: 20px; padding: 0 4px; border-radius: 5px; border: 1px solid hsl(var(--border)); background: hsl(var(--background)); font-size: 11px; font-weight: 500; }
+  .ib {
+    flex: none; display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; border: 0; background: transparent;
+    color: hsl(var(--muted-foreground)); font-size: 18px; cursor: pointer;
+  }
+  .ib:hover, .ib.hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
+  .body-fill { height: 150px; padding: 16px; display: grid; gap: 8px; align-content: start; }
+  .skel { height: 10px; border-radius: 4px; background: hsl(var(--muted)); }
+
+  .rail-wrap { display: flex; height: 300px; }
+  .rail { flex: none; width: 64px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 0; border-right: 1px solid hsl(var(--sidebar-border)); background: hsl(var(--sidebar-background)); }
+  .rail .ib { width: 40px; height: 40px; position: relative; }
+  .rail .badge { position: absolute; right: -2px; top: 2px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 99px; background: hsl(var(--primary)); color: #fff; font-size: 10px; font-weight: 500; line-height: 16px; box-shadow: 0 0 0 2px hsl(var(--sidebar-background)); }
+  .dark .rail .badge { color: hsl(0 0% 10%); }
+  .rail .sep { width: 24px; height: 1px; background: hsl(var(--sidebar-border)); margin: 8px 0; }
+  .rail-main { flex: 1; padding: 16px; display: grid; gap: 8px; align-content: start; }
+
+  .row-ui { padding: 16px; display: grid; gap: 60px; align-content: start; height: 284px; }
+  .line { display: flex; align-items: center; gap: 10px; min-width: 0; font-size: 13px; }
+  .line .lbl { width: 88px; flex: none; font-size: 12px; color: hsl(var(--muted-foreground)); }
+  .btn { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 13px; font-weight: 500; white-space: nowrap; }
+  .btn[aria-disabled="true"] { color: hsl(var(--muted-foreground)); }
+  .saved { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 10px; border-radius: 8px; background: hsl(var(--sidebar-accent)); font-size: 13px; white-space: nowrap; }
+  .dot { display: block; width: 6px; height: 6px; border-radius: 99px; background: hsl(var(--sidebar-ring)); }
+  .trunc { display: block; max-width: 170px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-weight: 500; }
+  /* Narrow stages: flip to the side that has room, as the real component does at the edge. */
+  @media (max-width: 520px) {
+    .flip-narrow.at-right { left: auto; right: 0; top: calc(100% + 6px); transform: none; }
+    .flip-end.at-top-start { left: auto; right: 0; }
+    .flip-bottom.at-right { left: 50%; top: calc(100% + 6px); transform: translateX(-50%); }
+    .native.cur, .native.cur-dot, .native.cur-mid { left: auto; right: 0; }
+  }
+
+  .chart-card { padding: 14px 16px 16px; }
+  .ctitle { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 15px; font-weight: 500; }
+  .ctitle i { font-size: 16px; color: hsl(var(--muted-foreground)); }
+  svg { display: block; }
+  .rev svg { width: 100%; height: 200px; overflow: visible; }
+
+  .tm { position: relative; height: 230px; margin: 0 16px 16px; }
+  .tm-tile { position: absolute; padding: 6px 8px; border-radius: 3px; font-size: 12px; font-weight: 500; line-height: 15px; color: #33190a; overflow: hidden; text-overflow: ellipsis; }
+  .tm-tile.on { box-shadow: inset 0 0 0 2px hsl(var(--foreground) / .85); }
+
+  .map { position: relative; height: 300px; background: hsl(var(--muted) / .6); }
+  .map svg.mapsvg { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+  /* ---------- Spec ---------- */
+  .anat { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
+  @media (max-width: 900px) { .anat { grid-template-columns: minmax(0, 1fr); } }
+  .anat .stage { height: 190px; display: grid; place-items: center; }
+  .anat .tip { position: static; }
+  .anat h3 { margin: 12px 0 2px; font-size: 16px; font-weight: 600; }
+  .anat p { margin: 0; font-size: 13px; color: hsl(var(--muted-foreground)); }
+  code { font: inherit; font-weight: 500; }
+  table.spec { width: 100%; margin-top: 24px; border-collapse: collapse; font-size: 13px; }
+  .spec th, .spec td { padding: 8px 10px; text-align: left; vertical-align: top; border-bottom: 1px solid hsl(var(--border)); }
+  .spec thead th { font-size: 12px; font-weight: 500; color: hsl(var(--muted-foreground)); }
+  .spec tbody th { width: 130px; font-weight: 400; color: hsl(var(--muted-foreground)); }
+  @media (max-width: 640px) {
+    table.spec, .spec tbody, .spec tr, .spec th, .spec td { display: block; width: auto; }
+    .spec thead { display: none; }
+    .spec tr { padding: 10px 0; border-bottom: 1px solid hsl(var(--border)); }
+    .spec th, .spec td { padding: 2px 0; border: 0; }
+    .spec tbody th { width: auto; font-weight: 600; color: hsl(var(--foreground)); }
+    .spec td[data-col]::before { content: attr(data-col) ": "; color: hsl(var(--muted-foreground)); }
+  }
+  .settled { margin: 8px 0 0; padding-left: 18px; max-width: 80ch; font-size: 13px; color: hsl(var(--muted-foreground)); }
+  .settled li + li { margin-top: 4px; }
+  .settled b { font-weight: 500; color: hsl(var(--foreground)); }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="top">
+    <h1>Tooltips</h1>
+    <button class="toggle" id="theme" type="button" aria-pressed="false"><i class="ri-moon-line" aria-hidden="true"></i><span>Dark</span></button>
+  </div>
+  <p class="intro">One tooltip surface for the whole app, in three sizes: a label for controls whose name is hidden, a chart tooltip for values, and a card for map hovers. Each section shows today's tooltip next to the proposed one, in place. Hover or tab to the proposed icon buttons to try the timing.</p>
+
+  <h2 class="part">The system</h2>
+  <p class="part-note">Built from the current chart tooltip: the name on top, muted detail lines such as "Accounts: 1,184", and a large figure where the tooltip answers "how much". The only changes to it: figures use the text colour, a small swatch carries the slice colour, and the same shape now covers labels, revenue and the map. Same surface everywhere: the tooltip token, one hairline border, 8px corners and the shared float shadow. Text uses text tokens only. Colour appears only as a small swatch that ties a chart tooltip to its slice or tile. No arrows: two of the three variants follow the pointer, so arrows would only appear on some tooltips, and a hairline arrow joined to a shadowed box never looks clean at this size.</p>
+
+  <div class="anat">
+    <div>
+      <div class="stage"><div class="tip tip-label">Industry<span class="sub">2 filters applied</span></div></div>
+      <h3>Label</h3>
+      <p>Only where a control's name is hidden or cut off: icon buttons, the collapsed rail, truncated text, status markers. The name, and an optional muted hint line.</p>
+    </div>
+    <div>
+      <div class="stage">
+        <div class="tip tip-chart">
+          <div class="tip-title"><span class="sw" style="--sw:var(--o6)"></span>United States</div>
+            <span class="tip-lead">61%</span><div class="tip-lines"><span class="tip-line">Accounts: <b>1,184</b></span></div>
+        </div>
+      </div>
+      <h3>Chart</h3>
+      <p>Donut, treemap, revenue. The name, muted detail lines, and an optional large figure. Follows the pointer.</p>
+    </div>
+    <div>
+      <div class="stage">
+        <div class="tip tip-card">
+          <div class="tip-title">Bengaluru</div>
+            <div class="tip-lines"><span class="tip-line">India</span></div><span class="tip-lead">1,284<span>centres</span></span>
+            <div class="tip-lines"><span class="tip-line">Accounts: <b>612</b></span><span class="tip-line">Headcount: <b>512,400</b></span></div>
+        </div>
+      </div>
+      <h3>Card</h3>
+      <p>Map hover. The chart tooltip with a place line and the centre count as its large figure. Follows the pointer.</p>
+    </div>
+  </div>
+
+  <div class="tbl-wrap">
+  <table class="spec">
+    <thead><tr><th scope="col"><span hidden>Property</span></th><th scope="col">Label</th><th scope="col">Chart</th><th scope="col">Card</th></tr></thead>
+    <tbody>
+      <tr><th scope="row">Surface</th><td colspan="3" data-col="All"><code>--tooltip</code>: light 0 0% 100% (same as popover), dark 0 0% 17% (clear of the 12% card). Text <code>--tooltip-foreground</code> (same as foreground).</td></tr>
+      <tr><th scope="row">Border, radius</th><td colspan="3" data-col="All">1px <code>--border</code>, 8px (rounded-lg)</td></tr>
+      <tr><th scope="row">Shadow</th><td colspan="3" data-col="All"><code>--tooltip-shadow</code>: light 0 8px 24px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04) (shadow-float); dark 0 8px 24px rgba(0,0,0,.45), 0 1px 2px rgba(0,0,0,.3)</td></tr>
+      <tr><th scope="row">When shown</th><td data-col="Label">Only where a name is hidden or cut off: icon-only buttons, the collapsed rail, truncated text (only when it overflows), status markers. Never on a button that shows its text.</td><td colspan="2" data-col="Chart and card">Every data point</td></tr>
+      <tr><th scope="row">Padding</th><td data-col="Label">6px 10px</td><td colspan="2" data-col="Chart and card">8px 12px (px-3 py-2, as today)</td></tr>
+      <tr><th scope="row">Width</th><td data-col="Label">Fits the text up to 240px, then wraps to at most 3 lines. Never an ellipsis.</td><td data-col="Chart">Min 140px, max 260px; the title wraps</td><td data-col="Card">Min 180px, max 280px</td></tr>
+      <tr><th scope="row">Name</th><td data-col="Label">13px/18px, 500, foreground</td><td colspan="2" data-col="Chart and card">14px/20px, 500, foreground (text-sm, as today). Optional 10px swatch before it: 2px radius, inset 1px ring at foreground/25, so pale steps stay visible on white.</td></tr>
+      <tr><th scope="row">Detail lines</th><td data-col="Label">Hint line: 12px/16px, 400, muted-foreground</td><td colspan="2" data-col="Chart and card">12px/16px, 400, muted-foreground, 2px apart, written as "Accounts: 1,184". The figure inside a line is 500, foreground, tabular-nums.</td></tr>
+      <tr><th scope="row">Large figure</th><td data-col="Label">None</td><td colspan="2" data-col="Chart and card">Optional, where the tooltip answers "how much": the donut share, the map's centre count. It sits right under the name (and place line), above the detail lines. 20px/28px, 500, foreground (never the slice colour), tabular-nums, with an optional 12px muted unit. Figures use the same format as the chart's own labels.</td></tr>
+      <tr><th scope="row">Position</th><td data-col="Label">Top by default, 6px from the trigger. Right on the sidebar rail. In the header, 6px below the bar so it clears the divider. Flips at the viewport edge.</td><td colspan="2" data-col="Chart and card">Follows the pointer, 12px from it; flips left or up at the container edge. Highcharts renders with <code>outside: true</code>, so small cards never clip it.</td></tr>
+      <tr><th scope="row">Timing</th><td data-col="Label">Opens after 400ms of hover, at once on keyboard focus; 300ms skip delay between neighbours. The pointer can move onto it (Radix hoverable content); it closes 100ms after the pointer leaves both, or at once on Escape, blur or click. Meets WCAG 1.4.13: dismissable, hoverable, persistent.</td><td colspan="2" data-col="Chart and card">Opens at once; closes 100ms after the pointer leaves the point; Escape closes</td></tr>
+      <tr><th scope="row">Touch</th><td data-col="Label">A tap acts on the control; no tooltip. Tapping an aria-disabled control shows its reason in a popover or a short toast.</td><td colspan="2" data-col="Chart and card">Tapping a point pins its tooltip; tapping anywhere else closes it</td></tr>
+      <tr><th scope="row">Motion</th><td colspan="3" data-col="All">120ms fade, no zoom, no slide; none with reduced motion</td></tr>
+      <tr><th scope="row">Access</th><td data-col="Label">The first line is the accessible name: aria-label matches it exactly. Only the hint line is linked with aria-describedby, so nothing is read twice. Disabled controls use aria-disabled so they keep focus.</td><td colspan="2" data-col="Chart and card">Pointer, touch and keyboard point focus. Every figure is also in the chart's list, labels or dialog text.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3 style="margin:28px 0 0; font-size:16px; font-weight:600">Settled defaults</h3>
+  <ul class="settled">
+    <li><b>Labels only where a name is hidden.</b> Search shows its name and its key, so it gets no tooltip.</li>
+    <li><b>The map card stays a tooltip variant.</b> Same surface and lines, with the centre count as its large figure.</li>
+    <li><b>One surface for every variant.</b> Labels keep the chart tooltip's surface rather than a tinted or inverted one.</li>
+  </ul>
+
+  <!-- 1. Icon buttons -->
+  <h2 class="part">Icon buttons</h2>
+  <p class="part-note">The header and the collapsed filter rail. Today these use the title attribute, so the browser draws them after about a second, in the OS style, and never on keyboard focus or touch.</p>
+  <section class="variant">
+    <div class="vh"><h3>Header actions</h3><span class="src">components/layout/header.tsx:73, 90</span></div>
+    <div class="pair">
+      <div>
+        <p class="case">Today: native title</p>
+        <div class="stage">
+          <div class="hdr">
+            <span class="brand">Bamboo Reports</span>
+            <span class="search"><i class="ri-search-line"></i>Search<span class="k">/</span></span>
+            <button class="ib hover" type="button" aria-label="Refresh data"><i class="ri-refresh-line"></i></button>
+            <button class="ib" type="button" aria-label="Updates"><i class="ri-notification-3-line"></i></button>
+          </div>
+          <div class="native" style="right:44px; top:58px">Refresh</div>
+          <div class="body-fill"><div class="skel" style="width:60%"></div><div class="skel" style="width:40%"></div><div class="skel" style="width:52%"></div></div>
+        </div>
+        <ul class="issues"><li>Drawn by the OS: different font, colours and corners per platform.</li><li>About 1s delay, not shown on focus or touch.</li><li>Search also has a title, repeating its visible name.</li></ul>
+      </div>
+      <div>
+        <p class="case new">Proposed: label</p>
+        <div class="stage">
+          <div class="hdr">
+            <span class="brand">Bamboo Reports</span>
+            <span class="search"><i class="ri-search-line"></i>Search<span class="k">/</span></span>
+            <button class="ib hover has-tip" type="button" aria-label="Refresh"><i class="ri-refresh-line"></i>
+              <span class="tip tip-label live pin at-bottom below-bar" aria-hidden="true">Refresh</span>
+            </button>
+            <button class="ib has-tip" type="button" aria-label="Updates"><i class="ri-notification-3-line"></i>
+              <span class="tip tip-label live at-bottom-end below-bar" aria-hidden="true">Updates</span>
+            </button>
+          </div>
+          <div class="body-fill"><div class="skel" style="width:60%"></div><div class="skel" style="width:40%"></div><div class="skel" style="width:52%"></div></div>
+        </div>
+        <ul class="issues"><li>Refresh is icon-only, so it gets a label. Search shows its name, so it gets none.</li><li>aria-label is "Refresh", the tooltip's exact text, so it is read once.</li><li>Sits 6px below the header bar, not across its divider.</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="variant">
+    <div class="vh"><h3>Collapsed filter rail</h3><span class="src">components/filters/filters-sidebar.tsx:265 to 346</span></div>
+    <div class="pair">
+      <div>
+        <p class="case">Today: native title</p>
+        <div class="stage rail-wrap">
+          <div class="rail">
+            <button class="ib" type="button" aria-label="Expand filters"><i class="ri-side-bar-fill"></i></button>
+            <span style="height:8px"></span>
+            <button class="ib" type="button" aria-label="Region"><i class="ri-global-line"></i></button>
+            <button class="ib hover" type="button" aria-label="Industry, 2 filters"><i class="ri-building-line"></i><span class="badge">2</span></button>
+            <button class="ib" type="button" aria-label="Centres"><i class="ri-map-pin-line"></i></button>
+            <span class="sep"></span>
+            <button class="ib" type="button" aria-label="Saved filters"><i class="ri-bookmark-line"></i></button>
+            <button class="ib" type="button" aria-label="Export data"><i class="ri-download-2-line"></i></button>
+          </div>
+          <div class="rail-main"><div class="skel" style="width:70%"></div><div class="skel" style="width:45%"></div></div>
+          <div class="native" style="left:58px; top:150px">Industry: 2 filters</div>
+        </div>
+        <ul class="issues"><li>aria-label ("Industry, 2 filters") and title ("Industry: 2 filters") say the same thing in two wordings.</li></ul>
+      </div>
+      <div>
+        <p class="case new">Proposed: label, on the right</p>
+        <div class="stage rail-wrap">
+          <div class="rail">
+            <button class="ib has-tip" type="button" aria-label="Expand filters"><i class="ri-side-bar-fill"></i><span class="tip tip-label live at-right" aria-hidden="true">Expand filters</span></button>
+            <span style="height:8px"></span>
+            <button class="ib has-tip" type="button" aria-label="Region"><i class="ri-global-line"></i><span class="tip tip-label live at-right" aria-hidden="true">Region</span></button>
+            <button class="ib hover has-tip" type="button" aria-label="Industry" aria-describedby="rail-hint"><i class="ri-building-line"></i><span class="badge" aria-hidden="true">2</span>
+              <span class="tip tip-label live pin at-right"><span aria-hidden="true">Industry</span><span class="sub" id="rail-hint">2 filters applied</span></span>
+            </button>
+            <button class="ib has-tip" type="button" aria-label="Centres"><i class="ri-map-pin-line"></i><span class="tip tip-label live at-right" aria-hidden="true">Centres</span></button>
+            <span class="sep"></span>
+            <button class="ib has-tip" type="button" aria-label="Saved filters"><i class="ri-bookmark-line"></i><span class="tip tip-label live at-right" aria-hidden="true">Saved filters</span></button>
+            <button class="ib has-tip" type="button" aria-label="Export data"><i class="ri-download-2-line"></i><span class="tip tip-label live at-right" aria-hidden="true">Export data</span></button>
+          </div>
+          <div class="rail-main"><div class="skel" style="width:70%"></div><div class="skel" style="width:45%"></div></div>
+        </div>
+        <ul class="issues"><li>aria-label is "Industry"; only "2 filters applied" is linked as the description. A screen reader says "Industry, 2 filters applied" once.</li><li>Opens to the right, the side with room next to a rail.</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. Hints -->
+  <h2 class="part">Hints and truncated text</h2>
+  <p class="part-note">Status markers, admin-only actions and names cut off with an ellipsis. The label tooltip takes an optional hint line in muted text for the reason.</p>
+  <section class="variant">
+    <div class="vh"><h3>Disabled action, changed marker, long name</h3><span class="src">filters-sidebar.tsx:513, saved-filters-manager.tsx:339, tables/account-columns.tsx:34</span></div>
+    <div class="pair">
+      <div>
+        <p class="case">Today: native title</p>
+        <div class="stage row-ui">
+          <div class="line"><span class="lbl">Admin only</span><span class="has-tip"><span class="btn" aria-disabled="true"><i class="ri-download-2-line"></i>Export data</span><span class="native cur">Only admins can export data</span></span></div>
+          <div class="line"><span class="lbl">Changed</span><span class="saved">Q3 pipeline<span class="has-tip"><span class="dot"></span><span class="native cur cur-dot">Changed since saving</span></span></span></div>
+          <div class="line"><span class="lbl">Truncated</span><span class="has-tip"><span class="trunc">Tata Consultancy Services Limited</span><span class="native cur cur-mid">Tata Consultancy Services Limited</span></span></div>
+        </div>
+        <ul class="issues"><li>A real disabled button never shows its title, so the reason is lost.</li><li>The 6px dot is too small to find by hovering, and focus never reaches it.</li></ul>
+      </div>
+      <div>
+        <p class="case new">Proposed: label with a hint line</p>
+        <div class="stage row-ui">
+          <div class="line"><span class="lbl">Admin only</span><span class="has-tip"><span class="btn" aria-disabled="true" aria-describedby="export-hint" tabindex="0"><i class="ri-download-2-line"></i>Export data</span><span class="tip tip-label at-right flip-narrow"><span aria-hidden="true">Export data</span><span class="sub" id="export-hint">Only admins can export data</span></span></span></div>
+          <div class="line"><span class="lbl">Changed</span><span class="saved">Q3 pipeline<span class="has-tip"><span class="dot" role="img" aria-label="Changed since saving" tabindex="0"></span><span class="tip tip-label at-right flip-bottom" aria-hidden="true">Changed since saving</span></span></span></div>
+          <div class="line"><span class="lbl">Truncated</span><span class="has-tip"><span class="trunc" tabindex="0">Tata Consultancy Services Limited</span><span class="tip tip-label at-top-start flip-end" aria-hidden="true">Tata Consultancy Services Limited</span></span></div>
+        </div>
+        <ul class="issues"><li>aria-disabled, not disabled, so the button takes focus and shows why. On touch, a tap shows the reason.</li><li>The dot becomes focusable, named "Changed since saving".</li><li>Truncated text shows the tooltip only when it overflows. This one opens on top, the default side.</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. Charts -->
+  <h2 class="part">Charts</h2>
+  <p class="part-note">Highcharts on the dashboard; plain HTML and Recharts in the detail dialogs. Today each one builds its own markup, so sizes and colours drift. The arrow marks where the pointer is.</p>
+  <section class="variant">
+    <div class="vh"><h3>Donut slice</h3><span class="src">components/charts/pie-chart-card.tsx:259</span></div>
+    <div class="pair">
+      <div>
+        <p class="case">Today: Highcharts HTML formatter</p>
+        <div class="stage chart-card" style="height:300px">
+          <div class="ctitle"><i class="ri-pie-chart-line"></i>Country</div>
+          <svg class="donut" viewBox="0 0 300 240" width="300" height="240" style="margin:0 auto"></svg>
+          <div class="t-pie" data-anchor=".s-us">
+            <p class="n">United States</p>
+            <p>Accounts: <b style="font-weight:500;color:var(--o6)">1,184</b></p>
+            <p><span class="big" style="color:var(--o6)">61%</span></p>
+          </div>
+          <div class="t-pie" data-anchor=".s-jp">
+            <p class="n">Japan</p>
+            <p>Accounts: <b style="font-weight:500;color:var(--o2)">97</b></p>
+            <p><span class="big" style="color:var(--o2)">5%</span></p>
+          </div>
+        </div>
+        <ul class="issues"><li>Figures take the slice colour: pale slices (Japan) fall to about 1.3:1 on white.</li><li>24px share dominates the name; the 14px title and 12px rows match nothing else.</li></ul>
+      </div>
+      <div>
+        <p class="case new">Proposed: chart tooltip</p>
+        <div class="stage chart-card" style="height:300px">
+          <div class="ctitle"><i class="ri-pie-chart-line"></i>Country</div>
+          <svg class="donut" viewBox="0 0 300 240" width="300" height="240" style="margin:0 auto"></svg>
+          <div class="tip tip-chart" data-anchor=".s-us">
+            <div class="tip-title"><span class="sw" style="--sw:var(--o6)"></span>United States</div>
+            <span class="tip-lead">61%</span><div class="tip-lines"><span class="tip-line">Accounts: <b>1,184</b></span></div>
+          </div>
+          <div class="tip tip-chart" data-anchor=".s-jp">
+            <div class="tip-title"><span class="sw" style="--sw:var(--o2)"></span>Japan</div>
+            <span class="tip-lead">5%</span><div class="tip-lines"><span class="tip-line">Accounts: <b>97</b></span></div>
+          </div>
+        </div>
+        <ul class="issues"><li>Today's parts in a clearer order: the name, the share large under it, then "Accounts: 1,184".</li><li>The share is 20px in the text colour instead of 24px in the slice colour, so pale slices stay readable; a 10px swatch carries the slice.</li><li>Two slices shown at once only to compare a deep and a pale swatch.</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="variant">
+    <div class="vh"><h3>Treemap tile</h3><span class="src">components/charts/tech-treemap.tsx (now plain HTML)</span></div>
+    <div class="pair">
+      <div>
+        <p class="case">Today: Highcharts formatter on main</p>
+        <div class="stage">
+          <div class="chart-card"><div class="ctitle"><i class="ri-stack-line"></i>Technology stack</div></div>
+          <div class="tm" data-tm></div>
+          <div class="t-tm" data-anchor=".tm-tile.on">
+            <div class="n">Oracle E-Business Suite</div>
+            <div class="v">5.5%</div>
+          </div>
+        </div>
+        <ul class="issues"><li>Name is smaller (12px) than the figure (14px), the reverse of the donut.</li><li>The figure has no label and no link to the tile colour.</li></ul>
+      </div>
+      <div>
+        <p class="case new">Proposed: chart tooltip</p>
+        <div class="stage">
+          <div class="chart-card"><div class="ctitle"><i class="ri-stack-line"></i>Technology stack</div></div>
+          <div class="tm" data-tm></div>
+          <div class="tip tip-chart" data-anchor=".tm-tile.on">
+            <div class="tip-title"><span class="sw" style="--sw:var(--o5)"></span><span>Oracle <span class="nb">E-Business</span> Suite</span></div>
+            <div class="tip-lines"><span class="tip-line">5.5%</span></div>
+          </div>
+        </div>
+        <ul class="issues"><li>The current treemap tooltip as it is: the name, then its share in a muted line. Only the swatch is new.</li><li>The swatch ties the tooltip to the tile; "E-Business" never breaks at the hyphen.</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="variant">
+    <div class="vh"><h3>Revenue by year</h3><span class="src">components/charts/annual-revenue-chart.tsx, components/ui/chart.tsx:153</span></div>
+    <div class="pair">
+      <div>
+        <p class="case">Today: Recharts ChartTooltipContent</p>
+        <div class="stage chart-card rev" style="height:250px">
+          <div class="ctitle">Annual revenue</div>
+          <svg data-rev="today" aria-label="Annual revenue by fiscal year" role="img"></svg>
+          <div class="t-rc" data-anchor=".col-hover">
+            <div class="n">FY 2026</div>
+            <div>318.6B</div>
+          </div>
+        </div>
+        <ul class="issues"><li>Background is the page colour, not the popover; border at half strength.</li><li>The formatter drops the series name, leaving a bare figure.</li><li>Nothing marks the hovered column.</li></ul>
+      </div>
+      <div>
+        <p class="case new">Proposed: chart tooltip</p>
+        <div class="stage chart-card rev" style="height:250px">
+          <div class="ctitle">Annual revenue</div>
+          <svg data-rev="new" aria-label="Annual revenue by fiscal year" role="img"></svg>
+          <div class="tip tip-chart" data-anchor=".col-hover">
+            <div class="tip-title">FY 2026</div>
+            <div class="tip-lines"><span class="tip-line">Revenue: <b>318.6B</b></span><span class="tip-line"><b>+13%</b> vs FY 2025</span></div>
+          </div>
+        </div>
+        <ul class="issues"><li>Same columns on both sides; only the tooltip changes. Same shape as the donut: name, then "Revenue: 318.6B".</li><li>The hovered column gets a 2px outline; nothing is dimmed.</li><li>Figures match the bar labels. No swatch: one series, and the shade only marks recency.</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Map -->
+  <h2 class="part">Map</h2>
+  <p class="part-note">Centres map (city bubbles) and the choropleth (states). Both files carry their own copy of the same card today.</p>
+  <section class="variant">
+    <div class="vh"><h3>City hover</h3><span class="src">components/maps/centers-map.tsx:577, centers-choropleth-map.tsx:579</span></div>
+    <div class="pair">
+      <div>
+        <p class="case">Today: hand-built card</p>
+        <div class="stage map"><svg class="mapsvg" viewBox="0 0 520 300" preserveAspectRatio="xMidYMid slice"></svg>
+          <div class="t-map" data-anchor=".city-on">
+            <div class="bar"></div>
+            <div class="body">
+              <div><div class="city">Bengaluru</div><div class="ctry">India</div></div>
+              <div class="hero"><b>1,284</b><span>centres</span></div>
+              <div class="rows"><div><span>Accounts</span><b>612</b></div><div><span>Headcount</span><b>512,400</b></div></div>
+            </div>
+          </div>
+        </div>
+        <ul class="issues"><li>Orange accent bar and 16px padding make it heavier than every other tooltip.</li><li>24px figure, zoom-in animation, and the font family set inline.</li></ul>
+      </div>
+      <div>
+        <p class="case new">Proposed: card</p>
+        <div class="stage map"><svg class="mapsvg" viewBox="0 0 520 300" preserveAspectRatio="xMidYMid slice"></svg>
+          <div class="tip tip-card" data-anchor=".city-on">
+            <div class="tip-title">Bengaluru</div>
+            <div class="tip-lines"><span class="tip-line">India</span></div><span class="tip-lead">1,284<span>centres</span></span>
+            <div class="tip-lines"><span class="tip-line">Accounts: <b>612</b></span><span class="tip-line">Headcount: <b>512,400</b></span></div>
+          </div>
+        </div>
+        <ul class="issues"><li>No accent bar, no divider, the same padding as the chart tooltips.</li><li>The same order as the donut: the name and place, the count large, then the detail lines.</li><li>The hovered city gets a solid fill and a foreground ring; near the edge the card flips to the other side.</li></ul>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+const C = ["#dd6516", "#f17c1d", "#f69d3d", "#f7bd6b", "#f9d996", "#fef0c3"]
+const NS = "http://www.w3.org/2000/svg"
+
+// Donut: United States 1,184 of 1,941 accounts.
+const SLICES = [["United States", 1184, "s-us"], ["United Kingdom", 252], ["Germany", 175], ["France", 117], ["Japan", 97, "s-jp"], ["Others", 116]]
+function arc(cx, cy, r0, r1, a0, a1) {
+  const p = (r, a) => [cx + r * Math.sin(a), cy - r * Math.cos(a)]
+  const large = a1 - a0 > Math.PI ? 1 : 0
+  const [x0, y0] = p(r1, a0), [x1, y1] = p(r1, a1), [x2, y2] = p(r0, a1), [x3, y3] = p(r0, a0)
+  return `M${x0} ${y0}A${r1} ${r1} 0 ${large} 1 ${x1} ${y1}L${x2} ${y2}A${r0} ${r0} 0 ${large} 0 ${x3} ${y3}Z`
+}
+document.querySelectorAll("svg.donut").forEach((svg) => {
+  const total = SLICES.reduce((s, d) => s + d[1], 0)
+  let a = 0, out = ""
+  SLICES.forEach(([, v, cls], i) => {
+    const a1 = a + (v / total) * Math.PI * 2, mid = (a + a1) / 2
+    // The pointer sits on the hovered slice's ring.
+    const px = 150 + 90 * Math.sin(mid), py = 120 - 90 * Math.cos(mid)
+    out += `<path class="${cls || ""}" data-px="${px}" data-py="${py}" d="${arc(150, 120, cls ? 74 : 76, cls ? 102 : 98, a + 0.01, a1 - 0.01)}" fill="${C[Math.min(i, 5)]}"/>`
+    a = a1
+  })
+  out += `<text x="150" y="116" text-anchor="middle" font-size="20" font-weight="600" fill="hsl(var(--foreground))">1,941</text>`
+  out += `<text x="150" y="136" text-anchor="middle" font-size="12" fill="hsl(var(--muted-foreground))">accounts</text>`
+  svg.innerHTML = out
+})
+
+// Treemap tiles (percent of the panel).
+const TILES = [
+  ["SAP S/4HANA", 0, 0, 34, 58, 0], ["Salesforce", 34, 0, 22, 58, 1], ["Oracle <span class=nb>E-Business</span> Suite", 56, 0, 22, 44, 1],
+  ["Workday", 78, 0, 22, 44, 2], ["AWS", 56, 44, 44, 14, 3], ["Microsoft Azure", 0, 58, 26, 42, 2],
+  ["ServiceNow", 26, 58, 22, 42, 3], ["Tableau", 48, 58, 18, 42, 4], ["Snowflake", 66, 58, 18, 42, 4], ["Jira", 84, 58, 16, 42, 5],
+]
+document.querySelectorAll("[data-tm]").forEach((el) => {
+  el.innerHTML = TILES.map(([n, x, y, w, h, c]) =>
+    `<div class="tm-tile${n.startsWith("Oracle") ? " on" : ""}" data-fx=".55" data-fy=".62" style="left:calc(${x}% + 1px);top:calc(${y}% + 1px);width:calc(${w}% - 2px);height:calc(${h}% - 2px);background:${C[c]}">${n}</div>`).join("")
+})
+
+// Revenue columns, drawn at the svg's real width so labels stay 12px.
+const REV = [["FY 2023", 211.9], ["FY 2024", 245.1], ["FY 2025", 281.7], ["FY 2026", 318.6]]
+function drawRevenue(svg) {
+  const W = svg.clientWidth || 480, H = 200, pt = 24, pb = 28, ih = H - pt - pb, max = 400
+  const slot = W / REV.length, bw = Math.min(64, slot * 0.6), shades = [C[3], C[2], C[1], C[0]]
+  const outline = svg.dataset.rev === "new"
+  let s = ""
+  REV.forEach(([l, v], i) => {
+    const h = (v / max) * ih, x0 = slot * i + (slot - bw) / 2, y0 = pt + ih - h, last = i === REV.length - 1
+    // Pointer in the lower part of the hovered column, clear of the label above it.
+    const ptr = last ? ` class="col-hover" data-px="${x0 + bw / 2}" data-py="${pt + ih - 4}"` : ""
+    const stroke = last && outline ? ` stroke="hsl(var(--foreground))" stroke-width="2"` : ""
+    s += `<path${ptr} d="M${x0} ${pt + ih}V${y0 + 4}a4 4 0 0 1 4 -4h${bw - 8}a4 4 0 0 1 4 4V${pt + ih}Z" fill="${shades[i]}"${stroke}/>`
+    s += `<text x="${x0 + bw / 2}" y="${y0 - 8}" text-anchor="middle" font-size="12" font-weight="500" fill="hsl(var(--foreground))">${v.toFixed(1)}B</text>`
+    s += `<text x="${x0 + bw / 2}" y="${H - 8}" text-anchor="middle" font-size="12" fill="hsl(var(--muted-foreground))">${l}</text>`
+  })
+  s += `<line x1="0" x2="${W}" y1="${pt + ih}" y2="${pt + ih}" stroke="hsl(var(--border))"/>`
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`)
+  svg.innerHTML = s
+}
+
+// Map: an abstract land shape with city bubbles; Bengaluru is hovered.
+const CITIES = [["Bengaluru", 230, 210, 22, true], ["Hyderabad", 245, 160, 18], ["Pune", 175, 150, 15], ["Chennai", 278, 222, 13], ["Mumbai", 150, 135, 13], ["Delhi NCR", 225, 55, 17], ["Kolkata", 360, 115, 9], ["Ahmedabad", 150, 95, 7], ["Kochi", 210, 262, 6]]
+document.querySelectorAll(".mapsvg").forEach((svg) => {
+  let s = `<path d="M170 20 L290 10 L330 60 L420 80 L430 130 L340 140 L300 190 L270 260 L235 290 L205 270 L180 210 L140 160 L110 120 L120 70 Z" fill="hsl(var(--card))" stroke="hsl(var(--border))"/>`
+  CITIES.forEach(([, x, y, r, on]) => {
+    s += on
+      ? `<circle class="city-on" data-px="${x + 6}" data-py="${y - 4}" cx="${x}" cy="${y}" r="${r}" fill="#dd6516" stroke="hsl(var(--foreground))" stroke-width="2.5"/>`
+      : `<circle cx="${x}" cy="${y}" r="${r}" fill="#f69d3d" fill-opacity=".55" stroke="hsl(var(--card))" stroke-width="1"/>`
+  })
+  svg.innerHTML = s
+})
+
+// Pointer-following placement: 12px from the pointer, flip left or up at the stage edge.
+function pointerOf(el) {
+  if (el instanceof SVGElement && el.dataset.px) {
+    const svg = el.ownerSVGElement, pt = svg.createSVGPoint()
+    pt.x = +el.dataset.px; pt.y = +el.dataset.py
+    const p = pt.matrixTransform(svg.getScreenCTM())
+    return { x: p.x, y: p.y }
+  }
+  const r = el.getBoundingClientRect()
+  return { x: r.left + r.width * +(el.dataset.fx || .5), y: r.top + r.height * +(el.dataset.fy || .5) }
+}
+const CURSOR = `<svg class="ptr" viewBox="0 0 14 14" aria-hidden="true"><path d="M1 1 L1 12 L4.2 9.2 L6.4 13 L8.2 12 L6 8.4 L10.5 8.4 Z" fill="hsl(var(--foreground))" stroke="hsl(var(--card))" stroke-width="1.2" stroke-linejoin="round"/></svg>`
+function placeAll() {
+  document.querySelectorAll("svg[data-rev]").forEach(drawRevenue)
+  document.querySelectorAll(".ptr").forEach((n) => n.remove())
+  document.querySelectorAll("[data-placed]").forEach((n) => delete n.dataset.placed)
+  document.querySelectorAll("[data-anchor]").forEach((tip) => {
+    const stage = tip.closest(".stage"), anchor = stage.querySelector(tip.dataset.anchor)
+    if (!anchor) return
+    const s = stage.getBoundingClientRect(), p = pointerOf(anchor)
+    const px = p.x - s.left - 1, py = p.y - s.top - 1, W = stage.clientWidth, H = stage.clientHeight
+    const w = tip.offsetWidth, h = tip.offsetHeight, G = 12, M = 8
+    // Try right-below, left-below, right-above, left-above; keep the first that fits and does not cover a tooltip already placed.
+    const clampX = (x) => Math.max(M, Math.min(x, W - w - M)), clampY = (y) => Math.max(M, Math.min(y, H - h - M))
+    const fits = (x, y) => x >= M && x + w <= W - M && y >= M && y + h <= H - M
+    const placed = [...stage.querySelectorAll("[data-anchor][data-placed]")].map((t) => [t.offsetLeft, t.offsetTop, t.offsetWidth, t.offsetHeight])
+    const clear = (x, y) => placed.every(([a, b, c, d]) => x + w <= a || x >= a + c || y + h <= b || y >= b + d)
+    const cands = [[px + G, py + G], [px - G - w, py + G], [px + G, py - G - h], [px - G - w, py - G - h], [px - w / 2, py - G - h], [px - w / 2, py + G + 8]]
+    let pick = cands.find(([x, y]) => fits(x, y) && clear(x, y)) || cands.find(([x, y]) => clear(clampX(x), clampY(y))) || cands.find(([x, y]) => fits(x, y)) || cands[0]
+    tip.style.left = clampX(pick[0]) + "px"; tip.style.top = clampY(pick[1]) + "px"; tip.dataset.placed = "1"
+    if (!stage.querySelector(`.ptr[data-for="${tip.dataset.anchor}"]`)) {
+      stage.insertAdjacentHTML("beforeend", CURSOR)
+      const c = stage.lastElementChild
+      c.dataset.for = tip.dataset.anchor; c.style.left = px + "px"; c.style.top = py + "px"
+    }
+  })
+}
+addEventListener("resize", placeAll)
+document.fonts.ready.then(placeAll)
+placeAll()
+
+const themeBtn = document.getElementById("theme")
+function setTheme(dark) {
+  document.documentElement.classList.toggle("dark", dark)
+  themeBtn.setAttribute("aria-pressed", String(dark))
+  themeBtn.querySelector("span").textContent = dark ? "Light" : "Dark"
+  themeBtn.querySelector("i").className = dark ? "ri-sun-line" : "ri-moon-line"
+}
+themeBtn.addEventListener("click", () => setTheme(!document.documentElement.classList.contains("dark")))
+setTheme(new URLSearchParams(location.search).has("dark") || matchMedia("(prefers-color-scheme: dark)").matches)
+</script>
+</body>
+</html>

@@ -88,3 +88,48 @@ describe("parseMatchRequestNames", () => {
     expect(parseMatchRequestNames({ names: ["x".repeat(201)] })).toMatchObject({ error: expect.any(String) })
   })
 })
+
+describe("acquired companies (\"currently known as\" names the acquirer)", () => {
+  const acqIndex = buildAccountMatchIndex(
+    [
+      { name: "Microsoft Corp.", visibility: "include", visibility_note: null },
+      { name: "Nuance Communications Inc. (Acquired by Microsoft Corp.)", visibility: "include", visibility_note: null },
+      { name: "Skava (Acquired by Infosys Ltd.)", visibility: "include", visibility_note: null },
+    ],
+    [
+      {
+        account_global_legal_name: "Nuance Communications Inc. (Acquired by Microsoft Corp.)",
+        abbreviated_name: null,
+        brand_name: "Nuance",
+        short_legal_name: "Nuance Communications",
+        currently_known_as: "Microsoft Corp",
+      },
+      {
+        account_global_legal_name: "Skava (Acquired by Infosys Ltd.)",
+        abbreviated_name: null,
+        brand_name: null,
+        short_legal_name: "Skava",
+        currently_known_as: "Infosys Ltd",
+      },
+    ]
+  )
+
+  it("matches the acquirer by its own legal name, not the subsidiary", () => {
+    const [r] = matchAccountList(["microsoft corp"], acqIndex)
+    expect(r.status).toBe("matched")
+    expect(r.match).toMatchObject({ name: "Microsoft Corp.", via: "normalized" })
+  })
+
+  it("only suggests the subsidiary for review when the acquirer is not an account", () => {
+    const [r] = matchAccountList(["Infosys Ltd"], acqIndex)
+    expect(r.status).toBe("review")
+    expect(r.match).toBeNull()
+    expect(r.candidates.map((c) => c.name)).toEqual(["Skava (Acquired by Infosys Ltd.)"])
+  })
+
+  it("still auto-matches the subsidiary's own aliases", () => {
+    const [r] = matchAccountList(["Nuance"], acqIndex)
+    expect(r.status).toBe("matched")
+    expect(r.match).toMatchObject({ name: "Nuance Communications Inc. (Acquired by Microsoft Corp.)", via: "alias" })
+  })
+})

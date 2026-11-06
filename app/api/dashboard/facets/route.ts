@@ -1,7 +1,7 @@
-import { extractBearerToken, resolveAuthenticatedUserId } from "@/lib/auth/server"
+import { authenticateRequest } from "@/lib/auth/request"
 import { enforceRateLimit } from "@/lib/rate-limit/server"
 import { createLogger } from "@/lib/logger"
-import { parseFilters, resolveAccess } from "@/lib/dashboard/filters-request"
+import { parseFilters } from "@/lib/dashboard/filters-request"
 import { computeFacets } from "@/lib/dashboard/dashboard-core"
 
 export const dynamic = "force-dynamic"
@@ -15,14 +15,9 @@ function json(body: unknown, status = 200) {
 }
 
 export async function POST(request: Request) {
-  const token = extractBearerToken(request.headers.get("authorization"))
-  if (!token) return json({ error: "Missing authorization token" }, 401)
-  let userId: string
-  try {
-    userId = await resolveAuthenticatedUserId(token)
-  } catch {
-    return json({ error: "Invalid or expired token" }, 401)
-  }
+  const auth = await authenticateRequest(request)
+  if (auth instanceof Response) return auth
+  const { userId } = auth
   // Started now so the counter round trip overlaps the request parsing below;
   // awaited before any warehouse work so an over-limit caller never reaches it.
   const limitedPromise = enforceRateLimit({ userId, bucket: "dashboard:facets" })
@@ -37,10 +32,9 @@ export async function POST(request: Request) {
     rawBody = {}
   }
   const filters = parseFilters((rawBody as { filters?: unknown })?.filters)
-  const access = resolveAccess()
 
   try {
-    const body = await computeFacets(filters, access, { bypassRead: request.headers.get("x-no-cache") === "1" })
+    const body = await computeFacets(filters, { bypassRead: request.headers.get("x-no-cache") === "1" })
     return json(body)
   } catch (err) {
     logger.error("facets_failed", { error: err })

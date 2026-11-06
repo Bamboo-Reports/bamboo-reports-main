@@ -46,11 +46,11 @@ gated("export-by-filter services wrap against the real Neon warehouse", () => {
 
   async function parity(overrides: Partial<Filters>) {
     const filters = createDefaultFilters({ accountHqRevenueRange: WIDE, ...overrides })
-    const engine = getFilteredData(accounts, centers, [], [], [], [], filters, {})
+    const engine = getFilteredData(accounts, centers, [], [], [], [], filters)
     const survivingKeys = new Set(engine.filteredCenters.map((c) => c.cn_unique_key))
     const expected = serviceKeys.filter((s) => s.cn_unique_key !== null && survivingKeys.has(s.cn_unique_key)).length
 
-    const centersSub = buildCentersQuery(filters, {}, { columns: "cn_unique_key", orderBy: null })
+    const centersSub = buildCentersQuery(filters, { columns: "cn_unique_key", orderBy: null })
     const rows = (await sql.query(
       `select count(*)::int as total from services where cn_unique_key in (${centersSub.text})`,
       centersSub.values

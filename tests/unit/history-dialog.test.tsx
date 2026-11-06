@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { act, cleanup, fireEvent, render, renderHook, screen } from "@testing-library/react"
 import { toast } from "sonner"
 import { HistoryDialog } from "@/components/history/history-dialog"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import { useRecentItems, type RecentItem } from "@/hooks/use-recent-items"
 
 vi.mock("@/lib/analytics/client", () => ({ captureEvent: () => {} }))
@@ -20,10 +21,16 @@ function renderDialog(overrides: Partial<React.ComponentProps<typeof HistoryDial
     recentItems: items,
     onItemSelect: vi.fn(),
     onClearHistory: vi.fn(),
+    onRemoveItem: vi.fn(),
     onRestoreHistory: vi.fn(),
     ...overrides,
   }
-  render(<HistoryDialog {...props} />)
+  // The app mounts TooltipProvider once in app/providers.tsx.
+  render(
+    <TooltipProvider>
+      <HistoryDialog {...props} />
+    </TooltipProvider>
+  )
   return props
 }
 
@@ -55,6 +62,57 @@ describe("History dialog clear (#311)", () => {
     const options = vi.mocked(toast).mock.calls[0][1] as unknown as { action: { onClick: () => void } }
     options.action.onClick()
     expect(props.onRestoreHistory).toHaveBeenCalledWith(items)
+  })
+})
+
+describe("History dialog", () => {
+  beforeEach(() => {
+    vi.mocked(toast).mockReset()
+  })
+
+  afterEach(() => {
+    cleanup()
+  })
+
+  it("removes one record and offers an Undo that puts the list back", () => {
+    const props = renderDialog()
+    fireEvent.click(screen.getByRole("button", { name: "Remove Asha Rao from History" }))
+    expect(props.onRemoveItem).toHaveBeenCalledWith(items[1])
+    const options = vi.mocked(toast).mock.calls[0][1] as unknown as { action: { onClick: () => void } }
+    options.action.onClick()
+    expect(props.onRestoreHistory).toHaveBeenCalledWith(items)
+  })
+
+  it("filters by type and search", () => {
+    renderDialog()
+    fireEvent.click(screen.getByRole("tab", { name: /Prospects/ }))
+    expect(screen.queryByText("Acme Corp")).toBeNull()
+    expect(screen.getByText("Asha Rao")).toBeTruthy()
+    fireEvent.click(screen.getByRole("tab", { name: /All/ }))
+    fireEvent.change(screen.getByRole("textbox", { name: "Search history" }), { target: { value: "pune" } })
+    expect(screen.getByText("Acme Corp")).toBeTruthy()
+    expect(screen.queryByText("Asha Rao")).toBeNull()
+  })
+
+  it("opens a record and closes the window", () => {
+    const props = renderDialog()
+    fireEvent.click(screen.getByText("Acme Corp"))
+    expect(props.onOpenChange).toHaveBeenCalledWith(false)
+    expect(props.onItemSelect).toHaveBeenCalledWith(items[0])
+  })
+})
+
+describe("useRecentItems remove", () => {
+  beforeEach(() => {
+    window.localStorage.clear()
+  })
+
+  it("drops one record from state and storage", () => {
+    const { result } = renderHook(() => useRecentItems())
+    act(() => result.current.restoreRecentItems(items))
+    act(() => result.current.removeRecentItem("prospect", "p1"))
+    expect(result.current.recentItems).toEqual([items[0]])
+    expect(JSON.parse(window.localStorage.getItem("br-recent-items") ?? "[]")).toEqual([items[0]])
   })
 })
 

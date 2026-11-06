@@ -8,6 +8,8 @@ describe("centers map query builders", () => {
     expect(q.text).toContain("group by center_city")
     expect(q.text).toContain("lat is not null and lng is not null")
     expect(q.text).toContain("center_city is not null and center_city <> ''")
+    // "TBA" is a placeholder city with a stand-in point; it must not become a bubble.
+    expect(q.text).toContain("upper(trim(center_city)) <> 'TBA'")
     // First-center-in-name-order semantics for country and coordinates.
     expect(q.text).toContain("array_agg(coalesce(center_country, '') order by center_name asc)")
     expect(q.text).toContain("array_agg(lat order by center_name asc)")

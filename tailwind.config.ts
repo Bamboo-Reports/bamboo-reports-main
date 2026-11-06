@@ -11,9 +11,12 @@ const config: Config = {
   ],
   theme: {
   		extend: {
+  			boxShadow: {
+  				float: '0 8px 24px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04)'
+  			},
   		fontFamily: {
   			sans: [
-  				'var(--font-geist-sans)',
+  				'var(--font-sans)',
   				'system-ui',
   				'-apple-system',
   				'BlinkMacSystemFont',
@@ -34,7 +37,8 @@ const config: Config = {
   			},
   			primary: {
   				DEFAULT: 'hsl(var(--primary))',
-  				foreground: 'hsl(var(--primary-foreground))'
+  				foreground: 'hsl(var(--primary-foreground))',
+  				strong: 'hsl(var(--primary-strong))'
   			},
   			secondary: {
   				DEFAULT: 'hsl(var(--secondary))',
@@ -62,6 +66,8 @@ const config: Config = {
   				'4': 'hsl(var(--chart-4))',
   				'5': 'hsl(var(--chart-5))'
   			},
+  			include: 'hsl(var(--include))',
+  			exclude: 'hsl(var(--exclude))',
   			sidebar: {
   				DEFAULT: 'hsl(var(--sidebar-background))',
   				foreground: 'hsl(var(--sidebar-foreground))',

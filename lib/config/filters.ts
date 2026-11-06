@@ -1,19 +1,9 @@
-import { isSectionEnabled, type DashboardSection } from "@/lib/config/dashboard-access"
-import { createDefaultFilters } from "@/lib/dashboard/defaults"
-import type { Filters } from "@/lib/types"
-
 /**
  * Filter Configuration
  *
- * Controls which filters are visible and active in the dashboard sidebar.
- * Set `enabled: false` to hide a filter from the UI and exclude it from
- * filtering logic. Disabled filters will not affect data results.
- *
- * To configure for different consumers / deployments:
- *   1. Toggle individual filters by setting `enabled` to true or false.
- *   2. Toggle an entire section by setting the section's `enabled` flag.
- *      When a section is disabled, all filters within it are hidden
- *      regardless of their individual `enabled` state.
+ * Metadata for the dashboard sidebar filters, grouped by section: labels,
+ * control types, the columns they target, and which filters sit under each
+ * section's "More" divider.
  *
  * Filter keys match the keys in the `Filters` interface (lib/types.ts).
  */
@@ -29,8 +19,6 @@ export interface FilterConfig {
   key: string
   /** Human-readable label shown in the sidebar UI */
   label: string
-  /** Whether this filter is currently visible and active */
-  enabled: boolean
   /** Filter control type */
   type: FilterType
   /** Database column(s) this filter targets */
@@ -46,12 +34,8 @@ export interface FilterSectionConfig {
   id: string
   /** Display label for the accordion header */
   label: string
-  /** Whether the entire section is visible */
-  enabled: boolean
-  /** Whether premium "Show More" filters are available for this section */
-  showMoreEnabled?: boolean
-  /** Filter keys gated behind the "Show More" premium reveal */
-  premiumFilterKeys?: string[]
+  /** Less-used filters, listed under the "More" divider in the sidebar */
+  moreFilterKeys?: string[]
   /** Filters within this section */
   filters: FilterConfig[]
 }
@@ -65,23 +49,17 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
   {
     id: "accounts",
     label: "Account Attributes",
-    enabled: true,
-    showMoreEnabled: true,
-    premiumFilterKeys: [
+    moreFilterKeys: [
       "accountHqRegionValues",
       "accountHqEmployeeRangeValues",
       "accountHqIndustryValues",
       "accountPrimaryNatureValues",
       "accountNasscomStatusValues",
-      "accountSourceValues",
-      "accountTypeValues",
-      "accountDataCoverageValues",
     ],
     filters: [
       {
         key: "accountVisibilityMode",
         label: "Account Visibility",
-        enabled: true,
         type: "single-select",
         column: "account_visibility",
         table: "accounts",
@@ -90,7 +68,6 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       {
         key: "accountGlobalLegalNameKeywords",
         label: "Account Name",
-        enabled: true,
         type: "keyword",
         column: "account_global_legal_name",
         table: "accounts",
@@ -99,7 +76,6 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       {
         key: "accountListValues",
         label: "Account List",
-        enabled: true,
         type: "multi-select",
         column: "account_global_legal_name",
         table: "accounts",
@@ -108,7 +84,6 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       {
         key: "accountNameValues",
         label: "Account List Accounts",
-        enabled: true,
         type: "multi-select",
         column: "account_global_legal_name",
         table: "accounts",
@@ -117,7 +92,6 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       {
         key: "accountHqRevenueRange",
         label: "HQ Company Revenue",
-        enabled: true,
         type: "range",
         column: "account_hq_revenue",
         table: "accounts",
@@ -126,7 +100,6 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       {
         key: "accountHqRevenueIncludeNull",
         label: "Revenue: Include all",
-        enabled: true,
         type: "boolean",
         column: "account_hq_revenue",
         table: "accounts",
@@ -135,7 +108,6 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       {
         key: "accountCenterEmployeesRangeValues",
         label: "GCC Aggregate Headcount (India)",
-        enabled: true,
         type: "multi-select",
         column: "account_center_employees_range",
         table: "accounts",
@@ -143,7 +115,6 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       {
         key: "accountYearsInIndiaRange",
         label: "Years In India",
-        enabled: true,
         type: "range",
         column: "years_in_india",
         table: "accounts",
@@ -152,7 +123,6 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       {
         key: "yearsInIndiaIncludeNull",
         label: "Years In India: Include all",
-        enabled: true,
         type: "boolean",
         column: "years_in_india",
         table: "accounts",
@@ -161,7 +131,6 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       {
         key: "accountPrimaryCategoryValues",
         label: "Industry",
-        enabled: true,
         type: "multi-select",
         column: "account_primary_category",
         table: "accounts",
@@ -169,7 +138,6 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       {
         key: "accountHqCountryValues",
         label: "HQ Country",
-        enabled: true,
         type: "multi-select",
         column: "account_hq_country",
         table: "accounts",
@@ -177,7 +145,6 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       {
         key: "accountHqRegionValues",
         label: "HQ Region",
-        enabled: true,
         type: "multi-select",
         column: "account_hq_region",
         table: "accounts",
@@ -185,7 +152,6 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       {
         key: "accountHqEmployeeRangeValues",
         label: "HQ Employee Range",
-        enabled: true,
         type: "multi-select",
         column: "account_hq_employee_range",
         table: "accounts",
@@ -193,7 +159,6 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       {
         key: "accountHqIndustryValues",
         label: "Sub Industry",
-        enabled: true,
         type: "multi-select",
         column: "account_hq_industry",
         table: "accounts",
@@ -201,7 +166,6 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       {
         key: "accountPrimaryNatureValues",
         label: "Segment",
-        enabled: true,
         type: "multi-select",
         column: "account_primary_nature",
         table: "accounts",
@@ -209,33 +173,8 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       {
         key: "accountNasscomStatusValues",
         label: "NASSCOM GCC Listing Status",
-        enabled: true,
         type: "multi-select",
         column: "account_nasscom_status",
-        table: "accounts",
-      },
-      {
-        key: "accountSourceValues",
-        label: "Source",
-        enabled: false,
-        type: "multi-select",
-        column: "account_source",
-        table: "accounts",
-      },
-      {
-        key: "accountTypeValues",
-        label: "Type",
-        enabled: false,
-        type: "multi-select",
-        column: "account_type",
-        table: "accounts",
-      },
-      {
-        key: "accountDataCoverageValues",
-        label: "Coverage",
-        enabled: false,
-        type: "multi-select",
-        column: "account_data_coverage",
         table: "accounts",
       },
     ],
@@ -245,19 +184,15 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
   {
     id: "centers",
     label: "Center Attributes",
-    enabled: true,
-    showMoreEnabled: true,
-    premiumFilterKeys: [
+    moreFilterKeys: [
       "centerStateValues",
       "centerFocusValues",
       "techSoftwareInUseKeywords",
-      "centerCountryValues",
     ],
     filters: [
       {
         key: "centerStatusValues",
         label: "Status",
-        enabled: true,
         type: "multi-select",
         column: "center_status",
         table: "centers",
@@ -265,7 +200,6 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       {
         key: "centerTypeValues",
         label: "Center Type",
-        enabled: true,
         type: "multi-select",
         column: "center_type",
         table: "centers",
@@ -273,7 +207,6 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       {
         key: "functionNameValues",
         label: "Services Offered",
-        enabled: true,
         type: "multi-select",
         column: "function_name",
         table: "functions",
@@ -282,7 +215,6 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       {
         key: "centerCityValues",
         label: "City",
-        enabled: true,
         type: "multi-select",
         column: "center_city",
         table: "centers",
@@ -290,7 +222,6 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       {
         key: "centerIncYearRange",
         label: "Incorporation Timeline",
-        enabled: true,
         type: "range",
         column: "center_inc_year",
         table: "centers",
@@ -299,7 +230,6 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       {
         key: "centerIncYearIncludeNull",
         label: "Incorporation Timeline: Include all",
-        enabled: true,
         type: "boolean",
         column: "center_inc_year",
         table: "centers",
@@ -308,7 +238,6 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       {
         key: "centerEmployeesRangeValues",
         label: "Center Headcount",
-        enabled: true,
         type: "multi-select",
         column: "center_employees_range",
         table: "centers",
@@ -316,7 +245,6 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       {
         key: "centerStateValues",
         label: "State",
-        enabled: true,
         type: "multi-select",
         column: "center_state",
         table: "centers",
@@ -324,7 +252,6 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       {
         key: "centerFocusValues",
         label: "Center Focus",
-        enabled: true,
         type: "multi-select",
         column: "center_focus",
         table: "centers",
@@ -332,19 +259,10 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       {
         key: "techSoftwareInUseKeywords",
         label: "Software In Use",
-        enabled: true,
         type: "keyword",
         column: "software_in_use",
         table: "tech",
         description: "Keyword search via tech table joined through cn_unique_key",
-      },
-      {
-        key: "centerCountryValues",
-        label: "Country",
-        enabled: false,
-        type: "multi-select",
-        column: "center_country",
-        table: "centers",
       },
     ],
   },
@@ -353,12 +271,10 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
   {
     id: "prospects",
     label: "Prospect Attributes",
-    enabled: true,
     filters: [
       {
         key: "prospectTitleKeywords",
         label: "Job Title",
-        enabled: true,
         type: "keyword",
         column: "prospect_title",
         table: "prospects",
@@ -367,7 +283,6 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       {
         key: "prospectHeadTypeValues",
         label: "Role",
-        enabled: true,
         type: "multi-select",
         column: "head_type",
         table: "prospects",
@@ -375,7 +290,6 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       {
         key: "prospectLevelValues",
         label: "Seniority Level",
-        enabled: true,
         type: "multi-select",
         column: "prospect_level",
         table: "prospects",
@@ -383,7 +297,6 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       {
         key: "prospectDepartmentValues",
         label: "Department",
-        enabled: true,
         type: "multi-select",
         column: "prospect_department",
         table: "prospects",
@@ -391,7 +304,6 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       {
         key: "prospectCityValues",
         label: "City",
-        enabled: true,
         type: "multi-select",
         column: "prospect_city",
         table: "prospects",
@@ -399,7 +311,6 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
       {
         key: "prospectEngagedValues",
         label: "Engaged",
-        enabled: true,
         type: "multi-select",
         column: "prospect_engaged",
         table: "prospects",
@@ -413,74 +324,9 @@ export const FILTER_SECTIONS: FilterSectionConfig[] = [
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Set of all enabled filter keys (respects both section and filter level) */
-const _enabledFilterKeys = new Set<string>()
-const _filterKeyToSection = new Map<string, DashboardSection>()
-const _premiumFilterKeys = new Set<string>()
-
-for (const section of FILTER_SECTIONS) {
-  if (!section.enabled) continue
-  const premiumKeys = new Set(section.premiumFilterKeys ?? [])
-  for (const filter of section.filters) {
-    _filterKeyToSection.set(filter.key, section.id as DashboardSection)
-    if (premiumKeys.has(filter.key)) {
-      _premiumFilterKeys.add(filter.key)
-    }
-    if (filter.enabled) {
-      _enabledFilterKeys.add(filter.key)
-    }
-  }
-}
-
-/** Frozen set for runtime lookups. rebuild by restarting the dev server after config changes */
-export const ENABLED_FILTER_KEYS: ReadonlySet<string> = _enabledFilterKeys
-
-/** Check if a specific filter is enabled */
-export function isFilterEnabled(filterKey: string): boolean {
-  const section = _filterKeyToSection.get(filterKey)
-  if (section && !isSectionEnabled(section)) {
-    return false
-  }
-  if (isPremiumFilter(filterKey) && section && !isShowMoreEnabled(section)) {
-    return false
-  }
-  return ENABLED_FILTER_KEYS.has(filterKey)
-}
-
-export function isShowMoreEnabled(sectionId: string): boolean {
-  const section = FILTER_SECTIONS.find((s) => s.id === sectionId)
-  if (!section || !section.enabled) return false
-  return Boolean(section.showMoreEnabled)
-}
-
-export function getPremiumFilterKeys(sectionId: string): string[] {
+/** Filters listed under the "More" divider for a section */
+export function getMoreFilterKeys(sectionId: string): string[] {
   const section = FILTER_SECTIONS.find((s) => s.id === sectionId)
   if (!section) return []
-  return section.premiumFilterKeys ?? []
-}
-
-export function isPremiumFilter(filterKey: string): boolean {
-  return _premiumFilterKeys.has(filterKey)
-}
-
-/** Check if a section has any enabled filters */
-export function isSectionVisible(sectionId: string): boolean {
-  const section = FILTER_SECTIONS.find((s) => s.id === sectionId)
-  if (!section || !section.enabled) return false
-  return section.filters.some((f) => f.enabled)
-}
-
-export function sanitizeFilters(sourceFilters: Filters): Filters {
-  const defaults = createDefaultFilters()
-  const sanitized: Filters = { ...sourceFilters }
-  const sanitizedRecord = sanitized as unknown as Record<string, Filters[keyof Filters]>
-  const defaultsRecord = defaults as unknown as Record<string, Filters[keyof Filters]>
-
-  ;(Object.keys(defaults) as Array<keyof Filters>).forEach((key) => {
-    if (!isFilterEnabled(key)) {
-      sanitizedRecord[key] = defaultsRecord[key]
-    }
-  })
-
-  return sanitized
+  return section.moreFilterKeys ?? []
 }

@@ -55,7 +55,7 @@ The old `filter-column-ui-label-map.json` has moved to `documentation/archive/` 
 
 The filter sidebar is on the left side of the dashboard. Filters are grouped into three collapsible sections: **Account Attributes**, **Centre Attributes** and **Prospect Attributes** (the config section ids are `accounts`, `centers`, `prospects`).
 
-Each section can hide some filters behind a premium "Show More" reveal (`premiumFilterKeys` in `lib/config/filters.ts`). Filters with `enabled: false` are hidden and ignored by filtering (`sanitizeFilters` resets them to defaults).
+Each section lists its less-used filters under a "More" divider (`moreFilterKeys` in `lib/config/filters.ts`).
 
 **Source files:**
 - `lib/config/filters.ts`
@@ -86,9 +86,6 @@ Rows are in config order. "Premium" means the filter sits behind "Show More".
 | Sub Industry | `accountHqIndustryValues` | `account_hq_industry` | `accounts` | Multi-select | Premium |
 | Segment | `accountPrimaryNatureValues` | `account_primary_nature` | `accounts` | Multi-select | Premium |
 | NASSCOM GCC Listing Status | `accountNasscomStatusValues` | `account_nasscom_status` | `accounts` | Multi-select | Premium |
-| Source | `accountSourceValues` | `account_source` | `accounts` | Multi-select | Premium, `enabled: false` |
-| Type | `accountTypeValues` | `account_type` | `accounts` | Multi-select | Premium, `enabled: false` |
-| Coverage | `accountDataCoverageValues` | `account_data_coverage` | `accounts` | Multi-select | Premium, `enabled: false` |
 
 > **Naming trap:** the UI label "Industry" maps to `account_primary_category`, and "Sub Industry" maps to `account_hq_industry`. The column `account_hq_sub_industry` is not filterable; it appears only in the Account dialog and in exports.
 
@@ -106,7 +103,6 @@ Rows are in config order. "Premium" means the filter sits behind "Show More".
 | State | `centerStateValues` | `center_state` | `centers` | Multi-select | Premium |
 | Centre Focus | `centerFocusValues` | `center_focus` | `centers` | Multi-select | Premium. Config label is "Center Focus" |
 | Software In Use | `techSoftwareInUseKeywords` | `software_in_use` | `tech` | Keyword | Premium. Joined through `cn_unique_key`, matches with `ILIKE '%kw%'` |
-| Country | `centerCountryValues` | `center_country` | `centers` | Multi-select | Premium, `enabled: false` |
 
 ### 1.3 Prospect Attributes
 
@@ -135,7 +131,7 @@ This section has no "Show More" gating.
 
 ## 2. Data Tables
 
-Each tab can show a paginated data table built on TanStack Table (`components/tables/data-table.tsx`, wired to the dashboard by `components/tables/use-data-table.ts`). Every column is always shown. Page size comes from `itemsPerPage` in `app/page.tsx` (default 50; the footer offers 10, 25, 50 and 100, saved per browser under `br-dashboard-page-size`) and is sent to the query routes, which clamp it to `MAX_PAGE_SIZE = 100` (`lib/dashboard/entity-query.ts`).
+Each tab can show a paginated data table built on TanStack Table (`components/tables/data-table.tsx`, wired to the dashboard by `components/tables/use-data-table.ts`). Every column is always shown. Page size comes from `itemsPerPage` in `app/page.tsx` (default 25; the footer offers 10, 25, 50 and 100, saved per browser under `br-dashboard-page-size`) and is sent to the query routes, which fall back to the same default and cap it at 100 rows. The options, default and cap are defined once in `lib/dashboard/page-size.ts`.
 
 Column labels and cells are defined per tab in the column files listed below. The Centres labels use the British spelling.
 

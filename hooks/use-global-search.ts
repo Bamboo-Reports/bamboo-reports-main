@@ -5,7 +5,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { devError } from "@/lib/utils/dev-log"
-import type { SearchResponse } from "@/lib/dashboard/api-client"
+import type { SearchFocus, SearchResponse } from "@/lib/dashboard/api-client"
 import { searchQuery } from "@/lib/dashboard/queries"
 import type { Account, Alias, Center, Prospect } from "@/lib/types"
 import { buildSearchIndex, searchIndex, type GroupedResults, type SearchResult } from "@/lib/search"
@@ -37,6 +37,9 @@ interface UseGlobalSearchReturn {
   }
   /** True from keystroke until the (debounced) lookup for it resolves. */
   isSearching: boolean
+  /** The one type search is narrowed to, which returns more of that type; null for all. */
+  focus: SearchFocus | null
+  setFocus: (focus: SearchFocus | null) => void
   isOpen: boolean
   setIsOpen: (open: boolean) => void
   handleOpen: () => void
@@ -75,6 +78,7 @@ export function useGlobalSearch({
   const [query, setQuery] = useState("")
   const [debouncedQuery, setDebouncedQuery] = useState("")
   const [isOpen, setIsOpen] = useState(false)
+  const [focus, setFocus] = useState<SearchFocus | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const index = useMemo(
@@ -87,7 +91,7 @@ export function useGlobalSearch({
   // lookup shows no results.
   const term = debouncedQuery.trim()
   const serverEnabled = serverMode && term.length >= 2
-  const serverQuery = useQuery({ ...searchQuery(term), enabled: serverEnabled, placeholderData: keepPreviousData })
+  const serverQuery = useQuery({ ...searchQuery(term, focus), enabled: serverEnabled, placeholderData: keepPreviousData })
   const serverError = serverQuery.error
   useEffect(() => {
     if (serverError) devError("server search failed:", serverError)
@@ -156,6 +160,7 @@ export function useGlobalSearch({
     setIsOpen(false)
     setQuery("")
     setDebouncedQuery("")
+    setFocus(null)
   }, [])
 
   return {
@@ -163,6 +168,8 @@ export function useGlobalSearch({
     setQuery: handleSetQuery,
     results,
     isSearching,
+    focus,
+    setFocus,
     isOpen,
     setIsOpen,
     handleOpen,

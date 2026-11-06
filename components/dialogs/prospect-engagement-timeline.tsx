@@ -17,6 +17,7 @@ import {
 } from "@/lib/dashboard/engagements"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { HintTooltip } from "@/components/ui/tooltip"
 
 const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
@@ -85,9 +86,9 @@ export function ProspectEngagementTimeline({ psUniqueKey }: { psUniqueKey: strin
   const loading = query.isPending
 
   return (
-    <section className="space-y-4" aria-busy={loading}>
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-border/40 pb-2">
-        <h3 className="text-base font-semibold tracking-tight">Bamboo Reports Activity</h3>
+    <section aria-busy={loading}>
+      <div className="mb-3 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <h3 className="text-sm font-medium">Bamboo Reports activity</h3>
         {touchpoints.length > 0 ? (
           <p className="text-xs text-muted-foreground tabular-nums">
             {touchpoints.length > 1 ? `${touchpoints.length} touchpoints · ` : ""}
@@ -96,7 +97,7 @@ export function ProspectEngagementTimeline({ psUniqueKey }: { psUniqueKey: strin
         ) : null}
       </div>
 
-      <div className="rounded-xl border border-border/60 bg-background/40 p-5 backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
+      <div className="rounded-xl border bg-card p-4">
         {loading ? (
           <div className="flex items-center">
             <span className="flex w-[5.5rem] shrink-0 justify-end">
@@ -148,12 +149,20 @@ export function ProspectEngagementTimeline({ psUniqueKey }: { psUniqueKey: strin
                     </div>
                   ) : null}
                   <div className="flex items-center">
-                    <time
-                      className="w-[5.5rem] shrink-0 text-right text-xs font-medium text-muted-foreground tabular-nums"
-                      title={agoDays !== null ? formatDaysAgo(agoDays) : undefined}
-                    >
-                      {tp.dateLabel}
-                    </time>
+                    {agoDays !== null ? (
+                      <HintTooltip label={tp.dateLabel} hint={formatDaysAgo(agoDays)}>
+                        <time
+                          tabIndex={0}
+                          className="w-[5.5rem] shrink-0 rounded-sm text-right text-xs font-medium text-muted-foreground tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          {tp.dateLabel}
+                        </time>
+                      </HintTooltip>
+                    ) : (
+                      <time className="w-[5.5rem] shrink-0 text-right text-xs font-medium text-muted-foreground tabular-nums">
+                        {tp.dateLabel}
+                      </time>
+                    )}
                     <span
                       className={`mx-3 grid h-9 w-9 shrink-0 place-items-center rounded-lg sm:mx-4 ${
                         isLatest

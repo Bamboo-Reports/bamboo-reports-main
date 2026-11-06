@@ -22,8 +22,10 @@
     --card-foreground: 214 45% 15%;
     --popover: 0 0% 100%;
     --popover-foreground: 214 45% 15%;
-    --primary: 204 100% 41%;
+    --primary: 204 100% 38%;
     --primary-foreground: 0 0% 100%;
+    /* Blue text on a blue tint (bg-primary/10): darker than --primary so it keeps 4.5:1. */
+    --primary-strong: 204 100% 33%;
     --secondary: 210 25% 94%;
     --secondary-foreground: 214 45% 22%;
     --muted: 210 25% 94%;
@@ -34,7 +36,7 @@
     --destructive-foreground: 0 0% 98%;
     --border: 212 24% 86%;
     --input: 212 24% 86%;
-    --ring: 204 100% 41%;
+    --ring: 204 100% 38%;
     --chart-1: 204 100% 41%;
     --chart-2: 212 71% 31%;
     --chart-3: 28 88% 53%;
@@ -44,12 +46,19 @@
     --radius: 0.5rem;
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 214 45% 15%;
-    --sidebar-primary: 204 100% 41%;
+    --sidebar-primary: 204 100% 38%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 210 30% 96%;
     --sidebar-accent-foreground: 214 45% 18%;
     --sidebar-border: 212 24% 86%;
     --sidebar-ring: 28 88% 53%;
+    /* Filter values: included (+) and excluded (−). */
+    --include: 142 64% 32%;
+    --exclude: 0 72% 46%;
+    /* Tooltips: one surface for labels, charts and map hovers. */
+    --tooltip: 0 0% 100%;
+    --tooltip-foreground: 214 45% 15%;
+    --tooltip-shadow: 0 8px 24px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
   }
   .dark {
     --background: 0 0% 10%;
@@ -60,6 +69,7 @@
     --popover-foreground: 0 0% 98%;
     --primary: 204 92% 56%;
     --primary-foreground: 0 0% 10%;
+    --primary-strong: 204 92% 56%;
     --secondary: 0 0% 16%;
     --secondary-foreground: 0 0% 98%;
     --muted: 0 0% 16%;
@@ -85,6 +95,12 @@
     --sidebar-accent-foreground: 0 0% 95%;
     --sidebar-border: 0 0% 24%;
     --sidebar-ring: 28 88% 60%;
+    --include: 142 55% 55%;
+    --exclude: 0 80% 66%;
+    /* One step above the card (12%), so a tooltip never melts into it. */
+    --tooltip: 0 0% 17%;
+    --tooltip-foreground: 0 0% 98%;
+    --tooltip-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.3);
   }
 }
 
@@ -94,7 +110,7 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont,
+    font-family: var(--font-sans), system-ui, -apple-system, BlinkMacSystemFont,
       'Segoe UI', sans-serif;
     line-height: 1.55;
     font-variant-numeric: tabular-nums;
@@ -115,27 +131,27 @@
 
   /* Typography Hierarchy Enhancement */
   h1 {
-    @apply text-3xl font-bold tracking-tight;
+    @apply text-3xl font-semibold tracking-tight;
   }
 
   h2 {
-    @apply text-2xl font-semibold tracking-tight;
+    @apply text-2xl font-semibold;
   }
 
   h3 {
-    @apply text-xl font-semibold tracking-tight;
+    @apply text-xl font-semibold;
   }
 
   h4 {
-    @apply text-lg font-medium tracking-tight;
+    @apply text-lg font-medium;
   }
 
   h5 {
-    @apply text-base font-medium tracking-tight;
+    @apply text-base font-medium;
   }
 
   h6 {
-    @apply text-sm font-medium tracking-tight;
+    @apply text-sm font-medium;
   }
 
   /* Performance optimizations */
@@ -150,7 +166,7 @@
     will-change: transform, opacity;
   }
 
-  /* Smooth scrolling — disabled during product tour to avoid double-animation */
+  /* Smooth scrolling, disabled during the product tour to avoid a double animation */
   html {
     font-size: 100%;
     scroll-behavior: smooth;
@@ -182,21 +198,6 @@
   }
 
   /* Glassmorphism Dialog Styles */
-  .glassmorphism-dialog {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
-  }
-
-  .dark .glassmorphism-dialog {
-    background: rgba(15, 15, 15, 0.95);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -225,34 +226,34 @@
   }
 
   .animate-fade-in {
-    animation: fadeIn 0.2s ease-out forwards;
+    animation: fadeIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   }
 
   /* Staggered animation for list items */
   .animate-stagger {
     opacity: 0;
-    animation: fadeIn 0.2s ease-out forwards;
+    animation: fadeIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   }
 
   .animate-stagger:nth-child(1) { animation-delay: 0ms; }
-  .animate-stagger:nth-child(2) { animation-delay: 25ms; }
-  .animate-stagger:nth-child(3) { animation-delay: 50ms; }
-  .animate-stagger:nth-child(4) { animation-delay: 75ms; }
-  .animate-stagger:nth-child(5) { animation-delay: 100ms; }
-  .animate-stagger:nth-child(6) { animation-delay: 125ms; }
-  .animate-stagger:nth-child(7) { animation-delay: 150ms; }
-  .animate-stagger:nth-child(8) { animation-delay: 175ms; }
-  .animate-stagger:nth-child(9) { animation-delay: 200ms; }
-  .animate-stagger:nth-child(10) { animation-delay: 225ms; }
+  .animate-stagger:nth-child(2) { animation-delay: 40ms; }
+  .animate-stagger:nth-child(3) { animation-delay: 80ms; }
+  .animate-stagger:nth-child(4) { animation-delay: 120ms; }
+  .animate-stagger:nth-child(5) { animation-delay: 160ms; }
+  .animate-stagger:nth-child(6) { animation-delay: 200ms; }
+  .animate-stagger:nth-child(7) { animation-delay: 240ms; }
+  .animate-stagger:nth-child(8) { animation-delay: 280ms; }
+  .animate-stagger:nth-child(9) { animation-delay: 320ms; }
+  .animate-stagger:nth-child(10) { animation-delay: 360ms; }
 
   /* Smooth transition for all interactive elements */
   .interactive {
-    transition: color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
-                background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
-                border-color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
-                transform 0.15s cubic-bezier(0.4, 0, 0.2, 1),
-                opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1),
-                box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: color 0.15s cubic-bezier(0.22, 1, 0.36, 1),
+                background-color 0.15s cubic-bezier(0.22, 1, 0.36, 1),
+                border-color 0.15s cubic-bezier(0.22, 1, 0.36, 1),
+                transform 0.15s cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 0.15s cubic-bezier(0.22, 1, 0.36, 1),
+                box-shadow 0.15s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   /* Table row hover */
@@ -351,7 +352,9 @@
   }
 }
 
-/* Product Tour (driver.js) Theme Overrides */
+/* Product tour (driver.js): the same floating card as menus and toasts.
+   12px corners, hairline border, the shared float shadow, a 15px medium
+   title over 13px grey text, and 32px buttons matching the app's Button. */
 .driver-overlay {
   will-change: opacity;
 }
@@ -361,63 +364,98 @@
   background: hsl(var(--popover)) !important;
   color: hsl(var(--popover-foreground)) !important;
   border: 1px solid hsl(var(--border)) !important;
-  border-radius: var(--radius) !important;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
   font-family: inherit !important;
-  max-width: 360px !important;
+  min-width: 280px !important;
+  max-width: 340px !important;
   padding: 16px !important;
 }
 
 .driver-popover.br-tour-popover .driver-popover-title {
-  font-size: 0.95rem !important;
-  font-weight: 600 !important;
-  color: hsl(var(--foreground)) !important;
+  margin: 0 28px 0 0 !important;
   font-family: inherit !important;
+  font-size: 15px !important;
+  line-height: 20px !important;
+  font-weight: 500 !important;
+  color: hsl(var(--foreground)) !important;
 }
 
 .driver-popover.br-tour-popover .driver-popover-description {
-  font-size: 0.835rem !important;
-  color: hsl(var(--muted-foreground)) !important;
-  line-height: 1.55 !important;
+  margin-top: 4px !important;
   font-family: inherit !important;
+  font-size: 13px !important;
+  line-height: 20px !important;
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.driver-popover.br-tour-popover .driver-popover-footer {
+  margin-top: 16px !important;
+  align-items: center !important;
+}
+
+.driver-popover.br-tour-popover .driver-popover-progress-text {
+  font-family: inherit !important;
+  font-size: 12px !important;
+  color: hsl(var(--muted-foreground)) !important;
+  font-variant-numeric: tabular-nums;
 }
 
 .driver-popover.br-tour-popover .driver-popover-navigation-btns {
-  gap: 6px !important;
+  gap: 8px !important;
+}
+
+.driver-popover.br-tour-popover .driver-popover-footer button {
+  height: 32px !important;
+  padding: 0 12px !important;
+  border-radius: 8px !important;
+  font-family: inherit !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 1 !important;
+  text-shadow: none !important;
+  transition: background-color 0.15s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.15s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
 .driver-popover.br-tour-popover .driver-popover-next-btn {
   background: hsl(var(--primary)) !important;
   color: hsl(var(--primary-foreground)) !important;
-  border: none !important;
-  border-radius: calc(var(--radius) - 2px) !important;
-  font-size: 0.8rem !important;
-  font-weight: 500 !important;
-  padding: 0.375rem 0.875rem !important;
-  font-family: inherit !important;
-  text-shadow: none !important;
+  border: 1px solid transparent !important;
+}
+
+.driver-popover.br-tour-popover .driver-popover-next-btn:hover {
+  background: hsl(var(--primary) / 0.9) !important;
 }
 
 .driver-popover.br-tour-popover .driver-popover-prev-btn {
-  background: transparent !important;
-  color: hsl(var(--muted-foreground)) !important;
+  background: hsl(var(--card)) !important;
+  color: hsl(var(--foreground)) !important;
   border: 1px solid hsl(var(--border)) !important;
-  border-radius: calc(var(--radius) - 2px) !important;
-  font-size: 0.8rem !important;
-  font-weight: 500 !important;
-  padding: 0.375rem 0.875rem !important;
-  font-family: inherit !important;
-  text-shadow: none !important;
+}
+
+.driver-popover.br-tour-popover .driver-popover-prev-btn:hover {
+  background: hsl(var(--muted)) !important;
+}
+
+.driver-popover.br-tour-popover .driver-popover-footer button:focus-visible {
+  outline: 2px solid hsl(var(--ring)) !important;
+  outline-offset: 2px !important;
 }
 
 .driver-popover.br-tour-popover .driver-popover-close-btn {
+  top: 12px !important;
+  right: 12px !important;
+  width: 24px !important;
+  height: 24px !important;
+  border-radius: 6px !important;
   color: hsl(var(--muted-foreground)) !important;
+  font-size: 18px !important;
+  transition: background-color 0.15s cubic-bezier(0.22, 1, 0.36, 1), color 0.15s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
-.driver-popover.br-tour-popover .driver-popover-progress-text {
-  font-size: 0.7rem !important;
-  color: hsl(var(--muted-foreground)) !important;
-  font-family: inherit !important;
+.driver-popover.br-tour-popover .driver-popover-close-btn:hover {
+  background: hsl(var(--muted)) !important;
+  color: hsl(var(--foreground)) !important;
 }
 
 .driver-popover.br-tour-popover .driver-popover-arrow-side-left,
@@ -436,4 +474,131 @@
 .driver-popover.br-tour-popover .driver-popover-arrow-side-top .driver-popover-arrow,
 .driver-popover.br-tour-popover .driver-popover-arrow-side-bottom .driver-popover-arrow {
   background: hsl(var(--popover)) !important;
+}
+
+/* MapLibre controls (zoom, compass, fullscreen, attribution) follow the theme. */
+.maplibregl-map .maplibregl-ctrl-group:not(:empty) {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.maplibregl-map .maplibregl-ctrl-group button + button {
+  border-top-color: hsl(var(--border));
+}
+
+.maplibregl-map .maplibregl-ctrl.maplibregl-ctrl-attrib,
+.maplibregl-map .maplibregl-ctrl.maplibregl-ctrl-attrib.maplibregl-compact {
+  background: hsl(var(--card) / 0.85);
+  color: hsl(var(--muted-foreground));
+}
+
+.maplibregl-map .maplibregl-ctrl-attrib a {
+  color: hsl(var(--muted-foreground));
+}
+
+.dark .maplibregl-map .maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+  filter: invert(1);
+}
+
+.dark .maplibregl-map .maplibregl-ctrl-attrib-button {
+  filter: invert(1);
+}
+
+/* Tooltip surface and parts. Plain classes so the HTML strings written for
+   Highcharts and the React tooltips share one source. */
+@layer components {
+  .br-tip {
+    background: hsl(var(--tooltip));
+    color: hsl(var(--tooltip-foreground));
+    border: 1px solid hsl(var(--border));
+    border-radius: 8px;
+    box-shadow: var(--tooltip-shadow);
+    font-family: var(--font-sans), system-ui, sans-serif;
+    font-size: 12px;
+    line-height: 16px;
+    text-align: left;
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+  /* Label: a control's name (and an optional hint) where the name is hidden or cut off. */
+  .br-tip-label {
+    padding: 6px 10px;
+    width: max-content;
+    max-width: 240px;
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 500;
+  }
+  .br-tip-hint {
+    display: block;
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 400;
+    color: hsl(var(--muted-foreground));
+  }
+  /* Chart and card: a name, an optional large figure, then muted detail lines. */
+  .br-tip-chart {
+    padding: 8px 12px;
+    min-width: 140px;
+    max-width: 260px;
+    width: max-content;
+  }
+  .br-tip-card {
+    padding: 8px 12px;
+    min-width: 180px;
+    max-width: 280px;
+    width: max-content;
+  }
+  .br-tip-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 500;
+  }
+  .br-tip-sub {
+    color: hsl(var(--muted-foreground));
+  }
+  .br-tip-lead {
+    display: block;
+    margin-top: 2px;
+    font-size: 20px;
+    line-height: 28px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+  .br-tip-card .br-tip-lead {
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 600;
+  }
+  .br-tip-unit {
+    margin-left: 4px;
+    font-size: 12px;
+    font-weight: 400;
+    color: hsl(var(--muted-foreground));
+  }
+  .br-tip-lines {
+    display: grid;
+    gap: 2px;
+    margin-top: 2px;
+  }
+  .br-tip-line {
+    color: hsl(var(--muted-foreground));
+  }
+  .br-tip-line b {
+    font-weight: 500;
+    color: hsl(var(--tooltip-foreground));
+    font-variant-numeric: tabular-nums;
+  }
+  .br-tip-swatch {
+    flex: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    box-shadow: inset 0 0 0 1px hsl(var(--foreground) / 0.25);
+  }
 }

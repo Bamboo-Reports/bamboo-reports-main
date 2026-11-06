@@ -22,20 +22,6 @@ export function formatTableLabel(tableName: string, count: number): string {
   return TABLE_LABELS[normalized] ?? normalized
 }
 
-export function formatSummaryTitle(summary: {
-  table_name: string
-  change_type: "added" | "updated"
-  record_count: number
-}): string {
-  const count = summary.record_count
-  const label = formatTableLabel(summary.table_name, count)
-
-  if (summary.change_type === "added") {
-    return `${count} new ${label} added`
-  }
-  return `${count} ${label} updated`
-}
-
 export function formatRelativeEventDate(value: string): string {
   const parsed = Date.parse(value)
   if (Number.isNaN(parsed)) return value

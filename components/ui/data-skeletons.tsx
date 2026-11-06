@@ -29,19 +29,19 @@ export function TableSkeletonRows({ rows = 8, columns, lead = "logo" }: TableSke
       {Array.from({ length: rows }, (_, i) => (
         <TableRow key={`skeleton-${i}`}>
           {Array.from({ length: columns }, (_, j) => (
-            <TableCell key={j}>
+            <TableCell key={j} className="py-3">
               {j === 0 ? (
                 <Skeleton className="h-4 w-4 rounded-sm" />
               ) : j === nameColumn ? (
                 <div className="flex items-center gap-3">
-                  {lead === "logo" ? <Skeleton className="h-8 w-8 shrink-0 rounded-xl" /> : null}
+                  {lead === "logo" ? <Skeleton className="h-10 w-10 shrink-0 rounded-[10px]" /> : null}
                   <div className="min-w-0 flex-1 space-y-1.5">
                     <Skeleton className="h-3.5 w-3/4" />
                     <Skeleton className="h-3 w-1/2" />
                   </div>
                 </div>
               ) : lead === "avatar" && j === 1 ? (
-                <Skeleton className="h-8 w-8 rounded-full" />
+                <Skeleton className="h-10 w-10 rounded-full" />
               ) : (
                 <Skeleton className="h-4 w-3/4" />
               )}
@@ -96,10 +96,10 @@ export function GridSkeletonCards({ cards = 6, statRows = 2, avatar = false }: G
   )
 }
 
-/** A small floating pill shown over maps while fresh aggregates load. */
+/** A small floating tag shown over maps while fresh aggregates load. */
 export function MapUpdatingPill() {
   return (
-    <div className="pointer-events-none absolute left-1/2 top-4 z-20 -translate-x-1/2 rounded-full border border-border/70 bg-background/90 px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur animate-pulse">
+    <div className="pointer-events-none absolute left-1/2 top-4 z-20 -translate-x-1/2 rounded-md border bg-card px-2 py-1 text-xs text-muted-foreground shadow-float animate-pulse motion-reduce:animate-none">
       Updating map
     </div>
   )

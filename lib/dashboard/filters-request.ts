@@ -5,17 +5,14 @@ import {
   DEFAULT_YEARS_IN_INDIA_RANGE,
   DEFAULT_CENTER_INC_YEAR_RANGE,
 } from "@/lib/dashboard/defaults"
-import { sanitizeFilters } from "@/lib/config/filters"
-import { isSectionEnabled } from "@/lib/config/dashboard-access"
-import type { FilterAccess } from "@/lib/dashboard/filtering-sql"
 
 // Every FilterValue[] field on Filters.
 const VALUE_ARRAY_KEYS = [
-  "accountHqRegionValues", "accountHqCountryValues", "accountHqIndustryValues", "accountDataCoverageValues",
-  "accountSourceValues", "accountTypeValues", "accountPrimaryCategoryValues", "accountPrimaryNatureValues",
-  "accountNasscomStatusValues", "accountHqEmployeeRangeValues", "accountCenterEmployeesRangeValues",
-  "accountGlobalLegalNameKeywords", "accountNameValues", "accountListValues", "centerTypeValues", "centerFocusValues", "centerCityValues",
-  "centerStateValues", "centerCountryValues", "centerEmployeesRangeValues", "centerStatusValues",
+  "accountHqRegionValues", "accountHqCountryValues", "accountHqIndustryValues", "accountPrimaryCategoryValues",
+  "accountPrimaryNatureValues", "accountNasscomStatusValues", "accountHqEmployeeRangeValues",
+  "accountCenterEmployeesRangeValues", "accountGlobalLegalNameKeywords", "accountNameValues", "accountListValues",
+  "centerTypeValues", "centerFocusValues", "centerCityValues", "centerStateValues", "centerEmployeesRangeValues",
+  "centerStatusValues",
   "functionNameValues", "techSoftwareInUseKeywords", "prospectDepartmentValues", "prospectHeadTypeValues",
   "prospectLevelValues", "prospectEngagedValues", "prospectCityValues", "prospectTitleKeywords",
 ] as const
@@ -65,10 +62,10 @@ function coerceRange(input: unknown, fallback: [number, number]): [number, numbe
 }
 
 /**
- * Safely coerce an untrusted request body into a valid, sanitized Filters
- * object. Unknown/malformed fields fall back to defaults, value lists past the
- * size caps above are cut off, and disabled filters are reset (sanitizeFilters),
- * matching the client before it runs the engine.
+ * Safely coerce an untrusted request body into a valid Filters object.
+ * Malformed fields fall back to defaults, unknown keys (such as filters that
+ * no longer exist, still present in old saved filters) are ignored, and value
+ * lists past the size caps above are cut off.
  */
 export function parseFilters(input: unknown): Filters {
   const src = input && typeof input === "object" ? (input as Record<string, unknown>) : {}
@@ -92,14 +89,5 @@ export function parseFilters(input: unknown): Filters {
   overrides.accountVisibilityMode =
     vm === "all" || vm === "nonGcc" || vm === "gcc" ? (vm as AccountVisibilityMode) : "gcc"
 
-  return sanitizeFilters(createDefaultFilters(overrides))
-}
-
-/** Server-side section entitlement (deployment config), mirrors the client. */
-export function resolveAccess(): FilterAccess {
-  return {
-    accountsEnabled: isSectionEnabled("accounts"),
-    centersEnabled: isSectionEnabled("centers"),
-    prospectsEnabled: isSectionEnabled("prospects"),
-  }
+  return createDefaultFilters(overrides)
 }

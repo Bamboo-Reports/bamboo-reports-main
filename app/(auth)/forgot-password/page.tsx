@@ -7,8 +7,8 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AuthShell } from "@/components/auth/auth-shell"
+import { RiMailSendLine } from "@remixicon/react"
+import { AuthNotice, AuthShell } from "@/components/auth/auth-shell"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
@@ -17,6 +17,7 @@ import { forgotPasswordSchema, type ForgotPasswordValues } from "@/lib/validator
 export default function ForgotPasswordPage() {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
+  const [sentTo, setSentTo] = useState("")
   const {
     register,
     handleSubmit,
@@ -49,13 +50,64 @@ export default function ForgotPasswordPage() {
     })
 
     // Always show success so the form does not reveal whether an email exists.
+    setSentTo(values.email.trim())
     setSent(true)
+  }
+
+  if (sent) {
+    return (
+      <AuthShell
+        footer={
+          <Link className="font-medium text-primary hover:underline" href="/signin">
+            Back to sign in
+          </Link>
+        }
+      >
+        <div className="py-1 text-center" role="status">
+          <span className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-full bg-muted text-foreground">
+            <RiMailSendLine className="h-6 w-6" />
+          </span>
+          <h1 className="text-xl font-semibold tracking-[-0.015em]">Check your email</h1>
+          <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+            If an account exists for <span className="font-medium text-foreground">{sentTo}</span>, a link to set a new
+            password is on its way. It can take a few minutes; check spam too.
+          </p>
+          {submitError && (
+            <AuthNotice tone="error" title="Could not send the link">
+              {submitError}
+            </AuthNotice>
+          )}
+          <p className="mt-4 text-[13px] text-muted-foreground">
+            Didn&apos;t get it?{" "}
+            <button
+              type="button"
+              className="font-medium text-primary hover:underline disabled:opacity-60"
+              disabled={isSubmitting}
+              onClick={() => void handleSubmit(onSubmit)()}
+            >
+              {isSubmitting ? "Sending" : "Send it again"}
+            </button>{" "}
+            or{" "}
+            <button
+              type="button"
+              className="font-medium text-primary hover:underline"
+              onClick={() => {
+                setSent(false)
+                setSubmitError(null)
+              }}
+            >
+              use a different email
+            </button>
+          </p>
+        </div>
+      </AuthShell>
+    )
   }
 
   return (
     <AuthShell
       title="Reset your password"
-      description="Enter your email and we will send you a link to set a new password."
+      description="Enter your email and we'll send you a link to set a new password."
       footer={
         <>
           Remembered it?{" "}
@@ -65,39 +117,31 @@ export default function ForgotPasswordPage() {
         </>
       }
     >
-      {sent ? (
-        <Alert className="border-emerald-500/30 bg-emerald-500/10 text-foreground">
-          <AlertDescription>
-            If an account exists for that email, a password reset link is on its way. Check your inbox
-            and spam folder.
-          </AlertDescription>
-        </Alert>
-      ) : (
-        <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
-          <div className="space-y-2">
-            <Label htmlFor="email" className="text-sm font-medium">
-              Email
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              required
-              className="h-10 rounded-lg"
-              {...register("email")}
-            />
-            {errors.email ? <p className="text-xs text-destructive">{errors.email.message}</p> : null}
-          </div>
-          {submitError ? (
-            <Alert variant="destructive" className="border-destructive/40 bg-destructive/5">
-              <AlertDescription>{submitError}</AlertDescription>
-            </Alert>
-          ) : null}
-          <Button size="lg" className="w-full" type="submit" loading={isSubmitting}>
-            {isSubmitting ? "Sending link" : "Send reset link"}
-          </Button>
-        </form>
-      )}
+      <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
+        {submitError ? (
+          <AuthNotice tone="error" title="Could not send the link">
+            {submitError}
+          </AuthNotice>
+        ) : null}
+        <div className="space-y-2">
+          <Label htmlFor="email" className="text-sm font-medium">
+            Email
+          </Label>
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            required
+            placeholder="you@company.com"
+            className="h-10 rounded-lg"
+            {...register("email")}
+          />
+          {errors.email ? <p className="text-xs text-destructive">{errors.email.message}</p> : null}
+        </div>
+        <Button size="lg" className="w-full" type="submit" loading={isSubmitting}>
+          {isSubmitting ? "Sending link" : "Send reset link"}
+        </Button>
+      </form>
     </AuthShell>
   )
 }

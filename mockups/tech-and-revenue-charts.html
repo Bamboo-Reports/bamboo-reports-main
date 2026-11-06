@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tech stack and revenue</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..600&display=swap" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css" rel="stylesheet" />
+<style>
+  /* Surface tokens copied from app/globals.css */
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 214 45% 15%;
+    --card: 0 0% 100%;
+    --primary: 204 100% 38%;
+    --muted: 210 25% 94%;
+    --muted-foreground: 215 20% 39%;
+    --border: 212 24% 86%;
+    --ring: 204 100% 38%;
+    --chart-1: 204 100% 41%;
+    /* Chart colours: DONUT_CHART_COLORS, pale to deep */
+    --o1: #fef0c3; --o2: #f9d996; --o3: #f7bd6b; --o4: #f69d3d; --o5: #f17c1d; --o6: #dd6516;
+    --up: 142 64% 32%;
+  }
+  .dark {
+    --background: 0 0% 10%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 12%;
+    --primary: 204 92% 56%;
+    --muted: 0 0% 16%;
+    --muted-foreground: 0 0% 65%;
+    --border: 0 0% 24%;
+    --ring: 0 0% 83.1%;
+    --chart-1: 204 92% 56%;
+    --up: 142 55% 55%;
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: light; }
+  html.dark { color-scheme: dark; }
+  body {
+    margin: 0; font-family: "DM Sans", system-ui, sans-serif; line-height: 1.5;
+    background: hsl(var(--background)); color: hsl(var(--foreground));
+    -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums;
+  }
+  ::selection { background: hsl(var(--primary) / .2); }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; border-radius: 6px; }
+
+  .page { max-width: 1140px; margin: 0 auto; padding: 32px 24px 96px; }
+  .top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; margin-bottom: 8px; }
+  .top h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .intro { margin: 0 0 8px; max-width: 80ch; font-size: 14px; color: hsl(var(--muted-foreground)); }
+  .toggle {
+    display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 8px;
+    border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 13px; font-weight: 500; cursor: pointer;
+    transition: background-color .15s ease;
+  }
+  .toggle:hover { background: hsl(var(--muted)); }
+  .part { margin: 40px 0 0; font-size: 18px; font-weight: 600; }
+  .part-note { margin: 4px 0 0; max-width: 80ch; font-size: 13px; color: hsl(var(--muted-foreground)); }
+
+  .variant { padding: 24px 0 28px; border-top: 1px solid hsl(var(--border)); margin-top: 20px; }
+  .vh { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-bottom: 4px; }
+  .vh h3 { margin: 0; font-size: 16px; font-weight: 600; }
+  .pick { font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: 6px; background: hsl(var(--primary) / .12); color: hsl(var(--primary)); }
+  .note { margin: 0 0 16px; max-width: 80ch; font-size: 13px; color: hsl(var(--muted-foreground)); }
+  .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+  @media (max-width: 900px) { .pair { grid-template-columns: 1fr; } }
+  .case { font-size: 12px; color: hsl(var(--muted-foreground)); margin: 0 0 6px; }
+
+  /* Dialog section, matching the details dialogs */
+  .section-title { margin: 0 0 10px; font-size: 15px; font-weight: 500; }
+  .panel { border: 1px solid hsl(var(--border)); border-radius: 12px; background: hsl(var(--card)); }
+
+  /* Treemap, refined */
+  .tm-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .tm { position: relative; overflow: hidden; border-radius: 12px; }
+  .tm-group { position: absolute; border-radius: 8px; background: hsl(var(--muted) / .7); }
+  .tm-cat-l {
+    position: absolute; left: 12px; right: 8px; top: 0; height: 24px; line-height: 25px;
+    font-size: 12px; font-weight: 500; color: hsl(var(--muted-foreground));
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none;
+  }
+  .tm-tool {
+    position: absolute; padding: 8px; border-radius: 4px; overflow: hidden; color: #33190a;
+    display: flex; flex-direction: column; justify-content: flex-start; cursor: default;
+    transition: box-shadow .12s ease;
+  }
+  /* Hover outlines the tile; dimming the rest would turn the oranges muddy on the dark surface. */
+  .tm-tool.on { box-shadow: inset 0 0 0 2px hsl(var(--foreground) / .85); }
+  .tm-tool .nm { font-size: 13px; font-weight: 500; line-height: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tm-tool .nm.wrap { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; }
+  .tm-tip {
+    position: absolute; z-index: 2; pointer-events: none; min-width: 160px; max-width: 260px; padding: 8px 12px;
+    border: 1px solid hsl(var(--border)); border-radius: 8px; background: hsl(var(--card));
+    box-shadow: 0 8px 24px -12px rgba(15, 30, 50, .35); font-size: 12px; color: hsl(var(--muted-foreground));
+    opacity: 0; transform: translateY(2px); transition: opacity .12s ease, transform .12s ease;
+  }
+  .tm-tip.show { opacity: 1; transform: none; }
+  .tm-tip { min-width: 0; }
+  .tm-tip b { display: block; font-size: 13px; font-weight: 500; color: hsl(var(--foreground)); }
+  @media (prefers-reduced-motion: reduce) { .tm-tip { transition: none; } }
+
+  /* Tech C: grouped list, same pattern as "Services offered" */
+  .groups { padding: 4px 0; }
+  .group { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 12px; align-items: start; padding: 10px 16px; }
+  .group + .group { border-top: 1px solid hsl(var(--border) / .7); }
+  .g-name { display: flex; align-items: center; gap: 8px; min-height: 26px; font-size: 13px; color: hsl(var(--muted-foreground)); }
+  .g-name i { font-size: 16px; }
+  .g-name .n { margin-left: auto; font-size: 12px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { display: inline-flex; align-items: center; height: 26px; padding: 0 9px; border-radius: 6px; background: hsl(var(--muted)); font-size: 13px; }
+  .group[hidden] { display: none; }
+  /* The tech section is full width in both dialogs, so each case gets the full width */
+  .pair[data-tech] { grid-template-columns: 1fr; gap: 28px; }
+  .chip .c { margin-left: 6px; font-size: 12px; color: hsl(var(--muted-foreground)); }
+  .more {
+    display: inline-flex; align-items: center; gap: 6px; height: 28px; margin: 4px 16px 10px; padding: 0 10px;
+    border: 1px dashed hsl(var(--border)); border-radius: 6px; background: transparent; font-size: 12px;
+    color: hsl(var(--muted-foreground)); cursor: pointer; transition: color .15s ease;
+  }
+  .more:hover { color: hsl(var(--foreground)); }
+  @media (max-width: 560px) { .group { grid-template-columns: 1fr; gap: 6px; } }
+
+  /* Revenue */
+  .rev { padding: 12px 14px 8px; }
+  .rev-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-bottom: 4px; }
+  .rev-h .t { font-size: 12px; color: hsl(var(--muted-foreground)); }
+  .rev-h .v { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+  .rev-h .d { font-size: 12px; font-weight: 500; color: hsl(var(--up)); }
+  .rev-h .d span { color: hsl(var(--muted-foreground)); font-weight: 400; }
+  .rev svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .ax { font-size: 11px; fill: hsl(var(--muted-foreground)); }
+  .grid-l { stroke: hsl(var(--border) / .8); stroke-width: 1; }
+  .vl { font-size: 12px; font-weight: 600; fill: hsl(var(--foreground)); }
+  .vl.m { font-weight: 500; fill: hsl(var(--muted-foreground)); }
+  .bar { transition: opacity .15s ease; }
+  svg.hov .bar:not(.on) { opacity: .45; }
+</style>
+</head>
+<body>
+<main class="page">
+  <div class="top">
+    <h1>Tech stack and revenue</h1>
+    <button class="toggle" id="theme" type="button" aria-pressed="false"><i class="ri-moon-line" aria-hidden="true"></i><span>Dark</span></button>
+  </div>
+  <p class="intro">Options for the two charts in the detail dialogs. Tech stack options show a real small centre next to the real Capgemini SE account. Revenue figures are sample data.</p>
+
+  <h2 class="part">Technology stack (account and centre details)</h2>
+  <p class="part-note">The same treemap sits in both dialogs. On a centre every tool appears once, so all tiles weigh the same and the sizes say nothing. On an account a tool is counted once per centre that uses it, so size means "used at more centres". The big case below is the real Capgemini SE stack: 43 tools in 20 categories across 15 centres. Today the smaller categories collapse into slivers with no readable labels.</p>
+
+  <section class="variant">
+    <div class="vh"><h3>T2. Treemap, refined</h3><span class="pick">Recommended</span></div>
+    <p class="note">Still a treemap, laid out as near-square tiles at both levels instead of thin slices. Each category is a quiet grey tray with its name at the top and its tools inside, busiest category first, with more space between trays than between tiles. A tool's shade shows how many centres use it; hovering a tile outlines it and shows the tool name with its share of the stack. The box grows as tall as it needs so tool names fit, wrapping onto two lines where a tile is narrow: a centre with 3 tools stays short, a big account gets a taller box (up to 760px). A tool used at one centre is never a sliver: sizes still follow centre count, softened so the smallest tools keep room for a name. On a single centre every tile has the same shade, because every count is 1.</p>
+    <div class="pair" data-tech="tiles"></div>
+  </section>
+
+  <h2 class="part">Annual revenue (account details)</h2>
+  <p class="part-note">Four fiscal years for one company. Today it is a blue area chart; the values only show on hover.</p>
+
+  <section class="variant">
+    <div class="vh"><h3>R1. Today</h3></div>
+    <p class="note">For reference. Blue, a gradient fill, five gridlines, and no figures until you hover.</p>
+    <div data-rev="today"></div>
+  </section>
+
+  <section class="variant">
+    <div class="vh"><h3>R2. Line, refined</h3></div>
+    <p class="note">Same line in the chart orange, with a flat light fill instead of the gradient and three quiet gridlines. The latest year is called out in the header with its change against the year before, and each point carries its figure.</p>
+    <div data-rev="line"></div>
+  </section>
+
+  <section class="variant">
+    <div class="vh"><h3>R3. Columns</h3><span class="pick">Recommended</span></div>
+    <p class="note">Annual totals are separate amounts, so columns compare them most directly. Each column has its figure on top, the latest year is the deep orange and earlier years step paler, and the header gives the latest figure and its change. No axis needed.</p>
+    <div data-rev="bars"></div>
+  </section>
+</main>
+
+<script>
+// Real data from the tech table: [category, [[tool, centres using it], ...]]
+const TECH = {
+  small: { label: "Centre: Microsoft Corporation India, Hyderabad (3 tools)", account: false, data: [
+    ["Cloud Platform", [["Microsoft Azure", 1]]], ["ERP", [["SAP", 1]]], ["Human Resources", [["SAP HR", 1]]],
+  ]},
+  big: { label: "Account: Capgemini SE (43 tools, 20 categories, 15 centres)", account: true, centres: 15, data:
+    [["ERP",[["Oracle E-Business Suite",7],["Oracle Fusion Applications",3],["Oracle PeopleSoft",3],["SAP MM",3],["SAP S/4HANA",3],["SAP PM",2]]],["Human Resources",[["Oracle HRMS",4],["SAP HCM",3],["Workday HCM",3],["Oracle Fusion HCM",1],["SAP Payroll",1],["Workday Payroll",1]]],["Data Engineering",[["SAP MDO",4],["SAP MDI",4],["SAP MDG",4]]],["Application Frameworks",[["SAP Fiori",6],["SAP Web Dynpro",4]]],["CRM",[["Salesforce",4],["SAP C4C",3],["SAP CRM",3]]],["Supply Chain",[["SAP EWM",4],["Oracle OSM",3],["Oracle Transportation Management",3]]],["Finance",[["Oracle CC&B",3],["Oracle BRM",3],["Oracle Financials",3]]],["Databases",[["SAP HANA",5],["Oracle MDM",3]]],["Cloud Platform",[["Amazon Web Services",4],["Microsoft Azure",3]]],["Analytics",[["SAP BusinessObjects",3],["SAP BW",2]]],["Procurement",[["SAP Ariba",5]]],["IT Service Management",[["ServiceNow",3]]],["Integration",[["Oracle SOA Suite",3]]],["Low Code",[["Appian",3]]],["Containers",[["Docker",1],["Kubernetes",1]]],["Manufacturing",[["SAP PP",2]]],["Sales",[["SAP SD",2]]],["DevOps",[["Jenkins",1]]],["Operating Systems",[["Linux",1]]],["Programming Languages",[["Python",1]]]]
+  },
+}
+const ICONS = {
+  "Cloud Platform": "ri-cloud-line", "Databases": "ri-database-2-line", "ERP": "ri-stack-line", "Analytics": "ri-bar-chart-box-line",
+  "Containers": "ri-box-3-line", "Human Resources": "ri-team-line", "CRM": "ri-contacts-book-line", "Version Control": "ri-git-branch-line",
+  "Data Engineering": "ri-database-line", "Application Frameworks": "ri-layout-masonry-line", "Supply Chain": "ri-truck-line",
+  "Finance": "ri-bank-line", "Procurement": "ri-shopping-cart-line", "IT Service Management": "ri-customer-service-2-line",
+  "Integration": "ri-links-line", "Low Code": "ri-drag-drop-line", "Manufacturing": "ri-settings-3-line", "Sales": "ri-line-chart-line",
+  "DevOps": "ri-infinity-line", "Operating Systems": "ri-computer-line", "Programming Languages": "ri-code-s-slash-line",
+}
+const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;")
+const total = (tools) => tools.reduce((s, t) => s + t[1], 0)
+const sorted = (data) => [...data].sort((a, b) => total(b[1]) - total(a[1]) || b[1].length - a[1].length)
+
+// Squarified treemap layout: values sorted large to small -> rects in the same order.
+function squarify(values, x, y, w, h) {
+  const sum = values.reduce((s, v) => s + v, 0)
+  const areas = values.map((v) => (v / sum) * w * h)
+  const out = []
+  let row = []
+  const worst = (r, len) => {
+    const s = r.reduce((a, b) => a + b, 0), mx = Math.max(...r), mn = Math.min(...r)
+    return Math.max((len * len * mx) / (s * s), (s * s) / (len * len * mn))
+  }
+  const place = (r) => {
+    const s = r.reduce((a, b) => a + b, 0)
+    if (w >= h) {
+      const cw = s / h; let cy = y
+      r.forEach((a) => { out.push([x, cy, cw, a / cw]); cy += a / cw })
+      x += cw; w -= cw
+    } else {
+      const rh = s / w; let cx = x
+      r.forEach((a) => { out.push([cx, y, a / rh, rh]); cx += a / rh })
+      y += rh; h -= rh
+    }
+  }
+  let i = 0
+  while (i < areas.length) {
+    const len = Math.min(w, h)
+    if (!row.length || worst([...row, areas[i]], len) <= worst(row, len)) row.push(areas[i++])
+    else { place(row); row = [] }
+  }
+  if (row.length) place(row)
+  return out
+}
+
+const TECH_RENDER = {
+  tiles(set, el) {
+    // Busiest category first; ties by name so the layout never shuffles.
+    const cats = [...set.data].sort((a, b) => total(b[1]) - total(a[1]) || a[0].localeCompare(b[0]))
+    const PAD = 4, HEAD = 24, W = (el.clientWidth || 520) - PAD * 2
+    const maxCount = Math.max(...cats.flatMap((c) => c[1].map((t) => t[1])))
+    const shade = (n) => (maxCount <= 1 ? 4 : 2 + Math.round(((n - 1) / (maxCount - 1)) * 4))
+    // Names are measured in the real font (13px, 500), with 8px padding each side.
+    // A name may wrap at spaces onto as many lines as the tile holds (up to 3).
+    const ctx = document.createElement("canvas").getContext("2d")
+    ctx.font = '500 13px "DM Sans", system-ui, sans-serif'
+    const textW = (t) => ctx.measureText(t).width
+    const linesFor = (h) => Math.max(1, Math.min(3, Math.floor((h - 16) / 16)))
+    const wrappedLines = (t, w) => {
+      let lines = 1, line = 0
+      for (const word of t.split(" ")) {
+        const ww = textW(word), sp = line ? textW(" ") : 0
+        if (line && line + sp + ww > w) { lines++; line = ww } else line += sp + ww
+      }
+      return lines
+    }
+    const fitsName = (t, w, h) => {
+      if (h < 32) return false
+      const inner = w - 16
+      if (textW(t) <= inner) return true
+      return Math.max(...t.split(" ").map(textW)) <= inner && wrappedLines(t, inner) <= linesFor(h)
+    }
+    // Size follows centre count, softened so a tool at one centre is never a sliver.
+    const weight = (n) => n + 1
+
+    const layout = (H) => {
+      const out = { groups: [], tools: [], misfits: 0 }
+      squarify(cats.map((c) => c[1].reduce((s, t) => s + weight(t[1]), 0)), PAD, PAD, W, H).forEach(([cx, cy, cw, ch], ci) => {
+        const [name, tools] = cats[ci]
+        // 4px between trays; 4px inside a tray around its tiles.
+        const gx = cx + 2, gy = cy + 2, gw = cw - 4, gh = ch - 4
+        if (gw < 72 || gh < HEAD + 34) out.misfits++
+        out.groups.push({ name, x: gx, y: gy, w: gw, h: gh })
+        const ts = [...tools].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        squarify(ts.map((t) => weight(t[1])), gx + 3, gy + HEAD, gw - 6, gh - HEAD - 3).forEach(([tx, ty, tw, th], ti) => {
+          const [tool, n] = ts[ti]
+          if (!fitsName(tool, tw, th)) out.misfits++
+          out.tools.push({ cat: name, tool, n, x: tx + 1, y: ty + 1, w: tw - 2, h: th - 2 })
+        })
+      })
+      return out
+    }
+
+    // Grow the box until every name fits, up to a ceiling.
+    const toolCount = cats.reduce((s, c) => s + c[1].length, 0)
+    const MAX_H = 760
+    let H = Math.max(152, Math.round((toolCount * 110 * 44) / W))
+    let res = layout(H)
+    while (res.misfits > 0 && H < MAX_H) res = layout((H = Math.min(MAX_H, Math.round(H * 1.08))))
+
+    let html = ""
+    res.groups.forEach((g) => (html += `<div class="tm-group" style="left:${g.x}px;top:${g.y}px;width:${g.w}px;height:${g.h}px"><div class="tm-cat-l">${esc(g.name)}</div></div>`))
+    res.tools.forEach((t, i) => {
+      // Wrap only at spaces, and only when every word fits the tile; otherwise one line with "…".
+      const longestWord = Math.max(...t.tool.split(" ").map(textW))
+      const step = shade(t.n), wrap = textW(t.tool) + 16 > t.w && longestWord + 16 <= t.w && linesFor(t.h) > 1
+      const clamp = wrap ? ` style="-webkit-line-clamp:${linesFor(t.h)}"` : ""
+      html += `<div class="tm-tool" data-i="${i}" style="left:${t.x}px;top:${t.y}px;width:${Math.max(0, t.w)}px;height:${Math.max(0, t.h)}px;background:var(--o${step})"><span class="nm${wrap ? " wrap" : ""}"${clamp}>${esc(t.tool)}</span></div>`
+    })
+    // Same figure as today's tooltip: the tool's share of every tool entry in the stack.
+    const entries = cats.reduce((s, c) => s + total(c[1]), 0)
+    const sharePct = (n) => {
+      const r = Math.round((n / entries) * 1000) / 10
+      return `${Number.isInteger(r) ? r.toFixed(0) : r.toFixed(1)}%`
+    }
+    const id = "tm" + Math.random().toString(36).slice(2, 8)
+    // Hover card: wired after insert (see below).
+    queueMicrotask(() => {
+      const panel = document.getElementById(id)
+      if (!panel) return
+      const tip = panel.querySelector(".tm-tip")
+      panel.querySelectorAll(".tm-tool").forEach((node) => {
+        const t = res.tools[node.dataset.i]
+        node.addEventListener("pointerenter", () => {
+          panel.classList.add("hov"); node.classList.add("on")
+          tip.innerHTML = `<b>${esc(t.tool)}</b>${sharePct(t.n)}`
+          tip.classList.add("show")
+        })
+        node.addEventListener("pointermove", (e) => {
+          const r = panel.getBoundingClientRect()
+          const x = Math.min(e.clientX - r.left + 12, r.width - tip.offsetWidth - 8)
+          const y = e.clientY - r.top + 16 + tip.offsetHeight > r.height ? e.clientY - r.top - tip.offsetHeight - 12 : e.clientY - r.top + 16
+          tip.style.left = x + "px"; tip.style.top = y + "px"
+        })
+        node.addEventListener("pointerleave", () => { panel.classList.remove("hov"); node.classList.remove("on"); tip.classList.remove("show") })
+      })
+    })
+    return `<div class="panel tm" id="${id}" role="img" aria-label="Technology stack: ${toolCount} tools in ${cats.length} categories" style="height:${H + PAD * 2}px">${html}<div class="tm-tip" aria-hidden="true"></div></div>`
+  },
+  list(set) {
+    const cats = sorted(set.data)
+    const SHOW = 6
+    const row = ([c, tools], hidden) => `<div class="group"${hidden ? " hidden" : ""}><div class="g-name"><i class="${ICONS[c] || "ri-apps-line"}" aria-hidden="true"></i>${esc(c)}</div><div class="chips">${[...tools].sort((a, b) => b[1] - a[1]).map(([t, n]) => `<span class="chip">${esc(t)}${set.account ? `<span class="c">${n}</span>` : ""}</span>`).join("")}</div></div>`
+    const extra = cats.length - SHOW
+    return `<div class="panel groups">${cats.map((c, i) => row(c, i >= SHOW)).join("")}${extra > 0 ? `<button type="button" class="more" data-more="${extra}">Show ${extra} more categories</button>` : ""}</div>`
+  },
+}
+
+const renderTech = () => document.querySelectorAll("[data-tech]").forEach((el) => {
+  const kind = el.dataset.tech
+  el.innerHTML = ["small", "big"].map((k) => `<div data-case="${k}"><p class="case">${TECH[k].label}</p><p class="section-title">Technology stack</p><div class="slot"></div></div>`).join("")
+  el.querySelectorAll("[data-case]").forEach((c) => {
+    const slot = c.querySelector(".slot")
+    slot.innerHTML = TECH_RENDER[kind](TECH[c.dataset.case], slot)
+  })
+  el.querySelectorAll(".more").forEach((b) => b.addEventListener("click", () => {
+    const panel = b.closest(".groups"), open = b.dataset.open === "1"
+    panel.querySelectorAll(".group").forEach((g, i) => { if (i >= 6) g.hidden = open })
+    b.dataset.open = open ? "0" : "1"
+    b.textContent = open ? `Show ${b.dataset.more} more categories` : "Show fewer"
+  }))
+})
+// Labels are measured in the web font, so draw once it has loaded.
+document.fonts.ready.then(renderTech)
+
+// Revenue (sample figures, USD)
+const REV = [["FY 2023", 211.9e9], ["FY 2024", 245.1e9], ["FY 2025", 281.7e9], ["FY 2026", 318.6e9]]
+const compact = (n) => (n >= 1e12 ? (n / 1e12).toFixed(2) + "T" : n >= 1e9 ? (n / 1e9).toFixed(1) + "B" : (n / 1e6).toFixed(0) + "M")
+const last = REV[REV.length - 1][1], prev = REV[REV.length - 2][1]
+const change = Math.round(((last - prev) / prev) * 100)
+const header = (show) => show
+  ? `<div class="rev-h"><span class="t">Annual revenue</span><span class="v">${compact(last)}</span><span class="d">+${change}% <span>vs FY 2025</span></span></div>`
+  : `<div class="rev-h"><span class="t">Annual revenue (FY)</span></div>`
+
+function revSvg(kind) {
+  const W = 1000, H = kind === "bars" ? 190 : 200
+  const padL = kind === "today" ? 56 : kind === "line" ? 48 : 0, padR = kind === "bars" ? 0 : 24, padT = 24, padB = 28
+  const iw = W - padL - padR, ih = H - padT - padB
+  const top = kind === "today" ? 340e9 : 350e9
+  const y = (v) => padT + ih - (v / top) * ih
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Annual revenue by fiscal year">`
+  if (kind === "bars") {
+    const slot = iw / REV.length, bw = Math.min(120, slot * 0.5)
+    const shades = ["var(--o2)", "var(--o3)", "var(--o4)", "var(--o6)"]
+    REV.forEach(([l, v], i) => {
+      const x = padL + slot * i + (slot - bw) / 2, yy = y(v)
+      s += `<g class="bar" data-i="${i}"><path d="M${x} ${padT + ih}V${yy + 4}a4 4 0 0 1 4 -4h${bw - 8}a4 4 0 0 1 4 4V${padT + ih}Z" fill="${shades[i]}"/>`
+      s += `<text class="vl${i === REV.length - 1 ? "" : " m"}" x="${x + bw / 2}" y="${yy - 8}" text-anchor="middle">${compact(v)}</text>`
+      s += `<text class="ax" x="${x + bw / 2}" y="${H - 8}" text-anchor="middle">${l}</text></g>`
+    })
+    s += `<line class="grid-l" x1="0" x2="${W}" y1="${padT + ih}" y2="${padT + ih}"/>`
+    return s + "</svg>"
+  }
+  const ticks = kind === "today" ? [0, 85e9, 170e9, 255e9, 340e9] : [0, 175e9, 350e9]
+  ticks.forEach((t) => {
+    s += `<line class="grid-l" x1="${padL}" x2="${W - padR}" y1="${y(t)}" y2="${y(t)}"/>`
+    s += `<text class="ax" x="${padL - 10}" y="${y(t) + 4}" text-anchor="end">${t === 0 ? "0" : compact(t).replace(".0", "")}</text>`
+  })
+  const pts = REV.map(([, v], i) => [padL + (iw * i) / (REV.length - 1), y(v)])
+  const line = pts.map((p, i) => `${i ? "L" : "M"}${p[0]} ${p[1]}`).join("")
+  const area = `${line}L${pts[pts.length - 1][0]} ${padT + ih}L${pts[0][0]} ${padT + ih}Z`
+  if (kind === "today") {
+    s += `<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stop-color="hsl(var(--chart-1))" stop-opacity=".25"/><stop offset="95%" stop-color="hsl(var(--chart-1))" stop-opacity=".03"/></linearGradient></defs>`
+    s += `<path d="${area}" fill="url(#g)"/><path d="${line}" fill="none" stroke="hsl(var(--chart-1))" stroke-width="2"/>`
+    pts.forEach((p) => (s += `<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="hsl(var(--card))" stroke="hsl(var(--chart-1))" stroke-width="2"/>`))
+  } else {
+    s += `<path d="${area}" fill="var(--o5)" fill-opacity=".1"/><path d="${line}" fill="none" stroke="var(--o5)" stroke-width="2" stroke-linejoin="round"/>`
+    pts.forEach((p, i) => {
+      const lastP = i === pts.length - 1
+      s += `<circle cx="${p[0]}" cy="${p[1]}" r="${lastP ? 5 : 4}" fill="${lastP ? "var(--o6)" : "hsl(var(--card))"}" stroke="${lastP ? "hsl(var(--card))" : "var(--o5)"}" stroke-width="2"/>`
+      s += `<text class="vl${lastP ? "" : " m"}" x="${p[0]}" y="${p[1] - 12}" text-anchor="${i === 0 ? "start" : lastP ? "end" : "middle"}">${compact(REV[i][1])}</text>`
+    })
+  }
+  REV.forEach(([l], i) => (s += `<text class="ax" x="${pts[i][0]}" y="${H - 8}" text-anchor="${i === 0 ? "start" : i === REV.length - 1 ? "end" : "middle"}">${l}</text>`))
+  return s + "</svg>"
+}
+
+document.querySelectorAll("[data-rev]").forEach((el) => {
+  const kind = el.dataset.rev
+  el.innerHTML = `<p class="section-title">Scale and financials</p><div class="panel rev">${header(kind !== "today")}${revSvg(kind)}</div>`
+  const svg = el.querySelector("svg")
+  svg.querySelectorAll(".bar").forEach((b) => {
+    b.addEventListener("pointerenter", () => { svg.classList.add("hov"); b.classList.add("on") })
+    b.addEventListener("pointerleave", () => { svg.classList.remove("hov"); b.classList.remove("on") })
+  })
+})
+
+const themeBtn = document.getElementById("theme")
+function setTheme(dark) {
+  document.documentElement.classList.toggle("dark", dark)
+  themeBtn.setAttribute("aria-pressed", String(dark))
+  themeBtn.querySelector("span").textContent = dark ? "Light" : "Dark"
+  themeBtn.querySelector("i").className = dark ? "ri-sun-line" : "ri-moon-line"
+}
+themeBtn.addEventListener("click", () => setTheme(!document.documentElement.classList.contains("dark")))
+setTheme(new URLSearchParams(location.search).has("dark") || matchMedia("(prefers-color-scheme: dark)").matches)
+</script>
+</body>
+</html>

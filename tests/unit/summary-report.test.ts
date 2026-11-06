@@ -33,7 +33,6 @@ const counts = {
   totalHeadcount: 1200000,
 }
 
-const allSections = { accounts: true, centers: true, prospects: true }
 
 describe("buildReportFilterRows", () => {
   it("always leads with the account visibility scope", () => {
@@ -42,7 +41,7 @@ describe("buildReportFilterRows", () => {
       baselineRanges
     )
     expect(rows).toHaveLength(1)
-    expect(rows[0]).toMatchObject({ group: "Scope", label: "Account Visibility", included: ["GCC accounts only"] })
+    expect(rows[0]).toMatchObject({ group: "Scope", label: "Accounts to show", included: ["GCC accounts only"] })
   })
 
   it("splits list filters into included and excluded values with sidebar labels", () => {
@@ -54,13 +53,13 @@ describe("buildReportFilterRows", () => {
       prospectTitleKeywords: [inc("CFO")],
     })
     const rows = buildReportFilterRows(filters, baselineRanges)
-    const country = rows.find((row) => row.label === "HQ Country")
+    const country = rows.find((row) => row.label === "HQ country")
     expect(country).toMatchObject({
       group: "Account",
       included: ["United States", "Germany"],
       excluded: ["China"],
     })
-    const title = rows.find((row) => row.label === "Job Title")
+    const title = rows.find((row) => row.label === "Job title")
     expect(title).toMatchObject({ group: "Prospect", included: ["CFO"], excluded: [] })
   })
 
@@ -73,16 +72,16 @@ describe("buildReportFilterRows", () => {
     })
     const rows = buildReportFilterRows(filters, baselineRanges)
     const labels = rows.map((row) => row.label)
-    expect(labels).toContain("HQ Company Revenue")
-    expect(labels).toContain("Incorporation Timeline")
-    expect(labels).not.toContain("Years In India")
+    expect(labels).toContain("HQ revenue")
+    expect(labels).toContain("Incorporation year")
+    expect(labels).not.toContain("Years in India")
 
-    const revenue = rows.find((row) => row.label === "HQ Company Revenue")
+    const revenue = rows.find((row) => row.label === "HQ revenue")
     expect(revenue?.included).toEqual(["100M to 2,500M (USD)"])
     expect(revenue?.excluded).toEqual(["Accounts with no recorded value"])
 
-    const incYear = rows.find((row) => row.label === "Incorporation Timeline")
-    expect(incYear?.included).toEqual(["2015 to 2026", "Centers with no recorded value"])
+    const incYear = rows.find((row) => row.label === "Incorporation year")
+    expect(incYear?.included).toEqual(["2015 to 2026", "Centres with no recorded value"])
     expect(incYear?.excluded).toEqual([])
   })
 
@@ -102,16 +101,9 @@ describe("buildReportFilterRows", () => {
 })
 
 describe("buildReportMetrics", () => {
-  it("includes every metric when all sections are procured", () => {
-    const ids = buildReportMetrics(counts, allSections).map((metric) => metric.id)
+  it("includes every metric in dashboard order", () => {
+    const ids = buildReportMetrics(counts).map((metric) => metric.id)
     expect(ids).toEqual(["accounts", "centers", "upcomingCenters", "prospects", "headcount"])
-  })
-
-  it("drops metrics for sections that are not procured", () => {
-    const ids = buildReportMetrics(counts, { accounts: true, centers: false, prospects: false }).map(
-      (metric) => metric.id
-    )
-    expect(ids).toEqual(["accounts"])
   })
 })
 
@@ -127,18 +119,17 @@ describe("buildSummaryReport", () => {
       }),
       counts,
       baselineRanges,
-      enabledSections: allSections,
       activeView: "centers",
       activeFilterCount: 1,
       generatedBy: "ops@example.com",
       generatedAt,
     })
-    expect(model.title).toBe("Dashboard Summary Report")
+    expect(model.title).toBe("Dashboard summary")
     expect(model.productName).toBe("Bamboo Reports")
     expect(model.generatedBy).toBe("ops@example.com")
     expect(model.activeView).toBe("centers")
     expect(model.metrics).toHaveLength(5)
-    expect(model.filters.map((row) => row.label)).toEqual(["Account Visibility", "Center Type"])
+    expect(model.filters.map((row) => row.label)).toEqual(["Accounts to show", "Centre type"])
   })
 })
 
@@ -178,6 +169,20 @@ describe("buildReportChart", () => {
     ])
   })
 
+  it("folds an incoming Others slice into a single Others segment", () => {
+    const chart = buildReportChart("City", "Centres", [
+      { name: "Bengaluru", value: 60 },
+      { name: "Others", value: 30 },
+      { name: "Pune", value: 8 },
+      { name: "Kochi", value: 2 },
+    ])
+    expect(chart.segments.map((segment) => [segment.name, segment.value])).toEqual([
+      ["Bengaluru", 60],
+      ["Pune", 8],
+      ["Others", 32],
+    ])
+  })
+
   it("returns an empty chart for no data", () => {
     const chart = buildReportChart("City", "Centers", [])
     expect(chart.total).toBe(0)
@@ -194,10 +199,10 @@ describe("buildReportChartGroups", () => {
   }
 
   it("mirrors the dashboard tabs with four, four and two charts", () => {
-    const groups = buildReportChartGroups(sources, allSections, counts)
+    const groups = buildReportChartGroups(sources, counts)
     expect(groups.map((group) => [group.title, group.charts.length])).toEqual([
       ["Accounts", 4],
-      ["Centers", 4],
+      ["Centres", 4],
       ["Prospects", 2],
     ])
     expect(groups.map((group) => [group.matching, group.databaseTotal])).toEqual([
@@ -207,10 +212,42 @@ describe("buildReportChartGroups", () => {
     ])
   })
 
-  it("skips sections that are not procured and missing sources", () => {
-    expect(
-      buildReportChartGroups(sources, { accounts: false, centers: true, prospects: false }, counts)
-    ).toHaveLength(1)
-    expect(buildReportChartGroups(undefined, allSections, counts)).toEqual([])
+  it("returns no groups when chart sources are missing", () => {
+    expect(buildReportChartGroups(undefined, counts)).toEqual([])
+  })
+})
+
+describe("buildReportChart in range order", () => {
+  it("keeps small buckets and lists them in range order", () => {
+    const chart = buildReportChart("Centre headcount", "Centres", [
+      { name: "201 - 500", value: 500 },
+      { name: "<50", value: 400 },
+      { name: "10K+", value: 10 },
+      { name: "1K - 5K", value: 90 },
+    ], "range")
+    expect(chart.segments.map((s) => s.name)).toEqual(["<50", "201 - 500", "1K - 5K", "10K+"])
+    expect(chart.othersMembers).toEqual([])
+  })
+})
+
+describe("accountHeadcountChartTitle", () => {
+  it("only says GCC when the view is limited to GCCs", async () => {
+    const { accountHeadcountChartTitle } = await import("@/lib/utils/chart-helpers")
+    expect(accountHeadcountChartTitle("gcc")).toBe("GCC aggregate headcount (India)")
+    expect(accountHeadcountChartTitle(undefined)).toBe("GCC aggregate headcount (India)")
+    expect(accountHeadcountChartTitle("nonGcc")).toBe("Aggregate headcount (India)")
+    expect(accountHeadcountChartTitle("all")).toBe("Aggregate headcount (India)")
+  })
+})
+
+describe("formatRevenueRange", () => {
+  it("writes stored ranges the way the revenue filter does", async () => {
+    const { formatRevenueRange } = await import("@/lib/utils/helpers")
+    expect(formatRevenueRange("10Mn - 50Mn")).toBe("$10M to $50M")
+    expect(formatRevenueRange("501Mn - 1Bn")).toBe("$501M to $1B")
+    expect(formatRevenueRange("<10Mn")).toBe("Under $10M")
+    expect(formatRevenueRange(">50Bn")).toBe("$50B+")
+    expect(formatRevenueRange("Unknown")).toBe("Unknown")
+    expect(formatRevenueRange(null)).toBe("")
   })
 })

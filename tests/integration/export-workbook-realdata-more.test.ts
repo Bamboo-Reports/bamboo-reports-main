@@ -80,12 +80,11 @@ const SCENARIOS: Array<{ label: string; overrides: Partial<Filters> }> = [
     },
   },
   {
-    label: "all + years in india 5-20 (no null bucket) + center country India + dept FnA/HR",
+    label: "all + years in india 5-20 (no null bucket) + dept FnA/HR",
     overrides: {
       accountVisibilityMode: "all",
       accountYearsInIndiaRange: [5, 20],
       yearsInIndiaIncludeNull: false,
-      centerCountryValues: inc("India"),
       prospectDepartmentValues: inc("FnA", "HR"),
     },
   },
@@ -152,7 +151,7 @@ gated("export-by-filter workbook sanity matrix (10 combos) against the real ware
   for (const { label, overrides } of SCENARIOS) {
     it(label, async () => {
       const filters = createDefaultFilters({ accountHqRevenueRange: WIDE, ...overrides })
-      const engine = getFilteredData(accounts, centers, functions, [], prospects, tech, filters, {})
+      const engine = getFilteredData(accounts, centers, functions, [], prospects, tech, filters)
       const survivingKeys = new Set(engine.filteredCenters.map((c) => c.cn_unique_key))
       const expected = {
         accounts: engine.filteredAccounts.length,
@@ -164,7 +163,6 @@ gated("export-by-filter workbook sanity matrix (10 combos) against the real ware
       const result = await buildServerExport({
         datasets: ["accounts", "centers", "services", "prospects"],
         filters,
-        access: {},
       })
       expect(result.rowCounts, `rowCounts for ${label}`).toEqual(expected)
 

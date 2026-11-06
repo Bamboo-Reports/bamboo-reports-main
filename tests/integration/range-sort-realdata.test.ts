@@ -46,7 +46,7 @@ gated("range columns sort by bucket size against the real Neon warehouse", () =>
   for (const { entity, column, build } of cases) {
     for (const direction of ["asc", "desc"] as const) {
       it(`${entity}.${column} ${direction}`, async () => {
-        const q = build(createDefaultFilters(), {}, {
+        const q = build(createDefaultFilters(), {
           columns: column,
           orderBy: resolveOrder(entity, { column, direction }),
           limit: 100000,

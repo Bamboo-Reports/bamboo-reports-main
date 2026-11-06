@@ -34,4 +34,24 @@ describe("account list parser", () => {
     expect(table.headers).toEqual(["Company", "City"])
     expect(extractNames(table, 0)).toEqual(["Infosys"])
   })
+
+  it("drops a single-column title row like the sheet's name", () => {
+    const table = tableFromRows([["Accounts - Sales & Marketing"], ["Trelleborg AB"], ["Twilio Inc."]])
+    expect(table.hasHeader).toBe(true)
+    expect(extractNames(table, 0)).toEqual(["Trelleborg AB", "Twilio Inc."])
+  })
+
+  it("drops a single-column label header", () => {
+    for (const label of ["Account name", "Company", "Accounts", "Legal name", "Customer"]) {
+      expect(tableFromRows([[label], ["Infosys"], ["TCS"]]).hasHeader).toBe(true)
+    }
+  })
+
+  it("keeps a real first name that only contains a label word", () => {
+    for (const name of ["Acme Company", "Kraft Heinz Company", "Client Solutions Inc"]) {
+      const table = tableFromRows([[name], ["Infosys"]])
+      expect(table.hasHeader).toBe(false)
+      expect(extractNames(table, 0)[0]).toBe(name)
+    }
+  })
 })

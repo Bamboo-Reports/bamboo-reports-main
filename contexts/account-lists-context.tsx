@@ -1,9 +1,9 @@
 "use client"
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { devError } from "@/lib/utils/dev-log"
-import { normalizeAccountList, type AccountList } from "@/lib/accounts/account-lists"
+import { normalizeAccountList, type AccountList, type AccountListMatch } from "@/lib/accounts/account-lists"
 
 export interface AccountListShare {
   id: string
@@ -17,6 +17,8 @@ export type AccountListInput = {
   name: string
   accounts: string[]
   unmatched?: string[]
+  /** Every uploaded name and what it became. */
+  matches?: AccountListMatch[]
   sourceFile?: string | null
 }
 
@@ -45,7 +47,29 @@ function describeError(error: unknown): string {
   return String(error)
 }
 
-const COLUMNS = "id, user_id, name, accounts, account_count, unmatched, source_file, created_at, updated_at"
+const BASE_COLUMNS = "id, user_id, name, accounts, account_count, unmatched, source_file, created_at, updated_at"
+const MATCH_COLUMNS = `${BASE_COLUMNS}, matches`
+
+/**
+ * True when Postgres or PostgREST rejected the request because the `matches`
+ * column does not exist yet (its migration is optional, like sharing).
+ */
+function isMissingMatchesColumn(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false
+  const e = error as { code?: unknown; message?: unknown }
+  const code = typeof e.code === "string" ? e.code : ""
+  const message = typeof e.message === "string" ? e.message : ""
+  return (code === "42703" || code === "PGRST204") && message.includes("matches")
+}
+
+type Flag = { current: boolean }
+const columnsFor = (matchesColumn: Flag) => (matchesColumn.current ? MATCH_COLUMNS : BASE_COLUMNS)
+/** Switches the matches column off when the error says it is missing; true means retry. */
+function dropMissingMatches(matchesColumn: Flag, error: unknown): boolean {
+  if (!matchesColumn.current || !isMissingMatchesColumn(error)) return false
+  matchesColumn.current = false
+  return true
+}
 
 /**
  * Owner-scoped account lists (Supabase `account_lists`, RLS-guarded). One
@@ -58,6 +82,8 @@ export function AccountListsProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [authReady, setAuthReady] = useState(false)
+  // Flips off once the database says the matches column is missing, so later calls skip it.
+  const matchesColumn = useRef(true)
 
   useEffect(() => {
     let mounted = true
@@ -83,16 +109,19 @@ export function AccountListsProvider({ children }: { children: ReactNode }) {
     }
     setLoading(true)
     try {
-      const [{ data: ownData, error: ownError }, { data: sharedData, error: sharedError }] = await Promise.all([
-        supabase.from("account_lists").select(COLUMNS).eq("user_id", userId).order("updated_at", { ascending: false }),
-        supabase.from("account_list_shares").select(`list_id, account_lists(${COLUMNS})`).eq("shared_with_user_id", userId),
-      ])
+      const load = () =>
+        Promise.all([
+          supabase.from("account_lists").select(columnsFor(matchesColumn)).eq("user_id", userId).order("updated_at", { ascending: false }),
+          supabase.from("account_list_shares").select(`list_id, account_lists(${columnsFor(matchesColumn)})`).eq("shared_with_user_id", userId),
+        ])
+      let [{ data: ownData, error: ownError }, { data: sharedData, error: sharedError }] = await load()
+      if (dropMissingMatches(matchesColumn, ownError)) [{ data: ownData, error: ownError }, { data: sharedData, error: sharedError }] = await load()
       if (ownError) throw ownError
       // Sharing is optional (its migration may not be applied yet): keep own lists usable.
       if (sharedError) devError("Failed to load shared account lists:", describeError(sharedError))
 
       const own = (Array.isArray(ownData) ? ownData : [])
-        .map((row) => normalizeAccountList(row as Record<string, unknown>))
+        .map((row) => normalizeAccountList(row as unknown as Record<string, unknown>))
         .filter((row): row is AccountList => Boolean(row))
 
       const sharedRows = (Array.isArray(sharedData) ? sharedData : [])
@@ -134,20 +163,24 @@ export function AccountListsProvider({ children }: { children: ReactNode }) {
       if (!name || !userId) return null
       setLoading(true)
       try {
-        const { data, error } = await supabase
-          .from("account_lists")
-          .insert({
-            user_id: userId,
-            name,
-            accounts: input.accounts,
-            account_count: input.accounts.length,
-            unmatched: input.unmatched ?? [],
-            source_file: input.sourceFile ?? null,
-          })
-          .select(COLUMNS)
-          .single()
+        const insert = () =>
+          supabase
+            .from("account_lists")
+            .insert({
+              user_id: userId,
+              name,
+              accounts: input.accounts,
+              account_count: input.accounts.length,
+              unmatched: input.unmatched ?? [],
+              ...(matchesColumn.current ? { matches: input.matches ?? [] } : {}),
+              source_file: input.sourceFile ?? null,
+            })
+            .select(columnsFor(matchesColumn))
+            .single()
+        let { data, error } = await insert()
+        if (dropMissingMatches(matchesColumn, error)) ({ data, error } = await insert())
         if (error) throw error
-        const created = normalizeAccountList(data as Record<string, unknown>)
+        const created = normalizeAccountList(data as unknown as Record<string, unknown>)
         if (created) setLists((prev) => [created, ...prev])
         return created
       } catch (error) {
@@ -176,9 +209,15 @@ export function AccountListsProvider({ children }: { children: ReactNode }) {
         }
         if (input.unmatched) patch.unmatched = input.unmatched
         if (input.sourceFile !== undefined) patch.source_file = input.sourceFile
-        const { data, error } = await supabase.from("account_lists").update(patch).eq("id", id).select(COLUMNS).single()
+        const update = () => {
+          const body = { ...patch }
+          if (input.matches && matchesColumn.current) body.matches = input.matches
+          return supabase.from("account_lists").update(body).eq("id", id).select(columnsFor(matchesColumn)).single()
+        }
+        let { data, error } = await update()
+        if (dropMissingMatches(matchesColumn, error)) ({ data, error } = await update())
         if (error) throw error
-        const updated = normalizeAccountList(data as Record<string, unknown>)
+        const updated = normalizeAccountList(data as unknown as Record<string, unknown>)
         if (updated) setLists((prev) => [updated, ...prev.filter((l) => l.id !== id)])
         return updated
       } catch (error) {

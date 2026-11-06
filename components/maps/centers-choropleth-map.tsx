@@ -1,10 +1,16 @@
 "use client"
 
+import { ChartTooltipCard } from "@/components/ui/chart-tooltip-card"
+import { MapControls } from "@/components/maps/map-controls"
+import { DONUT_CHART_COLORS } from "@/lib/utils/chart-helpers"
 import React, { useMemo, useState, useEffect, useLayoutEffect } from "react"
-import { Map as MapGL, Source, Layer, NavigationControl, FullscreenControl } from "@vis.gl/react-maplibre"
+import { Map as MapGL, Source, Layer, type MapRef } from "@vis.gl/react-maplibre"
+import type { ExpressionSpecification, FilterSpecification } from "maplibre-gl"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
-import { MAPLIBRE_WORKER_URL, prepareBasemap, useBasemapStyleUrl } from "@/lib/maps/basemap"
+import { MAPLIBRE_WORKER_URL, prepareBasemap, transformMapRequest, useBasemapStyleUrl } from "@/lib/maps/basemap"
+import { useMapRecovery } from "@/lib/maps/use-map-recovery"
+import { MapErrorState } from "@/components/maps/map-error-state"
 import { DebugLocationSearch } from "@/components/maps/debug-location-search"
 import { devError } from "@/lib/utils/dev-log"
 import type { Center } from "@/lib/types"
@@ -34,22 +40,13 @@ interface Admin1Feature {
   properties?: Admin1Properties
   geometry?: {
     type: "Polygon" | "MultiPolygon"
-    coordinates: any
+    coordinates: unknown
   }
 }
 
-const COLOR_SCALE = [
-  "#FFF2BB",
-  "#FFEEA2",
-  "#FFE573",
-  "#FFE056",
-  "#FFDB39",
-  "#F7CA02",
-  "#FFB649",
-  "#FFA92A",
-  "#F59302",
-  "#FF8000",
-]
+// The same pale-to-deep orange steps as the donut charts, so a state's shade
+// reads the same as a slice's.
+const COLOR_SCALE = DONUT_CHART_COLORS
 
 const normalizeIso2 = (value?: string | null) => (value || "").trim().toUpperCase()
 const normalizeStateKey = (value?: string | null) => (value || "").trim().toLowerCase()
@@ -119,7 +116,7 @@ const aggregatesFromStateRows = (rows: StateAggregate[]): StateAggregates => {
   return { countsByState, accountsCountByState, headcountByState, countryNamesByIso }
 }
 
-const buildColorScale = (values: number[], countExpression: any) => {
+const buildColorScale = (values: number[], countExpression: ExpressionSpecification) => {
   const computedMax = values.length > 0 ? Math.max(...values) : 0
   const computedMin = values.length > 0 ? Math.min(...values) : 0
   const maxValue = Math.max(0, computedMax)
@@ -127,7 +124,7 @@ const buildColorScale = (values: number[], countExpression: any) => {
 
   if (maxValue <= 0) {
     return {
-      expression: ["step", countExpression, COLOR_SCALE[0], 1, COLOR_SCALE[1]] as any,
+      expression: ["step", countExpression, COLOR_SCALE[0], 1, COLOR_SCALE[1]] as ExpressionSpecification,
       legend: [
         { label: "0", color: COLOR_SCALE[0] },
         { label: "1+", color: COLOR_SCALE[1] },
@@ -138,7 +135,7 @@ const buildColorScale = (values: number[], countExpression: any) => {
   if (minValue >= maxValue) {
     const color = COLOR_SCALE[COLOR_SCALE.length - 1]
     return {
-      expression: ["case", [">", countExpression, 0], color, COLOR_SCALE[0]] as any,
+      expression: ["case", [">", countExpression, 0], color, COLOR_SCALE[0]] as ExpressionSpecification,
       legend: [
         { label: minValue.toLocaleString(), color },
       ],
@@ -167,10 +164,12 @@ const buildColorScale = (values: number[], countExpression: any) => {
     const step = maxColorIndex / (bucketCount - 1)
     return COLOR_SCALE[Math.round(index * step)]
   })
-  const expression: any[] = ["step", countExpression, colors[0]]
+  // Built step by step, so typed once complete.
+  const stepParts: Array<ExpressionSpecification | string | number> = ["step", countExpression, colors[0]]
   uniqueThresholds.forEach((threshold, index) => {
-    expression.push(threshold, colors[index + 1])
+    stepParts.push(threshold, colors[index + 1])
   })
+  const expression = stepParts as ExpressionSpecification
 
   const legend: Array<{ label: string; color: string }> = []
   const formatRange = (min: number, max: number | null) => {
@@ -208,7 +207,10 @@ export function CentersChoroplethMap({
   scaleStates,
   heightClass = "h-[750px]",
 }: CentersChoroplethMapProps) {
-  const [error, setError] = useState<string | null>(null)
+  const { mapKey, ready, error, errorKind, handleFatalError, handleLoad, reload } = useMapRecovery({
+    map_kind: "state",
+    map_name: "centers_choropleth_map",
+  })
   const [isClient, setIsClient] = useState(false)
   const [hoverInfo, setHoverInfo] = useState<{
     x: number
@@ -221,7 +223,7 @@ export function CentersChoroplethMap({
   } | null>(null)
   const [hoveredFeatureKeys, setHoveredFeatureKeys] = useState<string[] | null>(null)
   const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number } | null>(null)
-  const mapRef = React.useRef<any>(null)
+  const mapRef = React.useRef<MapRef>(null)
   const containerRef = React.useRef<HTMLDivElement | null>(null)
   const tooltipRef = React.useRef<HTMLDivElement | null>(null)
   const lastMapMoveTrackedAtRef = React.useRef(0)
@@ -281,25 +283,6 @@ export function CentersChoroplethMap({
     lastTooltipStateRef.current = stateKey
   }, [hoverInfo])
 
-  useEffect(() => {
-    if (!isClient || typeof ResizeObserver === "undefined") return
-    const container = containerRef.current
-    if (!container) return
-
-    const resizeMap = () => {
-      if (mapRef.current?.resize) {
-        mapRef.current.resize()
-      }
-    }
-
-    const observer = new ResizeObserver(resizeMap)
-    observer.observe(container)
-
-    requestAnimationFrame(resizeMap)
-
-    return () => observer.disconnect()
-  }, [isClient])
-
   const stateAggregates = useMemo(
     () => (states ? aggregatesFromStateRows(states) : buildStateAggregates(centers)),
     [states, centers]
@@ -324,7 +307,7 @@ export function CentersChoroplethMap({
   }, [countValues])
 
   const featureKeyExpression = useMemo(
-    () => (["concat", ["get", "level_0"], "|", ["downcase", ["coalesce", ["get", "name"], ""]]] as any),
+    (): ExpressionSpecification => ["concat", ["get", "level_0"], "|", ["downcase", ["coalesce", ["get", "name"], ""]]],
     []
   )
 
@@ -336,16 +319,17 @@ export function CentersChoroplethMap({
     return keys
   }, [stateAggregates])
 
-  const countExpression = useMemo(() => {
-    if (stateKeysWithCounts.length === 0) return ["literal", 0] as any
-    const expression: any[] = ["match", featureKeyExpression]
+  const countExpression = useMemo((): ExpressionSpecification => {
+    if (stateKeysWithCounts.length === 0) return ["literal", 0]
+    // Built pair by pair, so typed once complete.
+    const match: Array<ExpressionSpecification | string | number> = ["match", featureKeyExpression]
     stateAggregates.countsByState.forEach((value, key) => {
       if (value > 0) {
-        expression.push(key, value)
+        match.push(key, value)
       }
     })
-    expression.push(0)
-    return expression
+    match.push(0)
+    return match as ExpressionSpecification
   }, [featureKeyExpression, stateAggregates, stateKeysWithCounts])
 
   const { expression: fillColorExpression } = useMemo(
@@ -353,28 +337,28 @@ export function CentersChoroplethMap({
     [countValues, countExpression]
   )
 
-  const layerFilter = useMemo(() => {
+  const layerFilter = useMemo((): FilterSpecification => {
     if (stateKeysWithCounts.length === 0) {
-      return ["==", 0, 1] as any
+      return ["==", 0, 1]
     }
-    return ["all", ["==", ["get", "level"], 1], ["in", featureKeyExpression, ["literal", stateKeysWithCounts]]] as any
+    return ["all", ["==", ["get", "level"], 1], ["in", featureKeyExpression, ["literal", stateKeysWithCounts]]]
   }, [featureKeyExpression, stateKeysWithCounts])
 
-  const hoverLayerFilter = useMemo(() => {
+  const hoverLayerFilter = useMemo((): FilterSpecification => {
     if (!hoveredFeatureKeys || hoveredFeatureKeys.length === 0) {
-      return ["==", ["get", "name"], "__never_hovered_state__"] as any
+      return ["==", ["get", "name"], "__never_hovered_state__"]
     }
     return [
       "all",
       ["==", ["get", "level"], 1],
       ["in", featureKeyExpression, ["literal", hoveredFeatureKeys]],
-    ] as any
+    ]
   }, [featureKeyExpression, hoveredFeatureKeys])
 
   const mapStyle = useBasemapStyleUrl()
 
   const handleRecenter = () => {
-    const mapInstance = mapRef.current?.getMap?.() ?? mapRef.current
+    const mapInstance = mapRef.current?.getMap()
     if (!mapInstance) return
 
     mapInstance.flyTo({
@@ -389,22 +373,15 @@ export function CentersChoroplethMap({
   }
 
   if (error) {
-    return (
-      <div className={`flex items-center justify-center ${heightClass} bg-muted rounded-lg`}>
-        <div className="text-center">
-          <p className="text-lg font-semibold text-red-500 mb-2">Error Loading Map</p>
-          <p className="text-sm text-muted-foreground">{error}</p>
-          <p className="text-xs text-muted-foreground mt-2">Check browser console for details</p>
-        </div>
-      </div>
-    )
+    return <MapErrorState heightClass={heightClass} kind={errorKind} onReload={reload} />
   }
 
-  if (!isClient) {
+  // Wait for the worker file to be cached before MapLibre starts its workers.
+  if (!isClient || !ready) {
     return (
       <div className={`flex items-center justify-center ${heightClass} bg-muted rounded-lg`}>
         <div className="text-center">
-          <p className="text-sm text-muted-foreground">Loading map...</p>
+          <p className="text-sm text-muted-foreground">Loading map…</p>
         </div>
       </div>
     )
@@ -414,7 +391,7 @@ export function CentersChoroplethMap({
     return (
       <div className={`flex items-center justify-center ${heightClass} bg-muted rounded-lg`}>
         <div className="text-center">
-          <p className="text-sm text-muted-foreground">No state boundaries to display.</p>
+          <p className="text-sm text-muted-foreground">No state boundaries to show</p>
         </div>
       </div>
     )
@@ -426,6 +403,7 @@ export function CentersChoroplethMap({
       className={`relative w-full ${heightClass} rounded-lg overflow-hidden outline-none bg-muted`}
     >
       <MapGL
+        key={mapKey}
         ref={mapRef}
         style={{ width: "100%", height: "100%" }}
         initialViewState={{
@@ -435,10 +413,12 @@ export function CentersChoroplethMap({
         }}
         mapStyle={mapStyle}
         workerUrl={MAPLIBRE_WORKER_URL}
+        transformRequest={transformMapRequest}
         // Switching theme swaps the basemap style, which resets borders and colours.
         onStyleData={(e) => prepareBasemap(e.target)}
         projection="mercator"
         onLoad={(e) => {
+          handleLoad()
           // Hide the basemap's de-facto international borders; India boundaries
           // come from the SOI overlay below.
           prepareBasemap(e.target)
@@ -491,12 +471,12 @@ export function CentersChoroplethMap({
           const accountsCount = stateAggregates.accountsCountByState.get(key) || 0
           const headcount = stateAggregates.headcountByState.get(key) || 0
           const countryName = stateAggregates.countryNamesByIso.get(iso2) || iso2
-          const stateLabel = stateName || "Unknown State"
+          const stateLabel = stateName || "Unknown state"
           setHoverInfo({
             x: e.point.x,
             y: e.point.y,
             state: stateLabel,
-            country: countryName || "Unknown Country",
+            country: countryName || "Unknown country",
             count,
             accountsCount,
             headcount,
@@ -516,16 +496,11 @@ export function CentersChoroplethMap({
             return
           }
           devError("[CentersChoroplethMap] Map error:", message)
-          setError(`Map error: ${message}`)
-          captureEvent(ANALYTICS_EVENTS.MAP_ERROR_SHOWN, {
-            map_kind: "state",
-            map_name: "centers_choropleth_map",
-            error_message: message,
-          })
+          // Retries once silently, then shows the error state (useMapRecovery).
+          handleFatalError(message)
         }}
       >
-        <NavigationControl position="top-left" showCompass={true} showZoom={true} />
-        <FullscreenControl position="top-left" />
+        <MapControls onRecenter={handleRecenter} />
 
         <DebugLocationSearch mapRef={mapRef} />
 
@@ -533,7 +508,7 @@ export function CentersChoroplethMap({
           <Layer
             id="admin1-base-outline"
             type="line"
-            filter={["==", ["get", "level"], 1] as any}
+            filter={["==", ["get", "level"], 1]}
             paint={{
               "line-color": "#64748b",
               "line-width": 0.5,
@@ -566,7 +541,7 @@ export function CentersChoroplethMap({
             type="fill"
             filter={hoverLayerFilter}
             paint={{
-              "fill-color": "#f97316",
+              "fill-color": DONUT_CHART_COLORS[4],
               "fill-outline-color": "rgba(0,0,0,0)",
               "fill-antialias": true,
               "fill-opacity": 0.2,
@@ -575,14 +550,14 @@ export function CentersChoroplethMap({
         </Source>
 
         <div
-          className="absolute bottom-4 left-4 z-10 rounded-lg border bg-background/35 backdrop-blur-md p-3 shadow-sm min-w-[220px]"
+          className="absolute bottom-4 left-4 z-10 min-w-[220px] rounded-lg border bg-card p-3 shadow-float"
           style={{
             fontFamily:
-              "'Geist', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+              "var(--font-sans), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
           }}
         >
-          <div className="text-sm font-semibold text-muted-foreground dark:text-white mb-2 text-center">Total Centres</div>
-          <div className="flex items-center gap-2 text-[11px] text-muted-foreground dark:text-white">
+          <div className="mb-2 text-xs font-medium text-muted-foreground">Total centres</div>
+          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
             <span className="tabular-nums">{countRange.min.toLocaleString()}</span>
             <div
               className="h-2 flex-1 rounded-full"
@@ -601,50 +576,19 @@ export function CentersChoroplethMap({
             style={{
               left: `${(tooltipPosition?.x ?? hoverInfo.x + 15)}px`,
               top: `${(tooltipPosition?.y ?? hoverInfo.y + 15)}px`,
-              fontFamily:
-                "'Geist', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
             }}
           >
-            <div className="flex min-w-[220px] overflow-hidden rounded-lg border border-border/80 bg-popover/95 text-popover-foreground shadow-[0_12px_40px_-12px_rgba(0,0,0,0.35)] backdrop-blur-md animate-in fade-in-0 zoom-in-95 duration-150">
-              <div className="w-0.5 bg-orange-500/80" aria-hidden="true" />
-              <div className="flex-1 space-y-3 p-3.5">
-                {/* Location */}
-                <div>
-                  <div className="text-[11px] font-semibold uppercase leading-tight tracking-[0.14em] text-foreground">
-                    {hoverInfo.state || "Unknown State"}
-                  </div>
-                  <div className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                    {hoverInfo.country || "Unknown Country"}
-                  </div>
-                </div>
-
-                {/* Hero metric: centers count */}
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-semibold leading-none tabular-nums text-foreground">
-                    {hoverInfo.count.toLocaleString()}
-                  </span>
-                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                    {hoverInfo.count === 1 ? 'center' : 'centers'}
-                  </span>
-                </div>
-
-                {/* Secondary metrics */}
-                <div className="space-y-1 border-t border-border/60 pt-2 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Accounts</span>
-                    <span className="font-medium tabular-nums text-foreground">
-                      {hoverInfo.accountsCount.toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Headcount</span>
-                    <span className="font-medium tabular-nums text-foreground">
-                      {hoverInfo.headcount.toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <ChartTooltipCard
+              variant="card"
+              title={hoverInfo.state || "Unknown state"}
+              subtitle={hoverInfo.country || "Unknown country"}
+              lead={hoverInfo.count.toLocaleString("en-US")}
+              leadUnit={hoverInfo.count === 1 ? "centre" : "centres"}
+              lines={[
+                { label: "Accounts", value: hoverInfo.accountsCount.toLocaleString("en-US") },
+                { label: "Headcount", value: hoverInfo.headcount.toLocaleString("en-US") },
+              ]}
+            />
           </div>
         )}
 

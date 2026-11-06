@@ -7,7 +7,6 @@ import {
   buildAccountsQuery,
   buildCentersQuery,
   buildProspectsQuery,
-  type FilterAccess,
 } from "@/lib/dashboard/filtering-sql"
 
 // ---------------------------------------------------------------------------
@@ -143,16 +142,16 @@ async function sqlIds(query: { text: string; values: unknown[] }, key: string) {
   return sorted(res.rows.map((r) => r[key]))
 }
 
-async function assertParity(name: string, overrides: Partial<Filters>, access: FilterAccess = {}) {
+async function assertParity(name: string, overrides: Partial<Filters>) {
   const filters = createDefaultFilters(overrides)
-  const expected: FilteredData = getFilteredData(accounts, centers, functions, [], prospects, tech, filters, access)
+  const expected: FilteredData = getFilteredData(accounts, centers, functions, [], prospects, tech, filters)
 
   // pg-mem does not parse `AS MATERIALIZED` (a pure planner hint), so turn it
   // off here. Results are identical; production defaults it on for the planner.
   const o = { orderBy: null, materialized: false } as const
-  const sqlAccounts = await sqlIds(buildAccountsQuery(filters, access, o), "account_global_legal_name")
-  const sqlCenters = await sqlIds(buildCentersQuery(filters, access, o), "cn_unique_key")
-  const sqlProspects = await sqlIds(buildProspectsQuery(filters, access, o), "ps_unique_key")
+  const sqlAccounts = await sqlIds(buildAccountsQuery(filters, o), "account_global_legal_name")
+  const sqlCenters = await sqlIds(buildCentersQuery(filters, o), "cn_unique_key")
+  const sqlProspects = await sqlIds(buildProspectsQuery(filters, o), "ps_unique_key")
 
   expect(sqlAccounts, `${name} :: accounts`).toEqual(sorted(expected.filteredAccounts.map((x) => x.account_global_legal_name)))
   expect(sqlCenters, `${name} :: centers`).toEqual(sorted(expected.filteredCenters.map((x) => x.cn_unique_key)))
@@ -161,8 +160,8 @@ async function assertParity(name: string, overrides: Partial<Filters>, access: F
 
 async function accountNamesBothEngines(overrides: Partial<Filters>) {
   const filters = createDefaultFilters({ accountVisibilityMode: "all", ...overrides })
-  const js = sorted(getFilteredData(accounts, centers, functions, [], prospects, tech, filters, {}).filteredAccounts.map((x) => x.account_global_legal_name))
-  const sql = await sqlIds(buildAccountsQuery(filters, {}, { orderBy: null, materialized: false }), "account_global_legal_name")
+  const js = sorted(getFilteredData(accounts, centers, functions, [], prospects, tech, filters).filteredAccounts.map((x) => x.account_global_legal_name))
+  const sql = await sqlIds(buildAccountsQuery(filters, { orderBy: null, materialized: false }), "account_global_legal_name")
   return { js, sql }
 }
 
@@ -221,7 +220,7 @@ const exc = (...vs: string[]) => vs.map((value) => ({ value, mode: "exclude" as 
 const WIDE: [number, number] = [0, Number.MAX_SAFE_INTEGER]
 
 describe("filtering-sql parity with getFilteredData", () => {
-  const scenarios: Array<[string, Partial<Filters>, FilterAccess?]> = [
+  const scenarios: Array<[string, Partial<Filters>]> = [
     ["defaults (gcc)", {}],
     ["visibility all", { accountVisibilityMode: "all" }],
     ["visibility nonGcc", { accountVisibilityMode: "nonGcc" }],
@@ -253,14 +252,11 @@ describe("filtering-sql parity with getFilteredData", () => {
     ["center employees exclude (null passes)", { accountCenterEmployeesRangeValues: exc("100-500"), accountVisibilityMode: "all" }],
     ["employee range include", { accountHqEmployeeRangeValues: inc("1000-5000") }],
     ["everything combined", { accountVisibilityMode: "all", accountHqCountryValues: inc("United States"), centerCityValues: inc("New York"), prospectDepartmentValues: inc("Engineering", "Finance"), accountHqRevenueRange: WIDE }],
-    ["centers disabled", { accountHqCountryValues: inc("United States") }, { centersEnabled: false }],
-    ["prospects disabled with prospect filter", { prospectDepartmentValues: inc("Engineering"), accountVisibilityMode: "all" }, { prospectsEnabled: false }],
-    ["accounts disabled", { accountVisibilityMode: "all" }, { accountsEnabled: false }],
   ]
 
-  for (const [name, overrides, access] of scenarios) {
+  for (const [name, overrides] of scenarios) {
     it(name, async () => {
-      await assertParity(name, overrides, access)
+      await assertParity(name, overrides)
     })
   }
 })
@@ -282,9 +278,6 @@ const POOLS = {
   region: ["North America", "Europe", "APAC", "Antarctica"],
   country: ["United States", "Germany", "India", "France", "Narnia"],
   industry: ["Software", "Automotive", "Finance", "Mining"],
-  dataCoverage: ["Full", "Partial", "None"],
-  source: ["Web", "Manual", "Api"],
-  type: ["Public", "Private", "NGO"],
   primaryCategory: ["Technology", "Industrial", "Financial", "Retail"],
   primaryNature: ["Product", "Manufacturing", "Services"],
   nasscom: ["Yes", "No"],
@@ -296,7 +289,6 @@ const POOLS = {
   centerFocus: ["IT", "Engineering", "Operations"],
   centerCity: ["New York", "Austin", "Berlin", "Paris", "Mumbai"],
   centerState: ["NY", "TX", "BE", "IDF"],
-  centerCountry: ["United States", "Germany", "France"],
   centerEmp: ["100-500", "50-100"],
   centerStatus: ["Active", "Upcoming"],
   fn: ["IT Services", "Engineering", "Finance", "HR"],
@@ -331,9 +323,6 @@ describe("filtering-sql parity fuzz (seeded)", () => {
     set("accountHqRegionValues", maybeValues(POOLS.region))
     set("accountHqCountryValues", maybeValues(POOLS.country))
     set("accountHqIndustryValues", maybeValues(POOLS.industry))
-    set("accountDataCoverageValues", maybeValues(POOLS.dataCoverage))
-    set("accountSourceValues", maybeValues(POOLS.source))
-    set("accountTypeValues", maybeValues(POOLS.type))
     set("accountPrimaryCategoryValues", maybeValues(POOLS.primaryCategory))
     set("accountPrimaryNatureValues", maybeValues(POOLS.primaryNature))
     set("accountNasscomStatusValues", maybeValues(POOLS.nasscom))
@@ -345,7 +334,6 @@ describe("filtering-sql parity fuzz (seeded)", () => {
     set("centerFocusValues", maybeValues(POOLS.centerFocus))
     set("centerCityValues", maybeValues(POOLS.centerCity))
     set("centerStateValues", maybeValues(POOLS.centerState))
-    set("centerCountryValues", maybeValues(POOLS.centerCountry))
     set("centerEmployeesRangeValues", maybeValues(POOLS.centerEmp))
     set("centerStatusValues", maybeValues(POOLS.centerStatus))
     set("functionNameValues", maybeValues(POOLS.fn))

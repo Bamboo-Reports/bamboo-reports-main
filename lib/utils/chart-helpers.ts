@@ -1,17 +1,23 @@
-import type { Center, Function, ChartData } from "../types"
+import type { AccountVisibilityMode, Center, Function, ChartData } from "../types"
 
-// Professional pie-chart palette tuned for executive dashboards.
-export const PIE_CHART_COLORS = [
+// Chart colours (donuts, treemap, maps, PDF): the orange-to-yellow scheme in six steps far enough
+// apart that neighbouring slices read as different (OKLCH lightness gap >= 0.06).
+// Lightest first. The lightest step is kept for "Others".
+export const DONUT_CHART_COLORS = [
+  "#fef0c3",
+  "#f9d996",
+  "#f7bd6b",
+  "#f69d3d",
   "#f17c1d",
-  "#f28d2f",
-  "#f29e42",
-  "#f3ad55",
-  "#f5bb69",
-  "#f6c97e",
-  "#f8d794",
-  "#fbe4ab",
-  "#fff0c2",
+  "#dd6516",
 ]
+
+/**
+ * Title of the account chart of India centre headcount ranges. Every account
+ * has the figure, so "GCC" is only said when the view is limited to GCCs.
+ */
+export const accountHeadcountChartTitle = (mode: AccountVisibilityMode | undefined): string =>
+  (mode ?? "gcc") === "gcc" ? "GCC aggregate headcount (India)" : "Aggregate headcount (India)"
 
 /**
  * Calculate chart data from accounts

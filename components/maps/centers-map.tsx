@@ -1,10 +1,18 @@
 "use client"
 
+import { ChartTooltipCard } from "@/components/ui/chart-tooltip-card"
+import { MapControls } from "@/components/maps/map-controls"
+import { DONUT_CHART_COLORS } from "@/lib/utils/chart-helpers"
+import { bubbleRadius } from "@/lib/maps/bubble-size"
+import { knownText } from "@/lib/utils/helpers"
 import React, { useMemo, useState, useEffect, useCallback, useLayoutEffect } from "react"
-import { Map as MapGL, Source, Layer, NavigationControl, FullscreenControl } from "@vis.gl/react-maplibre"
+import { Map as MapGL, Source, Layer, type MapRef, type ViewStateChangeEvent } from "@vis.gl/react-maplibre"
+import type { ExpressionSpecification } from "maplibre-gl"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
-import { MAPLIBRE_WORKER_URL, prepareBasemap, useBasemapStyleUrl } from "@/lib/maps/basemap"
+import { MAPLIBRE_WORKER_URL, prepareBasemap, transformMapRequest, useBasemapStyleUrl } from "@/lib/maps/basemap"
+import { useMapRecovery } from "@/lib/maps/use-map-recovery"
+import { MapErrorState } from "@/components/maps/map-error-state"
 import { DebugLocationSearch } from "@/components/maps/debug-location-search"
 import { createLogger } from "@/lib/logger"
 import type { Center } from "@/lib/types"
@@ -56,19 +64,28 @@ interface CityFeatureCollection {
   features: CityFeature[]
 }
 
-const HALO_RADIUS_SCALE = 1.5
-const OVERLAP_PADDING = 0.5
+// A thin ring just outside each bubble; kept tight so it does not make the
+// bubble read larger than its count.
+const HALO_RADIUS_SCALE = 1.15
+// Cities with at least this many centres always show, even when crowded.
+const HOTSPOT_MIN_COUNT = 100
 const logger = createLogger("components/CentersMap")
 
 export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAccountsCount = true }: CentersMapProps) {
   const [hoveredCity, setHoveredCity] = useState<string | null>(null)
   const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  // Data problems (bad city aggregates) and map failures are handled separately:
+  // only the map gets the silent retry and Reload map button.
+  const [dataError, setDataError] = useState<string | null>(null)
+  const { mapKey, ready, error, errorKind, handleFatalError, handleLoad, reload } = useMapRecovery({
+    map_kind: "city",
+    map_name: "centers_map",
+  })
   const [isClient, setIsClient] = useState(false)
   const [isMapReady, setIsMapReady] = useState(false)
   const [visibleGeojsonData, setVisibleGeojsonData] = useState<CityFeatureCollection | null>(null)
   const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number } | null>(null)
-  const mapRef = React.useRef<any>(null)
+  const mapRef = React.useRef<MapRef>(null)
   const containerRef = React.useRef<HTMLDivElement | null>(null)
   const tooltipRef = React.useRef<HTMLDivElement | null>(null)
   const lastMapMoveTrackedAtRef = React.useRef(0)
@@ -128,7 +145,8 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
       const cityMap = new Map<string, CityCluster & { accounts: Set<string> }>()
 
       centers.forEach((center) => {
-        const city = center.center_city
+        // A blank or "TBA" city has only a stand-in point, so it is left off the map.
+        const city = knownText(center.center_city)
         const country = center.center_country
         const account = center.account_global_legal_name
         // Same rule as the Headcount card: some centre types are left out.
@@ -169,7 +187,7 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
       return result
     } catch (err) {
       logger.error("city_data_calculation_failed", { error: err })
-      setError(err instanceof Error ? err.message : "Error calculating city data")
+      setDataError(err instanceof Error ? err.message : "Error calculating city data")
       return []
     }
   }, [cities, centers])
@@ -204,27 +222,6 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
     return () => clearTimeout(fallback)
   }, [])
 
-  // Force map to recalc size when container changes to avoid clipped bottom
-  useEffect(() => {
-    if (!isClient || typeof ResizeObserver === "undefined") return
-    const container = containerRef.current
-    if (!container) return
-
-    const resizeMap = () => {
-      if (mapRef.current?.resize) {
-        mapRef.current.resize()
-      }
-    }
-
-    const observer = new ResizeObserver(resizeMap)
-    observer.observe(container)
-
-    // Initial pass after layout
-    requestAnimationFrame(resizeMap)
-
-    return () => observer.disconnect()
-  }, [isClient])
-
   // Calculate center of all points for initial view
   const initialViewState = useMemo(() => {
     if (cityData.length === 0) {
@@ -255,21 +252,21 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
     }
   }, [cityData])
 
-  const getCoreRadiusForCount = useCallback((count: number) => {
-    const minCount = 1
-    const maxCount = Math.max(...cityData.map(c => c.count), 1)
-    const minRadius = 4
-    const maxRadius = 20
-
-    if (maxCount === minCount) return minRadius
-
-    const logCount = Math.log10(count)
-    const logMin = Math.log10(minCount)
-    const logMax = Math.log10(maxCount)
-
-    const normalized = (logCount - logMin) / (logMax - logMin)
-    return minRadius + normalized * (maxRadius - minRadius)
-  }, [cityData])
+  // Log sizing from a minimum that fits a number (see bubbleRadius); the largest
+  // city in view gets the largest bubble.
+  const maxCityCount = useMemo(() => Math.max(1, ...cityData.map((c) => c.count)), [cityData])
+  const getCoreRadiusForCount = useCallback(
+    (count: number) => bubbleRadius(count, maxCityCount),
+    [maxCityCount]
+  )
+  // Reference sizes for the legend: round counts up to the largest city in view.
+  const sizeLegend = useMemo(
+    () =>
+      [1, 10, 100, 1000]
+        .filter((count) => count <= maxCityCount)
+        .map((count) => ({ count, radius: bubbleRadius(count, maxCityCount) })),
+    [maxCityCount]
+  )
 
   const getLabelConfig = useCallback((count: number, radius: number) => {
     const label = count.toString()
@@ -318,33 +315,34 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
   }, [cityData, getCoreRadiusForCount, getLabelConfig])
 
   const updateVisibleGeojsonData = useCallback(() => {
-    const mapInstance = mapRef.current?.getMap?.() ?? mapRef.current
+    const mapInstance = mapRef.current?.getMap()
     if (!mapInstance?.project || geojsonData.features.length === 0) {
       setVisibleGeojsonData(geojsonData)
       return
     }
 
+    // Keeps the map readable: a smaller city whose bubble (with its halo) would
+    // touch one already placed is left out at this zoom and appears on zooming
+    // in. Bubbles are placed largest first. Hotspots (HOTSPOT_MIN_COUNT or
+    // more centres) are never left out, so neighbours like Mumbai and Pune or
+    // Delhi, Noida and Gurugram all show; their numbers give way to the bigger
+    // city's where they would collide.
     const keptFeatures: CityFeature[] = []
     const keptCenters: Array<{ x: number; y: number; radius: number }> = []
 
     for (const feature of geojsonData.features) {
       const [lng, lat] = feature.geometry.coordinates
       const projected = mapInstance.project([lng, lat])
-      const coreRadius = getCoreRadiusForCount(feature.properties.count)
-      const haloRadius = coreRadius * HALO_RADIUS_SCALE + OVERLAP_PADDING
+      const haloRadius = getCoreRadiusForCount(feature.properties.count) * HALO_RADIUS_SCALE
 
-      let overlaps = false
-      for (const kept of keptCenters) {
+      const overlaps = keptCenters.some((kept) => {
         const dx = projected.x - kept.x
         const dy = projected.y - kept.y
         const minDistance = haloRadius + kept.radius
-        if (dx * dx + dy * dy < minDistance * minDistance) {
-          overlaps = true
-          break
-        }
-      }
+        return dx * dx + dy * dy < minDistance * minDistance
+      })
 
-      if (!overlaps) {
+      if (!overlaps || feature.properties.count >= HOTSPOT_MIN_COUNT) {
         keptFeatures.push(feature)
         keptCenters.push({ x: projected.x, y: projected.y, radius: haloRadius })
       }
@@ -361,9 +359,9 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
     updateVisibleGeojsonData()
   }, [isMapReady, updateVisibleGeojsonData])
 
-  const coreRadiusExpression = useMemo(() => ["get", "radius"] as any, [])
+  const coreRadiusExpression = useMemo((): ExpressionSpecification => ["get", "radius"], [])
   const haloRadiusExpression = useMemo(
-    () => ["*", coreRadiusExpression, HALO_RADIUS_SCALE] as any,
+    (): ExpressionSpecification => ["*", coreRadiusExpression, HALO_RADIUS_SCALE],
     [coreRadiusExpression]
   )
 
@@ -385,24 +383,28 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
   }
 
   // Show error if any
-  if (error) {
+  if (dataError) {
     return (
       <div className={`flex items-center justify-center ${heightClass} bg-muted rounded-lg`}>
         <div className="text-center">
-          <p className="text-lg font-semibold text-red-500 mb-2">Error Loading Map</p>
-          <p className="text-sm text-muted-foreground">{error}</p>
-          <p className="text-xs text-muted-foreground mt-2">Check browser console for details</p>
+          <p className="text-base font-medium text-destructive mb-2">Could not load the map</p>
+          <p className="text-sm text-muted-foreground">{dataError}</p>
         </div>
       </div>
     )
   }
 
+  if (error) {
+    return <MapErrorState heightClass={heightClass} kind={errorKind} onReload={reload} />
+  }
+
   // Wait for client-side rendering
-  if (!isClient) {
+  // Wait for the worker file to be cached before MapLibre starts its workers.
+  if (!isClient || !ready) {
     return (
       <div className={`flex items-center justify-center ${heightClass} bg-muted rounded-lg`}>
         <div className="text-center">
-          <p className="text-sm text-muted-foreground">Loading map...</p>
+          <p className="text-sm text-muted-foreground">Loading map…</p>
         </div>
       </div>
     )
@@ -413,7 +415,7 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
     return (
       <div className={`flex items-center justify-center ${heightClass} bg-muted rounded-lg`}>
         <div className="text-center">
-          <p className="text-lg font-semibold text-muted-foreground mb-2">No Location Data</p>
+          <p className="text-base font-medium text-foreground mb-2">No location data</p>
           <p className="text-sm text-muted-foreground">
             Centres do not have latitude and longitude information
           </p>
@@ -425,7 +427,7 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
   logger.debug("rendering_map", { cities_count: cityData.length })
 
   try {
-    const handleMapMoveTracked = (event: any) => {
+    const handleMapMoveTracked = (event: ViewStateChangeEvent) => {
       updateVisibleGeojsonData()
       const now = Date.now()
       const zoom = Number(event?.viewState?.zoom ?? 0)
@@ -460,16 +462,19 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
         className={`relative w-full ${heightClass} rounded-lg overflow-hidden outline-none bg-muted`}
       >
         <MapGL
+        key={mapKey}
         ref={mapRef}
         style={{ width: "100%", height: "100%" }}
         initialViewState={initialViewState}
         mapStyle={mapStyle}
         workerUrl={MAPLIBRE_WORKER_URL}
+        transformRequest={transformMapRequest}
         // Switching theme swaps the basemap style, which resets borders and colours.
         onStyleData={(e) => prepareBasemap(e.target)}
         projection="mercator"
         onLoad={() => {
-          const map = mapRef.current?.getMap?.() ?? mapRef.current
+          handleLoad()
+          const map = mapRef.current?.getMap()
           // Hide the basemap's de-facto international borders; India boundaries
           // come from the SOI overlay below.
           if (map) prepareBasemap(map)
@@ -510,19 +515,11 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
             return
           }
           logger.error("map_runtime_error", { message })
-          setError(`Map error: ${message}`)
-          captureEvent(ANALYTICS_EVENTS.MAP_ERROR_SHOWN, {
-            map_kind: "city",
-            map_name: "centers_map",
-            error_message: message,
-          })
+          // Retries once silently, then shows the error state (useMapRecovery).
+          handleFatalError(message)
         }}
       >
-        {/* Navigation Controls - Zoom and Rotation */}
-        <NavigationControl position="top-left" showCompass={true} showZoom={true} />
-
-        {/* Fullscreen Control */}
-        <FullscreenControl position="top-left" />
+        <MapControls onRecenter={handleRecenter} />
 
         <DebugLocationSearch mapRef={mapRef} />
 
@@ -541,14 +538,18 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
         </Source>
 
         <Source id="centers" type="geojson" data={visibleGeojsonData ?? geojsonData}>
-          {/* Outer halo layer - crisp, flat, and rendered below core for clean overlap */}
+          {/* Outer halo: a thin ring in a donut chart step, drawn below the core. A
+              see-through orange fill reads as muddy brown on the dark basemap. */}
           <Layer
             id="centers-halo"
             type="circle"
             paint={{
               "circle-radius": haloRadiusExpression,
-              "circle-color": "#ffbf57",
-              "circle-opacity": 0.25,
+              "circle-color": DONUT_CHART_COLORS[3],
+              "circle-opacity": 0.08,
+              "circle-stroke-color": DONUT_CHART_COLORS[3],
+              "circle-stroke-width": 1.5,
+              "circle-stroke-opacity": 0.7,
               "circle-blur": 0,
             }}
           />
@@ -559,7 +560,7 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
             type="circle"
             paint={{
               "circle-radius": coreRadiusExpression,
-              "circle-color": "#ff6800",
+              "circle-color": DONUT_CHART_COLORS[5],
               "circle-opacity": 1,
               "circle-blur": 0,
             }}
@@ -574,8 +575,11 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
               "text-size": ["get", "labelSize"],
               // Carto's glyph server only serves Open Sans (not Google Sans).
               "text-font": ["Open Sans Bold", "Open Sans Regular"],
-              "text-allow-overlap": true,
-              "text-ignore-placement": true,
+              // Every bubble is drawn, but a number that would collide with
+              // another is dropped, bigger cities first (a lower key places first).
+              "text-allow-overlap": false,
+              "text-ignore-placement": false,
+              "symbol-sort-key": ["-", 0, ["get", "count"]],
             }}
             paint={{
               "text-color": "#ffffff",
@@ -595,55 +599,41 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
               style={{
                 left: `${(tooltipPosition?.x ?? mousePosition.x + 15)}px`,
                 top: `${(tooltipPosition?.y ?? mousePosition.y + 15)}px`,
-                fontFamily:
-                  "'Geist', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
               }}
             >
-              <div className="flex min-w-[220px] overflow-hidden rounded-lg border border-border/80 bg-popover/95 text-popover-foreground shadow-[0_12px_40px_-12px_rgba(0,0,0,0.35)] backdrop-blur-md animate-in fade-in-0 zoom-in-95 duration-150">
-                <div className="w-0.5 bg-orange-500/80" aria-hidden="true" />
-                <div className="flex-1 space-y-3 p-3.5">
-                  {/* Location */}
-                  <div>
-                    <div className="text-[11px] font-semibold uppercase leading-tight tracking-[0.14em] text-foreground">
-                      {cityInfo.city}
-                    </div>
-                    <div className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                      {cityInfo.country}
-                    </div>
-                  </div>
-
-                  {/* Hero metric: centers count */}
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-semibold leading-none tabular-nums text-foreground">
-                      {cityInfo.count.toLocaleString()}
-                    </span>
-                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                      {cityInfo.count === 1 ? 'center' : 'centers'}
-                    </span>
-                  </div>
-
-                  {/* Secondary metrics */}
-                  <div className="space-y-1 border-t border-border/60 pt-2 text-xs">
-                    {showAccountsCount && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Accounts</span>
-                        <span className="font-medium tabular-nums text-foreground">
-                          {cityInfo.accountsCount.toLocaleString()}
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Headcount</span>
-                      <span className="font-medium tabular-nums text-foreground">
-                        {cityInfo.headcount.toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <ChartTooltipCard
+                variant="card"
+                title={cityInfo.city}
+                subtitle={cityInfo.country}
+                lead={cityInfo.count.toLocaleString("en-US")}
+                leadUnit={cityInfo.count === 1 ? "centre" : "centres"}
+                lines={[
+                  ...(showAccountsCount ? [{ label: "Accounts", value: cityInfo.accountsCount.toLocaleString("en-US") }] : []),
+                  { label: "Headcount", value: cityInfo.headcount.toLocaleString("en-US") },
+                ]}
+              />
             </div>
           )
         })()}
+
+        {/* Size legend: what a bubble's size means, drawn at the map's own sizes. */}
+        {sizeLegend.length > 1 && (
+          <div className="absolute bottom-4 left-4 z-10 rounded-lg border bg-card p-3 shadow-float">
+            <div className="mb-2 text-xs font-medium text-muted-foreground">Centres per city</div>
+            <div className="flex items-end gap-4">
+              {sizeLegend.map(({ count, radius }) => (
+                <div key={count} className="flex flex-col items-center gap-1">
+                  <span
+                    className="block rounded-full"
+                    style={{ width: radius * 2, height: radius * 2, background: DONUT_CHART_COLORS[5] }}
+                    aria-hidden
+                  />
+                  <span className="text-[11px] tabular-nums text-muted-foreground">{count.toLocaleString("en-US")}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </MapGL>
     </div>
     )
@@ -652,7 +642,7 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
     return (
       <div className={`flex items-center justify-center ${heightClass} bg-muted rounded-lg`}>
         <div className="text-center">
-          <p className="text-lg font-semibold text-red-500 mb-2">Map Rendering Error</p>
+          <p className="text-base font-medium text-destructive mb-2">Could not draw the map</p>
           <p className="text-sm text-muted-foreground">
             {err instanceof Error ? err.message : "Unknown error occurred"}
           </p>

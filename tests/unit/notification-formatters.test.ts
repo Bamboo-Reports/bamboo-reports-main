@@ -2,7 +2,6 @@ import { describe, expect, it, vi, beforeAll, afterAll } from "vitest"
 import {
   formatAbsoluteEventDate,
   formatRelativeEventDate,
-  formatSummaryTitle,
   formatTableLabel,
 } from "@/lib/notifications/formatters"
 
@@ -21,28 +20,6 @@ describe("notification formatters", () => {
     it("falls back to normalized string if not found in map", () => {
       expect(formatTableLabel("unknown", 1)).toBe("unknown")
       expect(formatTableLabel(" UNKNOWN ", 2)).toBe("unknown")
-    })
-  })
-
-  describe("formatSummaryTitle", () => {
-    it("formats 'added' changes", () => {
-      expect(
-        formatSummaryTitle({ table_name: "accounts", change_type: "added", record_count: 5 })
-      ).toBe("5 new Accounts added")
-      
-      expect(
-        formatSummaryTitle({ table_name: "prospects", change_type: "added", record_count: 1 })
-      ).toBe("1 new Prospect added")
-    })
-
-    it("formats 'updated' changes", () => {
-      expect(
-        formatSummaryTitle({ table_name: "centers", change_type: "updated", record_count: 3 })
-      ).toBe("3 Centres updated")
-      
-      expect(
-        formatSummaryTitle({ table_name: "accounts", change_type: "updated", record_count: 1 })
-      ).toBe("1 Account updated")
     })
   })
 

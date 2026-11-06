@@ -63,7 +63,7 @@ gated("export-by-filter workbook parity against the real Neon warehouse", () => 
 
   async function validate(label: string, overrides: Partial<Filters>) {
     const filters = createDefaultFilters({ accountHqRevenueRange: WIDE, ...overrides })
-    const engine = getFilteredData(accounts, centers, functions, [], prospects, tech, filters, {})
+    const engine = getFilteredData(accounts, centers, functions, [], prospects, tech, filters)
     const survivingKeys = new Set(engine.filteredCenters.map((c) => c.cn_unique_key))
     const expected = {
       accounts: engine.filteredAccounts.length,
@@ -75,7 +75,6 @@ gated("export-by-filter workbook parity against the real Neon warehouse", () => 
     const result = await buildServerExport({
       datasets: ["accounts", "centers", "services", "prospects"],
       filters,
-      access: {},
     })
 
     expect(result.rowCounts, `rowCounts for ${label}`).toEqual(expected)

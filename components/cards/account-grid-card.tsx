@@ -3,6 +3,8 @@ import { RiArrowRightUpLine, RiCheckboxCircleLine, RiExternalLinkLine, RiEyeLine
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CompanyLogo } from "@/components/ui/company-logo"
+import { HintTooltip } from "@/components/ui/tooltip"
+import { TruncatedText } from "@/components/ui/truncated-text"
 import {
   ContextMenu,
   ContextMenuContent,
@@ -11,6 +13,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
 import type { Account } from "@/lib/types"
+import { formatRevenueRange } from "@/lib/utils/helpers"
 import { ensureAbsoluteUrl } from "@/lib/utils"
 interface AccountGridCardProps {
   account: Account
@@ -46,38 +49,40 @@ export const AccountGridCard = memo(({ account, onClick }: AccountGridCardProps)
                 companyName={accountName}
                 size="md"
                 theme="auto"
+                zoom
               />
               <div className="min-w-0">
-                <h3
-                  className="min-w-0 truncate text-base font-semibold leading-snug text-foreground"
-                  title={accountName}
-                >
-                  {accountName}
+                <h3 className="min-w-0 text-base font-medium leading-snug text-foreground">
+                  <TruncatedText text={accountName} />
                 </h3>
-                <p
-                  className="text-sm text-muted-foreground mt-1 truncate"
-                  title={location || account.account_hq_country || "-"}
-                >
-                  {location || account.account_hq_country || "-"}
-                </p>
+                <TruncatedText
+                  text={location || account.account_hq_country || "-"}
+                  className="text-sm text-muted-foreground mt-1"
+                />
                 {showChipRow && (
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
                     {isNasscomVerified && (
-                      <div
-                        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold bg-[#C03430]/15 text-[#C03430]"
-                        title="NASSCOM listed"
-                      >
-                        <RiCheckboxCircleLine className="h-3 w-3" aria-hidden="true" />
-                        NASSCOM
-                      </div>
+                      <HintTooltip label="NASSCOM listed">
+                        <div
+                          role="img"
+                          tabIndex={0}
+                          className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          <RiCheckboxCircleLine className="h-3 w-3" aria-hidden="true" />
+                          NASSCOM
+                        </div>
+                      </HintTooltip>
                     )}
                     {visibilityNote && (
-                      <div
-                        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 max-w-[220px]"
-                        title={visibilityNote}
-                      >
-                        <span className="truncate">{visibilityNote}</span>
-                      </div>
+                      <HintTooltip label="Visibility note" hint={visibilityNote}>
+                        <div
+                          role="img"
+                          tabIndex={0}
+                          className="inline-flex max-w-[220px] items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-xs font-medium text-amber-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-amber-300"
+                        >
+                          <span className="truncate">{visibilityNote}</span>
+                        </div>
+                      </HintTooltip>
                     )}
                   </div>
                 )}
@@ -86,22 +91,20 @@ export const AccountGridCard = memo(({ account, onClick }: AccountGridCardProps)
             <div className="mt-auto flex flex-col gap-4">
               <div className="space-y-2 text-sm">
                 <div className="flex items-center justify-between gap-3 min-w-0">
-                  <span className="text-muted-foreground">Industry</span>
-                  <span
-                    className="font-medium text-foreground text-right truncate max-w-[160px]"
-                    title={account.account_hq_industry || "-"}
-                  >
-                    {account.account_hq_industry || "-"}
-                  </span>
+                  <span className="text-muted-foreground">Sub industry</span>
+                  <TruncatedText
+                    text={account.account_hq_industry || "-"}
+                    className="font-medium text-foreground text-right max-w-[160px]"
+                    align="end"
+                  />
                 </div>
                 <div className="flex items-center justify-between gap-3 min-w-0">
                   <span className="text-muted-foreground">Revenue</span>
-                  <span
-                    className="font-medium text-foreground text-right truncate max-w-[160px]"
-                    title={account.account_hq_revenue_range || "-"}
-                  >
-                    {account.account_hq_revenue_range || "-"}
-                  </span>
+                  <TruncatedText
+                    text={formatRevenueRange(account.account_hq_revenue_range) || "-"}
+                    className="font-medium text-foreground text-right max-w-[160px]"
+                    align="end"
+                  />
                 </div>
               </div>
               <Button
@@ -111,7 +114,7 @@ export const AccountGridCard = memo(({ account, onClick }: AccountGridCardProps)
                 onClick={onClick}
                 className="w-full justify-between"
               >
-                View Details
+                View details
                 <RiArrowRightUpLine className="h-4 w-4" />
               </Button>
             </div>
@@ -121,14 +124,14 @@ export const AccountGridCard = memo(({ account, onClick }: AccountGridCardProps)
       <ContextMenuContent className="w-48">
         <ContextMenuItem onClick={onClick}>
           <RiEyeLine className="h-4 w-4" />
-          View Details
+          View details
         </ContextMenuItem>
         {account.account_hq_website && (
           <>
             <ContextMenuSeparator />
             <ContextMenuItem onClick={() => window.open(ensureAbsoluteUrl(account.account_hq_website!), "_blank", "noopener,noreferrer")}>
               <RiGlobalLine className="h-4 w-4" />
-              Open Website
+              Open website
             </ContextMenuItem>
           </>
         )}

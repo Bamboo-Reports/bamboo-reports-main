@@ -6,8 +6,19 @@ import { RecordHistoryProvider } from "@/contexts/record-history-context"
 import { ProspectDetailsDialog } from "@/components/dialogs/prospect-details-dialog"
 import { CenterDetailsDialog } from "@/components/dialogs/center-details-dialog"
 import { createQueryWrapper } from "../fixtures/query-client"
+import { TooltipProvider } from "@/components/ui/tooltip"
 
-const render = (ui: React.ReactElement) => baseRender(ui, { wrapper: createQueryWrapper() })
+// The dialogs' icon buttons use label tooltips, which need the provider the app mounts once.
+const render = (ui: React.ReactElement) => {
+  const QueryWrapper = createQueryWrapper()
+  return baseRender(ui, {
+    wrapper: ({ children }) => (
+      <QueryWrapper>
+        <TooltipProvider>{children}</TooltipProvider>
+      </QueryWrapper>
+    ),
+  })
+}
 
 vi.mock("@/lib/analytics/client", () => ({ captureEvent: () => {} }))
 
@@ -50,8 +61,8 @@ describe("detail dialogs record what they show in History (#310)", () => {
     )
     expect(recordOpened).toHaveBeenLastCalledWith(expect.objectContaining({ type: "prospect", id: "p1", title: "Asha Rao" }))
 
-    // The only contact card left in More Contacts is Ben's.
-    fireEvent.click(screen.getByRole("button", { name: /View Details/ }))
+    // The only contact left in More contacts is Ben's row.
+    fireEvent.click(screen.getByLabelText("Show Ben Iyer"))
     expect(recordOpened).toHaveBeenLastCalledWith(expect.objectContaining({ type: "prospect", id: "p2", title: "Ben Iyer" }))
   })
 

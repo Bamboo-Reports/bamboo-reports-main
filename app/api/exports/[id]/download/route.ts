@@ -1,4 +1,4 @@
-import { extractBearerToken, resolveAuthenticatedUserId } from "@/lib/auth/server"
+import { authenticateRequest } from "@/lib/auth/request"
 import { enforceRateLimit } from "@/lib/rate-limit/server"
 import { createLogger } from "@/lib/logger"
 import { getSupabaseServiceRoleClient, USER_EXPORTS_BUCKET } from "@/lib/supabase/server"
@@ -14,18 +14,6 @@ function jsonError(status: number, message: string) {
     status,
     headers: { "Content-Type": "application/json" },
   })
-}
-
-async function authenticateFromHeader(request: Request): Promise<string | Response> {
-  const headerToken = extractBearerToken(request.headers.get("authorization"))
-
-  if (!headerToken) return jsonError(401, "Missing authorization token")
-
-  try {
-    return await resolveAuthenticatedUserId(headerToken)
-  } catch {
-    return jsonError(401, "Invalid or expired token")
-  }
 }
 
 type ExportRow = {
@@ -61,9 +49,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const auth = await authenticateFromHeader(request)
+  const auth = await authenticateRequest(request)
   if (auth instanceof Response) return auth
-  const userId = auth
+  const { userId } = auth
 
   const limited = await enforceRateLimit({ userId, bucket: "exports:download" })
   if (!limited.ok) return limited.response

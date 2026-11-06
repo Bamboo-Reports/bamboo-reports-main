@@ -52,7 +52,7 @@ describe("useGlobalSearch: searching state (#288)", () => {
     expect(result.current.isSearching).toBe(true)
 
     await type(result, "acme", 300)
-    expect(fetchMock).toHaveBeenCalledWith("acme")
+    expect(fetchMock).toHaveBeenCalledWith("acme", null)
     expect(result.current.isSearching).toBe(false)
   })
 

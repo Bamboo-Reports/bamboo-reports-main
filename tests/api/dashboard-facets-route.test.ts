@@ -56,11 +56,11 @@ describe("dashboard facets route", () => {
     const res = await post({ filters: {} })
     expect(res.status).toBe(200)
     const body = (await res.json()) as { options: Record<string, { value: string; count: number }[]>; ranges: Record<string, { min: number; max: number }> }
-    // 24 facet keys present, each sorted by count desc.
-    expect(Object.keys(body.options)).toHaveLength(24)
+    // 20 facet keys present, each sorted by count desc.
+    expect(Object.keys(body.options)).toHaveLength(20)
     expect(body.options.accountHqCountryValues).toEqual([{ value: "A", count: 5 }, { value: "B", count: 2 }])
     expect(body.ranges).toEqual({ revenue: { min: 5, max: 900 }, yearsInIndia: { min: 5, max: 900 }, centerIncYear: { min: 5, max: 900 } })
-    // No active facet: all 24 lists come from ONE statement, plus one for the ranges.
+    // No active facet: all 20 lists come from ONE statement, plus one for the ranges.
     expect(warehouseMocks.queryWarehouse).toHaveBeenCalledTimes(2)
   })
 
@@ -75,7 +75,7 @@ describe("dashboard facets route", () => {
     // The country facet's own statement must not filter on the country.
     expect(own?.values.flat()).not.toContain("India")
     expect(rest?.values.flat()).toContain("India")
-    expect(rest?.text.match(/as facet/g)).toHaveLength(23)
+    expect(rest?.text.match(/as facet/g)).toHaveLength(19)
   })
 
   it("returns 500 when the warehouse fails", async () => {

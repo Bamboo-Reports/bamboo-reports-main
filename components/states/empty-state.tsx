@@ -32,45 +32,41 @@ export function EmptyState({
   const config = {
     "no-data": {
       icon: RiDatabase2Line,
-      defaultTitle: "No Data Available",
-      defaultDescription: "There's no data to display at the moment. Please check back later.",
-      iconColor: "text-muted-foreground",
+      defaultTitle: "No data yet",
+      defaultDescription: "There is nothing to show right now. Check back later.",
     },
     "no-results": {
       icon: RiFileUnknowLine,
-      defaultTitle: "No Results Found",
-      defaultDescription: "We couldn't find any items matching your current filters. Try adjusting your search criteria.",
-      iconColor: "text-primary",
+      defaultTitle: "No matches",
+      defaultDescription: "Nothing matches the current filters. Try removing one or widening a range.",
     },
     "no-filters": {
       icon: RiFilterLine,
-      defaultTitle: "Apply Filters to Get Started",
-      defaultDescription: "Select filters from the sidebar to view relevant data and insights.",
-      iconColor: "text-accent",
+      defaultTitle: "Choose filters to start",
+      defaultDescription: "Pick filters in the sidebar to see the matching data.",
     },
     "error": {
       icon: RiSearchLine,
-      defaultTitle: "Something Went Wrong",
-      defaultDescription: "We encountered an error while loading the data. Please try again.",
-      iconColor: "text-destructive",
+      defaultTitle: "Something went wrong",
+      defaultDescription: "The data did not load. Try again.",
     },
   }
 
-  const { icon: Icon, defaultTitle, defaultDescription, iconColor } = config[type]
+  const { icon: Icon, defaultTitle, defaultDescription } = config[type]
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center animate-fade-in">
-      <div className={`mb-6 p-6 rounded-full bg-muted/50 ${iconColor}`}>
-        <Icon className="h-16 w-16" />
+      <div className="mb-4 grid h-12 w-12 place-items-center rounded-full bg-muted text-muted-foreground">
+        <Icon className="h-6 w-6" />
       </div>
-      <h3 className="text-xl font-semibold text-foreground mb-2">
+      <h3 className="text-lg font-medium text-foreground mb-1">
         {title || defaultTitle}
       </h3>
-      <p className="text-muted-foreground max-w-md mb-6">
+      <p className="text-sm text-muted-foreground max-w-md mb-6">
         {description || defaultDescription}
       </p>
       {action && (
-        <Button onClick={action.onClick} variant="default" className="animate-scale-in">
+        <Button onClick={action.onClick} variant="default">
           {action.label}
         </Button>
       )}

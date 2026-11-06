@@ -10,9 +10,6 @@ const FACETS: Spec[] = [
   { key: "accountHqRegionValues", entity: "accounts", column: "account_hq_region" },
   { key: "accountHqCountryValues", entity: "accounts", column: "account_hq_country" },
   { key: "accountHqIndustryValues", entity: "accounts", column: "account_hq_industry" },
-  { key: "accountDataCoverageValues", entity: "accounts", column: "account_data_coverage" },
-  { key: "accountSourceValues", entity: "accounts", column: "account_source" },
-  { key: "accountTypeValues", entity: "accounts", column: "account_type" },
   { key: "accountPrimaryCategoryValues", entity: "accounts", column: "account_primary_category" },
   { key: "accountPrimaryNatureValues", entity: "accounts", column: "account_primary_nature" },
   { key: "accountNasscomStatusValues", entity: "accounts", column: "account_nasscom_status" },
@@ -22,7 +19,6 @@ const FACETS: Spec[] = [
   { key: "centerFocusValues", entity: "centers", column: "center_focus" },
   { key: "centerCityValues", entity: "centers", column: "center_city" },
   { key: "centerStateValues", entity: "centers", column: "center_state" },
-  { key: "centerCountryValues", entity: "centers", column: "center_country" },
   { key: "centerEmployeesRangeValues", entity: "centers", column: "center_employees_range" },
   { key: "centerStatusValues", entity: "centers", column: "center_status" },
   { key: "functionNameValues", entity: "functions", column: "function_name" },
@@ -102,7 +98,7 @@ async function sqlFacet(filters: Filters, spec: Spec): Promise<FilterOption[]> {
   const active = ((filters[spec.key as keyof Filters] as { length?: number } | undefined)?.length ?? 0) > 0
   const ff = active ? ({ ...filters, [spec.key]: [] } as Filters) : filters
   const value = `coalesce(${spec.column}, '')`
-  const q = buildEntityAggregateQuery(spec.entity, ff, {}, `${value} as value, count(*)::int as count`, { groupBy: value, materialized: false })
+  const q = buildEntityAggregateQuery(spec.entity, ff, `${value} as value, count(*)::int as count`, { groupBy: value, materialized: false })
   const rows = (await pool.query(q.text, q.values)).rows as { value: string | null; count: number }[]
   return rows.map((r) => ({ value: String(r.value ?? ""), count: Number(r.count) }))
 }
@@ -119,7 +115,7 @@ async function sqlFacetsUnion(filters: Filters): Promise<Record<string, FilterOp
   })
   const out: Record<string, FilterOption[]> = Object.fromEntries(FACETS.map((s) => [s.key, []]))
   for (const g of groups.values()) {
-    const q = buildFacetCountsQuery(g.specs, g.filters, {}, { materialized: false })
+    const q = buildFacetCountsQuery(g.specs, g.filters, { materialized: false })
     const rows = (await pool.query(q.text, q.values)).rows as { facet: number; value: string | null; count: number }[]
     for (const r of rows) out[FACETS[Number(r.facet)].key].push({ value: String(r.value ?? ""), count: Number(r.count) })
   }
@@ -128,7 +124,7 @@ async function sqlFacetsUnion(filters: Filters): Promise<Record<string, FilterOp
 
 async function assertFacets(overrides: Partial<Filters>) {
   const filters = createDefaultFilters({ accountHqRevenueRange: [0, Number.MAX_SAFE_INTEGER], ...overrides })
-  const engine = getAvailableOptions(accounts, centers, functions, prospects, tech, filters, {})
+  const engine = getAvailableOptions(accounts, centers, functions, prospects, tech, filters)
   const union = await sqlFacetsUnion(filters)
   for (const spec of FACETS) {
     const sql = await sqlFacet(filters, spec)

@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
   formatAbsoluteEventDate,
   formatRelativeEventDate,
-  formatSummaryTitle,
   formatTableLabel,
 } from "@/lib/notifications/formatters"
 import { signInSchema } from "@/lib/validators/auth"
@@ -17,11 +16,9 @@ describe("notification formatters and auth validators", () => {
     vi.useRealTimers()
   })
 
-  it("formats table labels and summary titles", () => {
+  it("formats table labels", () => {
     expect(formatTableLabel("accounts", 1)).toBe("Account")
     expect(formatTableLabel("accounts", 2)).toBe("Accounts")
-    expect(formatSummaryTitle({ table_name: "prospects", change_type: "added", record_count: 3 })).toBe("3 new Prospects added")
-    expect(formatSummaryTitle({ table_name: "centers", change_type: "updated", record_count: 1 })).toBe("1 Centre updated")
   })
 
   it("formats relative and absolute event dates with invalid fallback", () => {
