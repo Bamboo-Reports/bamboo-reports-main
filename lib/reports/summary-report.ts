@@ -1,7 +1,6 @@
 import type { AccountVisibilityMode, ChartData, Filters, FilterValue } from "@/lib/types"
 import { FILTER_METADATA } from "@/lib/analytics/filter-metadata"
 import { formatRevenueInMillions } from "@/lib/utils/helpers"
-import { PIE_CHART_COLORS } from "@/lib/utils/chart-helpers"
 
 /**
  * Builds the data model behind the downloadable summary PDF: the headline
@@ -35,7 +34,6 @@ export interface ReportChartSegment {
   value: number
   /** Percent of the chart total, to one decimal place. */
   percent: number
-  color: string
 }
 
 export interface ReportChartOtherMember {
@@ -402,7 +400,6 @@ export function buildReportChart(title: string, countLabel: string, data: ChartD
       name,
       value,
       percent: Math.round(share * 10) / 10,
-      color: item.fill || PIE_CHART_COLORS[index % PIE_CHART_COLORS.length],
     })
   })
 
@@ -415,7 +412,6 @@ export function buildReportChart(title: string, countLabel: string, data: ChartD
       name: "Others",
       value: othersTotal,
       percent: Math.round((othersTotal / total) * 1000) / 10,
-      color: PIE_CHART_COLORS[PIE_CHART_COLORS.length - 1],
     })
   }
 

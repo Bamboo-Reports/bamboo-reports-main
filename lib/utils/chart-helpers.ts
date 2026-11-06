@@ -1,19 +1,6 @@
 import type { Center, Function, ChartData } from "../types"
 
-// Professional pie-chart palette tuned for executive dashboards.
-export const PIE_CHART_COLORS = [
-  "#f17c1d",
-  "#f28d2f",
-  "#f29e42",
-  "#f3ad55",
-  "#f5bb69",
-  "#f6c97e",
-  "#f8d794",
-  "#fbe4ab",
-  "#fff0c2",
-]
-
-// Donut slices: the same orange-to-yellow scheme, cut to six steps far enough
+// Chart colours (donuts, treemap, maps, PDF): the orange-to-yellow scheme in six steps far enough
 // apart that neighbouring slices read as different (OKLCH lightness gap >= 0.06).
 // Lightest first. The lightest step is kept for "Others".
 export const DONUT_CHART_COLORS = [

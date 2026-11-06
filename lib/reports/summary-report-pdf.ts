@@ -7,7 +7,7 @@ import {
   type ReportFilterRow,
   type SummaryReportModel,
 } from "@/lib/reports/summary-report"
-import { PIE_CHART_COLORS } from "@/lib/utils/chart-helpers"
+import { DONUT_CHART_COLORS } from "@/lib/utils/chart-helpers"
 
 /**
  * Renders a SummaryReportModel to an A4 PDF and triggers a browser download.
@@ -48,9 +48,10 @@ const EXCLUDE: RGB = [202, 33, 33]
 const EXCLUDE_BG: RGB = [251, 234, 234]
 const OTHERS_BAR: RGB = [206, 213, 222]
 
-// Bars by rank: the dashboard's orange scale from strongest to lighter,
-// stopping before the palest steps so every bar still reads on white.
-const BAR_STEPS: RGB[] = PIE_CHART_COLORS.slice(0, 6).map(hexToRgb)
+// Bars by rank, in the same orange steps as the dashboard's donut charts:
+// the deepest for the largest, getting lighter. The two palest steps are left
+// out because a pale yellow bar barely shows on white paper; "Others" stays grey.
+const BAR_STEPS: RGB[] = DONUT_CHART_COLORS.slice(2).reverse().map(hexToRgb)
 
 const COMPANY_LINE = "Bamboo Reports, a Research NXT product"
 const GROUP_TITLE: Record<Exclude<ReportFilterGroup, "Scope">, string> = {
