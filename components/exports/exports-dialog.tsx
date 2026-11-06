@@ -23,7 +23,7 @@ import {
   LibraryPaneHeader,
   LibraryPaneTitle,
 } from "@/components/filters/library-dialog"
-import type { DescribedField } from "@/components/filters/filter-description"
+import { fieldText, type DescribedField } from "@/components/filters/filter-description"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { resolveExportDownloadUrl } from "@/lib/exports/request-client"
 import {
@@ -38,6 +38,7 @@ import {
 } from "@/lib/exports/history"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
+import { plural } from "@/lib/utils/helpers"
 
 type ExportRow = {
   id: string
@@ -60,17 +61,10 @@ const SHEET_ICONS: Record<string, typeof RiBuildingLine> = {
   prospects: RiGroupLine,
 }
 
-const plural = (n: number, word: string) => `${n.toLocaleString()} ${word}${n === 1 ? "" : "s"}`
-
 function formatIp(ip: string | null): string | null {
   if (!ip) return null
   if (ip === "::1" || ip === "127.0.0.1") return `${ip} (this computer)`
   return ip
-}
-
-function fieldText(field: DescribedField): string {
-  if (field.text) return field.text
-  return (field.values ?? []).map((v) => (v.mode === "exclude" ? `not ${v.value}` : v.value)).join(", ")
 }
 
 interface ExportsDialogProps {

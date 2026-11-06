@@ -119,3 +119,6 @@ export const formatCenterLocation = (
   }
   return "India"
 }
+
+/** "1 account", "2,400 accounts". */
+export const plural = (n: number, word: string) => `${n.toLocaleString()} ${word}${n === 1 ? "" : "s"}`

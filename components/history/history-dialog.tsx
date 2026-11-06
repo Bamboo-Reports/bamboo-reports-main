@@ -14,6 +14,7 @@ import type { RecentItem } from "@/hooks/use-recent-items"
 import type { SearchResultType } from "@/lib/search"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
+import { plural } from "@/lib/utils/helpers"
 
 const UNDO_WINDOW_MS = 10_000
 
@@ -25,8 +26,6 @@ const TYPE_FILTERS: Array<{ id: TypeFilter; label: string }> = [
   { id: "center", label: "Centres" },
   { id: "prospect", label: "Prospects" },
 ]
-
-const plural = (n: number, word: string) => `${n.toLocaleString()} ${word}${n === 1 ? "" : "s"}`
 
 interface HistoryDialogProps {
   open: boolean

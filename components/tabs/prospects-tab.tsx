@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { TabsContent } from "@/components/ui/tabs"
 import { RiPieChartLine, RiTableLine } from "@remixicon/react"
-import { DataLayoutSwitcher, DataTable, DataTablePagination, type DataLayout } from "@/components/tables/data-table"
+import { DataGridSortBar, DataLayoutSwitcher, DataTable, DataTablePagination, type DataLayout } from "@/components/tables/data-table"
 import { ProspectRowMenu, getProspectKey, prospectColumns } from "@/components/tables/prospect-columns"
 import { SelectionActionBar } from "@/components/tables/selection-action-bar"
 import { useDataTable } from "@/components/tables/use-data-table"
@@ -330,7 +330,12 @@ export function ProspectsTab({
               <DataTablePagination
                 table={table}
                 totalRows={totalRows}
-                leading={<DataLayoutSwitcher value={dataLayout} onValueChange={handleDataLayoutChange} />}
+                leading={
+                  <>
+                    <DataLayoutSwitcher value={dataLayout} onValueChange={handleDataLayoutChange} />
+                    {dataLayout === "grid" && <DataGridSortBar column={table.getColumn("name")} label="prospect name" />}
+                  </>
+                }
               />
             </CardContent>
          </Card>

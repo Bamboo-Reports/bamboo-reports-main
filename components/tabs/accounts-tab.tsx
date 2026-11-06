@@ -7,7 +7,7 @@ import { GridSkeletonCards, MapUpdatingPill } from "@/components/ui/data-skeleto
 import { cn } from "@/lib/utils"
 import { RiMapLine, RiMapPinLine, RiPieChartLine, RiStackLine, RiTableLine } from "@remixicon/react"
 import { AccountRowMenu, accountColumns, getAccountKey } from "@/components/tables/account-columns"
-import { DataLayoutSwitcher, DataTable, DataTablePagination, type DataLayout } from "@/components/tables/data-table"
+import { DataGridSortBar, DataLayoutSwitcher, DataTable, DataTablePagination, type DataLayout } from "@/components/tables/data-table"
 import { SelectionActionBar } from "@/components/tables/selection-action-bar"
 import { useDataTable } from "@/components/tables/use-data-table"
 import { useDataLayoutPreference } from "@/hooks/use-data-layout-preference"
@@ -128,7 +128,6 @@ export function AccountsTab({
   })
   const allPageSelected = table.getIsAllPageRowsSelected()
   const pageAccounts = table.getRowModel().rows.map((row) => row.original)
-  const nameColumn = table.getColumn("name")
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -390,7 +389,12 @@ export function AccountsTab({
             <DataTablePagination
                 table={table}
                 totalRows={totalRows}
-                leading={<DataLayoutSwitcher value={dataLayout} onValueChange={handleDataLayoutChange} />}
+                leading={
+                  <>
+                    <DataLayoutSwitcher value={dataLayout} onValueChange={handleDataLayoutChange} />
+                    {dataLayout === "grid" && <DataGridSortBar column={table.getColumn("name")} label="account name" />}
+                  </>
+                }
               />
           </CardContent>
         </Card>

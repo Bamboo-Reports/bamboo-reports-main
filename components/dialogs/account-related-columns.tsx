@@ -29,7 +29,8 @@ export function centerStatusLabel(status: string | null | undefined): string {
   return status
 }
 
-function statusDot(status: string | null | undefined): string {
+/** Tint of the dot beside a centre status. */
+export function statusDot(status: string | null | undefined): string {
   if (status === "Active Center") return "bg-include"
   if (status === "Upcoming") return "bg-amber-500"
   if (status === "Non Operational") return "bg-exclude"

@@ -3,7 +3,7 @@ import { createDefaultFilters } from "@/lib/dashboard/defaults"
 import {
   decodeDashboardUrl,
   encodeDashboardUrl,
-  filtersDiff,
+  MAX_FILTER_PARAM_LENGTH,
   filtersFromUrl,
   type RangeBounds,
 } from "@/lib/dashboard/url-state"
@@ -44,15 +44,28 @@ describe("dashboard url state", () => {
     expect(filtersFromUrl(decoded.filters!, bounds)).toEqual(filters)
   })
 
-  it("stores account lists by id, not their names", () => {
+  it("keeps the accounts behind a small list, so a reader without the list still gets them", () => {
+    const filters = {
+      ...base(),
+      accountListValues: [{ value: "list-1", mode: "include" as const }],
+      accountNameValues: [{ value: "Acme", mode: "include" as const }, { value: "Globex", mode: "include" as const }],
+    }
+    const decoded = decodeDashboardUrl(encodeDashboardUrl({ section: "accounts", view: "map", filters }, bounds))
+    expect(decoded.filters?.accountListValues).toEqual(filters.accountListValues)
+    expect(decoded.filters?.accountNameValues).toEqual(filters.accountNameValues)
+  })
+
+  it("stores a large list by id alone, so the link stays short", () => {
     const filters = {
       ...base(),
       accountListValues: [{ value: "list-1", mode: "include" as const }],
       accountNameValues: Array.from({ length: 300 }, (_, i) => ({ value: `Company ${i}`, mode: "include" as const })),
     }
-    const diff = filtersDiff(filters, bounds)
-    expect(diff.accountListValues).toEqual(filters.accountListValues)
-    expect(diff.accountNameValues).toBeUndefined()
+    const search = encodeDashboardUrl({ section: "accounts", view: "map", filters }, bounds)
+    expect(search.length).toBeLessThan(MAX_FILTER_PARAM_LENGTH + 100)
+    const decoded = decodeDashboardUrl(search)
+    expect(decoded.filters?.accountListValues).toEqual(filters.accountListValues)
+    expect(decoded.filters?.accountNameValues).toBeUndefined()
   })
 
   it("ignores malformed or unknown values", () => {

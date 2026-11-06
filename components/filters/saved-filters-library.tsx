@@ -39,7 +39,8 @@ interface SavedFiltersLibraryProps {
   formatUpdated: (iso: string) => string | null
   onApply: (filter: SavedFilter) => void
   onShare: (filter: SavedFilter) => void
-  onRename: (filter: SavedFilter, name: string) => Promise<void>
+  /** Resolves true once renamed; false keeps the rename box open (for example a name already in use). */
+  onRename: (filter: SavedFilter, name: string) => Promise<boolean>
   onDelete: (filter: SavedFilter) => void
   /** Saves the filters applied now; disabled when nothing is applied. */
   onSaveCurrent: () => void
@@ -130,7 +131,9 @@ export function SavedFiltersLibrary({
                 initial={selected.name}
                 saving={loading}
                 onSave={(name) => {
-                  void onRename(selected, name).finally(() => setRenamingId(null))
+                  void onRename(selected, name).then((renamed) => {
+                    if (renamed) setRenamingId(null)
+                  })
                 }}
                 onCancel={() => setRenamingId(null)}
               />

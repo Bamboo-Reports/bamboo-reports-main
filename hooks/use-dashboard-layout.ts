@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import type { PieChartLabelDisplay } from "@/components/charts/pie-chart-card"
 import type { TabSort } from "@/components/tabs/accounts-tab"
 import { captureEvent } from "@/lib/analytics/client"
@@ -8,6 +8,7 @@ import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import type { EntitySort } from "@/lib/dashboard/api-client"
 import { TAB_SORT_COLUMNS } from "@/lib/dashboard/entity-columns"
 import { DEFAULT_PAGE_SIZE, isPageSizeOption } from "@/lib/dashboard/page-size"
+import { BOOLEAN_PREFERENCE, usePersistedPreference, type PreferenceCodec } from "@/hooks/use-persisted-preference"
 
 export const SIDEBAR_COLLAPSED_STORAGE_KEY = "br-dashboard-sidebar-collapsed"
 export const PAGE_SIZE_STORAGE_KEY = "br-dashboard-page-size"
@@ -18,39 +19,14 @@ export type ProspectsView = "chart" | "data"
 
 export const DEFAULT_SECTION: DashboardSection = "accounts"
 
-// The page size is read straight from storage (through useSyncExternalStore,
-// so the server render and hydration still see the default) instead of being
-// restored in a mount effect: a mount effect would let the active table fetch
-// its first page at the default size and then again at the saved one.
-const pageSizeListeners = new Set<() => void>()
-// Only used when storage cannot be written to, so the chosen size still applies.
-let unsavedPageSize: number | null = null
-
-function readPageSize(): number {
-  try {
-    const stored = Number(window.localStorage.getItem(PAGE_SIZE_STORAGE_KEY))
-    if (isPageSizeOption(stored)) return stored
-  } catch {
-    // storage unavailable (private mode, blocked site data)
-  }
-  return unsavedPageSize ?? DEFAULT_PAGE_SIZE
-}
-
-function subscribePageSize(listener: () => void) {
-  pageSizeListeners.add(listener)
-  return () => {
-    pageSizeListeners.delete(listener)
-  }
-}
-
-function storePageSize(size: number) {
-  try {
-    window.localStorage.setItem(PAGE_SIZE_STORAGE_KEY, String(size))
-    unsavedPageSize = null
-  } catch {
-    unsavedPageSize = size
-  }
-  pageSizeListeners.forEach((listener) => listener())
+// Read straight from storage on the first render (not restored in a mount
+// effect), so the active table's first page query already uses the saved size.
+const PAGE_SIZE_PREFERENCE: PreferenceCodec<number> = {
+  parse: (raw) => {
+    const size = Number(raw)
+    return isPageSizeOption(size) ? size : DEFAULT_PAGE_SIZE
+  },
+  serialize: String,
 }
 
 function toEntitySort(entity: DashboardSection, sort: TabSort | null): EntitySort | null {
@@ -77,14 +53,17 @@ export function useDashboardLayout({ filtersKey }: { filtersKey: string }) {
   const [accountsPage, setAccountsPage] = useState(1)
   const [centersPage, setCentersPage] = useState(1)
   const [prospectsPage, setProspectsPage] = useState(1)
-  const itemsPerPage = useSyncExternalStore(subscribePageSize, readPageSize, () => DEFAULT_PAGE_SIZE)
+  const [itemsPerPage, storeItemsPerPage] = usePersistedPreference(PAGE_SIZE_STORAGE_KEY, PAGE_SIZE_PREFERENCE)
   // One page size for all three tables; a new size starts every tab from page 1.
-  const setItemsPerPage = useCallback((size: number) => {
-    setAccountsPage(1)
-    setCentersPage(1)
-    setProspectsPage(1)
-    storePageSize(size)
-  }, [])
+  const setItemsPerPage = useCallback(
+    (size: number) => {
+      setAccountsPage(1)
+      setCentersPage(1)
+      setProspectsPage(1)
+      storeItemsPerPage(size)
+    },
+    [storeItemsPerPage]
+  )
 
   // Server mode: per-entity sort state, keyed by the tab's column id. The
   // tables read it back through their server props, so this is the only copy.
@@ -100,8 +79,7 @@ export function useDashboardLayout({ filtersKey }: { filtersKey: string }) {
     [accountsSort, centersSort, prospectsSort]
   )
 
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
-  const sidebarCollapsedRef = useRef(false)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = usePersistedPreference(SIDEBAR_COLLAPSED_STORAGE_KEY, BOOLEAN_PREFERENCE)
 
   const activeView: EntityView | ProspectsView =
     activeSection === "accounts" ? accountsView : activeSection === "centers" ? centersView : prospectsView
@@ -117,26 +95,12 @@ export function useDashboardLayout({ filtersKey }: { filtersKey: string }) {
     setProspectsPage(1)
   }, [filtersKey])
 
-  useEffect(() => {
-    const storedSidebarState = window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY)
-    if (storedSidebarState === "true") {
-      sidebarCollapsedRef.current = true
-      setIsSidebarCollapsed(true)
-    }
-  }, [])
-
-  useEffect(() => {
-    window.localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, String(isSidebarCollapsed))
-  }, [isSidebarCollapsed])
-
-  // Reported from the toggle itself, so restoring the saved state on load is
-  // not counted as a toggle.
+  // Reported from the toggle itself, so the saved state on load is not counted as a toggle.
   const toggleSidebar = useCallback(() => {
-    const next = !sidebarCollapsedRef.current
-    sidebarCollapsedRef.current = next
+    const next = !isSidebarCollapsed
     setIsSidebarCollapsed(next)
     captureEvent(ANALYTICS_EVENTS.SIDEBAR_TOGGLED, { is_collapsed: next })
-  }, [])
+  }, [isSidebarCollapsed, setIsSidebarCollapsed])
 
   return {
     activeSection,

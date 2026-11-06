@@ -22,27 +22,18 @@ function escapeLike(s: string): string {
   return s.replace(/([\\%_])/g, "\\$1")
 }
 
-// Names mix straight and curly apostrophes ("O'Reilly" vs "O’Reilly"). When the
-// term has one, the term and every searched column are folded to the straight
-// form, so either spelling finds both, like the in-browser search. Terms
-// without an apostrophe keep the plain columns.
-const FOLDED_APOSTROPHES = ["’", "‘", "ʼ", "`", "´"]
-const STRAIGHT_APOSTROPHE_SQL = "''''"
-
-function foldColumn(expr: string): string {
-  return FOLDED_APOSTROPHES.reduce((sql, ch) => `replace(${sql}, '${ch}', ${STRAIGHT_APOSTROPHE_SQL})`, `(${expr})`)
-}
-
+// Names mix straight and curly apostrophes ("O'Reilly" vs "O’Reilly"). An
+// apostrophe in the term becomes the one-character wildcard, so either
+// spelling finds both, like the in-browser search, while the columns stay
+// plain (no per-row rewriting, and an index on them stays usable).
 type Matcher = { starts: string; contains: string; like: (expr: string, param: string) => string }
 
 function matcher(term: string): Matcher {
-  const folded = term.replace(APOSTROPHES, "'")
-  const fold = folded.includes("'")
-  const e = escapeLike(folded)
+  const e = escapeLike(term).replace(APOSTROPHES, "_")
   return {
     starts: `${e}%`,
     contains: `%${e}%`,
-    like: (expr, param) => `${fold ? foldColumn(expr) : expr} ilike ${param}`,
+    like: (expr, param) => `${expr} ilike ${param}`,
   }
 }
 

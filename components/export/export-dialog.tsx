@@ -23,7 +23,8 @@ import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { toTrackedStringArray } from "@/lib/analytics/tracking"
 import { cn } from "@/lib/utils"
-import type { DescribedField } from "@/components/filters/filter-description"
+import { fieldText, type DescribedField } from "@/components/filters/filter-description"
+import { plural } from "@/lib/utils/helpers"
 
 type ExportData = {
   accounts: object[]
@@ -73,14 +74,6 @@ interface ExportDialogProps {
 }
 
 const SINGULAR: Record<ExportDatasetKey, string> = { accounts: "account", centers: "centre", services: "service", prospects: "prospect" }
-
-const plural = (n: number, word: string) => `${n.toLocaleString()} ${word}${n === 1 ? "" : "s"}`
-
-/** "Bengaluru, Pune" or "not Pune" for values; the text as is for ranges and switches. */
-function fieldText(field: DescribedField): string {
-  if (field.text) return field.text
-  return (field.values ?? []).map((v) => (v.mode === "exclude" ? `not ${v.value}` : v.value)).join(", ")
-}
 
 const DATASET_META: Array<{
   key: ExportDatasetKey

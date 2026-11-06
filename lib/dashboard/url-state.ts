@@ -9,7 +9,9 @@ import { createDefaultFilters } from "@/lib/dashboard/defaults"
  *
  * `view` and `show` are left out at their defaults. `f` holds only the filters
  * that differ from the defaults, as base64url JSON. Ranges at the slider's full
- * extent are defaults; an account list is stored by its id alone, since its
+ * extent are defaults. An account list is stored by its id and, while the link
+ * stays short enough, the names it expands to, so someone without the list
+ * still gets its accounts; a large list is stored by its id alone and the
  * names are re-derived from the list when the filters are restored.
  */
 
@@ -70,15 +72,26 @@ function fromBase64Url(text: string): string {
   return new TextDecoder().decode(Uint8Array.from(binary, (ch) => ch.charCodeAt(0)))
 }
 
+/**
+ * Longest `f` value that still carries the account names behind a selected
+ * list. Past it the names are left to the list, so a link never grows beyond
+ * what browsers, chat tools and proxies accept.
+ */
+export const MAX_FILTER_PARAM_LENGTH = 1500
+
 /** The filters that differ from the defaults (ranges against the slider bounds). */
-export function filtersDiff(filters: Filters, bounds: RangeBounds): Partial<Filters> {
+export function filtersDiff(
+  filters: Filters,
+  bounds: RangeBounds,
+  { listNames = true }: { listNames?: boolean } = {}
+): Partial<Filters> {
   const base = baselineFilters(bounds)
   const diff: Record<string, unknown> = {}
   for (const key of Object.keys(base) as (keyof Filters)[]) {
     const value = filters[key]
     if (value === undefined || sameJson(value, base[key])) continue
-    // Names that come from account lists are rebuilt from the lists on load.
-    if (key === "accountNameValues" && filters.accountListValues.length > 0) continue
+    // Names that come from account lists can be rebuilt from the lists on load.
+    if (key === "accountNameValues" && !listNames && filters.accountListValues.length > 0) continue
     diff[key] = value
   }
   return diff as Partial<Filters>
@@ -89,8 +102,13 @@ export function encodeDashboardUrl(state: DashboardUrlState, bounds: RangeBounds
   const params = new URLSearchParams()
   if (state.section !== DEFAULT_URL_SECTION) params.set("view", state.section)
   if (state.view !== DEFAULT_URL_VIEWS[state.section]) params.set("show", state.view)
-  const diff = filtersDiff(state.filters, bounds)
-  if (Object.keys(diff).length > 0) params.set("f", toBase64Url(JSON.stringify(diff)))
+  let diff = filtersDiff(state.filters, bounds)
+  let encoded = toBase64Url(JSON.stringify(diff))
+  if (encoded.length > MAX_FILTER_PARAM_LENGTH && state.filters.accountListValues.length > 0) {
+    diff = filtersDiff(state.filters, bounds, { listNames: false })
+    encoded = toBase64Url(JSON.stringify(diff))
+  }
+  if (Object.keys(diff).length > 0) params.set("f", encoded)
   const query = params.toString()
   return query ? `?${query}` : ""
 }

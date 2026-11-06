@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useState } from "react"
 import { functionalUpdate, useTable, type PaginationState, type SortingState, type Updater } from "@tanstack/react-table"
 import {
   Dialog,
@@ -45,6 +45,7 @@ import {
   StatRow,
   toggleInSet,
 } from "./account-details-parts"
+import { Section } from "@/components/dialogs/record-section"
 
 function formatCompactNumber(value: number | null): string | null {
   if (value === null) return null
@@ -74,17 +75,8 @@ interface AccountDetailsDialogProps {
   fetchRelated?: boolean
 }
 
-function Section({ title, meta, children }: { title: string; meta?: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <section className="mt-7 first:mt-0">
-      <h3 className="mb-3 flex items-baseline gap-1.5 text-sm font-medium">
-        {title}
-        {meta !== undefined && <span className="text-xs font-normal tabular-nums text-muted-foreground">{meta}</span>}
-      </h3>
-      {children}
-    </section>
-  )
-}
+const getCenterRowLabel = (center: Center) => `View centre details for ${center.center_name || "centre"}`
+const getProspectRowLabel = (prospect: Prospect) => `View prospect details for ${prospectFullName(prospect) || "prospect"}`
 
 export function AccountDetailsDialog({
   account,
@@ -298,17 +290,27 @@ export function AccountDetailsDialog({
   const trackOutboundLink = (linkType: "website" | "linkedin") =>
     captureEvent(ANALYTICS_EVENTS.OUTBOUND_LINK_CLICKED, { entity: "account", link_type: linkType })
 
-  const handleCenterClick = (center: Center) => {
+  // Stable, with the row menu renderers below, so the memoised table rows are
+  // left alone while the dialog's search and filters change.
+  const handleCenterClick = useCallback((center: Center) => {
     captureEvent(ANALYTICS_EVENTS.RELATED_RECORD_OPENED, { parent_entity: "account", entity: "center" })
     setSelectedCenter(center)
     setIsCenterDialogOpen(true)
-  }
+  }, [])
+  const renderCenterRowMenu = useCallback(
+    (center: Center) => <CenterRowMenu center={center} onOpen={handleCenterClick} />,
+    [handleCenterClick]
+  )
 
-  const handleProspectClick = (prospect: Prospect) => {
+  const handleProspectClick = useCallback((prospect: Prospect) => {
     captureEvent(ANALYTICS_EVENTS.RELATED_RECORD_OPENED, { parent_entity: "account", entity: "prospect" })
     setSelectedProspect(prospect)
     setIsProspectDialogOpen(true)
-  }
+  }, [])
+  const renderProspectRowMenu = useCallback(
+    (prospect: Prospect) => <ProspectRowMenu prospect={prospect} onOpen={handleProspectClick} />,
+    [handleProspectClick]
+  )
 
   useEffect(() => {
     setActiveTab("info")
@@ -618,8 +620,8 @@ export function AccountDetailsDialog({
                       key="table"
                       table={centerTable}
                       onRowOpen={handleCenterClick}
-                      getRowLabel={(center) => `View centre details for ${center.center_name || "centre"}`}
-                      renderRowMenu={(center) => <CenterRowMenu center={center} onOpen={handleCenterClick} />}
+                      getRowLabel={getCenterRowLabel}
+                      renderRowMenu={renderCenterRowMenu}
                     />
                   ) : (
                     <div key="grid" className="min-h-0 flex-1 overflow-auto">
@@ -678,8 +680,8 @@ export function AccountDetailsDialog({
                       key="table"
                       table={prospectTable}
                       onRowOpen={handleProspectClick}
-                      getRowLabel={(prospect) => `View prospect details for ${prospectFullName(prospect) || "prospect"}`}
-                      renderRowMenu={(prospect) => <ProspectRowMenu prospect={prospect} onOpen={handleProspectClick} />}
+                      getRowLabel={getProspectRowLabel}
+                      renderRowMenu={renderProspectRowMenu}
                     />
                   ) : (
                     <div key="grid" className="min-h-0 flex-1 overflow-auto">

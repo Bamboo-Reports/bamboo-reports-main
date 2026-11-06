@@ -109,7 +109,15 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
   if (appliedFilter && appliedFilter.snapshot === null && currentFilters !== appliedFilter.baseline) {
     setAppliedFilter({ ...appliedFilter, snapshot: JSON.stringify(currentFilters) })
   }
-  const activeSavedFilter = appliedFilter?.snapshot != null && totalActiveFilters > 0 ? appliedFilter : null
+  // Judged by the applied filters (what the snapshot is compared against), not
+  // the pending count, which drops to zero while chips are being cleared. A
+  // saved filter that sets nothing stays applied too.
+  const savedNothing = useMemo(
+    () => (appliedFilter?.snapshot ? countFilters(JSON.parse(appliedFilter.snapshot) as Filters) === 0 : false),
+    [appliedFilter?.snapshot, countFilters]
+  )
+  const activeSavedFilter =
+    appliedFilter?.snapshot != null && (savedNothing || countFilters(currentFilters) > 0) ? appliedFilter : null
   const isModified = activeSavedFilter != null && JSON.stringify(currentFilters) !== activeSavedFilter.snapshot
   const { lists: accountLists } = useAccountLists()
   const [manageDialogOpen, setManageDialogOpen] = useState(false)
@@ -221,10 +229,11 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
     // Same rule as saving: no two of your filters share a name.
     if (myFilters.some((f) => f.id !== filter.id && f.name.trim().toLowerCase() === lower)) {
       toast.error(`You already have a filter called "${name.trim()}"`)
-      return
+      return false
     }
     const success = await updateFilter(filter.id, name, filter.filters)
     if (success && appliedFilter?.id === filter.id) setAppliedFilter({ ...appliedFilter, name: name.trim() })
+    return success
   }, [updateFilter, appliedFilter, myFilters])
 
   // Share handlers

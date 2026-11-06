@@ -338,19 +338,14 @@ export function useDashboardSearch({ currentScreenView, onSectionSelect, onReloa
     [closeSearch, onSectionSelect, onReload, setTheme, resolvedTheme]
   )
 
+  // Escape, the close button and the backdrop all land here; closing clears
+  // the query and the type narrowing like every other way out.
   const handleSearchOpenChange = useCallback(
     (open: boolean) => {
-      if (open) {
-        captureEvent(ANALYTICS_EVENTS.SEARCH_OPENED, { trigger: "shortcut_or_button" })
-      } else {
-        captureEvent(ANALYTICS_EVENTS.SEARCH_CLOSED, { had_query: searchQuery.length > 0, close_reason: "dismissed" })
-      }
-      setIsSearchOpen(open)
-      if (!open) {
-        setSearchQuery("")
-      }
+      if (open) openSearch()
+      else closeSearch("dismissed")
     },
-    [setIsSearchOpen, setSearchQuery, searchQuery]
+    [openSearch, closeSearch]
   )
 
   const searchProps: ComponentProps<typeof GlobalSearch> = {

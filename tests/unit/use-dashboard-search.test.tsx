@@ -143,13 +143,18 @@ describe("useDashboardSearch", () => {
     expect(events("theme_changed")).toEqual([["theme_changed", { theme: "dark", previous_theme: "light", source: "search_action" }]])
   })
 
-  it("closing search clears the query and reports it", () => {
+  it("dismissing search closes it fully (query and type narrowing) and reports it", () => {
     const { result } = setup()
     act(() => result.current.searchProps.onOpenChange(true))
+    expect(search.handleOpen).toHaveBeenCalled()
     expect(events("search_opened")).toEqual([["search_opened", { trigger: "shortcut_or_button" }]])
-    act(() => result.current.searchProps.onOpenChange(false))
-    expect(search.setIsOpen).toHaveBeenLastCalledWith(false)
-    expect(search.setQuery).toHaveBeenCalledWith("")
+
+    search.isOpen = true
+    const open = setup()
+    act(() => open.result.current.searchProps.onOpenChange(false))
+    search.isOpen = false
+    // handleClose clears the query, the debounced term and the "Show all" focus together.
+    expect(search.handleClose).toHaveBeenCalled()
     expect(events("search_closed")).toEqual([["search_closed", { had_query: true, close_reason: "dismissed" }]])
   })
 

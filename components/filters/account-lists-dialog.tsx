@@ -35,6 +35,7 @@ import { useAccountLists, type AccountListShare } from "@/contexts/account-lists
 import { MAX_ACCOUNT_LIST_NAME_LENGTH, mapUnmatchedName, type AccountList } from "@/lib/accounts/account-lists"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
+import { plural } from "@/lib/utils/helpers"
 
 interface AccountListsDialogProps {
   open: boolean
@@ -48,8 +49,6 @@ function formatDate(value: string): string {
   const d = new Date(value)
   return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })
 }
-
-const plural = (n: number, word: string) => `${n.toLocaleString()} ${word}${n === 1 ? "" : "s"}`
 
 /** Account lists: browse, search, upload, apply, share, rename, replace from a file, delete. */
 export function AccountListsDialog({ open, onOpenChange, onApply }: AccountListsDialogProps) {

@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest"
-import { DataType, newDb } from "pg-mem"
+import { newDb } from "pg-mem"
 import type { Account, Alias, Center, Prospect } from "@/lib/types"
 import { buildSearchIndex, searchIndex } from "@/lib/search/index"
 import { buildAccountSearch, buildCenterSearch, buildProspectSearch, firstAliasMatch, type SearchQueries } from "@/lib/search/search-sql"
@@ -37,13 +37,6 @@ async function ins(table: string, cols: string[], rows: Record<string, unknown>[
 
 beforeAll(async () => {
   const db = newDb()
-  // Postgres has replace(); pg-mem does not. Used to fold apostrophes.
-  db.public.registerFunction({
-    name: "replace",
-    args: [DataType.text, DataType.text, DataType.text],
-    returns: DataType.text,
-    implementation: (value: string, from: string, to: string) => value.split(from).join(to),
-  })
   const { Pool } = db.adapters.createPg()
   pool = new Pool()
   await pool.query(`create table accounts (account_global_legal_name text, account_hq_industry text, account_hq_country text)`)

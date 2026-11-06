@@ -1,8 +1,16 @@
 "use client"
 
 import { memo, type ReactNode, type Ref } from "react"
-import { createColumnHelper, type ReactTable, type Row, type RowData } from "@tanstack/react-table"
-import { RiArrowLeftSLine, RiArrowRightSLine, RiLayoutGridLine, RiTableLine } from "@remixicon/react"
+import { createColumnHelper, type Column, type ReactTable, type Row, type RowData } from "@tanstack/react-table"
+import {
+  RiArrowLeftSLine,
+  RiArrowRightSLine,
+  RiExpandUpDownLine,
+  RiLayoutGridLine,
+  RiSortAlphabetAsc,
+  RiSortAlphabetDesc,
+  RiTableLine,
+} from "@remixicon/react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from "@/components/ui/context-menu"
@@ -309,6 +317,41 @@ export function DataTablePagination<TData extends RowData>({ table, totalRows, l
 export type DataLayout = "table" | "grid"
 
 /** Icon-only Table/Grid switch for the data card footer. */
+interface DataGridSortBarProps<TData extends RowData, TValue> {
+  /** The table's name column; the grid layout sorts by it. */
+  column: Column<DataTableFeatures, TData, TValue> | undefined
+  /** What the column holds, for the accessible name: "account name". */
+  label: string
+}
+
+/**
+ * Sort control for the grid layout, which has no column headers. Shares the
+ * table's sort state, so it goes in the footer beside the layout switch.
+ */
+export function DataGridSortBar<TData extends RowData, TValue>({ column, label }: DataGridSortBarProps<TData, TValue>) {
+  const sorted = column?.getIsSorted() ?? false
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      className="h-8 gap-1.5 px-2.5"
+      onClick={column?.getToggleSortingHandler()}
+      aria-label={`Sort by ${label}`}
+      aria-pressed={sorted !== false}
+    >
+      {sorted === false ? (
+        <RiExpandUpDownLine className="h-4 w-4 text-muted-foreground" />
+      ) : sorted === "asc" ? (
+        <RiSortAlphabetAsc className="h-4 w-4 text-primary" />
+      ) : (
+        <RiSortAlphabetDesc className="h-4 w-4 text-primary" />
+      )}
+      Name
+    </Button>
+  )
+}
+
 export function DataLayoutSwitcher({ value, onValueChange }: { value: DataLayout; onValueChange: (value: DataLayout) => void }) {
   return (
     <ViewSwitcher

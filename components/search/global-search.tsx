@@ -15,6 +15,7 @@ import type { GroupedResults, SearchResult, SearchResultType } from "@/lib/searc
 import type { RecentItem } from "@/hooks/use-recent-items"
 import type { Account } from "@/lib/types"
 import type { SearchFocus } from "@/lib/dashboard/api-client"
+import { formatTimeAgo } from "@/lib/dashboard/entity-display"
 
 interface GlobalSearchProps {
   open: boolean
@@ -55,17 +56,6 @@ const GROUPS: Array<{ key: SearchFocus; type: SearchResultType; heading: string 
 /** Rows share one look: a quiet icon tile, the name with the typed letters in bold, and a line under it. */
 const ITEM_CLASS =
   "gap-2.5 rounded-md px-2.5 py-2 data-[selected=true]:bg-primary/10 data-[selected=true]:text-foreground [&[data-selected=true]_.result-title]:text-primary-strong"
-
-function formatTimeAgo(timestamp: number): string {
-  const seconds = Math.floor((Date.now() - timestamp) / 1000)
-  if (seconds < 60) return "just now"
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  return `${days}d ago`
-}
 
 /** The title with the first match of the query in bold. */
 function Highlight({ text, query }: { text: string; query: string }) {

@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useMemo, useRef, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { HeadTypeBadge } from "@/components/ui/head-type-badge"
 import { functionalUpdate, useTable, type PaginationState, type SortingState, type Updater } from "@tanstack/react-table"
 import {
@@ -32,6 +32,7 @@ import { ProspectRowMenu } from "@/components/tables/prospect-columns"
 import { RECORD_LIST_LAYOUT_STORAGE_KEY, useDataLayoutPreference } from "@/hooks/use-data-layout-preference"
 import { FactGroup, FilterMenu, sortByCount, toggleInSet } from "./account-details-parts"
 import { accountProspectColumns, prospectFullName } from "./account-related-columns"
+import { Section } from "@/components/dialogs/record-section"
 
 interface ProspectDetailsDialogProps {
   prospect: Prospect | null
@@ -46,17 +47,7 @@ interface ProspectDetailsDialogProps {
 /** Same sizes as the account window's lists. */
 const RECORD_PAGE_SIZES = [12, 24, 48, 96] as const
 
-function Section({ title, meta, children }: { title: string; meta?: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <section className="mt-7 first:mt-0">
-      <h3 className="mb-3 flex items-baseline gap-1.5 text-sm font-medium">
-        {title}
-        {meta !== undefined && <span className="text-xs font-normal tabular-nums text-muted-foreground">{meta}</span>}
-      </h3>
-      {children}
-    </section>
-  )
-}
+const getContactRowLabel = (contact: Prospect) => `Show ${prospectFullName(contact) || "this contact"}`
 
 /** A prospect: their activity and colleagues on the left, contact, role and location on the right. */
 export function ProspectDetailsDialog({
@@ -79,18 +70,18 @@ export function ProspectDetailsDialog({
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: RECORD_PAGE_SIZES[0] })
   const [listLayout, setListLayout] = useDataLayoutPreference(RECORD_LIST_LAYOUT_STORAGE_KEY)
 
-  const resetContacts = () => {
+  const resetContacts = useCallback(() => {
     setContactQuery("")
     setHeadTypeFilter(new Set())
     setDeptFilter(new Set())
     setLevelFilter(new Set())
     setPagination((prev) => ({ ...prev, pageIndex: 0 }))
-  }
+  }, [])
 
   useEffect(() => {
     setCurrent(prospect)
     resetContacts()
-  }, [prospect])
+  }, [prospect, resetContacts])
 
   const p = current
 
@@ -192,12 +183,20 @@ export function ProspectDetailsDialog({
   })
 
   /** Shows another contact in this same window, back at the top. */
-  const openContact = (contact: Prospect) => {
-    captureEvent(ANALYTICS_EVENTS.RELATED_RECORD_OPENED, { parent_entity: "prospect", entity: "prospect" })
-    setCurrent(contact)
-    resetContacts()
-    bodyRef.current?.scrollTo({ top: 0, behavior: "smooth" })
-  }
+  const openContact = useCallback(
+    (contact: Prospect) => {
+      captureEvent(ANALYTICS_EVENTS.RELATED_RECORD_OPENED, { parent_entity: "prospect", entity: "prospect" })
+      setCurrent(contact)
+      resetContacts()
+      bodyRef.current?.scrollTo({ top: 0, behavior: "smooth" })
+    },
+    [resetContacts]
+  )
+  // Stable, so the memoised table rows are left alone while the contact filters change.
+  const renderContactRowMenu = useCallback(
+    (contact: Prospect) => <ProspectRowMenu prospect={contact} onOpen={openContact} />,
+    [openContact]
+  )
 
   if (!p) return null
 
@@ -327,8 +326,8 @@ export function ProspectDetailsDialog({
                             key="table"
                             table={contactTable}
                             onRowOpen={openContact}
-                            getRowLabel={(contact) => `Show ${prospectFullName(contact) || "this contact"}`}
-                            renderRowMenu={(contact) => <ProspectRowMenu prospect={contact} onOpen={openContact} />}
+                            getRowLabel={getContactRowLabel}
+                            renderRowMenu={renderContactRowMenu}
                           />
                         ) : filteredContacts.length > 0 ? (
                           <div key="grid" className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 xl:grid-cols-3">

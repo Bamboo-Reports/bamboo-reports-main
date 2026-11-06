@@ -113,3 +113,9 @@ export function describeFilters(
   }
   return out
 }
+
+/** A described field as one line: "Bengaluru, not Pune" for values; the text as is for ranges and switches. */
+export function fieldText(field: DescribedField): string {
+  if (field.text) return field.text
+  return (field.values ?? []).map((v) => (v.mode === "exclude" ? `not ${v.value}` : v.value)).join(", ")
+}

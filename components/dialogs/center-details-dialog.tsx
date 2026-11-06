@@ -37,7 +37,8 @@ import { useRecordHistory } from "@/contexts/record-history-context"
 import { centerHistoryItem } from "@/lib/dashboard/record-history"
 import { cn, ensureAbsoluteUrl } from "@/lib/utils"
 import { FactGroup, StatRow } from "./account-details-parts"
-import { centerStatusLabel } from "./account-related-columns"
+import { centerStatusLabel, statusDot } from "./account-related-columns"
+import { Section } from "@/components/dialogs/record-section"
 
 interface CenterDetailsDialogProps {
   center: Center | null
@@ -50,28 +51,12 @@ interface CenterDetailsDialogProps {
   fetchDetail?: boolean
 }
 
-function statusDot(status: string | null | undefined): string {
-  if (status === "Active Center") return "bg-include"
-  if (status === "Upcoming") return "bg-amber-500"
-  if (status === "Non Operational") return "bg-exclude"
-  return "bg-muted-foreground/50"
-}
-
 /** Lines of a multi-line field, without blanks or "-" placeholders. */
 const parseLines = (content: string | null | undefined) =>
   content ? content.split(/\r?\n/).map((line) => line.trim()).filter((line) => line && line !== "-") : []
 
 const present = (value: string | number | null | undefined) =>
   value !== null && value !== undefined && (typeof value === "number" || (value.trim() !== "" && value.trim() !== "-"))
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="mt-7 first:mt-0">
-      <h3 className="mb-3 text-sm font-medium">{title}</h3>
-      {children}
-    </section>
-  )
-}
 
 function Tags({ items }: { items: string[] }) {
   return (
