@@ -154,7 +154,7 @@ export function DataTable<TData extends RowData>({
 
 /** Page sizes offered below the tables. The query API caps a page at 100 rows. */
 export const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const
-export const DEFAULT_PAGE_SIZE = 50
+export const DEFAULT_PAGE_SIZE = 25
 
 export type PageItem = number | "start-ellipsis" | "end-ellipsis"
 

@@ -29,7 +29,7 @@ describe("useDashboardLayout", () => {
     expect(result.current.activeView).toBe("map")
     expect(result.current.hasMapView).toBe(true)
     expect(result.current.activePage).toBe(1)
-    expect(result.current.itemsPerPage).toBe(50)
+    expect(result.current.itemsPerPage).toBe(25)
   })
 
   it("follows the active section's view and page", () => {
@@ -54,10 +54,10 @@ describe("useDashboardLayout", () => {
       result.current.setCentersPage(4)
       result.current.setProspectsPage(5)
     })
-    act(() => result.current.setItemsPerPage(25))
-    expect(result.current.itemsPerPage).toBe(25)
+    act(() => result.current.setItemsPerPage(10))
+    expect(result.current.itemsPerPage).toBe(10)
     expect([result.current.accountsPage, result.current.centersPage, result.current.prospectsPage]).toEqual([1, 1, 1])
-    expect(window.localStorage.getItem(PAGE_SIZE_STORAGE_KEY)).toBe("25")
+    expect(window.localStorage.getItem(PAGE_SIZE_STORAGE_KEY)).toBe("10")
   })
 
   it("restores a saved page size and ignores sizes the tables do not offer", () => {
@@ -65,7 +65,7 @@ describe("useDashboardLayout", () => {
     expect(setup().result.current.itemsPerPage).toBe(100)
     cleanup()
     window.localStorage.setItem(PAGE_SIZE_STORAGE_KEY, "7")
-    expect(setup().result.current.itemsPerPage).toBe(50)
+    expect(setup().result.current.itemsPerPage).toBe(25)
   })
 
   it("goes back to page 1 when the filters change", () => {
