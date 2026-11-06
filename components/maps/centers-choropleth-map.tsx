@@ -1,6 +1,7 @@
 "use client"
 
 import { ChartTooltipCard } from "@/components/ui/chart-tooltip-card"
+import { DONUT_CHART_COLORS } from "@/lib/utils/chart-helpers"
 import React, { useMemo, useState, useEffect, useLayoutEffect } from "react"
 import { Map as MapGL, Source, Layer, NavigationControl, FullscreenControl, type MapRef } from "@vis.gl/react-maplibre"
 import type { ExpressionSpecification, FilterSpecification } from "maplibre-gl"
@@ -42,18 +43,9 @@ interface Admin1Feature {
   }
 }
 
-const COLOR_SCALE = [
-  "#FFF2BB",
-  "#FFEEA2",
-  "#FFE573",
-  "#FFE056",
-  "#FFDB39",
-  "#F7CA02",
-  "#FFB649",
-  "#FFA92A",
-  "#F59302",
-  "#FF8000",
-]
+// The same pale-to-deep orange steps as the donut charts, so a state's shade
+// reads the same as a slice's.
+const COLOR_SCALE = DONUT_CHART_COLORS
 
 const normalizeIso2 = (value?: string | null) => (value || "").trim().toUpperCase()
 const normalizeStateKey = (value?: string | null) => (value || "").trim().toLowerCase()
@@ -549,7 +541,7 @@ export function CentersChoroplethMap({
             type="fill"
             filter={hoverLayerFilter}
             paint={{
-              "fill-color": "#f97316",
+              "fill-color": DONUT_CHART_COLORS[4],
               "fill-outline-color": "rgba(0,0,0,0)",
               "fill-antialias": true,
               "fill-opacity": 0.2,

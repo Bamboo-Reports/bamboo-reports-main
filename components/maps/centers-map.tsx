@@ -1,6 +1,8 @@
 "use client"
 
 import { ChartTooltipCard } from "@/components/ui/chart-tooltip-card"
+import { DONUT_CHART_COLORS } from "@/lib/utils/chart-helpers"
+import { bubbleRadius } from "@/lib/maps/bubble-size"
 import React, { useMemo, useState, useEffect, useCallback, useLayoutEffect } from "react"
 import { Map as MapGL, Source, Layer, NavigationControl, FullscreenControl, type MapRef, type ViewStateChangeEvent } from "@vis.gl/react-maplibre"
 import type { ExpressionSpecification } from "maplibre-gl"
@@ -60,8 +62,11 @@ interface CityFeatureCollection {
   features: CityFeature[]
 }
 
-const HALO_RADIUS_SCALE = 1.5
-const OVERLAP_PADDING = 0.5
+// A thin ring just outside each bubble; kept tight so it does not make the
+// bubble read larger than its count.
+const HALO_RADIUS_SCALE = 1.15
+// Cities with at least this many centres always show, even when crowded.
+const HOTSPOT_MIN_COUNT = 100
 const logger = createLogger("components/CentersMap")
 
 export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAccountsCount = true }: CentersMapProps) {
@@ -244,21 +249,13 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
     }
   }, [cityData])
 
-  const getCoreRadiusForCount = useCallback((count: number) => {
-    const minCount = 1
-    const maxCount = Math.max(...cityData.map(c => c.count), 1)
-    const minRadius = 4
-    const maxRadius = 20
-
-    if (maxCount === minCount) return minRadius
-
-    const logCount = Math.log10(count)
-    const logMin = Math.log10(minCount)
-    const logMax = Math.log10(maxCount)
-
-    const normalized = (logCount - logMin) / (logMax - logMin)
-    return minRadius + normalized * (maxRadius - minRadius)
-  }, [cityData])
+  // Log sizing from a minimum that fits a number (see bubbleRadius); the largest
+  // city in view gets the largest bubble.
+  const maxCityCount = useMemo(() => Math.max(1, ...cityData.map((c) => c.count)), [cityData])
+  const getCoreRadiusForCount = useCallback(
+    (count: number) => bubbleRadius(count, maxCityCount),
+    [maxCityCount]
+  )
 
   const getLabelConfig = useCallback((count: number, radius: number) => {
     const label = count.toString()
@@ -313,27 +310,28 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
       return
     }
 
+    // Keeps the map readable: a smaller city whose bubble (with its halo) would
+    // touch one already placed is left out at this zoom and appears on zooming
+    // in. Bubbles are placed largest first. Hotspots (HOTSPOT_MIN_COUNT or
+    // more centres) are never left out, so neighbours like Mumbai and Pune or
+    // Delhi, Noida and Gurugram all show; their numbers give way to the bigger
+    // city's where they would collide.
     const keptFeatures: CityFeature[] = []
     const keptCenters: Array<{ x: number; y: number; radius: number }> = []
 
     for (const feature of geojsonData.features) {
       const [lng, lat] = feature.geometry.coordinates
       const projected = mapInstance.project([lng, lat])
-      const coreRadius = getCoreRadiusForCount(feature.properties.count)
-      const haloRadius = coreRadius * HALO_RADIUS_SCALE + OVERLAP_PADDING
+      const haloRadius = getCoreRadiusForCount(feature.properties.count) * HALO_RADIUS_SCALE
 
-      let overlaps = false
-      for (const kept of keptCenters) {
+      const overlaps = keptCenters.some((kept) => {
         const dx = projected.x - kept.x
         const dy = projected.y - kept.y
         const minDistance = haloRadius + kept.radius
-        if (dx * dx + dy * dy < minDistance * minDistance) {
-          overlaps = true
-          break
-        }
-      }
+        return dx * dx + dy * dy < minDistance * minDistance
+      })
 
-      if (!overlaps) {
+      if (!overlaps || feature.properties.count >= HOTSPOT_MIN_COUNT) {
         keptFeatures.push(feature)
         keptCenters.push({ x: projected.x, y: projected.y, radius: haloRadius })
       }
@@ -533,14 +531,18 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
         </Source>
 
         <Source id="centers" type="geojson" data={visibleGeojsonData ?? geojsonData}>
-          {/* Outer halo layer - crisp, flat, and rendered below core for clean overlap */}
+          {/* Outer halo: a thin ring in a donut chart step, drawn below the core. A
+              see-through orange fill reads as muddy brown on the dark basemap. */}
           <Layer
             id="centers-halo"
             type="circle"
             paint={{
               "circle-radius": haloRadiusExpression,
-              "circle-color": "#ffbf57",
-              "circle-opacity": 0.25,
+              "circle-color": DONUT_CHART_COLORS[3],
+              "circle-opacity": 0.08,
+              "circle-stroke-color": DONUT_CHART_COLORS[3],
+              "circle-stroke-width": 1.5,
+              "circle-stroke-opacity": 0.7,
               "circle-blur": 0,
             }}
           />
@@ -551,7 +553,7 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
             type="circle"
             paint={{
               "circle-radius": coreRadiusExpression,
-              "circle-color": "#ff6800",
+              "circle-color": DONUT_CHART_COLORS[5],
               "circle-opacity": 1,
               "circle-blur": 0,
             }}
@@ -566,8 +568,11 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
               "text-size": ["get", "labelSize"],
               // Carto's glyph server only serves Open Sans (not Google Sans).
               "text-font": ["Open Sans Bold", "Open Sans Regular"],
-              "text-allow-overlap": true,
-              "text-ignore-placement": true,
+              // Every bubble is drawn, but a number that would collide with
+              // another is dropped, bigger cities first (a lower key places first).
+              "text-allow-overlap": false,
+              "text-ignore-placement": false,
+              "symbol-sort-key": ["-", 0, ["get", "count"]],
             }}
             paint={{
               "text-color": "#ffffff",
