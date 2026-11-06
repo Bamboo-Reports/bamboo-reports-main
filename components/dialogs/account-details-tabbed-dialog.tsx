@@ -554,9 +554,10 @@ export function AccountDetailsDialog({
                     rows={[
                       ["Type", account.account_hq_company_type],
                       ["Stock ticker", tickerLabel],
-                      ["Industry", account.account_hq_industry],
-                      ["Sub industry", account.account_hq_sub_industry],
-                      ["Category", account.account_primary_category],
+                      // Broad to narrow, named like the filters: Industry, then Sub industry.
+                      ["Industry", account.account_primary_category],
+                      ["Sub industry", account.account_hq_industry],
+                      ["Segment", account.account_hq_sub_industry],
                       ["Nature", account.account_primary_nature],
                     ]}
                   />

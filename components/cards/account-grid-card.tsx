@@ -90,7 +90,7 @@ export const AccountGridCard = memo(({ account, onClick }: AccountGridCardProps)
             <div className="mt-auto flex flex-col gap-4">
               <div className="space-y-2 text-sm">
                 <div className="flex items-center justify-between gap-3 min-w-0">
-                  <span className="text-muted-foreground">Industry</span>
+                  <span className="text-muted-foreground">Sub industry</span>
                   <TruncatedText
                     text={account.account_hq_industry || "-"}
                     className="font-medium text-foreground text-right max-w-[160px]"
