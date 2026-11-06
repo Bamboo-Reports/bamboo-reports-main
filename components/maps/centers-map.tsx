@@ -4,6 +4,7 @@ import { ChartTooltipCard } from "@/components/ui/chart-tooltip-card"
 import { MapControls } from "@/components/maps/map-controls"
 import { DONUT_CHART_COLORS } from "@/lib/utils/chart-helpers"
 import { bubbleRadius } from "@/lib/maps/bubble-size"
+import { knownText } from "@/lib/utils/helpers"
 import React, { useMemo, useState, useEffect, useCallback, useLayoutEffect } from "react"
 import { Map as MapGL, Source, Layer, type MapRef, type ViewStateChangeEvent } from "@vis.gl/react-maplibre"
 import type { ExpressionSpecification } from "maplibre-gl"
@@ -144,7 +145,8 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
       const cityMap = new Map<string, CityCluster & { accounts: Set<string> }>()
 
       centers.forEach((center) => {
-        const city = center.center_city
+        // A blank or "TBA" city has only a stand-in point, so it is left off the map.
+        const city = knownText(center.center_city)
         const country = center.center_country
         const account = center.account_global_legal_name
         // Same rule as the Headcount card: some centre types are left out.

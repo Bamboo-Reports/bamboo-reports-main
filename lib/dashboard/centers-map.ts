@@ -45,7 +45,9 @@ const CITY_BRANCH: AggregateBranch = {
     "count(distinct account_global_legal_name)::int as accounts_count",
     `${HEADCOUNT_SUM_SQL} as headcount`,
   ].join(", "),
-  where: "lat is not null and lng is not null and center_city is not null and center_city <> ''",
+  // "TBA" is a placeholder, not a city: those centres sit on a stand-in point
+  // (the centre of India or of their state), so they are left off the map.
+  where: "lat is not null and lng is not null and center_city is not null and center_city <> '' and upper(trim(center_city)) <> 'TBA'",
   groupBy: "center_city",
 }
 
