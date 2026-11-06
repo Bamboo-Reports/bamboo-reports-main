@@ -284,8 +284,11 @@ export const PieChartCard = memo(({
       })
     }
 
+    // The stored bucket rides along so analytics keep reporting it, not the display label.
     return formatName
-      ? majorSegments.map((segment) => (segment.name === "Others" ? segment : { ...segment, name: formatName(segment.name) }))
+      ? majorSegments.map((segment) =>
+          segment.name === "Others" ? segment : { ...segment, name: formatName(segment.name), custom: { rawName: segment.name } }
+        )
       : majorSegments
   }, [safeData, dataKey, total, order, formatName])
 
@@ -383,7 +386,7 @@ export const PieChartCard = memo(({
                 const point = this as Point
                 captureEvent(ANALYTICS_EVENTS.CHART_SLICE_CLICKED, {
                   chart_title: analyticsTitle ?? title,
-                  segment_name: point.name,
+                  segment_name: (point.options.custom?.rawName as string | undefined) ?? point.name,
                   segment_value: point.y ?? 0,
                 })
               },

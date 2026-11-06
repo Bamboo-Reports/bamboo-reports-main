@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest"
 import {
   describeUserAgent,
+  MAX_LISTED_FILTER_VALUES,
+  summarizeExportFilters,
   describeWhen,
   exportTitle,
   formatBytes,
@@ -58,5 +60,20 @@ describe("export history", () => {
     expect(selectionSummary({ selection: { dataset: "accounts", accountNames: ["Acme"] } })).toBe("1 account")
     expect(selectionSummary({ accountVisibilityMode: "nonGcc" })).toBeNull()
     expect(selectionSummary(null)).toBeNull()
+  })
+
+  it("cuts an export's saved filters down to what the list shows", () => {
+    const names = Array.from({ length: MAX_LISTED_FILTER_VALUES + 30 }, (_, i) => ({ value: `Co ${i}`, mode: "include" }))
+    const summary = summarizeExportFilters({
+      selection: { dataset: "accounts", accountNames: ["a", "b", "c"] },
+      accountGlobalLegalNameKeywords: names,
+      centerCityValues: [{ value: "Pune", mode: "include" }],
+    }) as Record<string, unknown>
+    expect(summary.selection).toEqual({ dataset: "accounts", count: 3 })
+    expect(selectionSummary(summary)).toBe("3 accounts")
+    const keywords = summary.accountGlobalLegalNameKeywords as Array<{ value: string }>
+    expect(keywords).toHaveLength(MAX_LISTED_FILTER_VALUES + 1)
+    expect(keywords[MAX_LISTED_FILTER_VALUES]).toEqual({ value: "and 30 more", mode: "include" })
+    expect(summary.centerCityValues).toEqual([{ value: "Pune", mode: "include" }])
   })
 })

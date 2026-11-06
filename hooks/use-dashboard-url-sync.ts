@@ -3,16 +3,11 @@
 import { useEffect, useRef, useState } from "react"
 import type { Filters } from "@/lib/types"
 import { useAccountLists } from "@/contexts/account-lists-context"
-import {
-  DEFAULT_REVENUE_RANGE,
-  DEFAULT_CENTER_INC_YEAR_RANGE,
-  DEFAULT_YEARS_IN_INDIA_RANGE,
-} from "@/lib/dashboard/defaults"
+import { DEFAULT_RANGE_BOUNDS, type FilterRangeBounds } from "@/lib/dashboard/active-filters"
 import {
   decodeDashboardUrl,
   encodeDashboardUrl,
   filtersFromUrl,
-  type RangeBounds,
   type UrlSection,
   type UrlView,
 } from "@/lib/dashboard/url-state"
@@ -20,17 +15,12 @@ import {
 /** How long a link's account lists may take to load before the filters are restored without them. */
 const LIST_WAIT_MS = 4000
 
-const DEFAULT_BOUNDS: RangeBounds = {
-  revenue: { min: DEFAULT_REVENUE_RANGE[0], max: DEFAULT_REVENUE_RANGE[1] },
-  yearsInIndia: { min: DEFAULT_YEARS_IN_INDIA_RANGE[0], max: DEFAULT_YEARS_IN_INDIA_RANGE[1] },
-  centerIncYear: { min: DEFAULT_CENTER_INC_YEAR_RANGE[0], max: DEFAULT_CENTER_INC_YEAR_RANGE[1] },
-}
 
 interface UseDashboardUrlSyncParams {
   /** Applied filters. */
   filters: Filters
   /** Slider bounds from the server; null until they arrive. */
-  bounds: RangeBounds | null
+  bounds: FilterRangeBounds | null
   /** Applies restored filters (the saved-filter loader: clamps ranges, expands lists). */
   applyFilters: (filters: Filters) => void
   section: UrlSection
@@ -96,7 +86,7 @@ export function useDashboardUrlSync({
   // Write every change back to the address.
   useEffect(() => {
     if (!restored) return
-    const search = encodeDashboardUrl({ section, view, filters }, bounds ?? DEFAULT_BOUNDS)
+    const search = encodeDashboardUrl({ section, view, filters }, bounds ?? DEFAULT_RANGE_BOUNDS)
     if (search === window.location.search) return
     window.history.replaceState(window.history.state, "", `${window.location.pathname}${search}${window.location.hash}`)
   }, [restored, filters, section, view, bounds])

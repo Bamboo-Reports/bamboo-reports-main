@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps } from "react"
 import type { ExportDialog } from "@/components/export/export-dialog"
-import { describeFilters } from "@/components/filters/filter-description"
+import { describeFilterFields as describeFields } from "@/components/filters/filter-description"
 import { useAccountLists } from "@/contexts/account-lists-context"
 import type { ExportDatasetKey } from "@/lib/utils/export-helpers"
 import type { Filters } from "@/lib/types"
@@ -199,7 +199,7 @@ export function useDashboardExport({
       if (!source || typeof source !== "object") return []
       const listNames = new Map(accountLists.map((list) => [list.id, list.name]))
       const bounds = { revenue, yearsInIndia, centerIncYear }
-      return describeFilters(source as Partial<Filters>, bounds, listNames).flatMap((section) => section.fields)
+      return describeFields(source as Partial<Filters>, bounds, listNames)
     },
     [accountLists, revenue, yearsInIndia, centerIncYear]
   )

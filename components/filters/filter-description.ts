@@ -1,5 +1,6 @@
 import { isRangeActive, type FilterRangeBounds, type FilterSectionId } from "@/lib/dashboard/active-filters"
-import { formatRangeSummary, type RangeUnit } from "@/components/filters/filter-range-field"
+import { formatRangeSummary } from "@/components/filters/filter-range-field"
+import { SECTION_LABELS, SECTION_SPECS, VISIBILITY_FIELD_LABEL } from "@/lib/dashboard/filter-spec"
 import { withFilterDefaults } from "@/lib/dashboard/filter-summary"
 import type { AccountVisibilityMode, FilterValue, Filters } from "@/lib/types"
 
@@ -8,6 +9,8 @@ export interface DescribedField {
   label: string
   values?: FilterValue[]
   text?: string
+  /** Unique among the fields of one description (section and filter key); set by describeFilterFields. */
+  key?: string
 }
 
 export interface DescribedSection {
@@ -16,55 +19,6 @@ export interface DescribedSection {
 }
 
 const VISIBILITY_LABELS: Record<AccountVisibilityMode, string> = { all: "All", gcc: "GCCs", nonGcc: "Non-GCCs" }
-
-type FieldSpec =
-  | { kind: "values"; key: keyof Filters; label: string }
-  | {
-      kind: "range"
-      key: "accountHqRevenueRange" | "accountYearsInIndiaRange" | "centerIncYearRange"
-      includeNullKey: "accountHqRevenueIncludeNull" | "yearsInIndiaIncludeNull" | "centerIncYearIncludeNull"
-      bounds: keyof FilterRangeBounds
-      unit: RangeUnit
-      label: string
-    }
-  | { kind: "accountList"; label: string }
-
-// The sidebar's fields, in its order and with its labels.
-const SECTION_SPECS: Record<FilterSectionId, FieldSpec[]> = {
-  accounts: [
-    { kind: "values", key: "accountGlobalLegalNameKeywords", label: "Account name" },
-    { kind: "accountList", label: "Account list" },
-    { kind: "range", key: "accountHqRevenueRange", includeNullKey: "accountHqRevenueIncludeNull", bounds: "revenue", unit: "money", label: "HQ revenue" },
-    { kind: "values", key: "accountCenterEmployeesRangeValues", label: "GCC headcount (India)" },
-    { kind: "range", key: "accountYearsInIndiaRange", includeNullKey: "yearsInIndiaIncludeNull", bounds: "yearsInIndia", unit: "years", label: "Years in India" },
-    { kind: "values", key: "accountPrimaryCategoryValues", label: "Industry" },
-    { kind: "values", key: "accountHqCountryValues", label: "HQ country" },
-    { kind: "values", key: "accountHqRegionValues", label: "HQ region" },
-    { kind: "values", key: "accountHqEmployeeRangeValues", label: "HQ employee range" },
-    { kind: "values", key: "accountHqIndustryValues", label: "Sub industry" },
-    { kind: "values", key: "accountPrimaryNatureValues", label: "Segment" },
-    { kind: "values", key: "accountNasscomStatusValues", label: "NASSCOM listing" },
-  ],
-  centers: [
-    { kind: "values", key: "centerStatusValues", label: "Status" },
-    { kind: "values", key: "centerTypeValues", label: "Centre type" },
-    { kind: "values", key: "functionNameValues", label: "Services offered" },
-    { kind: "values", key: "centerCityValues", label: "City" },
-    { kind: "range", key: "centerIncYearRange", includeNullKey: "centerIncYearIncludeNull", bounds: "centerIncYear", unit: "year", label: "Incorporation year" },
-    { kind: "values", key: "centerEmployeesRangeValues", label: "Centre headcount" },
-    { kind: "values", key: "centerStateValues", label: "State" },
-    { kind: "values", key: "centerFocusValues", label: "Centre focus" },
-    { kind: "values", key: "techSoftwareInUseKeywords", label: "Software in use" },
-  ],
-  prospects: [
-    { kind: "values", key: "prospectTitleKeywords", label: "Job title" },
-    { kind: "values", key: "prospectHeadTypeValues", label: "Role" },
-    { kind: "values", key: "prospectLevelValues", label: "Level" },
-    { kind: "values", key: "prospectDepartmentValues", label: "Department" },
-    { kind: "values", key: "prospectCityValues", label: "City" },
-    { kind: "values", key: "prospectEngagedValues", label: "Engaged" },
-  ],
-}
 
 /**
  * What a set of filters selects, grouped like the sidebar. Only set fields are
@@ -83,7 +37,7 @@ export function describeFilters(
     const fields: DescribedField[] = []
 
     if (section === "accounts" && filters.accountVisibilityMode !== "gcc") {
-      fields.push({ label: "Accounts to show", text: VISIBILITY_LABELS[filters.accountVisibilityMode] })
+      fields.push({ label: VISIBILITY_FIELD_LABEL, text: VISIBILITY_LABELS[filters.accountVisibilityMode] })
     }
 
     for (const spec of SECTION_SPECS[section]) {
@@ -118,4 +72,28 @@ export function describeFilters(
 export function fieldText(field: DescribedField): string {
   if (field.text) return field.text
   return (field.values ?? []).map((v) => (v.mode === "exclude" ? `not ${v.value}` : v.value)).join(", ")
+}
+
+/**
+ * The described fields of every section as one flat list for chips, each with
+ * a unique key. A label two sections share ("City" for centres and prospects)
+ * gets the section after it so the chips can be told apart.
+ */
+export function describeFilterFields(
+  source: Partial<Filters>,
+  bounds: FilterRangeBounds,
+  listNames: ReadonlyMap<string, string>
+): DescribedField[] {
+  const sections = describeFilters(source, bounds, listNames)
+  const labelCounts = new Map<string, number>()
+  for (const { fields } of sections) {
+    for (const field of fields) labelCounts.set(field.label, (labelCounts.get(field.label) ?? 0) + 1)
+  }
+  return sections.flatMap(({ section, fields }) =>
+    fields.map((field) => ({
+      ...field,
+      key: `${section}:${field.label}`,
+      label: (labelCounts.get(field.label) ?? 0) > 1 ? `${field.label} (${SECTION_LABELS[section].toLowerCase()})` : field.label,
+    }))
+  )
 }

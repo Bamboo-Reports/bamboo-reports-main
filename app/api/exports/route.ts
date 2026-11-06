@@ -1,6 +1,7 @@
 import { authenticateRequest } from "@/lib/auth/request"
 import { enforceRateLimit } from "@/lib/rate-limit/server"
 import { createLogger } from "@/lib/logger"
+import { summarizeExportFilters } from "@/lib/exports/history"
 
 export const dynamic = "force-dynamic"
 
@@ -45,10 +46,13 @@ export async function GET(request: Request) {
     return json({ error: "Failed to list exports" }, 500)
   }
 
-  const data = (await res.json()) as unknown[]
+  const data = (await res.json()) as Array<Record<string, unknown>>
   logger.info("list_succeeded", { user_id: userId, count: data.length })
 
-  return new Response(JSON.stringify({ exports: data }), {
+  // The list describes each export's filters; the full saved filters (every
+  // selected key, every expanded account name) would make it megabytes.
+  const exports = data.map((row) => ({ ...row, filters_applied: summarizeExportFilters(row.filters_applied) }))
+  return new Response(JSON.stringify({ exports }), {
     status: 200,
     headers: {
       "Content-Type": "application/json",

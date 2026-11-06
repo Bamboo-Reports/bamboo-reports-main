@@ -4,9 +4,10 @@ import {
   DEFAULT_YEARS_IN_INDIA_RANGE,
 } from "@/lib/dashboard/defaults"
 import { withFilterDefaults } from "@/lib/dashboard/filter-summary"
+import { FILTER_SECTION_IDS, SECTION_SPECS, type FieldSpec, type FilterSectionId } from "@/lib/dashboard/filter-spec"
 import type { FilterValue, Filters } from "@/lib/types"
 
-export type FilterSectionId = "accounts" | "centers" | "prospects"
+export type { FilterSectionId }
 
 type Bounds = { min: number; max: number }
 
@@ -46,54 +47,22 @@ export function isRangeActive(range: [number, number], bounds: Bounds, includeNu
   return range[0] > bounds.min || range[1] < bounds.max || !includeNull
 }
 
-/** Every filter field, by section, as the sidebar counts them: one per field, however many values it has. */
-const SECTION_FIELDS: Record<FilterSectionId, FieldCheck[]> = {
-  accounts: [
-    values("accountGlobalLegalNameKeywords"),
-    {
-      key: "accountListValues",
-      isActive: (f) => f.accountListValues.length > 0 || f.accountNameValues.length > 0,
-    },
-    {
-      key: "accountHqRevenueRange",
-      isActive: (f, b) => isRangeActive(f.accountHqRevenueRange, b.revenue, f.accountHqRevenueIncludeNull),
-    },
-    values("accountCenterEmployeesRangeValues"),
-    {
-      key: "accountYearsInIndiaRange",
-      isActive: (f, b) => isRangeActive(f.accountYearsInIndiaRange, b.yearsInIndia, f.yearsInIndiaIncludeNull),
-    },
-    values("accountPrimaryCategoryValues"),
-    values("accountHqCountryValues"),
-    values("accountHqRegionValues"),
-    values("accountHqEmployeeRangeValues"),
-    values("accountHqIndustryValues"),
-    values("accountPrimaryNatureValues"),
-    values("accountNasscomStatusValues"),
-  ],
-  centers: [
-    values("centerStatusValues"),
-    values("centerTypeValues"),
-    values("functionNameValues"),
-    values("centerCityValues"),
-    {
-      key: "centerIncYearRange",
-      isActive: (f, b) => isRangeActive(f.centerIncYearRange, b.centerIncYear, f.centerIncYearIncludeNull),
-    },
-    values("centerEmployeesRangeValues"),
-    values("centerStateValues"),
-    values("centerFocusValues"),
-    values("techSoftwareInUseKeywords"),
-  ],
-  prospects: [
-    values("prospectTitleKeywords"),
-    values("prospectHeadTypeValues"),
-    values("prospectLevelValues"),
-    values("prospectDepartmentValues"),
-    values("prospectCityValues"),
-    values("prospectEngagedValues"),
-  ],
+/** The check behind one sidebar field: set when it has values, narrows its range, or names a list. */
+function fieldCheck(spec: FieldSpec): FieldCheck {
+  if (spec.kind === "values") return values(spec.key)
+  if (spec.kind === "range") {
+    return {
+      key: spec.key,
+      isActive: (f, b) => isRangeActive(f[spec.key], b[spec.bounds], f[spec.includeNullKey]),
+    }
+  }
+  return { key: spec.key, isActive: (f) => f.accountListValues.length > 0 || f.accountNameValues.length > 0 }
 }
+
+/** Every filter field, by section, as the sidebar counts them: one per field, however many values it has. */
+const SECTION_FIELDS = Object.fromEntries(
+  FILTER_SECTION_IDS.map((section) => [section, SECTION_SPECS[section].map(fieldCheck)])
+) as Record<FilterSectionId, FieldCheck[]>
 
 /** How many fields in a section are set. */
 export function countActiveFields(section: FilterSectionId, filters: Filters, bounds: FilterRangeBounds) {
@@ -111,8 +80,7 @@ const DEFAULT_VISIBILITY_MODE = "gcc"
 export function countActiveFilters(source: Partial<Filters>, bounds: FilterRangeBounds = DEFAULT_RANGE_BOUNDS) {
   // Saved filters can predate newer fields; fill those in before counting.
   const filters = withFilterDefaults(source)
-  const sections = Object.keys(SECTION_FIELDS) as FilterSectionId[]
-  const fields = sections.reduce((sum, section) => sum + countActiveFields(section, filters, bounds), 0)
+  const fields = FILTER_SECTION_IDS.reduce((sum, section) => sum + countActiveFields(section, filters, bounds), 0)
   const visibility = (filters.accountVisibilityMode ?? DEFAULT_VISIBILITY_MODE) !== DEFAULT_VISIBILITY_MODE
   return fields + (visibility ? 1 : 0)
 }

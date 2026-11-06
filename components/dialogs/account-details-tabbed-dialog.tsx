@@ -35,7 +35,7 @@ import { useRecordHistory } from "@/contexts/record-history-context"
 import { accountHistoryItem } from "@/lib/dashboard/record-history"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
-import { cn } from "@/lib/utils"
+import { cn, ensureAbsoluteUrl } from "@/lib/utils"
 import { formatRevenueRange, knownText } from "@/lib/utils/helpers"
 import {
   FactChip,
@@ -54,8 +54,6 @@ function formatCompactNumber(value: number | null): string | null {
     maximumFractionDigits: 2,
   }).format(value)
 }
-
-const withProtocol = (url: string) => (url.startsWith("http") ? url : `https://${url}`)
 
 /** Rows (or cards) per page in the centre and prospect lists; each fills 2, 3 or 4 grid columns evenly. */
 const RECORD_PAGE_SIZES = [12, 24, 48, 96] as const
@@ -406,7 +404,7 @@ export function AccountDetailsDialog({
                   {account.account_hq_website && (
                     <HintTooltip label="Website" hint={account.account_hq_website}>
                       <Button asChild variant="ghost" size="icon-sm">
-                        <a href={withProtocol(account.account_hq_website)} target="_blank" rel="noopener noreferrer" onClick={() => trackOutboundLink("website")} aria-label="Website">
+                        <a href={ensureAbsoluteUrl(account.account_hq_website)} target="_blank" rel="noopener noreferrer" onClick={() => trackOutboundLink("website")} aria-label="Website">
                           <RiGlobalLine />
                         </a>
                       </Button>
@@ -415,7 +413,7 @@ export function AccountDetailsDialog({
                   {account.account_hq_linkedin_link && (
                     <HintTooltip label="LinkedIn">
                       <Button asChild variant="ghost" size="icon-sm">
-                        <a href={withProtocol(account.account_hq_linkedin_link)} target="_blank" rel="noopener noreferrer" onClick={() => trackOutboundLink("linkedin")} aria-label="LinkedIn">
+                        <a href={ensureAbsoluteUrl(account.account_hq_linkedin_link)} target="_blank" rel="noopener noreferrer" onClick={() => trackOutboundLink("linkedin")} aria-label="LinkedIn">
                           <RiLinkedinBoxLine />
                         </a>
                       </Button>

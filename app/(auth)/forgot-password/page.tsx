@@ -72,6 +72,11 @@ export default function ForgotPasswordPage() {
             If an account exists for <span className="font-medium text-foreground">{sentTo}</span>, a link to set a new
             password is on its way. It can take a few minutes; check spam too.
           </p>
+          {submitError && (
+            <AuthNotice tone="error" title="Could not send the link">
+              {submitError}
+            </AuthNotice>
+          )}
           <p className="mt-4 text-[13px] text-muted-foreground">
             Didn&apos;t get it?{" "}
             <button

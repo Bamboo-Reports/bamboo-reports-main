@@ -36,7 +36,17 @@ function useTextMeasurer(element: HTMLElement | null, fontsReady: boolean) {
     const context = typeof document === "undefined" ? null : document.createElement("canvas").getContext("2d")
     if (!context || !element) return (text: string) => text.length * 7
     context.font = `500 13px ${getComputedStyle(element).fontFamily}`
-    return (text: string) => context.measureText(text).width
+    // Fitting the height lays the tiles out many times over the same names, so
+    // each name (and word) is measured once per font.
+    const widths = new Map<string, number>()
+    return (text: string) => {
+      let width = widths.get(text)
+      if (width === undefined) {
+        width = context.measureText(text).width
+        widths.set(text, width)
+      }
+      return width
+    }
     // Re-measure once the web font has loaded.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [element, fontsReady])
@@ -63,13 +73,25 @@ export const TechTreemap = memo(({ tech, title = "Technology stack", className }
   }, [])
 
   // The height depends on the width, so track the panel's inner width.
+  // A sidebar or window animation reports a new width every frame; only the
+  // last one per frame is laid out.
   React.useEffect(() => {
     if (!panel) return
     const update = () => setWidth(Math.max(0, panel.clientWidth - PANEL_PADDING * 2))
     update()
-    const observer = new ResizeObserver(update)
+    let frame: number | null = null
+    const observer = new ResizeObserver(() => {
+      if (frame !== null) return
+      frame = requestAnimationFrame(() => {
+        frame = null
+        update()
+      })
+    })
     observer.observe(panel)
-    return () => observer.disconnect()
+    return () => {
+      observer.disconnect()
+      if (frame !== null) cancelAnimationFrame(frame)
+    }
   }, [panel])
 
   const textWidth = useTextMeasurer(panel, fontsReady)

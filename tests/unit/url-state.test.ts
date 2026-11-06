@@ -68,6 +68,12 @@ describe("dashboard url state", () => {
     expect(decoded.filters?.accountNameValues).toBeUndefined()
   })
 
+  it("ignores keys inherited from Object.prototype in a crafted link", () => {
+    const crafted = btoa(JSON.stringify({ constructor: [1, 2], toString: [{ value: "x", mode: "include" }], centerCityValues: [{ value: "Pune", mode: "include" }] }))
+    const decoded = decodeDashboardUrl(`?f=${crafted}`)
+    expect(decoded.filters).toEqual({ centerCityValues: [{ value: "Pune", mode: "include" }] })
+  })
+
   it("ignores malformed or unknown values", () => {
     expect(decodeDashboardUrl("?view=nope&show=table&f=%%%")).toEqual({ section: null, view: null, filters: null })
     const junk = btoa(JSON.stringify({ evil: 1, centerCityValues: "Pune", accountVisibilityMode: "x", centerIncYearRange: [1, "2"] }))

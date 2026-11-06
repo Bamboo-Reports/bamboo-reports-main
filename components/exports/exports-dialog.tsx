@@ -310,7 +310,7 @@ export function ExportsDialog({ open, onOpenChange, describeFilters }: ExportsDi
               <div className="flex flex-wrap gap-1.5">
                 {fields.map((field) => (
                   <span
-                    key={field.label}
+                    key={field.key ?? field.label}
                     className="inline-flex h-6 max-w-full items-center gap-1 rounded-md border bg-card px-2 text-xs font-medium"
                   >
                     <span className="shrink-0 font-normal text-muted-foreground">{field.label}</span>

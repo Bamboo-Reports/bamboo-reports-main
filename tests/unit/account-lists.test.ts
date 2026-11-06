@@ -52,6 +52,26 @@ describe("account lists", () => {
     expect(expandAccountLists(stored, lists).accountNameValues).toEqual([{ value: "Kept Co", mode: "include" }])
   })
 
+  it("keeps stored names for a list that is not to hand while refreshing the known one", () => {
+    // The stored names came from both lists; "b" is not in this context yet.
+    const stored = createDefaultFilters({
+      accountListValues: [
+        { value: "a", mode: "include" },
+        { value: "new", mode: "include" },
+      ],
+      accountNameValues: [
+        { value: "Acme Corp", mode: "include" },
+        { value: "Fresh Co", mode: "include" },
+      ],
+    })
+    expect(expandAccountLists(stored, lists).accountNameValues).toEqual(
+      expect.arrayContaining([
+        { value: "Acme Corp", mode: "include" },
+        { value: "Fresh Co", mode: "include" },
+      ])
+    )
+  })
+
   it("clears names when no list is selected", () => {
     const filters = withAccountLists(createDefaultFilters({ accountNameValues: [{ value: "Old", mode: "include" }] }), [], lists)
     expect(filters.accountNameValues).toEqual([])

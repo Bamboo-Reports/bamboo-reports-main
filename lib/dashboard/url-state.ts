@@ -132,9 +132,10 @@ function sanitizeFilters(raw: unknown): Partial<Filters> | null {
   const template = createDefaultFilters()
   const out: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
-    if (!(key in template)) continue
+    // Own keys only: "constructor" or "__proto__" in a crafted link must not pass as a filter.
+    if (!Object.hasOwn(template, key)) continue
     const expected = template[key as keyof Filters]
-    if (key in RANGE_KEYS) {
+    if (Object.hasOwn(RANGE_KEYS, key)) {
       if (isRange(value)) out[key] = value
     } else if (Array.isArray(expected)) {
       if (isFilterValueList(value)) out[key] = value

@@ -63,9 +63,43 @@ export function selectionSummary(filters: unknown): string | null {
   if (!filters || typeof filters !== "object") return null
   const selection = (filters as { selection?: unknown }).selection
   if (!selection || typeof selection !== "object") return null
-  const s = selection as { dataset?: unknown; accountNames?: unknown; centerKeys?: unknown; prospectIds?: unknown }
+  const s = selection as { dataset?: unknown; count?: unknown; accountNames?: unknown; centerKeys?: unknown; prospectIds?: unknown }
   const count = (value: unknown) => (Array.isArray(value) ? value.length : 0)
-  const n = s.dataset === "centers" ? count(s.centerKeys) : s.dataset === "prospects" ? count(s.prospectIds) : count(s.accountNames)
+  const n =
+    typeof s.count === "number"
+      ? s.count
+      : s.dataset === "centers"
+        ? count(s.centerKeys)
+        : s.dataset === "prospects"
+          ? count(s.prospectIds)
+          : count(s.accountNames)
   const noun = s.dataset === "centers" ? "centre" : s.dataset === "prospects" ? "prospect" : "account"
   return `${n.toLocaleString()} ${noun}${n === 1 ? "" : "s"}`
+}
+
+/** Values of one filter the exports list carries; the rest is reported as a count. */
+export const MAX_LISTED_FILTER_VALUES = 50
+
+/**
+ * The saved filters of an export, cut down for the My exports list: a row
+ * selection becomes its dataset and count (not thousands of keys), and a
+ * long value list keeps its first values plus how many more there were. The
+ * list only describes the filters; it never re-applies them.
+ */
+export function summarizeExportFilters(filters: unknown): unknown {
+  if (!filters || typeof filters !== "object" || Array.isArray(filters)) return filters
+  const out: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(filters as Record<string, unknown>)) {
+    if (key === "selection" && value && typeof value === "object") {
+      const s = value as { dataset?: unknown; accountNames?: unknown; centerKeys?: unknown; prospectIds?: unknown }
+      const keys = s.dataset === "centers" ? s.centerKeys : s.dataset === "prospects" ? s.prospectIds : s.accountNames
+      out[key] = { dataset: s.dataset, count: Array.isArray(keys) ? keys.length : 0 }
+    } else if (Array.isArray(value) && value.length > MAX_LISTED_FILTER_VALUES) {
+      const more = value.length - MAX_LISTED_FILTER_VALUES
+      out[key] = [...value.slice(0, MAX_LISTED_FILTER_VALUES), { value: `and ${more.toLocaleString()} more`, mode: "include" }]
+    } else {
+      out[key] = value
+    }
+  }
+  return out
 }

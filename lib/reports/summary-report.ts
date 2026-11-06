@@ -3,6 +3,7 @@ import { FILTER_METADATA } from "@/lib/analytics/filter-metadata"
 import { compareRangeLabels } from "@/lib/utils/range-order"
 import { accountHeadcountChartTitle } from "@/lib/utils/chart-helpers"
 import { formatRevenueInMillions, formatRevenueRange } from "@/lib/utils/helpers"
+import { FIELD_LABELS } from "@/lib/dashboard/filter-spec"
 
 /**
  * Builds the data model behind the downloadable summary PDF: the headline
@@ -137,38 +138,8 @@ const GROUP_LABEL: Record<"account" | "center" | "prospect", ReportFilterGroup> 
 
 // Filter names as the sidebar shows them. FILTER_METADATA keeps its own
 // labels because analytics reports filter_name with them.
-const REPORT_LABEL: Partial<Record<keyof Filters, string>> = {
-  accountVisibilityMode: "Accounts to show",
-  accountGlobalLegalNameKeywords: "Account name",
-  accountListValues: "Account list",
-  accountHqRevenueRange: "HQ revenue",
-  accountCenterEmployeesRangeValues: "GCC headcount (India)",
-  accountYearsInIndiaRange: "Years in India",
-  accountPrimaryCategoryValues: "Industry",
-  accountHqCountryValues: "HQ country",
-  accountHqRegionValues: "HQ region",
-  accountHqEmployeeRangeValues: "HQ employee range",
-  accountHqIndustryValues: "Sub industry",
-  accountPrimaryNatureValues: "Segment",
-  accountNasscomStatusValues: "NASSCOM listing",
-  centerStatusValues: "Status",
-  centerTypeValues: "Centre type",
-  functionNameValues: "Services offered",
-  centerCityValues: "City",
-  centerIncYearRange: "Incorporation year",
-  centerEmployeesRangeValues: "Centre headcount",
-  centerStateValues: "State",
-  centerFocusValues: "Centre focus",
-  techSoftwareInUseKeywords: "Software in use",
-  prospectTitleKeywords: "Job title",
-  prospectHeadTypeValues: "Role",
-  prospectLevelValues: "Level",
-  prospectDepartmentValues: "Department",
-  prospectCityValues: "City",
-}
-
 const reportLabel = (key: keyof Filters) =>
-  REPORT_LABEL[key] ?? (FILTER_METADATA as Record<string, { label: string }>)[key]?.label ?? key
+  FIELD_LABELS[key] ?? (FILTER_METADATA as Record<string, { label: string }>)[key]?.label ?? key
 
 const VISIBILITY_LABEL: Record<AccountVisibilityMode, string> = {
   all: "All accounts (GCC and non-GCC)",

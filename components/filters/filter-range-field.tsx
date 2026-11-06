@@ -5,7 +5,9 @@ import { toast } from "sonner"
 import { Slider } from "@/components/ui/slider"
 import { cn } from "@/lib/utils"
 
-export type RangeUnit = "money" | "years" | "year"
+import type { RangeUnit } from "@/lib/dashboard/filter-spec"
+
+export type { RangeUnit }
 
 type Bounds = { min: number; max: number }
 

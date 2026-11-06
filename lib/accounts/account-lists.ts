@@ -130,7 +130,13 @@ export function expandAccountLists(filters: Filters, lists: AccountList[]): Filt
     }
     ;(entry.mode === "exclude" ? exclude : include).push(...list.accounts)
   }
-  if (missing && include.length === 0 && exclude.length === 0) return filters
+  // A list that is not to hand (another user's, deleted, or created a moment
+  // ago and not yet in this context) keeps the names stored with it, so its
+  // accounts still apply; the known lists' names are added so an edit to one
+  // of them still reaches the filters.
+  if (missing) {
+    for (const entry of filters.accountNameValues) (entry.mode === "exclude" ? exclude : include).push(entry.value)
+  }
   const dedupe = (names: string[], mode: FilterValue["mode"]): FilterValue[] =>
     Array.from(new Set(names)).map((value) => ({ value, mode }))
   return { ...filters, accountNameValues: [...dedupe(include, "include"), ...dedupe(exclude, "exclude")] }
