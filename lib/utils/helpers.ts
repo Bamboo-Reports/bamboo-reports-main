@@ -14,6 +14,36 @@ export const formatRevenueInMillions = (value: number): string => {
   return `${value.toLocaleString()}M`
 }
 
+const REVENUE_AMOUNT = /^(\d+(?:\.\d+)?)\s*(Mn|Bn|M|B)$/i
+
+const revenueAmount = (part: string): string | null => {
+  const match = part.trim().match(REVENUE_AMOUNT)
+  return match ? `$${match[1]}${match[2][0].toUpperCase()}` : null
+}
+
+/**
+ * A stored revenue range ("10Mn - 50Mn", "<10Mn", ">50Bn") in the form the
+ * revenue filter uses: "$10M to $50M", "Under $10M", "$50B+". Anything else
+ * is returned as it is.
+ */
+export const formatRevenueRange = (raw: string | null | undefined): string => {
+  const text = raw?.trim() ?? ""
+  if (text.startsWith("<")) {
+    const amount = revenueAmount(text.slice(1))
+    return amount ? `Under ${amount}` : text
+  }
+  if (text.startsWith(">")) {
+    const amount = revenueAmount(text.slice(1))
+    return amount ? `${amount}+` : text
+  }
+  const parts = text.split(/\s*-\s*/)
+  if (parts.length === 2) {
+    const [from, to] = parts.map(revenueAmount)
+    if (from && to) return `${from} to ${to}`
+  }
+  return text
+}
+
 /**
  * Get paginated data
  */

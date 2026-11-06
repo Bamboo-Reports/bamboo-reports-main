@@ -162,6 +162,8 @@ interface PieChartCardProps {
   order?: "size" | "range"
   /** A short note on how to read the chart, behind an info icon next to the title. */
   note?: string
+  /** Display form of a slice name (sorting still uses the raw name). Keep it stable. */
+  formatName?: (name: string) => string
 }
 
 export const PieChartCard = memo(({
@@ -176,6 +178,7 @@ export const PieChartCard = memo(({
   loading = false,
   order = "size",
   note,
+  formatName,
 }: PieChartCardProps) => {
   const OTHERS_THRESHOLD_PERCENT = 5
   // "Total accounts" reads as "Accounts: 1,184" in the tooltip.
@@ -281,8 +284,10 @@ export const PieChartCard = memo(({
       })
     }
 
-    return majorSegments
-  }, [safeData, dataKey, total, order])
+    return formatName
+      ? majorSegments.map((segment) => (segment.name === "Others" ? segment : { ...segment, name: formatName(segment.name) }))
+      : majorSegments
+  }, [safeData, dataKey, total, order, formatName])
 
   const options = React.useMemo<Options>(() => {
     return {

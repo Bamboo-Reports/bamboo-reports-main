@@ -239,3 +239,15 @@ describe("accountHeadcountChartTitle", () => {
     expect(accountHeadcountChartTitle("all")).toBe("Aggregate headcount (India)")
   })
 })
+
+describe("formatRevenueRange", () => {
+  it("writes stored ranges the way the revenue filter does", async () => {
+    const { formatRevenueRange } = await import("@/lib/utils/helpers")
+    expect(formatRevenueRange("10Mn - 50Mn")).toBe("$10M to $50M")
+    expect(formatRevenueRange("501Mn - 1Bn")).toBe("$501M to $1B")
+    expect(formatRevenueRange("<10Mn")).toBe("Under $10M")
+    expect(formatRevenueRange(">50Bn")).toBe("$50B+")
+    expect(formatRevenueRange("Unknown")).toBe("Unknown")
+    expect(formatRevenueRange(null)).toBe("")
+  })
+})

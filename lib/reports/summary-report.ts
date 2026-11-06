@@ -2,7 +2,7 @@ import type { AccountVisibilityMode, ChartData, Filters, FilterValue } from "@/l
 import { FILTER_METADATA } from "@/lib/analytics/filter-metadata"
 import { compareRangeLabels } from "@/lib/utils/range-order"
 import { accountHeadcountChartTitle } from "@/lib/utils/chart-helpers"
-import { formatRevenueInMillions } from "@/lib/utils/helpers"
+import { formatRevenueInMillions, formatRevenueRange } from "@/lib/utils/helpers"
 
 /**
  * Builds the data model behind the downloadable summary PDF: the headline
@@ -429,6 +429,14 @@ export function buildReportChart(
   return { title, countLabel, total, segments: major, othersMembers }
 }
 
+/** Renames a chart's segments for display, after they were sorted by their raw names. */
+function withSegmentNames(chart: ReportChart, format: (name: string) => string): ReportChart {
+  return {
+    ...chart,
+    segments: chart.segments.map((segment) => (segment.name === "Others" ? segment : { ...segment, name: format(segment.name) })),
+  }
+}
+
 export function buildReportChartGroups(
   sources: SummaryReportChartSources | undefined,
   counts: SummaryReportCounts,
@@ -446,7 +454,7 @@ export function buildReportChartGroups(
     charts: [
       buildReportChart("Country", "Accounts", accountSrc.regionData),
       buildReportChart("Industry", "Accounts", accountSrc.primaryNatureData),
-      buildReportChart("Revenue range", "Accounts", accountSrc.revenueRangeData, "range"),
+      withSegmentNames(buildReportChart("Revenue range", "Accounts", accountSrc.revenueRangeData, "range"), formatRevenueRange),
       buildReportChart(accountHeadcountChartTitle(visibilityMode), "Accounts", accountSrc.employeesRangeData, "range"),
     ],
   })
