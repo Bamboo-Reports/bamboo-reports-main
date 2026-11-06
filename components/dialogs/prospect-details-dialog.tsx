@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog"
 import { RiArrowRightUpLine, RiCheckLine, RiCloseLine, RiFileCopyLine, RiLinkedinBoxLine, RiMailLine, RiSearchLine } from "@remixicon/react"
 import type { Prospect } from "@/lib/types"
+import { knownText } from "@/lib/utils/helpers"
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard"
 import { Button } from "@/components/ui/button"
 import { HintTooltip } from "@/components/ui/tooltip"
@@ -207,12 +208,6 @@ export function ProspectDetailsDialog({
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? "")
     .join("")
-  // City, state and country each on their own row; a blank or "TBA" value is
-  // left out, so only what is known shows.
-  const known = (value: string | null | undefined) => {
-    const trimmed = value?.trim()
-    return trimmed && trimmed.toUpperCase() !== "TBA" ? trimmed : null
-  }
   const engaged = isEngagedProspect(p)
   const headType = p.head_type?.trim()
   const showHeadType = Boolean(headType && headType.toLowerCase() !== "others")
@@ -402,9 +397,9 @@ export function ProspectDetailsDialog({
                   title="Location"
                   rows={[
                     ["Centre", p.center_name],
-                    ["City", known(p.prospect_city)],
-                    ["State", known(p.prospect_state)],
-                    ["Country", known(p.prospect_country)],
+                    ["City", knownText(p.prospect_city)],
+                    ["State", knownText(p.prospect_state)],
+                    ["Country", knownText(p.prospect_country)],
                   ]}
                 />
               </div>

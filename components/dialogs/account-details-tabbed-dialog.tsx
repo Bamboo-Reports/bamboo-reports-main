@@ -36,6 +36,7 @@ import { accountHistoryItem } from "@/lib/dashboard/record-history"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { cn } from "@/lib/utils"
+import { knownText } from "@/lib/utils/helpers"
 import {
   FactChip,
   FactGroup,
@@ -366,7 +367,6 @@ export function AccountDetailsDialog({
 
   if (!account) return null
 
-  const hqLine = [account.account_hq_city, account.account_hq_state, account.account_hq_country].filter(Boolean).join(", ") || account.account_hq_region
   const tickerLabel = ticker ? [financialData?.exchange, ticker].filter(Boolean).join(": ") : null
   const offerings = (account.account_hq_key_offerings ?? "").split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
   const shownOfferings = showAllOfferings ? offerings : offerings.slice(0, VISIBLE_OFFERINGS)
@@ -389,11 +389,10 @@ export function AccountDetailsDialog({
           </DialogDescription>
           <Tabs value={activeTab} onValueChange={handleTabChange} className="flex min-h-0 flex-1 flex-col">
             <div className="shrink-0 border-b px-6 pt-5">
-              <div className="flex items-start gap-3">
+              <div className="flex items-center gap-3">
                 <CompanyLogo domain={account.account_hq_website ?? undefined} companyName={account.account_global_legal_name} size="md" theme="auto" />
                 <div className="min-w-0 flex-1">
                   <DialogTitle className="truncate text-xl font-semibold tracking-[-0.015em]">{account.account_global_legal_name}</DialogTitle>
-                  {hqLine && <p className="mt-0.5 text-[13px] text-muted-foreground">{hqLine}</p>}
                   {/* Industry, type, ticker, listings and rankings live in the fact sheet; only the Non-GCC flag is called out here. */}
                   {account.account_visibility === "exclude" && (
                     <div className="mt-2">
@@ -461,7 +460,7 @@ export function AccountDetailsDialog({
                 <div className="min-w-0 px-6 py-5">
                   {account.account_about?.trim() && (
                     <Section title="About">
-                      <p className="max-w-[72ch] whitespace-pre-line text-sm leading-relaxed">{account.account_about}</p>
+                      <p className="whitespace-pre-line text-sm leading-relaxed">{account.account_about}</p>
                     </Section>
                   )}
 
@@ -559,8 +558,16 @@ export function AccountDetailsDialog({
                       ["Sub industry", account.account_hq_sub_industry],
                       ["Category", account.account_primary_category],
                       ["Nature", account.account_primary_nature],
-                      // City, state and country are in the header; only the region is not.
-                      ["HQ region", account.account_hq_region],
+                    ]}
+                  />
+                  <FactGroup
+                    title="Headquarters"
+                    rows={[
+                      // Each on its own row; blank or "TBA" is left out.
+                      ["City", knownText(account.account_hq_city)],
+                      ["State", knownText(account.account_hq_state)],
+                      ["Country", knownText(account.account_hq_country)],
+                      ["Region", knownText(account.account_hq_region)],
                     ]}
                   />
                   <FactGroup

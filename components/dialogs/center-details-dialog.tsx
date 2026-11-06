@@ -27,7 +27,7 @@ import { Button } from "@/components/ui/button"
 import { HintTooltip } from "@/components/ui/tooltip"
 import { CompanyLogo } from "@/components/ui/company-logo"
 import { TechTreemap } from "@/components/charts/tech-treemap"
-import { formatCenterLocation } from "@/lib/utils/helpers"
+import { knownText } from "@/lib/utils/helpers"
 import { useCenterDetail } from "@/hooks/use-center-detail"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
@@ -124,8 +124,6 @@ export function CenterDetailsDialog({
 
   const primaryServices = parseLines(centerServices?.primary_service)
   const focusRegions = parseLines(centerServices?.focus_region)
-  const location = formatCenterLocation(center.center_city, center.center_state)
-  const showCountry = center.center_country?.trim().toUpperCase() !== "TBA" && location !== "India"
   const announced = [center.announced_month, center.announced_year].filter(Boolean).join(" ")
   const trackLink = (linkType: "website" | "linkedin") =>
     captureEvent(ANALYTICS_EVENTS.OUTBOUND_LINK_CLICKED, { entity: "center", link_type: linkType })
@@ -151,8 +149,6 @@ export function CenterDetailsDialog({
                 )}
               </div>
               <p className="mt-0.5 text-[13px] text-muted-foreground">
-                {[location, showCountry ? center.center_country : null].filter(Boolean).join(", ")}
-                {location && " · "}
                 {onAccountOpen ? (
                   <button
                     type="button"
@@ -273,6 +269,10 @@ export function CenterDetailsDialog({
                 <FactGroup
                   title="Location"
                   rows={[
+                    // City, state and country each on their own row; blank or "TBA" is left out.
+                    ["City", knownText(center.center_city)],
+                    ["State", knownText(center.center_state)],
+                    ["Country", knownText(center.center_country)],
                     ["Micro location", present(center.center_micro_location) ? center.center_micro_location : null],
                     ["Zip code", present(center.center_zip_code) ? center.center_zip_code : null],
                     ["Boardline", present(center.center_boardline) ? center.center_boardline : null],

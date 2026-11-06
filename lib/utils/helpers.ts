@@ -52,6 +52,12 @@ export const copyToClipboard = (text: string) => {
  * Values that are null, empty, or exactly "TBA" (case-insensitive) are ignored.
  * If nothing meaningful remains after filtering, falls back to `country`, then "India".
  */
+/** A trimmed value, or null when it is blank or the "TBA" placeholder. */
+export const knownText = (value: string | null | undefined): string | null => {
+  const trimmed = value?.trim()
+  return trimmed && trimmed.toUpperCase() !== "TBA" ? trimmed : null
+}
+
 export const formatProspectLocation = (
   city: string | null | undefined,
   state: string | null | undefined,
