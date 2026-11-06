@@ -1,11 +1,11 @@
 "use client"
 
 import { ChartTooltipCard } from "@/components/ui/chart-tooltip-card"
-import { RecenterControl } from "@/components/maps/recenter-control"
+import { MapControls } from "@/components/maps/map-controls"
 import { DONUT_CHART_COLORS } from "@/lib/utils/chart-helpers"
 import { bubbleRadius } from "@/lib/maps/bubble-size"
 import React, { useMemo, useState, useEffect, useCallback, useLayoutEffect } from "react"
-import { Map as MapGL, Source, Layer, NavigationControl, FullscreenControl, type MapRef, type ViewStateChangeEvent } from "@vis.gl/react-maplibre"
+import { Map as MapGL, Source, Layer, type MapRef, type ViewStateChangeEvent } from "@vis.gl/react-maplibre"
 import type { ExpressionSpecification } from "maplibre-gl"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
@@ -255,6 +255,14 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
   const maxCityCount = useMemo(() => Math.max(1, ...cityData.map((c) => c.count)), [cityData])
   const getCoreRadiusForCount = useCallback(
     (count: number) => bubbleRadius(count, maxCityCount),
+    [maxCityCount]
+  )
+  // Reference sizes for the legend: round counts up to the largest city in view.
+  const sizeLegend = useMemo(
+    () =>
+      [1, 10, 100, 1000]
+        .filter((count) => count <= maxCityCount)
+        .map((count) => ({ count, radius: bubbleRadius(count, maxCityCount) })),
     [maxCityCount]
   )
 
@@ -509,12 +517,7 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
           handleFatalError(message)
         }}
       >
-        {/* Navigation Controls - Zoom and Rotation */}
-        <NavigationControl position="top-left" showCompass={true} showZoom={true} />
-
-        {/* Fullscreen Control */}
-        <FullscreenControl position="top-left" />
-        <RecenterControl onRecenter={handleRecenter} />
+        <MapControls onRecenter={handleRecenter} />
 
         <DebugLocationSearch mapRef={mapRef} />
 
@@ -610,6 +613,25 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
             </div>
           )
         })()}
+
+        {/* Size legend: what a bubble's size means, drawn at the map's own sizes. */}
+        {sizeLegend.length > 1 && (
+          <div className="absolute bottom-4 left-4 z-10 rounded-lg border bg-card p-3 shadow-float">
+            <div className="mb-2 text-xs font-medium text-muted-foreground">Centres per city</div>
+            <div className="flex items-end gap-4">
+              {sizeLegend.map(({ count, radius }) => (
+                <div key={count} className="flex flex-col items-center gap-1">
+                  <span
+                    className="block rounded-full"
+                    style={{ width: radius * 2, height: radius * 2, background: DONUT_CHART_COLORS[5] }}
+                    aria-hidden
+                  />
+                  <span className="text-[11px] tabular-nums text-muted-foreground">{count.toLocaleString("en-US")}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </MapGL>
     </div>
     )

@@ -1,10 +1,10 @@
 "use client"
 
 import { ChartTooltipCard } from "@/components/ui/chart-tooltip-card"
-import { RecenterControl } from "@/components/maps/recenter-control"
+import { MapControls } from "@/components/maps/map-controls"
 import { DONUT_CHART_COLORS } from "@/lib/utils/chart-helpers"
 import React, { useMemo, useState, useEffect, useLayoutEffect } from "react"
-import { Map as MapGL, Source, Layer, NavigationControl, FullscreenControl, type MapRef } from "@vis.gl/react-maplibre"
+import { Map as MapGL, Source, Layer, type MapRef } from "@vis.gl/react-maplibre"
 import type { ExpressionSpecification, FilterSpecification } from "maplibre-gl"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
@@ -500,9 +500,7 @@ export function CentersChoroplethMap({
           handleFatalError(message)
         }}
       >
-        <NavigationControl position="top-left" showCompass={true} showZoom={true} />
-        <FullscreenControl position="top-left" />
-        <RecenterControl onRecenter={handleRecenter} />
+        <MapControls onRecenter={handleRecenter} />
 
         <DebugLocationSearch mapRef={mapRef} />
 
