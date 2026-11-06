@@ -27,6 +27,7 @@ import { useEntityTableProps } from "@/hooks/use-entity-table-props"
 import { useProductTour } from "@/hooks/use-product-tour"
 import { useServerDashboardData } from "@/hooks/use-server-dashboard-data"
 import { useSummaryReport } from "@/hooks/use-summary-report"
+import { useDashboardUrlSync } from "@/hooks/use-dashboard-url-sync"
 import { canExportData } from "@/lib/auth/roles"
 import type { FacetRanges } from "@/lib/dashboard/api-client"
 import {
@@ -135,6 +136,25 @@ function DashboardContent(): React.JSX.Element | null {
     if (!ranges) return
     setServerRanges((prev) => (prev && JSON.stringify(prev) === JSON.stringify(ranges) ? prev : ranges))
   }, [serverData.facets])
+
+  // Filters and view live in the address bar too, so a refresh or a pasted link keeps them.
+  const setViewFor = useCallback(
+    (section: "accounts" | "centers" | "prospects", view: "chart" | "data" | "map") => {
+      if (section === "accounts") setAccountsView(view)
+      else if (section === "centers") setCentersView(view)
+      else if (view !== "map") setProspectsView(view)
+    },
+    [setAccountsView, setCentersView, setProspectsView]
+  )
+  useDashboardUrlSync({
+    filters,
+    bounds: serverRanges,
+    applyFilters: handleLoadSavedFilters,
+    section: activeSection,
+    setSection: setActiveSection,
+    view: activeView,
+    setView: setViewFor,
+  })
 
   const {
     accounts: accountsServerProps,
