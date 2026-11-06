@@ -1,6 +1,7 @@
 "use client"
 
 import { ChartTooltipCard } from "@/components/ui/chart-tooltip-card"
+import { RecenterControl } from "@/components/maps/recenter-control"
 import { DONUT_CHART_COLORS } from "@/lib/utils/chart-helpers"
 import { bubbleRadius } from "@/lib/maps/bubble-size"
 import React, { useMemo, useState, useEffect, useCallback, useLayoutEffect } from "react"
@@ -513,6 +514,7 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
 
         {/* Fullscreen Control */}
         <FullscreenControl position="top-left" />
+        <RecenterControl onRecenter={handleRecenter} />
 
         <DebugLocationSearch mapRef={mapRef} />
 

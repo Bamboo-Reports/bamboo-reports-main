@@ -1,6 +1,7 @@
 "use client"
 
 import { ChartTooltipCard } from "@/components/ui/chart-tooltip-card"
+import { RecenterControl } from "@/components/maps/recenter-control"
 import { DONUT_CHART_COLORS } from "@/lib/utils/chart-helpers"
 import React, { useMemo, useState, useEffect, useLayoutEffect } from "react"
 import { Map as MapGL, Source, Layer, NavigationControl, FullscreenControl, type MapRef } from "@vis.gl/react-maplibre"
@@ -501,6 +502,7 @@ export function CentersChoroplethMap({
       >
         <NavigationControl position="top-left" showCompass={true} showZoom={true} />
         <FullscreenControl position="top-left" />
+        <RecenterControl onRecenter={handleRecenter} />
 
         <DebugLocationSearch mapRef={mapRef} />
 
