@@ -91,16 +91,19 @@ function MoreFilters({ section }: { section: "accounts" | "centers" }) {
 
 const CURRENT_YEAR = new Date().getFullYear()
 
-const REVENUE_PRESETS: RangePreset[] = [
-  { label: "Under $100M", range: [0, 100] },
-  { label: "$100M to $1B", range: [100, 1000] },
-  { label: "$1B to $10B", range: [1000, 10000] },
+// Ranges are inclusive and the values are whole numbers (revenue in $M,
+// years), so neighbouring presets end one below where the next starts: an
+// account at exactly $1B belongs to "$1B to $10B" only, never to two presets.
+export const REVENUE_PRESETS: RangePreset[] = [
+  { label: "Under $100M", range: [0, 99] },
+  { label: "$100M to $1B", range: [100, 999] },
+  { label: "$1B to $10B", range: [1000, 9999] },
   { label: "$10B+", range: [10000, Number.MAX_SAFE_INTEGER] },
 ]
 
-const YEARS_IN_INDIA_PRESETS: RangePreset[] = [
-  { label: "0 to 5", range: [0, 5] },
-  { label: "5 to 15", range: [5, 15] },
+export const YEARS_IN_INDIA_PRESETS: RangePreset[] = [
+  { label: "Under 5", range: [0, 4] },
+  { label: "5 to 14", range: [5, 14] },
   { label: "15+", range: [15, Number.MAX_SAFE_INTEGER] },
 ]
 
