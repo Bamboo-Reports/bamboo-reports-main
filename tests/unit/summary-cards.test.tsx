@@ -218,7 +218,9 @@ describe("summary-cards", () => {
     if (headcountCard) fireEvent.click(headcountCard)
     expect(toast.info).toHaveBeenCalledWith(
       "Headcount is an overview figure",
-      expect.objectContaining({ description: "Only Accounts, Centres and Prospects open as views" })
+      expect.objectContaining({
+        description: "Employees at the centres shown, leaving out manufacturing, sales & marketing, BPO and distribution centres",
+      })
     )
   })
 })
