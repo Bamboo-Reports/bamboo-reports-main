@@ -30,6 +30,7 @@ import { Button } from '@/components/ui/button'
 import { HintTooltip, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useCurrentProfile } from '@/hooks/use-current-profile'
 import { cn } from '@/lib/utils'
+import { hasAccountNameSearch } from '@/lib/utils/filter-helpers'
 import type { AccountVisibilityMode, Alias, AvailableOptions, Filters } from '@/lib/types'
 
 const ACCOUNT_VISIBILITY_OPTIONS: Array<{ value: AccountVisibilityMode; label: string }> = [
@@ -139,6 +140,11 @@ export function FiltersSidebar({
     SECTIONS.map(({ id }) => [id, countActiveFields(id, pendingFilters, bounds)])
   ) as Record<FilterSectionId, number>
   const totalActiveFilters = countActiveFilters(pendingFilters, bounds)
+  // Accounts picked by name are shown whatever their type, so the GCC or
+  // Non-GCC choice does not hide them. Say so while it applies.
+  const namedAccountsOverrideScope =
+    optimisticVisibilityMode !== "all" &&
+    hasAccountNameSearch(pendingFilters.accountGlobalLegalNameKeywords, pendingFilters.accountNameValues)
 
   const checkScroll = useCallback(() => {
     requestAnimationFrame(() => {
@@ -449,6 +455,9 @@ export function FiltersSidebar({
                 )
               })}
             </div>
+            {namedAccountsOverrideScope && (
+              <p className="mt-1.5 text-xs text-muted-foreground">Accounts you name are shown either way</p>
+            )}
           </div>
         </div>
 
