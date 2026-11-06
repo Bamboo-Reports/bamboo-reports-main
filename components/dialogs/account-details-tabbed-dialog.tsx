@@ -26,6 +26,7 @@ import { ProspectGridCard } from "@/components/cards/prospect-grid-card"
 import { RECORD_LIST_LAYOUT_STORAGE_KEY, useDataLayoutPreference } from "@/hooks/use-data-layout-preference"
 import { Button } from "@/components/ui/button"
 import { TechTreemap } from "@/components/charts/tech-treemap"
+import { AnnualRevenueChart } from "@/components/charts/annual-revenue-chart"
 import { requestAccountFinancialInfo } from "@/lib/finance/request-client"
 import { useAccountRelated } from "@/hooks/use-account-related"
 import { RelatedLoadError } from "./related-load-error"
@@ -34,13 +35,6 @@ import { accountHistoryItem } from "@/lib/dashboard/record-history"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { cn } from "@/lib/utils"
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from "@/components/ui/chart"
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import {
   FactChip,
   FactGroup,
@@ -58,26 +52,12 @@ function formatCompactNumber(value: number | null): string | null {
   }).format(value)
 }
 
-function formatRevenueAxis(value: number): string {
-  return new Intl.NumberFormat("en-US", {
-    notation: "compact",
-    maximumFractionDigits: 1,
-  }).format(value)
-}
-
 const withProtocol = (url: string) => (url.startsWith("http") ? url : `https://${url}`)
 
 /** Rows (or cards) per page in the centre and prospect lists; each fills 2, 3 or 4 grid columns evenly. */
 const RECORD_PAGE_SIZES = [12, 24, 48, 96] as const
 const PAGE_SIZE = RECORD_PAGE_SIZES[0]
 const VISIBLE_OFFERINGS = 8
-
-const revenueChartConfig = {
-  revenue: {
-    label: "Revenue",
-    color: "hsl(var(--chart-1))",
-  },
-} satisfies ChartConfig
 
 
 interface AccountDetailsDialogProps {
@@ -520,26 +500,7 @@ export function AccountDetailsDialog({
                       />
                     )}
                     {ticker && !financialError && !financialLoading && financialData && financialData.annualRevenueSeries.length > 0 && (
-                      <div className="mt-3 rounded-xl border bg-card px-3.5 pb-2 pt-3">
-                        <div className="mb-1 flex justify-between text-xs text-muted-foreground">
-                          <span>Annual revenue (FY)</span>
-                        </div>
-                        <ChartContainer config={revenueChartConfig} className="h-[200px] w-full">
-                          <AreaChart data={financialData.annualRevenueSeries} margin={{ left: 4, right: 8, top: 8, bottom: 4 }}>
-                            <defs>
-                              <linearGradient id="annualRevenueFill" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="var(--color-revenue)" stopOpacity={0.25} />
-                                <stop offset="95%" stopColor="var(--color-revenue)" stopOpacity={0.03} />
-                              </linearGradient>
-                            </defs>
-                            <CartesianGrid vertical={false} />
-                            <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} />
-                            <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={formatRevenueAxis} width={56} />
-                            <ChartTooltip cursor={false} content={<ChartTooltipContent formatter={(value) => formatCompactNumber(value as number) ?? "N/A"} />} />
-                            <Area type="monotone" dataKey="revenue" fill="url(#annualRevenueFill)" stroke="var(--color-revenue)" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
-                          </AreaChart>
-                        </ChartContainer>
-                      </div>
+                      <AnnualRevenueChart series={financialData.annualRevenueSeries} className="mt-3" />
                     )}
                   </Section>
 
@@ -571,14 +532,12 @@ export function AccountDetailsDialog({
 
                   {relatedLoading && (
                     <Section title="Technology stack">
-                      <Skeleton className="h-[320px] w-full rounded-xl" />
+                      <Skeleton className="h-[240px] w-full rounded-xl" />
                     </Section>
                   )}
                   {!relatedLoading && accountTech.length > 0 && (
                     <Section title="Technology stack">
-                      <div className="h-[320px] overflow-hidden rounded-xl border lg:h-[380px]">
-                        <TechTreemap tech={accountTech} heightClass="h-full" showTitle={false} />
-                      </div>
+                      <TechTreemap tech={accountTech} />
                     </Section>
                   )}
                 </div>

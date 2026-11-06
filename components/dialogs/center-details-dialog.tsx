@@ -254,14 +254,12 @@ export function CenterDetailsDialog({
 
               {detailLoading && (
                 <Section title="Technology stack">
-                  <Skeleton className="h-[320px] w-full rounded-xl" />
+                  <Skeleton className="h-[240px] w-full rounded-xl" />
                 </Section>
               )}
               {!detailLoading && centerTech.length > 0 && (
                 <Section title="Technology stack">
-                  <div className="h-[320px] overflow-hidden rounded-xl border lg:h-[380px]">
-                    <TechTreemap tech={centerTech} heightClass="h-full" showTitle={false} />
-                  </div>
+                  <TechTreemap tech={centerTech} />
                 </Section>
               )}
             </div>
