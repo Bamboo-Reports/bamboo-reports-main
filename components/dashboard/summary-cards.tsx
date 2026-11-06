@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { TruncatedText } from '@/components/ui/truncated-text'
 import { useNumberFormatPreference } from '@/hooks/use-number-format-preference'
+import { HEADCOUNT_EXCLUDED_CENTER_TYPES } from '@/lib/dashboard/headcount'
 import { cn } from '@/lib/utils'
 
 // Truncate to one decimal instead of rounding, so 2,459 reads as 2.4K (not 2.5K)
@@ -177,6 +178,10 @@ interface SummaryCardsProps {
   updating?: boolean
 }
 
+const VIEWS_NOTE = "Only Accounts, Centres and Prospects open as views"
+// Why this can be lower than an account's "Centre employees": some centre types are left out.
+const HEADCOUNT_NOTE = `Employees at the centres shown, leaving out ${HEADCOUNT_EXCLUDED_CENTER_TYPES.map((type) => (type === type.toUpperCase() ? type : type.toLowerCase())).join(", ").replace(/, ([^,]*)$/, " and $1")} centres`
+
 export const SummaryCards = React.memo(function SummaryCards({
   filteredAccountsCount,
   totalAccountsCount,
@@ -222,6 +227,7 @@ export const SummaryCards = React.memo(function SummaryCards({
       iconClassName: 'text-muted-foreground',
       interactive: false,
       message: "Upcoming centres is an overview figure",
+      description: VIEWS_NOTE,
     },
     {
       id: 'prospects' as const,
@@ -242,6 +248,7 @@ export const SummaryCards = React.memo(function SummaryCards({
       iconClassName: 'text-muted-foreground',
       interactive: false,
       message: "Headcount is an overview figure",
+      description: HEADCOUNT_NOTE,
     },
   ]
 
@@ -262,7 +269,7 @@ export const SummaryCards = React.memo(function SummaryCards({
               }
               const message = card.message
               if (!message) return undefined
-              return () => toast.info(message, { id: `summary-readonly-${card.id}`, description: "Only Accounts, Centres and Prospects open as views" })
+              return () => toast.info(message, { id: `summary-readonly-${card.id}`, description: card.description })
             })()}
             onKeyDown={card.interactive ? (event) => {
               if (event.key === 'Enter' || event.key === ' ') {
