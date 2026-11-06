@@ -26,7 +26,6 @@ import type { Center, Service, Tech } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { HintTooltip } from "@/components/ui/tooltip"
 import { CompanyLogo } from "@/components/ui/company-logo"
-import { DialogBreadcrumb } from "@/components/ui/dialog-breadcrumb"
 import { TechTreemap } from "@/components/charts/tech-treemap"
 import { formatCenterLocation } from "@/lib/utils/helpers"
 import { useCenterDetail } from "@/hooks/use-center-detail"
@@ -139,14 +138,7 @@ export function CenterDetailsDialog({
         </DialogDescription>
 
         <div className="shrink-0 border-b px-6 pb-4 pt-5">
-          <DialogBreadcrumb
-            items={[
-              { label: center.account_global_legal_name, onClick: () => onOpenChange(false) },
-              { label: "Centres", onClick: () => onOpenChange(false) },
-              { label: center.center_name ?? "" },
-            ]}
-          />
-          <div className="mt-2 flex items-start gap-3">
+          <div className="flex items-start gap-3">
             <CompanyLogo domain={center.center_account_website ?? undefined} companyName={center.account_global_legal_name} size="md" theme="auto" />
             <div className="min-w-0 flex-1">
               <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">

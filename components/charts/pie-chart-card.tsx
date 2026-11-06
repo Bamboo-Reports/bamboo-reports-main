@@ -469,8 +469,11 @@ export const PieChartCard = memo(({
             </div>
           )
         ) : (
-          <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-            <p className="text-sm">No data available</p>
+          // Same height as the chart, so the card does not shrink in the grid.
+          <div className="flex h-[400px] flex-col items-center justify-center gap-1 text-center">
+            <RiPieChartLine className="mb-1 h-5 w-5 text-muted-foreground" aria-hidden />
+            <p className="text-sm font-medium text-foreground">No {countLineLabel.toLowerCase()} to show</p>
+            <p className="text-xs text-muted-foreground">None match the current filters</p>
           </div>
         )}
       </CardContent>

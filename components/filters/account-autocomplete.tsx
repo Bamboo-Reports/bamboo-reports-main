@@ -356,7 +356,7 @@ export function AccountAutocomplete({
         {isSuggestionsOpen && (
           <div
             ref={dropdownRef}
-            className="relative z-50 mt-1 w-full rounded-md border bg-popover shadow-float"
+            className="relative z-50 mt-1 w-full rounded-lg border bg-popover shadow-float"
             role="listbox"
             id={listboxId}
             aria-label="Account suggestions"
@@ -443,7 +443,7 @@ export function AccountAutocomplete({
         {isOpen && (isFetching ? inputValue : debouncedValue).trim() && suggestions.length === 0 && (
           <div
             ref={dropdownRef}
-            className="absolute z-50 mt-1 w-full rounded-md border bg-popover p-3 text-sm text-muted-foreground shadow-float"
+            className="absolute z-50 mt-1 w-full rounded-lg border bg-popover p-3 text-sm text-muted-foreground shadow-float"
             role="status"
             aria-live="polite"
           >

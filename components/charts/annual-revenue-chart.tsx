@@ -7,6 +7,9 @@ import { DONUT_CHART_COLORS } from "@/lib/utils/chart-helpers"
 import { cn } from "@/lib/utils"
 import type { RevenueSeriesPoint } from "@/lib/types"
 
+// The chart is 180px tall with a ~30px axis; a two-line tooltip is ~72px tall.
+const TOOLTIP_TOP = 180 - 30 - 72 - 4
+
 const chartConfig = {
   revenue: { label: "Revenue" },
 } satisfies ChartConfig
@@ -81,6 +84,10 @@ export function AnnualRevenueChart({ series, className }: AnnualRevenueChartProp
           <Tooltip
             cursor={false}
             isAnimationActive={false}
+            // Sit low, against the columns, so it never covers the figures printed
+            // above them; it still follows the pointer sideways.
+            position={{ y: TOOLTIP_TOP }}
+            offset={16}
             content={({ active, payload }) => {
               const point = payload?.[0]?.payload as RevenueSeriesPoint | undefined
               if (!active || !point) return null

@@ -111,9 +111,9 @@ export const TechTreemap = memo(({ tech, title = "Technology stack", className }
 
   if (categories.length === 0) {
     return (
-      <div className={cn("flex h-[152px] flex-col items-center justify-center gap-2 text-muted-foreground", className)}>
-        <RiStackLine className="h-5 w-5" />
-        <p className="text-sm">No tech stack data available</p>
+      <div className={cn("flex h-[152px] flex-col items-center justify-center gap-1 text-muted-foreground", className)}>
+        <RiStackLine className="mb-1 h-5 w-5" aria-hidden />
+        <p className="text-sm font-medium text-foreground">No tech stack on record</p>
       </div>
     )
   }

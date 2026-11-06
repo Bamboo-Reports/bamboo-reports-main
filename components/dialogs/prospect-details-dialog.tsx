@@ -10,12 +10,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { RiArrowRightUpLine, RiCheckLine, RiCloseLine, RiFileCopyLine, RiLinkedinBoxLine, RiMailLine, RiSearchLine } from "@remixicon/react"
-import { formatProspectLocation } from "@/lib/utils/helpers"
 import type { Prospect } from "@/lib/types"
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard"
 import { Button } from "@/components/ui/button"
 import { HintTooltip } from "@/components/ui/tooltip"
-import { DialogBreadcrumb, type DialogBreadcrumbItem } from "@/components/ui/dialog-breadcrumb"
 import { ProspectGridCard } from "@/components/cards/prospect-grid-card"
 import { useAccountRelated } from "@/hooks/use-account-related"
 import { RelatedLoadError } from "./related-load-error"
@@ -209,17 +207,15 @@ export function ProspectDetailsDialog({
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? "")
     .join("")
-  const location = formatProspectLocation(p.prospect_city, p.prospect_state)
-  const showCountry = p.prospect_country?.trim().toUpperCase() !== "TBA" && location !== "India"
+  // City, state and country each on their own row; a blank or "TBA" value is
+  // left out, so only what is known shows.
+  const known = (value: string | null | undefined) => {
+    const trimmed = value?.trim()
+    return trimmed && trimmed.toUpperCase() !== "TBA" ? trimmed : null
+  }
   const engaged = isEngagedProspect(p)
   const headType = p.head_type?.trim()
   const showHeadType = Boolean(headType && headType.toLowerCase() !== "others")
-
-  const breadcrumbItems: DialogBreadcrumbItem[] = [
-    ...(p.account_global_legal_name ? [{ label: p.account_global_legal_name, onClick: () => onOpenChange(false) }] : []),
-    { label: "Prospects", onClick: () => onOpenChange(false) },
-    { label: fullName || "Prospect" },
-  ]
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -229,8 +225,7 @@ export function ProspectDetailsDialog({
         </DialogDescription>
 
         <div className="shrink-0 border-b px-6 pb-4 pt-5">
-          <DialogBreadcrumb items={breadcrumbItems} />
-          <div className="mt-2 flex items-start gap-3">
+          <div className="flex items-start gap-3">
             <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-muted text-base font-semibold text-foreground">{initials || "?"}</div>
             <div className="min-w-0 flex-1">
               <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
@@ -407,8 +402,9 @@ export function ProspectDetailsDialog({
                   title="Location"
                   rows={[
                     ["Centre", p.center_name],
-                    ["City", location],
-                    ["Country", showCountry ? p.prospect_country : null],
+                    ["City", known(p.prospect_city)],
+                    ["State", known(p.prospect_state)],
+                    ["Country", known(p.prospect_country)],
                   ]}
                 />
               </div>

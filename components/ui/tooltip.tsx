@@ -20,7 +20,8 @@ const TooltipContent = React.forwardRef<
   React.ElementRef<typeof TooltipPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Content>
 >(({ className, sideOffset = 6, collisionPadding = 8, ...props }, ref) => (
-  <TooltipPrimitive.Portal>
+  // In fullscreen (the map) only that element is on screen, so render there.
+  <TooltipPrimitive.Portal container={typeof document === "undefined" ? undefined : ((document.fullscreenElement as HTMLElement | null) ?? undefined)}>
     <TooltipPrimitive.Content
       ref={ref}
       sideOffset={sideOffset}
