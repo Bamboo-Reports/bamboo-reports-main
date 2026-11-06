@@ -12,6 +12,22 @@ export type ParsedAccountTable = {
 
 const NAME_HEADER_RE = /account|company|organi[sz]ation|customer|client|name|legal/i
 
+// For a single column, the first cell is only a header when it is clearly a
+// label ("Account name", "Company", "Accounts") or a title built from one
+// ("Accounts - Sales & Marketing", "Companies: Q4 targets"). A real name that
+// merely contains such a word ("Acme Company") stays as data.
+const LABEL = "(?:accounts?|compan(?:y|ies)|organi[sz]ations?|customers?|clients?)"
+const SINGLE_COLUMN_HEADER_RE = new RegExp(
+  `^(?:(?:${LABEL}|legal)\\s+)?(?:names?|${LABEL})$`,
+  "i"
+)
+const SINGLE_COLUMN_TITLE_RE = new RegExp(`^${LABEL}\\s*[-\u2013\u2014:|]\\s*\\S`, "i")
+
+function isSingleColumnHeader(cell: string): boolean {
+  const text = cell.trim()
+  return SINGLE_COLUMN_HEADER_RE.test(text) || SINGLE_COLUMN_TITLE_RE.test(text)
+}
+
 /** Splits one delimited line, honoring double-quoted fields. */
 export function splitDelimitedLine(line: string, delimiter: string): string[] {
   const out: string[] = []
@@ -77,7 +93,7 @@ export function tableFromRows(rawRows: string[][]): ParsedAccountTable {
   const first = padded[0]
   const hasHeader = padded.length > 1 && width > 1
     ? first.some((cell) => NAME_HEADER_RE.test(cell))
-    : padded.length > 1 && NAME_HEADER_RE.test(first[0]) && first[0].split(/\s+/).length <= 3
+    : padded.length > 1 && isSingleColumnHeader(first[0])
   const headers = hasHeader ? first : Array.from({ length: width }, (_, i) => `Column ${i + 1}`)
   return { headers, rows: hasHeader ? padded.slice(1) : padded, hasHeader }
 }
