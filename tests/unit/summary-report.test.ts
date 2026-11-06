@@ -216,3 +216,16 @@ describe("buildReportChartGroups", () => {
     expect(buildReportChartGroups(undefined, counts)).toEqual([])
   })
 })
+
+describe("buildReportChart in range order", () => {
+  it("keeps small buckets and lists them in range order", () => {
+    const chart = buildReportChart("Centre headcount", "Centres", [
+      { name: "201 - 500", value: 500 },
+      { name: "<50", value: 400 },
+      { name: "10K+", value: 10 },
+      { name: "1K - 5K", value: 90 },
+    ], "range")
+    expect(chart.segments.map((s) => s.name)).toEqual(["<50", "201 - 500", "1K - 5K", "10K+"])
+    expect(chart.othersMembers).toEqual([])
+  })
+})

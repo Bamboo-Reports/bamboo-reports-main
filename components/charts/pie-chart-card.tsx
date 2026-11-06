@@ -126,6 +126,23 @@ function donutStep(index: number, count: number, firstStep: number) {
   return DONUT_CHART_COLORS[firstStep + Math.round((index * (last - firstStep)) / (count - 1))]
 }
 
+const hexToRgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16))
+
+/**
+ * A colour `t` (0 to 1) of the way along the ramp, blending neighbouring steps,
+ * so a range chart with more buckets than steps never repeats a colour.
+ */
+export function donutRampColor(t: number): string {
+  const steps = DONUT_CHART_COLORS.length - 1
+  const position = Math.min(Math.max(t, 0), 1) * steps
+  const lower = Math.floor(position)
+  if (lower >= steps) return DONUT_CHART_COLORS[steps]
+  const a = hexToRgb(DONUT_CHART_COLORS[lower])
+  const b = hexToRgb(DONUT_CHART_COLORS[lower + 1])
+  const mix = position - lower
+  return `#${a.map((v, i) => Math.round(v + (b[i] - v) * mix).toString(16).padStart(2, "0")).join("")}`
+}
+
 interface PieChartCardProps {
   title: string
   /** Value sent as chart_title in analytics, when it differs from the shown title. */
@@ -228,7 +245,9 @@ export const PieChartCard = memo(({
     mappedData.forEach((segment) => {
       const percent = (segment.y / total) * 100
       // The API already sends the long tail as "Others"; merge small slices into it.
-      if (percent < OTHERS_THRESHOLD_PERCENT || segment.name === "Others") {
+      // Range charts keep every bucket so the scale stays in order.
+      const isSmall = order !== "range" && percent < OTHERS_THRESHOLD_PERCENT
+      if (isSmall || segment.name === "Others") {
         othersTotal += segment.y
       } else {
         majorSegments.push(segment)
@@ -241,8 +260,10 @@ export const PieChartCard = memo(({
     if (order === "range") {
       // Still the largest buckets, shown in range order from pale to deep.
       majorSegments.sort((a, b) => compareRangeLabels(a.name, b.name))
+      // Pale to deep along the ramp; the palest step stays for "Others" when present.
+      const start = hasOthers ? 1 / (DONUT_CHART_COLORS.length - 1) : 0
       majorSegments.forEach((segment, index) => {
-        segment.color ||= donutStep(index, count, hasOthers ? 1 : 0)
+        segment.color ||= donutRampColor(count <= 1 ? 1 : start + ((1 - start) * index) / (count - 1))
       })
     } else {
       // Largest first, clockwise from 12 o'clock; the largest gets the deepest orange.

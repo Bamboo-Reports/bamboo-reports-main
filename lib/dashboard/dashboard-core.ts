@@ -233,6 +233,8 @@ export function computeCharts(
       const [accCountry, accCategory, accRevenue, accEmployees, cenType, cenEmployees, cenCity, cenFunction, proDept, proLevel, proCity] =
         lists.map(sortBuckets)
 
+      // Range charts (revenue, headcount) are never capped: their buckets form
+      // one ordered scale, and folding the ends into Others would break it.
       const cap = full ? (list: ChartData[]) => list : top10
       const cities = full ? (list: ChartData[]) => list : cityBucket
 
@@ -240,12 +242,12 @@ export function computeCharts(
         account: {
           regionData: cap(accCountry),
           primaryNatureData: cap(accCategory),
-          revenueRangeData: cap(accRevenue),
-          employeesRangeData: cap(accEmployees),
+          revenueRangeData: accRevenue,
+          employeesRangeData: accEmployees,
         },
         center: {
           centerTypeData: cap(cenType),
-          employeesRangeData: cap(cenEmployees),
+          employeesRangeData: cenEmployees,
           cityData: cities(cenCity),
           functionData: cap(cenFunction),
         },

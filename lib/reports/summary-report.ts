@@ -1,5 +1,6 @@
 import type { AccountVisibilityMode, ChartData, Filters, FilterValue } from "@/lib/types"
 import { FILTER_METADATA } from "@/lib/analytics/filter-metadata"
+import { compareRangeLabels } from "@/lib/utils/range-order"
 import { formatRevenueInMillions } from "@/lib/utils/helpers"
 
 /**
@@ -375,7 +376,16 @@ export function buildReportMetrics(counts: SummaryReportCounts): ReportMetric[] 
 // Mirrors the PieChartCard rule: slices under this share collapse into "Others".
 const OTHERS_THRESHOLD_PERCENT = 5
 
-export function buildReportChart(title: string, countLabel: string, data: ChartData[]): ReportChart {
+/**
+ * `order: "range"` is for bucket charts like revenue range: every bucket is
+ * kept, in range order, as on the dashboard, instead of folding small ones.
+ */
+export function buildReportChart(
+  title: string,
+  countLabel: string,
+  data: ChartData[],
+  order: "size" | "range" = "size"
+): ReportChart {
   const total = data.reduce((sum, item) => sum + (typeof item.value === "number" ? item.value : 0), 0)
   const major: ReportChartSegment[] = []
   const othersMembers: ReportChartOtherMember[] = []
@@ -392,7 +402,7 @@ export function buildReportChart(title: string, countLabel: string, data: ChartD
       incomingOthers += value
       return
     }
-    if (share < OTHERS_THRESHOLD_PERCENT) {
+    if (order !== "range" && share < OTHERS_THRESHOLD_PERCENT) {
       othersMembers.push({ name, value, percent: Math.round(share * 10) / 10 })
       return
     }
@@ -403,7 +413,7 @@ export function buildReportChart(title: string, countLabel: string, data: ChartD
     })
   })
 
-  major.sort((a, b) => b.value - a.value)
+  major.sort(order === "range" ? (a, b) => compareRangeLabels(a.name, b.name) : (a, b) => b.value - a.value)
   othersMembers.sort((a, b) => b.value - a.value)
 
   const othersTotal = othersMembers.reduce((sum, member) => sum + member.value, incomingOthers)
@@ -434,8 +444,8 @@ export function buildReportChartGroups(
     charts: [
       buildReportChart("Country", "Accounts", accountSrc.regionData),
       buildReportChart("Industry", "Accounts", accountSrc.primaryNatureData),
-      buildReportChart("Revenue range", "Accounts", accountSrc.revenueRangeData),
-      buildReportChart("GCC aggregate headcount (India)", "Accounts", accountSrc.employeesRangeData),
+      buildReportChart("Revenue range", "Accounts", accountSrc.revenueRangeData, "range"),
+      buildReportChart("GCC aggregate headcount (India)", "Accounts", accountSrc.employeesRangeData, "range"),
     ],
   })
 
@@ -447,7 +457,7 @@ export function buildReportChartGroups(
     databaseTotal: counts.totalCentersCount,
     charts: [
       buildReportChart("Centre type", "Centres", centerSrc.centerTypeData),
-      buildReportChart("Centre headcount", "Centres", centerSrc.employeesRangeData),
+      buildReportChart("Centre headcount", "Centres", centerSrc.employeesRangeData, "range"),
       buildReportChart("City", "Centres", centerSrc.cityData),
       buildReportChart("Function", "Centres", centerSrc.functionData),
     ],

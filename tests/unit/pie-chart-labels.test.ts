@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
   describePieSlice,
+  donutRampColor,
   getPieChartLabelParts,
   wrapPieChartLabelName,
   type PieChartLabelDisplay,
@@ -67,5 +68,15 @@ describe("describePieSlice", () => {
   it("keeps other names as they are", () => {
     expect(describePieSlice("United States", 1523, 2766, "Accounts")).toBe("United States: 55%, 1,523 accounts")
     expect(describePieSlice("Others", 0, 0, "Accounts")).toBe("Others: 0%, 0 accounts")
+  })
+})
+
+describe("donutRampColor", () => {
+  it("runs from the palest to the deepest step and blends in between", () => {
+    expect(donutRampColor(0)).toBe("#fef0c3")
+    expect(donutRampColor(1)).toBe("#dd6516")
+    expect(donutRampColor(0.2)).toBe("#f9d996")
+    const eight = Array.from({ length: 8 }, (_, i) => donutRampColor(i / 7))
+    expect(new Set(eight).size).toBe(8)
   })
 })
