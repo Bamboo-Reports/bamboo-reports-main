@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
+  describePieSlice,
   getPieChartLabelParts,
   wrapPieChartLabelName,
   type PieChartLabelDisplay,
@@ -54,5 +55,17 @@ describe("pie chart data labels", () => {
 
   it("shortens a single word longer than a line", () => {
     expect(wrapPieChartLabelName("Pharmaceuticalsandbiotech")).toEqual(["Pharmaceuticalsan…"])
+  })
+})
+
+describe("describePieSlice", () => {
+  it("speaks range bounds as words so they survive tag stripping", () => {
+    expect(describePieSlice("<50", 382, 2547, "Accounts")).toBe("Under 50: 15%, 382 accounts")
+    expect(describePieSlice(">10K", 12, 100, "Centres")).toBe("Over 10K: 12%, 12 centres")
+  })
+
+  it("keeps other names as they are", () => {
+    expect(describePieSlice("United States", 1523, 2766, "Accounts")).toBe("United States: 55%, 1,523 accounts")
+    expect(describePieSlice("Others", 0, 0, "Accounts")).toBe("Others: 0%, 0 accounts")
   })
 })

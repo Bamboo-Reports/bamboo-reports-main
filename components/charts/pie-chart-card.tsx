@@ -56,6 +56,22 @@ export function wrapPieChartLabelName(name: string): string[] {
   return kept.map(shortenLine)
 }
 
+/**
+ * What a screen reader announces for a slice, such as "Under 50: 15%, 382 accounts".
+ * Highcharts strips anything that looks like an HTML tag from these descriptions,
+ * which erased slices named "<50", so range bounds are spoken as words and any
+ * other "<" is kept apart from the text after it.
+ */
+export function describePieSlice(name: string, value: number, total: number, unit: string): string {
+  const spokenName = name
+    .trim()
+    .replace(/^<\s*/, "Under ")
+    .replace(/^>\s*/, "Over ")
+    .replace(/<(?=\S)/g, "< ")
+  const percent = total > 0 ? Math.round((value / total) * 100) : 0
+  return `${spokenName}: ${percent}%, ${value.toLocaleString("en-US")} ${unit.toLowerCase()}`
+}
+
 export interface PieChartLabelParts {
   share: string | null
   /** The name, already broken into lines. */
@@ -256,7 +272,8 @@ export const PieChartCard = memo(({
         landmarkVerbosity: "one",
         description: `${title}. ${seriesData.length} segments. ${countLabel} total ${total.toLocaleString()}.`,
         point: {
-          valueDescriptionFormat: "{xDescription}. {point.y} {series.name}.",
+          descriptionFormatter: (point) =>
+            describePieSlice(String(point.name ?? ""), typeof point.y === "number" ? point.y : 0, total, countLineLabel),
         },
       },
       legend: {
