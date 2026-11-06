@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect, useMemo, memo } from "react"
+import { toast } from "sonner"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -137,13 +138,27 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
     [savedFilters, userId]
   )
 
+  // A name already used by one of your filters; saving it would leave two the same.
+  const duplicateName = useMemo(() => {
+    const name = filterName.trim().toLowerCase()
+    return name ? myFilters.find((f) => f.name.trim().toLowerCase() === name) ?? null : null
+  }, [filterName, myFilters])
+
   const handleSaveFilter = useCallback(async () => {
-    const success = await saveFilter(filterName, currentFilters)
-    if (success) {
+    if (!filterName.trim() || duplicateName) return
+    const name = filterName.trim()
+    const id = await saveFilter(name, currentFilters)
+    if (id) {
+      // The new filter is now the one applied, so "Update" and the changed
+      // marker refer to it rather than to whatever was loaded before.
+      setAppliedFilter({ id, name, owned: true, baseline: currentFilters, snapshot: JSON.stringify(currentFilters) })
       setSaveDialogOpen(false)
       setFilterName("")
+      toast.success(`Saved "${name}"`)
+    } else {
+      toast.error("Could not save the filter")
     }
-  }, [currentFilters, filterName, saveFilter])
+  }, [currentFilters, filterName, duplicateName, saveFilter])
 
   // Adds the list to whatever is applied now (it does not reset other filters).
   // Applying a list that is already in the filters switches its mode.
@@ -194,15 +209,23 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
     if (!filterToDelete) return
     const success = await deleteFilter(filterToDelete.id)
     if (success) {
+      // A deleted filter can no longer be the applied one.
+      if (appliedFilter?.id === filterToDelete.id) setAppliedFilter(null)
       setDeleteConfirmOpen(false)
       setFilterToDelete(null)
     }
-  }, [filterToDelete, deleteFilter])
+  }, [filterToDelete, deleteFilter, appliedFilter])
 
   const handleRename = useCallback(async (filter: SavedFilter, name: string) => {
+    const lower = name.trim().toLowerCase()
+    // Same rule as saving: no two of your filters share a name.
+    if (myFilters.some((f) => f.id !== filter.id && f.name.trim().toLowerCase() === lower)) {
+      toast.error(`You already have a filter called "${name.trim()}"`)
+      return
+    }
     const success = await updateFilter(filter.id, name, filter.filters)
     if (success && appliedFilter?.id === filter.id) setAppliedFilter({ ...appliedFilter, name: name.trim() })
-  }, [updateFilter, appliedFilter])
+  }, [updateFilter, appliedFilter, myFilters])
 
   // Share handlers
   const handleOpenShareDialog = useCallback(async (filter: SavedFilter) => {
@@ -409,26 +432,41 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
                 {totalActiveFilters === 1 ? "Save this filter so you can apply it again later." : `Save these ${totalActiveFilters} filters so you can apply them again later.`}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-2">
-              <div className="space-y-2">
-                <Label htmlFor="filter-name">Name</Label>
-                <Input
-                  id="filter-name"
-                  placeholder="e.g. Q4 prospects, tech hiring"
-                  value={filterName}
-                  onChange={(e) => setFilterName(e.target.value)}
-                  className="col-span-3"
-                />
+            {/* A form, so Enter in the name field saves. */}
+            <form
+              onSubmit={(event) => {
+                event.preventDefault()
+                void handleSaveFilter()
+              }}
+            >
+              <div className="space-y-4 py-2">
+                <div className="space-y-2">
+                  <Label htmlFor="filter-name">Name</Label>
+                  <Input
+                    id="filter-name"
+                    placeholder="e.g. Q4 prospects, tech hiring"
+                    value={filterName}
+                    onChange={(e) => setFilterName(e.target.value)}
+                    aria-invalid={duplicateName ? true : undefined}
+                    aria-describedby={duplicateName ? "filter-name-taken" : undefined}
+                    className="col-span-3"
+                  />
+                  {duplicateName && (
+                    <p id="filter-name-taken" className="text-xs text-destructive">
+                      You already have a filter called &ldquo;{duplicateName.name}&rdquo;. Choose another name.
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setSaveDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSaveFilter} disabled={!filterName.trim() || loading}>
-                {loading ? "Saving…" : "Save filters"}
-              </Button>
-            </DialogFooter>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setSaveDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={!filterName.trim() || Boolean(duplicateName) || loading}>
+                  {loading ? "Saving…" : "Save filters"}
+                </Button>
+              </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
 

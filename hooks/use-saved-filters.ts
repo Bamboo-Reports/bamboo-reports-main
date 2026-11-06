@@ -147,8 +147,9 @@ export function useSavedFilters() {
     loadSavedFilters()
   }, [authReady, loadSavedFilters, userId])
 
-  const saveFilter = useCallback(async (name: string, filters: Filters) => {
-    if (!name.trim() || !userId) return false
+  /** Saves the filters under `name`; resolves to the new filter's id, or null on failure. */
+  const saveFilter = useCallback(async (name: string, filters: Filters): Promise<string | null> => {
+    if (!name.trim() || !userId) return null
     const normalizedName = name.trim()
 
     setLoading(true)
@@ -168,10 +169,10 @@ export function useSavedFilters() {
         active_filters_count: calculateActiveFilters(filters),
         saved_filters_snapshot: buildTrackedFiltersSnapshot(filters),
       })
-      return true
+      return (data?.id as string | undefined) ?? null
     } catch (error) {
       devError("Error saving filter:", error)
-      return false
+      return null
     } finally {
       setLoading(false)
     }
