@@ -1,4 +1,5 @@
 import type { Alias } from "@/lib/types"
+import { searchKey } from "@/lib/search/normalize"
 
 export type AliasField =
   | "abbreviated_name"
@@ -52,7 +53,7 @@ export function aliasSearchText(aliases: Alias[] | undefined): string {
       if (value) parts.push(value)
     }
   }
-  return parts.join(" ").toLowerCase()
+  return searchKey(parts.join(" "))
 }
 
 export function findAliasMatch(
@@ -60,11 +61,11 @@ export function findAliasMatch(
   term: string
 ): AliasMatch | null {
   if (!aliases || aliases.length === 0 || !term) return null
-  const lowered = term.toLowerCase()
+  const lowered = searchKey(term)
   for (const field of ALIAS_FIELDS) {
     for (const alias of aliases) {
       const value = alias[field]
-      if (value && value.toLowerCase().includes(lowered)) {
+      if (value && searchKey(value).includes(lowered)) {
         return { field, value }
       }
     }

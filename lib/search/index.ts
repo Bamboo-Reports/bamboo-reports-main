@@ -1,5 +1,6 @@
 import type { Account, Alias, Center, Prospect } from "@/lib/types"
 import { aliasSearchText, buildAliasMap, findAliasMatch, type AliasMatch } from "@/lib/search/alias-utils"
+import { searchKey } from "@/lib/search/normalize"
 
 export type SearchResultType = "account" | "center" | "prospect"
 
@@ -38,12 +39,12 @@ export function buildSearchIndex(
     const name = a.account_global_legal_name
     const industry = a.account_hq_industry ?? ""
     const country = a.account_hq_country ?? ""
-    const nameLower = name.toLowerCase()
-    const accountAliases = aliasMap.get(nameLower) ?? []
+    const nameLower = searchKey(name)
+    const accountAliases = aliasMap.get(name.toLowerCase()) ?? []
     const aliasText = aliasSearchText(accountAliases)
 
     return {
-      searchText: [name, industry, country, aliasText].filter(Boolean).join(" ").toLowerCase(),
+      searchText: searchKey([name, industry, country, aliasText].filter(Boolean).join(" ")),
       nameLower,
       aliases: accountAliases,
       result: {
@@ -64,7 +65,7 @@ export function buildSearchIndex(
     const state = c.center_state ?? ""
 
     return {
-      searchText: [name, account, city, state].join(" ").toLowerCase(),
+      searchText: searchKey([name, account, city, state].join(" ")),
       result: {
         type: "center" as const,
         id: c.cn_unique_key,
@@ -86,7 +87,7 @@ export function buildSearchIndex(
     const uniqueKey = p.ps_unique_key ?? ""
 
     return {
-      searchText: [fullName, title, headType, account, center, email, uniqueKey].join(" ").toLowerCase(),
+      searchText: searchKey([fullName, title, headType, account, center, email, uniqueKey].join(" ")),
       result: {
         type: "prospect" as const,
         id: uniqueKey || `${account}::${fullName}`,
@@ -123,7 +124,7 @@ export function searchIndex(
     return { accounts: empty, centers: empty, prospects: empty, total: 0 }
   }
 
-  const term = query.toLowerCase().trim()
+  const term = searchKey(query.trim())
 
   const searchGroup = (
     entries: { searchText: string; result: SearchResult }[]
@@ -132,7 +133,7 @@ export function searchIndex(
     const containsMatches: SearchResult[] = []
 
     for (const entry of entries) {
-      if (entry.searchText.startsWith(term) || entry.result.title.toLowerCase().startsWith(term)) {
+      if (entry.searchText.startsWith(term) || searchKey(entry.result.title).startsWith(term)) {
         startsWithMatches.push(entry.result)
       } else if (entry.searchText.includes(term)) {
         containsMatches.push(entry.result)

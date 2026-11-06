@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest"
-import { newDb } from "pg-mem"
+import { DataType, newDb } from "pg-mem"
 import type { Account, Alias, Center, Prospect } from "@/lib/types"
 import { buildSearchIndex, searchIndex } from "@/lib/search/index"
 import { buildAccountSearch, buildCenterSearch, buildProspectSearch, firstAliasMatch, type SearchQueries } from "@/lib/search/search-sql"
@@ -9,6 +9,7 @@ const accounts = [
   { account_global_legal_name: "Beta Auto AG", account_hq_industry: "Automotive", account_hq_country: "Germany" },
   { account_global_legal_name: "Globex", account_hq_industry: "Software", account_hq_country: "India" },
   { account_global_legal_name: "Initech", account_hq_industry: "Finance", account_hq_country: "United States" },
+  { account_global_legal_name: "O’Reilly Media", account_hq_industry: "Publishing", account_hq_country: "Ireland" },
 ] as unknown as Account[]
 
 const aliases = [
@@ -24,6 +25,7 @@ const centers = [
 const prospects = [
   { ps_unique_key: "p1", prospect_full_name: "Jane Smith", prospect_first_name: null, prospect_last_name: null, prospect_title: "VP Engineering", head_type: "IT Head", account_global_legal_name: "Acme Corp", center_name: "Acme NYC", prospect_email: "jane@acme.com" },
   { ps_unique_key: "p2", prospect_full_name: null, prospect_first_name: "John", prospect_last_name: "Doe", prospect_title: "CFO", head_type: null, account_global_legal_name: "Beta Auto AG", center_name: null, prospect_email: "john.doe@beta.com" },
+  { ps_unique_key: "p4", prospect_full_name: "Sean O'Brien", prospect_first_name: null, prospect_last_name: null, prospect_title: "Director", head_type: null, account_global_legal_name: "O’Reilly Media", center_name: null, prospect_email: "sean@oreilly.com" },
   { ps_unique_key: "p3", prospect_full_name: "Alice Wong", prospect_first_name: null, prospect_last_name: null, prospect_title: "Head of HR", head_type: null, account_global_legal_name: "Globex", center_name: null, prospect_email: "alice@globex.com" },
 ] as unknown as Prospect[]
 
@@ -35,6 +37,13 @@ async function ins(table: string, cols: string[], rows: Record<string, unknown>[
 
 beforeAll(async () => {
   const db = newDb()
+  // Postgres has replace(); pg-mem does not. Used to fold apostrophes.
+  db.public.registerFunction({
+    name: "replace",
+    args: [DataType.text, DataType.text, DataType.text],
+    returns: DataType.text,
+    implementation: (value: string, from: string, to: string) => value.split(from).join(to),
+  })
   const { Pool } = db.adapters.createPg()
   pool = new Pool()
   await pool.query(`create table accounts (account_global_legal_name text, account_hq_industry text, account_hq_country text)`)
@@ -70,11 +79,19 @@ async function assertTerm(term: string) {
 }
 
 describe("search-sql parity with searchIndex (match set + totals)", () => {
-  for (const term of ["acme", "widget", "german", "york", "globex", "gbx", "doe", "software"]) {
+  for (const term of ["acme", "widget", "german", "york", "globex", "gbx", "doe", "software", "o'reilly", "o’brien"]) {
     it(`term "${term}"`, async () => {
       await assertTerm(term)
     })
   }
+})
+
+describe("apostrophes", () => {
+  it("matches straight and curly apostrophes either way", () => {
+    const result = searchIndex(index(), "o'reilly")
+    expect(result.accounts.items.map((r) => r.id)).toEqual(["O’Reilly Media"])
+    expect(searchIndex(index(), "o’brien").prospects.items.map((r) => r.id)).toEqual(["p4"])
+  })
 })
 
 describe("firstAliasMatch", () => {
@@ -84,5 +101,6 @@ describe("firstAliasMatch", () => {
     expect(firstAliasMatch(rows, "gbx")).toEqual({ field: "abbreviated_name", value: "GBX" })
     expect(firstAliasMatch(rows, "nomatch")).toBeNull()
     expect(firstAliasMatch(undefined, "x")).toBeNull()
+    expect(firstAliasMatch([{ brand_name: "McDonald’s" }], "mcdonald's")).toEqual({ field: "brand_name", value: "McDonald’s" })
   })
 })
