@@ -1,13 +1,13 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
 import type { PieChartLabelDisplay } from "@/components/charts/pie-chart-card"
 import type { TabSort } from "@/components/tabs/accounts-tab"
-import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "@/components/tables/data-table"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import type { EntitySort } from "@/lib/dashboard/api-client"
 import { TAB_SORT_COLUMNS } from "@/lib/dashboard/entity-columns"
+import { DEFAULT_PAGE_SIZE, isPageSizeOption } from "@/lib/dashboard/page-size"
 
 export const SIDEBAR_COLLAPSED_STORAGE_KEY = "br-dashboard-sidebar-collapsed"
 export const PAGE_SIZE_STORAGE_KEY = "br-dashboard-page-size"
@@ -17,6 +17,41 @@ export type EntityView = "chart" | "data" | "map"
 export type ProspectsView = "chart" | "data"
 
 export const DEFAULT_SECTION: DashboardSection = "accounts"
+
+// The page size is read straight from storage (through useSyncExternalStore,
+// so the server render and hydration still see the default) instead of being
+// restored in a mount effect: a mount effect would let the active table fetch
+// its first page at the default size and then again at the saved one.
+const pageSizeListeners = new Set<() => void>()
+// Only used when storage cannot be written to, so the chosen size still applies.
+let unsavedPageSize: number | null = null
+
+function readPageSize(): number {
+  try {
+    const stored = Number(window.localStorage.getItem(PAGE_SIZE_STORAGE_KEY))
+    if (isPageSizeOption(stored)) return stored
+  } catch {
+    // storage unavailable (private mode, blocked site data)
+  }
+  return unsavedPageSize ?? DEFAULT_PAGE_SIZE
+}
+
+function subscribePageSize(listener: () => void) {
+  pageSizeListeners.add(listener)
+  return () => {
+    pageSizeListeners.delete(listener)
+  }
+}
+
+function storePageSize(size: number) {
+  try {
+    window.localStorage.setItem(PAGE_SIZE_STORAGE_KEY, String(size))
+    unsavedPageSize = null
+  } catch {
+    unsavedPageSize = size
+  }
+  pageSizeListeners.forEach((listener) => listener())
+}
 
 function toEntitySort(entity: DashboardSection, sort: TabSort | null): EntitySort | null {
   const column = sort ? TAB_SORT_COLUMNS[entity][sort.key] : undefined
@@ -42,14 +77,13 @@ export function useDashboardLayout({ filtersKey }: { filtersKey: string }) {
   const [accountsPage, setAccountsPage] = useState(1)
   const [centersPage, setCentersPage] = useState(1)
   const [prospectsPage, setProspectsPage] = useState(1)
-  const [itemsPerPage, setItemsPerPageState] = useState<number>(DEFAULT_PAGE_SIZE)
+  const itemsPerPage = useSyncExternalStore(subscribePageSize, readPageSize, () => DEFAULT_PAGE_SIZE)
   // One page size for all three tables; a new size starts every tab from page 1.
   const setItemsPerPage = useCallback((size: number) => {
-    setItemsPerPageState(size)
     setAccountsPage(1)
     setCentersPage(1)
     setProspectsPage(1)
-    window.localStorage.setItem(PAGE_SIZE_STORAGE_KEY, String(size))
+    storePageSize(size)
   }, [])
 
   // Server mode: per-entity sort state, keyed by the tab's column id. The
@@ -88,10 +122,6 @@ export function useDashboardLayout({ filtersKey }: { filtersKey: string }) {
     if (storedSidebarState === "true") {
       sidebarCollapsedRef.current = true
       setIsSidebarCollapsed(true)
-    }
-    const storedPageSize = Number(window.localStorage.getItem(PAGE_SIZE_STORAGE_KEY))
-    if ((PAGE_SIZE_OPTIONS as readonly number[]).includes(storedPageSize)) {
-      setItemsPerPageState(storedPageSize)
     }
   }, [])
 

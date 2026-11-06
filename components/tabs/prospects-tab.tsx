@@ -55,6 +55,8 @@ interface ProspectsTabProps {
   chartsLoading?: boolean
 }
 
+const getProspectRowLabel = (prospect: Prospect) => `View prospect details for ${getProspectDisplayNameUtil(prospect)}`
+
 export function ProspectsTab({
   accounts,
   centers,
@@ -216,6 +218,10 @@ export function ProspectsTab({
     (prospect: Prospect) => handleProspectClick(prospect, "table_row"),
     [handleProspectClick]
   )
+  const renderProspectRowMenu = React.useCallback(
+    (prospect: Prospect) => <ProspectRowMenu prospect={prospect} onOpen={handleRowOpen} />,
+    [handleRowOpen]
+  )
 
   const handleExportSelection = () => {
     onDownloadSelection?.({ dataset: "prospects", prospectIds: Array.from(selectedKeys) })
@@ -298,8 +304,8 @@ export function ProspectsTab({
                   refreshing={server?.refreshing}
                   skeletonLead="avatar"
                   onRowOpen={handleRowOpen}
-                  getRowLabel={(prospect) => `View prospect details for ${getProspectDisplayName(prospect)}`}
-                  renderRowMenu={(prospect) => <ProspectRowMenu prospect={prospect} onOpen={handleRowOpen} />}
+                  getRowLabel={getProspectRowLabel}
+                  renderRowMenu={renderProspectRowMenu}
                   scrollRef={scrollContainerRef}
                 />
               ) : (

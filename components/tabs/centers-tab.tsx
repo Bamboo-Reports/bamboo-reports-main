@@ -64,6 +64,8 @@ interface CentersTabProps {
 }
 
 
+const getCenterRowLabel = (center: Center) => `View centre details for ${center.center_name || "center"}`
+
 export function CentersTab({
   accounts,
   centers,
@@ -229,6 +231,10 @@ export function CentersTab({
     (center: Center) => handleCenterClick(center, "table_row"),
     [handleCenterClick]
   )
+  const renderCenterRowMenu = React.useCallback(
+    (center: Center) => <CenterRowMenu center={center} onOpen={handleRowOpen} />,
+    [handleRowOpen]
+  )
 
   // Show empty state when no centers
   if (server ? server.total === 0 && !server.loading : centers.length === 0) {
@@ -376,8 +382,8 @@ export function CentersTab({
                   loading={server?.loading}
                   refreshing={server?.refreshing}
                   onRowOpen={handleRowOpen}
-                  getRowLabel={(center) => `View centre details for ${center.center_name || "center"}`}
-                  renderRowMenu={(center) => <CenterRowMenu center={center} onOpen={handleRowOpen} />}
+                  getRowLabel={getCenterRowLabel}
+                  renderRowMenu={renderCenterRowMenu}
                   scrollRef={scrollContainerRef}
                 />
               ) : (

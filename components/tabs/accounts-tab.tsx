@@ -80,6 +80,9 @@ interface AccountsTabProps {
   mapLoading?: boolean
 }
 
+const getAccountRowLabel = (account: Account) =>
+  `View account details for ${account.account_global_legal_name || "account"}`
+
 export function AccountsTab({
   accounts,
   centers,
@@ -210,6 +213,10 @@ export function AccountsTab({
   const handleRowOpen = React.useCallback(
     (account: Account) => handleAccountClick(account, "table_row"),
     [handleAccountClick]
+  )
+  const renderAccountRowMenu = React.useCallback(
+    (account: Account) => <AccountRowMenu account={account} onOpen={handleRowOpen} />,
+    [handleRowOpen]
   )
 
   if (server ? server.total === 0 && !server.loading : accounts.length === 0) {
@@ -357,8 +364,8 @@ export function AccountsTab({
                 loading={server?.loading}
                 refreshing={server?.refreshing}
                 onRowOpen={handleRowOpen}
-                getRowLabel={(account) => `View account details for ${account.account_global_legal_name || "account"}`}
-                renderRowMenu={(account) => <AccountRowMenu account={account} onOpen={handleRowOpen} />}
+                getRowLabel={getAccountRowLabel}
+                renderRowMenu={renderAccountRowMenu}
                 scrollRef={scrollContainerRef}
               />
             ) : (

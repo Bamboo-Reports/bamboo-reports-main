@@ -131,7 +131,7 @@ This section has no "Show More" gating.
 
 ## 2. Data Tables
 
-Each tab can show a paginated data table built on TanStack Table (`components/tables/data-table.tsx`, wired to the dashboard by `components/tables/use-data-table.ts`). Every column is always shown. Page size comes from `itemsPerPage` in `app/page.tsx` (default 50; the footer offers 10, 25, 50 and 100, saved per browser under `br-dashboard-page-size`) and is sent to the query routes, which clamp it to `MAX_PAGE_SIZE = 100` (`lib/dashboard/entity-query.ts`).
+Each tab can show a paginated data table built on TanStack Table (`components/tables/data-table.tsx`, wired to the dashboard by `components/tables/use-data-table.ts`). Every column is always shown. Page size comes from `itemsPerPage` in `app/page.tsx` (default 25; the footer offers 10, 25, 50 and 100, saved per browser under `br-dashboard-page-size`) and is sent to the query routes, which fall back to the same default and cap it at 100 rows. The options, default and cap are defined once in `lib/dashboard/page-size.ts`.
 
 Column labels and cells are defined per tab in the column files listed below. The Centres labels use the British spelling.
 

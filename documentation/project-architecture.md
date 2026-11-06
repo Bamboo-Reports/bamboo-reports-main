@@ -159,7 +159,7 @@ The filter state is a complex object defined in `lib/types.ts` (`Filters` interf
     -   **Long-term:** Saved to Supabase via `SavedFiltersManager` with `withFilterDefaults` for backward compatibility.
 -   **Optimization:**
     -   **Debouncing:** Search inputs are debounced (300ms) to prevent excessive re-renders.
-    -   **Memoization:** `React.memo` is used on row components (`AccountRow`, `CenterRow`, etc.) to prevent re-rendering the entire table when only filters change.
+    -   **Memoization:** `React.memo` on the shared table row (`DataTableRow` in `components/tables/data-table.tsx`) prevents re-rendering the rows on screen when only filters change; the tabs pass stable row callbacks so it can skip.
     -   **`useMemo`:** Used for derived view state (chart series, row lists). Filtering and aggregation run in SQL on the server; `useServerDashboardData` debounces filter changes and caches each response per canonical filter state.
 
 ### 3.2 Authentication State
@@ -299,8 +299,8 @@ app/layout.tsx (Root Layout)
 | **Shared response cache** | In-process L1 plus Upstash Redis L2, purged by the ETL after each import |
 | **Lazy view fetching** | `useServerDashboardData` fetches charts, map and table pages only for the visible view |
 | **Debounced search** | 300ms delay on keyword inputs prevents excessive re-renders |
-| **Row memoization** | `React.memo` on table row components prevents unnecessary re-renders |
+| **Row memoization** | `React.memo` on the shared table row (`components/tables/data-table.tsx`) prevents unnecessary re-renders |
 | **Data memoization** | `useMemo` for expensive aggregations (chart data, sorted arrays) |
 | **Lazy image loading** | Company logos use `loading="lazy"` for off-screen rows |
-| **Pagination** | 51 items per page (server-paginated) to keep DOM size manageable |
+| **Pagination** | 25 rows per page by default, up to 100 (server-paginated; `lib/dashboard/page-size.ts`) to keep DOM size manageable |
 | **Retry with backoff** | `queryWithRetry` in `lib/db/prisma.ts` makes 2 attempts by default, waiting 500ms before the retry (delay doubles per further attempt) |

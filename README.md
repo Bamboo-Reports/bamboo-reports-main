@@ -79,7 +79,7 @@ The dashboard covers six entities: accounts, centers, services, functions, tech 
 
 ### Tables and records
 
-- Tables show 51 rows per page, and each row component is memoized with `React.memo`.
+- Tables show 25 rows per page by default (10, 25, 50 or 100, remembered per browser; see `lib/dashboard/page-size.ts`), and rows are memoized so editing a filter does not re-render the rows on screen.
 - Clicking a row opens a tabbed dialog for that account, center or prospect.
 - One set of TypeScript types describes each entity from the database query to the UI.
 

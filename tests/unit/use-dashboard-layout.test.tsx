@@ -8,6 +8,7 @@ import {
   useDashboardLayout,
 } from "@/hooks/use-dashboard-layout"
 import { makeSortHandler } from "@/hooks/use-entity-table-props"
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "@/lib/dashboard/page-size"
 
 vi.mock("@/lib/analytics/client", () => ({ captureEvent: vi.fn() }))
 
@@ -22,6 +23,10 @@ afterEach(() => {
 const setup = (filtersKey = "a") =>
   renderHook(({ key }) => useDashboardLayout({ filtersKey: key }), { initialProps: { key: filtersKey } })
 
+// A size the footer offers that is not the default, so the tests can tell a
+// restored size from the one the hook starts on.
+const OTHER_PAGE_SIZE = PAGE_SIZE_OPTIONS.find((size) => size !== DEFAULT_PAGE_SIZE)!
+
 describe("useDashboardLayout", () => {
   it("starts on the accounts map with page 1 everywhere", () => {
     const { result } = setup()
@@ -29,7 +34,7 @@ describe("useDashboardLayout", () => {
     expect(result.current.activeView).toBe("map")
     expect(result.current.hasMapView).toBe(true)
     expect(result.current.activePage).toBe(1)
-    expect(result.current.itemsPerPage).toBe(25)
+    expect(result.current.itemsPerPage).toBe(DEFAULT_PAGE_SIZE)
   })
 
   it("follows the active section's view and page", () => {
@@ -54,18 +59,26 @@ describe("useDashboardLayout", () => {
       result.current.setCentersPage(4)
       result.current.setProspectsPage(5)
     })
-    act(() => result.current.setItemsPerPage(10))
-    expect(result.current.itemsPerPage).toBe(10)
+    act(() => result.current.setItemsPerPage(OTHER_PAGE_SIZE))
+    expect(result.current.itemsPerPage).toBe(OTHER_PAGE_SIZE)
     expect([result.current.accountsPage, result.current.centersPage, result.current.prospectsPage]).toEqual([1, 1, 1])
-    expect(window.localStorage.getItem(PAGE_SIZE_STORAGE_KEY)).toBe("10")
+    expect(window.localStorage.getItem(PAGE_SIZE_STORAGE_KEY)).toBe(String(OTHER_PAGE_SIZE))
   })
 
-  it("restores a saved page size and ignores sizes the tables do not offer", () => {
-    window.localStorage.setItem(PAGE_SIZE_STORAGE_KEY, "100")
-    expect(setup().result.current.itemsPerPage).toBe(100)
+  it("restores a saved page size on the first render and ignores sizes the tables do not offer", () => {
+    window.localStorage.setItem(PAGE_SIZE_STORAGE_KEY, String(OTHER_PAGE_SIZE))
+    const seen: number[] = []
+    const { result } = renderHook(() => {
+      const layout = useDashboardLayout({ filtersKey: "a" })
+      seen.push(layout.itemsPerPage)
+      return layout
+    })
+    // The first render already has it, so the first page query is not sent at the default size.
+    expect(seen[0]).toBe(OTHER_PAGE_SIZE)
+    expect(result.current.itemsPerPage).toBe(OTHER_PAGE_SIZE)
     cleanup()
     window.localStorage.setItem(PAGE_SIZE_STORAGE_KEY, "7")
-    expect(setup().result.current.itemsPerPage).toBe(25)
+    expect(setup().result.current.itemsPerPage).toBe(DEFAULT_PAGE_SIZE)
   })
 
   it("goes back to page 1 when the filters change", () => {

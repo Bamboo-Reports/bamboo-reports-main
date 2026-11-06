@@ -10,13 +10,13 @@ import {
 } from "@/lib/dashboard/filtering-sql"
 import { queryWarehouse } from "@/lib/db/warehouse"
 import { ACCOUNT_COLUMNS, CENTER_COLUMNS, PROSPECT_COLUMNS, ACCOUNT_PROJECTION } from "@/lib/dashboard/entity-columns"
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "@/lib/dashboard/page-size"
 
 export { ACCOUNT_COLUMNS, CENTER_COLUMNS, PROSPECT_COLUMNS }
 
 export type QueryEntity = "accounts" | "centers" | "prospects"
 
-export const MAX_PAGE_SIZE = 100
-export const DEFAULT_PAGE_SIZE = 51
+export { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE }
 
 type EntityConfig = {
   projection: string
