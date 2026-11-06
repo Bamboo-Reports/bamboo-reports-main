@@ -4,6 +4,8 @@ import React from "react"
 import { RiCheckLine, RiCloseLine, RiSearchLine } from "@remixicon/react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { TruncatedText } from "@/components/ui/truncated-text"
 import { cn } from "@/lib/utils"
 
 export type LibraryTab = "mine" | "shared"
@@ -139,7 +141,7 @@ export function LibraryItem({ selected, onSelect, icon, name, meta, badge }: Lib
     >
       <span className={cn("grid h-4 w-4 shrink-0 place-items-center", selected ? "text-primary" : "text-muted-foreground")}>{icon}</span>
       <span className="min-w-0 flex-1">
-        <span className={cn("block truncate text-[13px] font-medium", selected && "text-primary")} title={name}>{name}</span>
+        <TruncatedText text={name} className={cn("text-[13px] font-medium", selected && "text-primary")} />
         <span className="block truncate text-xs tabular-nums text-muted-foreground">{meta}</span>
       </span>
       {badge}
@@ -231,13 +233,21 @@ export function LibraryRename({
   )
 }
 
-export function LibraryCountBadge({ count, title }: { count: number; title: string }) {
+/**
+ * A small count inside a LibraryItem button. It cannot take focus there (no
+ * nested controls), so the label is also in the button's name as hidden text,
+ * and the tooltip shows it on hover.
+ */
+export function LibraryCountBadge({ count, label }: { count: number; label: string }) {
   return (
-    <span
-      className="grid h-5 min-w-5 shrink-0 place-items-center rounded-md bg-amber-500/15 px-1.5 text-[11px] font-medium tabular-nums text-amber-700 dark:text-amber-300"
-      title={title}
-    >
-      {count}
-    </span>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="grid h-5 min-w-5 shrink-0 place-items-center rounded-md bg-amber-500/15 px-1.5 text-[11px] font-medium tabular-nums text-amber-700 dark:text-amber-300">
+          <span aria-hidden="true">{count}</span>
+          <span className="sr-only">{label}</span>
+        </span>
+      </TooltipTrigger>
+      <TooltipContent aria-label="">{label}</TooltipContent>
+    </Tooltip>
   )
 }

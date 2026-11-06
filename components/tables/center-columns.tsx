@@ -4,6 +4,7 @@ import { createColumnHelper } from "@tanstack/react-table"
 import { RiExternalLinkLine, RiEyeLine, RiGlobalLine } from "@remixicon/react"
 import { CompanyLogo } from "@/components/ui/company-logo"
 import { ContextMenuItem, ContextMenuSeparator } from "@/components/ui/context-menu"
+import { TruncatedText as TruncatedSpan } from "@/components/ui/truncated-text"
 import { TruncatedText, createSelectColumn } from "@/components/tables/data-table"
 import { DataTableColumnHeader } from "@/components/tables/data-table-column-header"
 import type { DataTableFeatures } from "@/components/tables/data-table-features"
@@ -25,12 +26,8 @@ function CenterNameCell({ center }: { center: Center }) {
         theme="auto"
       />
       <div className="min-w-0">
-        <div className="truncate font-medium" title={center.center_name || "N/A"}>
-          {center.center_name || "N/A"}
-        </div>
-        <div className="truncate text-xs text-muted-foreground" title={center.account_global_legal_name || "N/A"}>
-          {center.account_global_legal_name || "N/A"}
-        </div>
+        <TruncatedSpan text={center.center_name || "N/A"} className="font-medium" />
+        <TruncatedSpan text={center.account_global_legal_name || "N/A"} className="text-xs text-muted-foreground" />
       </div>
     </div>
   )

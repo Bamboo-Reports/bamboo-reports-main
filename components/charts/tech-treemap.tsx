@@ -4,6 +4,7 @@ import React, { memo } from "react"
 import { RiStackLine } from "@remixicon/react"
 import { cn } from "@/lib/utils"
 import { ChartWaveSkeleton } from "@/components/ui/chart-wave-skeleton"
+import { ChartTooltipCard } from "@/components/ui/chart-tooltip-card"
 import { DONUT_CHART_COLORS } from "@/lib/utils/chart-helpers"
 import {
   TECH_TREEMAP_SIZING,
@@ -186,13 +187,12 @@ export const TechTreemap = memo(({ tech, title = "Technology stack", className }
       )}
 
       {hoveredTile && (
-        <div
-          ref={tipRef}
-          className="pointer-events-none absolute z-10 rounded-lg border border-border bg-popover px-3 py-2 shadow-float"
-          aria-hidden="true"
-        >
-          <p className="text-sm font-medium text-foreground">{hoveredTile.name}</p>
-          <p className="text-xs tabular-nums text-muted-foreground">{formatTechShare(hoveredTile.count, totalEntries)}</p>
+        <div ref={tipRef} className="pointer-events-none absolute z-10" aria-hidden="true">
+          <ChartTooltipCard
+            title={hoveredTile.name}
+            swatch={DONUT_CHART_COLORS[techShadeIndex(hoveredTile.count, maxCount)]}
+            lines={[{ value: formatTechShare(hoveredTile.count, totalEntries) }]}
+          />
         </div>
       )}
 

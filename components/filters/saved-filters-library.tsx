@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { RiAddLine, RiBookmarkLine, RiBriefcaseLine, RiBuildingLine, RiCheckLine, RiDeleteBinLine, RiFilter3Line, RiGroupLine, RiPencilLine, RiShareLine } from "@remixicon/react"
 import { Button } from "@/components/ui/button"
+import { HintTooltip } from "@/components/ui/tooltip"
 import { FilterValueTag } from "@/components/filters/filter-chip"
 import type { DescribedSection } from "@/components/filters/filter-description"
 import type { FilterSectionId } from "@/components/filters/filter-fields"
@@ -156,15 +157,21 @@ export function SavedFiltersLibrary({
               </Button>
               {owned && (
                 <span className="ml-auto flex items-center gap-0.5">
-                  <Button size="icon-sm" variant="ghost" onClick={() => onShare(selected)} aria-label={`Share ${selected.name}`} title="Share">
-                    <RiShareLine />
-                  </Button>
-                  <Button size="icon-sm" variant="ghost" onClick={() => setRenamingId(selected.id)} aria-label={`Rename ${selected.name}`} title="Rename">
-                    <RiPencilLine />
-                  </Button>
-                  <Button size="icon-sm" variant="ghost-destructive" onClick={() => onDelete(selected)} aria-label={`Delete ${selected.name}`} title="Delete">
-                    <RiDeleteBinLine />
-                  </Button>
+                  <HintTooltip label="Share filter">
+                    <Button size="icon-sm" variant="ghost" onClick={() => onShare(selected)}>
+                      <RiShareLine />
+                    </Button>
+                  </HintTooltip>
+                  <HintTooltip label="Rename filter">
+                    <Button size="icon-sm" variant="ghost" onClick={() => setRenamingId(selected.id)}>
+                      <RiPencilLine />
+                    </Button>
+                  </HintTooltip>
+                  <HintTooltip label="Delete filter">
+                    <Button size="icon-sm" variant="ghost-destructive" onClick={() => onDelete(selected)}>
+                      <RiDeleteBinLine />
+                    </Button>
+                  </HintTooltip>
                 </span>
               )}
             </>

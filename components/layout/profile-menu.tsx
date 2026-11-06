@@ -102,7 +102,6 @@ function ProfileNumberFormatSwitcher() {
                 type="button"
                 role="radio"
                 aria-checked={isActive}
-                title={option.hint}
                 onClick={() => {
                   if (option.value !== preference) {
                     captureEvent(ANALYTICS_EVENTS.NUMBER_FORMAT_CHANGED, {

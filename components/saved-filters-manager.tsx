@@ -4,6 +4,8 @@ import { useState, useCallback, useEffect, useMemo, memo } from "react"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { HintTooltip, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { TruncatedText } from "@/components/ui/truncated-text"
 import {
   Dialog,
   DialogContent,
@@ -295,52 +297,64 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
         key={filter.id}
         className={cn("group gap-2.5 py-1.5", applied && "bg-primary/5")}
         onSelect={() => handleLoadFilter(filter)}
-        title={filter.name}
       >
         <Icon className={cn("h-4 w-4 shrink-0", applied ? "text-primary" : "text-muted-foreground")} />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium">{filter.name}</span>
+          <TruncatedText text={filter.name} className="text-sm font-medium" />
           <span className="block truncate text-xs text-muted-foreground">{meta}</span>
         </span>
         {owned && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            className="shrink-0 text-muted-foreground"
-            onClick={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              handleOpenShareDialog(filter)
-            }}
-            aria-label={`Share saved filter ${filter.name}`}
-            title="Share"
-          >
-            <RiShareLine className="h-3.5 w-3.5" />
-          </Button>
+          <HintTooltip label="Share filter">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              className="shrink-0 text-muted-foreground"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                handleOpenShareDialog(filter)
+              }}
+            >
+              <RiShareLine className="h-3.5 w-3.5" />
+            </Button>
+          </HintTooltip>
         )}
       </DropdownMenuItem>
     )
   }
 
+  const modifiedName = isModified ? activeSavedFilter?.name : undefined
+
   return (
     <div className="flex w-full items-center gap-1.5">
         <DropdownMenu open={savedFiltersDropdownOpen} onOpenChange={setSavedFiltersDropdownOpen}>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="h-9 min-w-0 flex-1 justify-start gap-2 px-2.5 font-normal">
-              <RiBookmarkLine className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <span
-                className={cn("min-w-0 flex-1 truncate text-left", !activeSavedFilter && "text-muted-foreground")}
-                title={activeSavedFilter ? `Applied: ${activeSavedFilter.name}` : undefined}
-              >
-                {activeSavedFilter?.name ?? "Saved filters"}
-              </span>
-              {isModified && (
-                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-sidebar-ring" title="Changed since saving" aria-label="Changed since saving" />
-              )}
-              <RiArrowDownSLine className="h-4 w-4 shrink-0 text-muted-foreground" />
-            </Button>
-          </DropdownMenuTrigger>
+          {/* The 6px "changed" dot is too small to hover or focus, so its hint sits on the whole trigger. */}
+          <Tooltip>
+            <DropdownMenuTrigger asChild>
+              <TooltipTrigger asChild>
+                <Button variant="outline" className="h-9 min-w-0 flex-1 justify-start gap-2 px-2.5 font-normal">
+                  <RiBookmarkLine className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  {modifiedName ? (
+                    <span className="min-w-0 flex-1 truncate text-left">{modifiedName}</span>
+                  ) : (
+                    <TruncatedText
+                      text={activeSavedFilter?.name ?? "Saved filters"}
+                      className={cn("min-w-0 flex-1 text-left", !activeSavedFilter && "text-muted-foreground")}
+                    />
+                  )}
+                  {modifiedName && <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-sidebar-ring" />}
+                  <RiArrowDownSLine className="h-4 w-4 shrink-0 text-muted-foreground" />
+                </Button>
+              </TooltipTrigger>
+            </DropdownMenuTrigger>
+            {modifiedName && (
+              <TooltipContent aria-label="Changed since saving">
+                {modifiedName}
+                <span className="br-tip-hint">Changed since saving</span>
+              </TooltipContent>
+            )}
+          </Tooltip>
           <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width] min-w-[280px] p-1" align="start">
             <div className="flex items-center justify-between px-2 pb-1 pt-2 text-xs font-medium text-muted-foreground">
               <span>My filters</span>
@@ -418,21 +432,21 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
           </DialogContent>
         </Dialog>
 
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          className="h-9 w-9 shrink-0 text-muted-foreground"
-          title="Account lists: upload a client account list and apply it as a filter"
-          aria-label="Account lists"
-          onClick={() => {
-            captureEvent(ANALYTICS_EVENTS.ACCOUNT_LISTS_MANAGE_OPENED)
-            setAccountListsOpen(true)
-          }}
-          data-tour="account-lists-button"
-        >
-          <RiFileList3Line className="h-4 w-4" />
-        </Button>
+        <HintTooltip label="Account lists" hint="Upload a client account list and apply it as a filter">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 shrink-0 text-muted-foreground"
+            onClick={() => {
+              captureEvent(ANALYTICS_EVENTS.ACCOUNT_LISTS_MANAGE_OPENED)
+              setAccountListsOpen(true)
+            }}
+            data-tour="account-lists-button"
+          >
+            <RiFileList3Line className="h-4 w-4" />
+          </Button>
+        </HintTooltip>
 
       <AccountListsDialog open={accountListsOpen} onOpenChange={setAccountListsOpen} onApply={handleApplyAccountList} />
 

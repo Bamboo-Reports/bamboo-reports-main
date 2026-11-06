@@ -1,13 +1,25 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest"
-import { render, fireEvent, cleanup, act } from "@testing-library/react"
+import { render as rtlRender, fireEvent, cleanup, act } from "@testing-library/react"
+import type { ReactElement } from "react"
 import { SummaryCards } from "@/components/dashboard/summary-cards"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import { toast } from "sonner"
 import { NUMBER_FORMAT_STORAGE_KEY } from "@/hooks/use-number-format-preference"
 
 vi.mock("sonner", () => ({
   toast: { info: vi.fn() },
 }))
+
+const render = (ui: ReactElement) => rtlRender(ui, { wrapper: TooltipProvider })
+
+/** Focuses a figure and returns the text of the tooltip it opens, or null when none opens. */
+function tooltipFor(el: HTMLElement): string | null {
+  act(() => { fireEvent.focus(el) })
+  const text = document.querySelector('[role="tooltip"]')?.textContent ?? null
+  act(() => { fireEvent.blur(el) })
+  return text
+}
 
 describe("summary-cards", () => {
   beforeEach(() => {
@@ -122,8 +134,8 @@ describe("summary-cards", () => {
 
       // "1,500,000 of 2,000,000" is too wide, "1,500,000 of 2M" fits: only the total shortens.
       // Expected strings use toLocaleString, matching the component, so any locale passes.
-      expect(getByText((1500000).toLocaleString()).title).toBe("")
-      expect(getByText("of 2M").title).toBe(`of ${(2000000).toLocaleString()}`)
+      expect(tooltipFor(getByText((1500000).toLocaleString()))).toBeNull()
+      expect(tooltipFor(getByText("of 2M"))).toBe(`of ${(2000000).toLocaleString()}`)
       expect(queryByText(`of ${(2000000).toLocaleString()}`)).toBeNull()
       // Short figures on the other cards stay exact.
       expect(getByText("of 20")).not.toBeNull()
@@ -162,7 +174,11 @@ describe("summary-cards", () => {
       const { getByText, rerender } = render(<SummaryCards {...props} />)
       expect(getByText((1500000).toLocaleString())).not.toBeNull()
       // A cut-off total keeps its full value on hover in Full mode.
-      expect(getByText(`of ${(2000000).toLocaleString()}`).title).toBe(`of ${(2000000).toLocaleString()}`)
+      const fullTotal = getByText(`of ${(2000000).toLocaleString()}`)
+      expect(tooltipFor(fullTotal)).toBeNull()
+      const scrollWidth = vi.spyOn(fullTotal, "scrollWidth", "get").mockReturnValue(200)
+      expect(tooltipFor(fullTotal)).toBe(`of ${(2000000).toLocaleString()}`)
+      scrollWidth.mockRestore()
 
       // Another tab changing the setting applies without a reload.
       act(() => {
@@ -170,7 +186,7 @@ describe("summary-cards", () => {
         window.dispatchEvent(new StorageEvent("storage", { key: NUMBER_FORMAT_STORAGE_KEY }))
       })
       rerender(<SummaryCards {...props} />)
-      expect(getByText("1.5M").title).toBe((1500000).toLocaleString())
+      expect(tooltipFor(getByText("1.5M"))).toBe((1500000).toLocaleString())
       expect(getByText("of 2M")).not.toBeNull()
       // Counts under 1,000 have no short form.
       expect(getByText("10")).not.toBeNull()

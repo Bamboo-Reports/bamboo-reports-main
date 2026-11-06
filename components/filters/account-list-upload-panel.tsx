@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { HintTooltip } from "@/components/ui/tooltip"
+import { TruncatedText } from "@/components/ui/truncated-text"
 import { LibraryPaneHeader, LibraryPaneTitle } from "@/components/filters/library-dialog"
 import { AccountPicker, type AccountPickerOption } from "@/components/filters/account-picker"
 import { cn } from "@/lib/utils"
@@ -303,7 +305,7 @@ export function AccountListUploadPanel({ existingList = null, onDone, onApply }:
               {fileName ? (
                 <>
                   <RiFileExcelLine className="h-6 w-6 text-muted-foreground" />
-                  <p className="max-w-full truncate text-sm font-medium" title={fileName}>{fileName}</p>
+                  <TruncatedText text={fileName} className="max-w-full text-sm font-medium" />
                   <p className="text-xs text-muted-foreground">Click or drop another file to replace it</p>
                 </>
               ) : (
@@ -360,10 +362,10 @@ export function AccountListUploadPanel({ existingList = null, onDone, onApply }:
                 {names.length > MAX_MATCH_NAMES && (
                   <span className="text-muted-foreground"> (only the first {MAX_MATCH_NAMES} will be used)</span>
                 )}
-                <p className="mt-1 truncate text-xs text-muted-foreground" title={names.slice(0, 5).join(", ")}>
-                  {names.slice(0, 5).join(", ")}
-                  {names.length > 5 ? ", …" : ""}
-                </p>
+                <TruncatedText
+                  text={`${names.slice(0, 5).join(", ")}${names.length > 5 ? ", …" : ""}`}
+                  className="mt-1 text-xs text-muted-foreground"
+                />
               </div>
             )}
           </div>
@@ -421,9 +423,7 @@ export function AccountListUploadPanel({ existingList = null, onDone, onApply }:
                       return (
                         <tr key={`${row.input}-${index}`} className="border-t align-top">
                           <td className="max-w-[240px] px-3 py-2">
-                            <span className="block truncate font-medium" title={row.input}>
-                              {row.input}
-                            </span>
+                            <TruncatedText text={row.input} className="font-medium" />
                             {hint && <span className="block text-xs text-muted-foreground">{hint}</span>}
                           </td>
                           <td className="whitespace-nowrap px-3 py-2">
@@ -443,15 +443,15 @@ export function AccountListUploadPanel({ existingList = null, onDone, onApply }:
                             {row.candidates.length > 0 && !row.selected && (
                               <div className="mt-1.5 flex flex-wrap gap-1">
                                 {row.candidates.slice(0, 3).map((c) => (
-                                  <button
-                                    key={c.name}
-                                    type="button"
-                                    onClick={() => updateRow(index, c.name)}
-                                    className="max-w-[220px] truncate rounded-md border px-2 py-0.5 text-xs transition-colors hover:bg-accent"
-                                    title={c.aliasValue ? `${c.name} (known as ${c.aliasValue})` : c.name}
-                                  >
-                                    {c.name}
-                                  </button>
+                                  <HintTooltip key={c.name} label={c.name} hint={c.aliasValue ? `Known as ${c.aliasValue}` : undefined}>
+                                    <button
+                                      type="button"
+                                      onClick={() => updateRow(index, c.name)}
+                                      className="max-w-[220px] truncate rounded-md border px-2 py-0.5 text-xs transition-colors hover:bg-accent"
+                                    >
+                                      {c.name}
+                                    </button>
+                                  </HintTooltip>
                                 ))}
                               </div>
                             )}

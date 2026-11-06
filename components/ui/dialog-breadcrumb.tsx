@@ -2,6 +2,7 @@
 
 import React from "react"
 import { RiArrowRightSLine } from "@remixicon/react"
+import { TruncatedText } from "@/components/ui/truncated-text"
 export interface DialogBreadcrumbItem {
   label: string
   onClick?: () => void
@@ -29,19 +30,16 @@ export function DialogBreadcrumb({ items }: DialogBreadcrumbProps) {
               <button
                 type="button"
                 onClick={item.onClick}
-                className="hover:text-foreground transition-colors truncate max-w-[220px]"
-                title={item.label}
+                className="hover:text-foreground transition-colors min-w-0 max-w-[220px]"
               >
-                {item.label}
+                <TruncatedText text={item.label} />
               </button>
             ) : (
-              <span
-                className={`truncate max-w-[220px] ${isLast ? "text-foreground font-medium" : ""}`}
-                title={item.label}
+              <TruncatedText
+                text={item.label}
+                className={`max-w-[220px] ${isLast ? "text-foreground font-medium" : ""}`}
                 aria-current={isLast ? "page" : undefined}
-              >
-                {item.label}
-              </span>
+              />
             )}
             {!isLast && <RiArrowRightSLine className="h-3.5 w-3.5 shrink-0" />}
           </React.Fragment>

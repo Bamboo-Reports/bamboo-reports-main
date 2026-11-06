@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { RiRefreshLine, RiSearchLine } from "@remixicon/react"
 import { Button } from '@/components/ui/button'
+import { HintTooltip } from '@/components/ui/tooltip'
 import { NotificationDropdown } from '@/components/notifications/notification-dropdown'
 import { getEnvironmentLabel } from '@/lib/config/environment'
 import { NOTIFICATIONS_ENABLED } from '@/lib/config/notifications'
@@ -19,7 +20,7 @@ interface HeaderProps {
 export const Header = React.memo(function Header({ onRefresh, refreshing = false, onOpenSearch }: HeaderProps): React.JSX.Element {
   // On the development site the name reads "Bamboo Reports Dev" and the logo gets an amber dot.
   const isDev = getEnvironmentLabel() === "DEV"
-  const devHint = "Development site: for testing changes before they go live. Data and accounts may differ from the live Bamboo Reports."
+  const devHint = "For testing changes before they go live. Data and accounts may differ from the live Bamboo Reports."
   // Set after mount so the server render and the first client render match.
   const [shortcut, setShortcut] = useState("Ctrl K")
   useEffect(() => {
@@ -58,9 +59,15 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
               <p className="truncate text-[17px] font-semibold text-foreground">
                 Bamboo Reports
                 {isDev && (
-                  <span className="ml-1.5 cursor-default font-medium text-amber-700 dark:text-amber-400" title={devHint}>
-                    Dev
-                  </span>
+                  <HintTooltip label="Development site" hint={devHint} side="bottom">
+                    <span
+                      role="img"
+                      tabIndex={0}
+                      className="ml-1.5 cursor-default rounded-sm font-medium text-amber-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-amber-400"
+                    >
+                      Dev
+                    </span>
+                  </HintTooltip>
                 )}
               </p>
             </div>
@@ -70,7 +77,6 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
               <button
                 type="button"
                 onClick={onOpenSearch}
-                title={`Search (${shortcut})`}
                 aria-label="Open search"
                 className="hidden sm:inline-flex h-8 items-center gap-2 rounded-lg border border-border/60 bg-muted/30 pl-3 pr-1.5 text-[13px] text-muted-foreground transition-colors hover:bg-muted/60 hover:text-muted-foreground hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 w-56"
               >
@@ -81,17 +87,18 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
                 </kbd>
               </button>
             )}
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={onRefresh}
-              disabled={refreshing}
-              aria-busy={refreshing}
-              title={refreshing ? 'Refreshing…' : 'Refresh'}
-              aria-label={refreshing ? 'Refreshing data' : 'Refresh data'}
-            >
-              <RiRefreshLine className={refreshing ? 'animate-spin' : undefined} />
-            </Button>
+            <HintTooltip label={refreshing ? 'Refreshing data' : 'Refresh data'} side="bottom">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={onRefresh}
+                disabled={refreshing}
+                aria-busy={refreshing}
+                aria-label={refreshing ? 'Refreshing data' : 'Refresh data'}
+              >
+                <RiRefreshLine className={refreshing ? 'animate-spin' : undefined} />
+              </Button>
+            </HintTooltip>
             {NOTIFICATIONS_ENABLED ? <NotificationDropdown /> : null}
           </div>
         </div>

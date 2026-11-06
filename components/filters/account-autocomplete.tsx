@@ -5,6 +5,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { Input } from "@/components/ui/input"
 import { FilterChip } from "@/components/filters/filter-chip"
 import { Button } from "@/components/ui/button"
+import { HintTooltip } from "@/components/ui/tooltip"
 import { RiAddLine, RiCloseLine, RiLoader4Line, RiSubtractLine } from "@remixicon/react"
 import { cn } from "@/lib/utils"
 import { captureEvent } from "@/lib/analytics/client"
@@ -389,43 +390,40 @@ export function AccountAutocomplete({
                         </span>
                       )}
                       {suggestion.visibility?.visibility === "exclude" && (
-                        <span
-                          className="mt-0.5 block truncate text-xs font-medium text-amber-700 dark:text-amber-300"
-                          title="Non-GCC"
-                        >
+                        <span className="mt-0.5 block truncate text-xs font-medium text-amber-700 dark:text-amber-300">
                           Non-GCC
                         </span>
                       )}
                     </span>
                     <div className="flex gap-1 ml-2">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-xs"
-                        className="hover:bg-include/15"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleSelectAccount(suggestion.name, 'include')
-                        }}
-                        title="Include"
-                        aria-label={`Include ${suggestion.name}`}
-                      >
-                        <RiAddLine className="h-3.5 w-3.5 text-include" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-xs"
-                        className="hover:bg-exclude/15"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleSelectAccount(suggestion.name, 'exclude')
-                        }}
-                        title="Exclude"
-                        aria-label={`Exclude ${suggestion.name}`}
-                      >
-                        <RiSubtractLine className="h-3.5 w-3.5 text-exclude" />
-                      </Button>
+                      <HintTooltip label={`Include ${suggestion.name}`}>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
+                          className="hover:bg-include/15"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleSelectAccount(suggestion.name, 'include')
+                          }}
+                        >
+                          <RiAddLine className="h-3.5 w-3.5 text-include" />
+                        </Button>
+                      </HintTooltip>
+                      <HintTooltip label={`Exclude ${suggestion.name}`}>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
+                          className="hover:bg-exclude/15"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleSelectAccount(suggestion.name, 'exclude')
+                          }}
+                        >
+                          <RiSubtractLine className="h-3.5 w-3.5 text-exclude" />
+                        </Button>
+                      </HintTooltip>
                     </div>
                   </div>
                 ))}

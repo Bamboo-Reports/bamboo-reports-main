@@ -5,6 +5,7 @@ import { toast } from "sonner"
 import { RiCloseLine, RiDeleteBinLine, RiHistoryLine, RiSearchLine } from "@remixicon/react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { HintTooltip } from "@/components/ui/tooltip"
 import { LibraryEmpty, LibraryGroupLabel } from "@/components/filters/library-dialog"
 import { cn } from "@/lib/utils"
 import { ENTITY_TYPE_META } from "@/lib/dashboard/entity-display"
@@ -200,15 +201,15 @@ export function HistoryDialog({
                               {describeWhen(item.viewedAt).short}
                             </span>
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => removeOne(item)}
-                            aria-label={`Remove ${item.title} from History`}
-                            title="Remove from History"
-                            className="absolute right-2.5 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-focus-within:opacity-100 group-hover:opacity-100"
-                          >
-                            <RiCloseLine className="h-3.5 w-3.5" />
-                          </button>
+                          <HintTooltip label={`Remove ${item.title} from History`}>
+                            <button
+                              type="button"
+                              onClick={() => removeOne(item)}
+                              className="absolute right-2.5 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-focus-within:opacity-100 group-hover:opacity-100"
+                            >
+                              <RiCloseLine className="h-3.5 w-3.5" />
+                            </button>
+                          </HintTooltip>
                         </div>
                       )
                     })}

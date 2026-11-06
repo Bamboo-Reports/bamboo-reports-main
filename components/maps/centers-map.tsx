@@ -1,5 +1,6 @@
 "use client"
 
+import { ChartTooltipCard } from "@/components/ui/chart-tooltip-card"
 import React, { useMemo, useState, useEffect, useCallback, useLayoutEffect } from "react"
 import { Map as MapGL, Source, Layer, NavigationControl, FullscreenControl, type MapRef, type ViewStateChangeEvent } from "@vis.gl/react-maplibre"
 import type { ExpressionSpecification } from "maplibre-gl"
@@ -586,52 +587,19 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
               style={{
                 left: `${(tooltipPosition?.x ?? mousePosition.x + 15)}px`,
                 top: `${(tooltipPosition?.y ?? mousePosition.y + 15)}px`,
-                fontFamily:
-                  "var(--font-sans), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
               }}
             >
-              <div className="flex min-w-[220px] overflow-hidden rounded-lg border border-border/80 bg-popover text-popover-foreground shadow-[0_8px_24px_rgba(0,0,0,0.08)] animate-in fade-in-0 zoom-in-95 duration-150">
-                <div className="w-0.5 bg-orange-500/80" aria-hidden="true" />
-                <div className="flex-1 space-y-3 p-4">
-                  {/* Location */}
-                  <div>
-                    <div className="text-sm font-medium leading-tight text-foreground">
-                      {cityInfo.city}
-                    </div>
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      {cityInfo.country}
-                    </div>
-                  </div>
-
-                  {/* Hero metric: centers count */}
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-medium leading-none tabular-nums text-foreground">
-                      {cityInfo.count.toLocaleString()}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {cityInfo.count === 1 ? 'centre' : 'centres'}
-                    </span>
-                  </div>
-
-                  {/* Secondary metrics */}
-                  <div className="space-y-1 border-t border-border/60 pt-2 text-xs">
-                    {showAccountsCount && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Accounts</span>
-                        <span className="font-medium tabular-nums text-foreground">
-                          {cityInfo.accountsCount.toLocaleString()}
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Headcount</span>
-                      <span className="font-medium tabular-nums text-foreground">
-                        {cityInfo.headcount.toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <ChartTooltipCard
+                variant="card"
+                title={cityInfo.city}
+                subtitle={cityInfo.country}
+                lead={cityInfo.count.toLocaleString("en-US")}
+                leadUnit={cityInfo.count === 1 ? "centre" : "centres"}
+                lines={[
+                  ...(showAccountsCount ? [{ label: "Accounts", value: cityInfo.accountsCount.toLocaleString("en-US") }] : []),
+                  { label: "Headcount", value: cityInfo.headcount.toLocaleString("en-US") },
+                ]}
+              />
             </div>
           )
         })()}

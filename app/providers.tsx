@@ -6,6 +6,7 @@ import { initAnalytics } from "@/lib/analytics/client"
 import { getQueryClient } from "@/lib/query-client"
 import { NotificationProvider } from "@/contexts/notification-context"
 import { AccountListsProvider } from "@/contexts/account-lists-context"
+import { TooltipProvider } from "@/components/ui/tooltip"
 
 export function AppProviders({ children }: { children: ReactNode }) {
   useEffect(() => {
@@ -19,7 +20,10 @@ export function AppProviders({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <NotificationProvider>
-        <AccountListsProvider>{children}</AccountListsProvider>
+        <AccountListsProvider>
+          {/* One provider so neighbouring tooltips share the open and skip delays. */}
+          <TooltipProvider>{children}</TooltipProvider>
+        </AccountListsProvider>
       </NotificationProvider>
     </QueryClientProvider>
   )

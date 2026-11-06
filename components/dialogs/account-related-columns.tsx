@@ -6,6 +6,8 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { CompanyLogo } from "@/components/ui/company-logo"
 import { TruncatedText } from "@/components/tables/data-table"
+import { TruncatedText as TruncatedLine } from "@/components/ui/truncated-text"
+import { HintTooltip } from "@/components/ui/tooltip"
 import { DataTableColumnHeader } from "@/components/tables/data-table-column-header"
 import type { DataTableFeatures } from "@/components/tables/data-table-features"
 import { captureEvent } from "@/lib/analytics/client"
@@ -54,9 +56,7 @@ export const accountCenterColumns = centerHelper.columns([
             zoom
             theme="auto"
           />
-          <span className="truncate font-medium" title={center.center_name || "N/A"}>
-            {center.center_name || "N/A"}
-          </span>
+          <TruncatedLine className="font-medium" text={center.center_name || "N/A"} />
         </div>
       )
     },
@@ -111,35 +111,38 @@ function ProspectActions({ prospect }: { prospect: Prospect }) {
   return (
     <div className="flex justify-end gap-0.5">
       {prospect.prospect_linkedin_url && (
-        <Button asChild variant="ghost" size="icon-sm" title="LinkedIn">
-          <a
-            href={ensureAbsoluteUrl(prospect.prospect_linkedin_url)}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`${name} on LinkedIn`}
-            onClick={() => captureEvent(ANALYTICS_EVENTS.OUTBOUND_LINK_CLICKED, { entity: "prospect", link_type: "linkedin" })}
-          >
-            <RiLinkedinBoxLine />
-          </a>
-        </Button>
+        <HintTooltip label={`${name} on LinkedIn`}>
+          <Button asChild variant="ghost" size="icon-sm">
+            <a
+              href={ensureAbsoluteUrl(prospect.prospect_linkedin_url)}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`${name} on LinkedIn`}
+              onClick={() => captureEvent(ANALYTICS_EVENTS.OUTBOUND_LINK_CLICKED, { entity: "prospect", link_type: "linkedin" })}
+            >
+              <RiLinkedinBoxLine />
+            </a>
+          </Button>
+        </HintTooltip>
       )}
       {email && (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          title={`Copy ${email}`}
-          aria-label={`Copy ${name}'s email`}
-          onClick={async () => {
-            try {
-              await navigator.clipboard.writeText(email)
-              toast.success("Email copied", { description: email })
-            } catch {
-              toast.error("Could not copy the email address")
-            }
-          }}
-        >
-          <RiMailLine />
-        </Button>
+        <HintTooltip label={`Copy ${name}'s email`} hint={email}>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Copy ${name}'s email`}
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(email)
+                toast.success("Email copied", { description: email })
+              } catch {
+                toast.error("Could not copy the email address")
+              }
+            }}
+          >
+            <RiMailLine />
+          </Button>
+        </HintTooltip>
       )}
     </div>
   )
@@ -175,16 +178,12 @@ export const accountProspectColumns = prospectHelper.columns([
       return (
         <div className="min-w-0">
           <div className="flex min-w-0 items-center gap-1.5">
-            <span className="truncate font-medium" title={prospectFullName(prospect) || "N/A"}>
-              {prospectFullName(prospect) || "N/A"}
-            </span>
+            <TruncatedLine className="font-medium" text={prospectFullName(prospect) || "N/A"} />
             {engaged && (
               <span className="shrink-0 rounded-md bg-include/[0.12] px-1.5 text-[11px] font-medium leading-5 text-include">Engaged</span>
             )}
           </div>
-          <div className="truncate text-xs text-muted-foreground" title={prospect.prospect_title || undefined}>
-            {prospect.prospect_title || "N/A"}
-          </div>
+          <TruncatedLine className="text-xs text-muted-foreground" text={prospect.prospect_title || "N/A"} />
         </div>
       )
     },

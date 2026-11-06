@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { devError } from "@/lib/utils/dev-log"
 import { Checkbox } from "@/components/ui/checkbox"
+import { TruncatedText } from "@/components/ui/truncated-text"
 import { RiBriefcaseLine, RiBuildingLine, RiCheckboxCircleFill, RiDownloadLine, RiErrorWarningFill, RiGroupLine, RiSparklingLine } from "@remixicon/react"
 import type { ExportDatasetKey } from "@/lib/utils/export-helpers"
 import {
@@ -450,7 +451,7 @@ export function ExportDialog({
         </>
       ) : showResult && exportResult ? (
         <>
-          <div className="flex min-w-0 flex-1 items-center gap-2.5" role="status" title={exportResult.filename}>
+          <div className="flex min-w-0 flex-1 items-center gap-2.5" role="status">
             <RiCheckboxCircleFill className="h-5 w-5 shrink-0 text-include" />
             <div className="min-w-0">
               <p className="text-[13px] font-medium">Ready to download</p>
@@ -550,10 +551,9 @@ export function ExportDialog({
                 <span
                   key={field.label}
                   className="inline-flex h-6 max-w-full items-center gap-1 rounded-md border bg-card px-2 text-xs font-medium"
-                  title={`${field.label}: ${fieldText(field)}`}
                 >
                   <span className="shrink-0 font-normal text-muted-foreground">{field.label}</span>
-                  <span className="truncate">{fieldText(field)}</span>
+                  <TruncatedText text={fieldText(field)} />
                 </span>
               ))}
               {hiddenFilters > 0 && (

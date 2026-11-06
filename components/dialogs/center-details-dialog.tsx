@@ -24,6 +24,7 @@ import {
 } from "@remixicon/react"
 import type { Center, Service, Tech } from "@/lib/types"
 import { Button } from "@/components/ui/button"
+import { HintTooltip } from "@/components/ui/tooltip"
 import { CompanyLogo } from "@/components/ui/company-logo"
 import { DialogBreadcrumb } from "@/components/ui/dialog-breadcrumb"
 import { TechTreemap } from "@/components/charts/tech-treemap"
@@ -168,7 +169,6 @@ export function CenterDetailsDialog({
                       onAccountOpen(center.account_global_legal_name)
                     }}
                     className="inline-flex items-center gap-0.5 font-medium text-primary hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    title={`Open ${center.account_global_legal_name}`}
                   >
                     {center.account_global_legal_name}
                     <RiArrowRightUpLine className="h-3.5 w-3.5" />
@@ -180,18 +180,22 @@ export function CenterDetailsDialog({
             </div>
             <div className="flex shrink-0 items-center gap-0.5">
               {center.center_website && (
-                <Button asChild variant="ghost" size="icon-sm" title={center.center_website}>
-                  <a href={ensureAbsoluteUrl(center.center_website)} target="_blank" rel="noopener noreferrer" aria-label="Website" onClick={() => trackLink("website")}>
-                    <RiGlobalLine />
-                  </a>
-                </Button>
+                <HintTooltip label="Website" hint={center.center_website}>
+                  <Button asChild variant="ghost" size="icon-sm">
+                    <a href={ensureAbsoluteUrl(center.center_website)} target="_blank" rel="noopener noreferrer" aria-label="Website" onClick={() => trackLink("website")}>
+                      <RiGlobalLine />
+                    </a>
+                  </Button>
+                </HintTooltip>
               )}
               {center.center_linkedin && (
-                <Button asChild variant="ghost" size="icon-sm" title="LinkedIn">
-                  <a href={ensureAbsoluteUrl(center.center_linkedin)} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" onClick={() => trackLink("linkedin")}>
-                    <RiLinkedinBoxLine />
-                  </a>
-                </Button>
+                <HintTooltip label="LinkedIn">
+                  <Button asChild variant="ghost" size="icon-sm">
+                    <a href={ensureAbsoluteUrl(center.center_linkedin)} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" onClick={() => trackLink("linkedin")}>
+                      <RiLinkedinBoxLine />
+                    </a>
+                  </Button>
+                </HintTooltip>
               )}
               <Button variant="ghost" size="icon-sm" onClick={() => onOpenChange(false)} aria-label="Close">
                 <RiCloseLine />

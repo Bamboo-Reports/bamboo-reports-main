@@ -17,6 +17,7 @@ import {
 } from "@/lib/dashboard/engagements"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { HintTooltip } from "@/components/ui/tooltip"
 
 const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
@@ -148,12 +149,20 @@ export function ProspectEngagementTimeline({ psUniqueKey }: { psUniqueKey: strin
                     </div>
                   ) : null}
                   <div className="flex items-center">
-                    <time
-                      className="w-[5.5rem] shrink-0 text-right text-xs font-medium text-muted-foreground tabular-nums"
-                      title={agoDays !== null ? formatDaysAgo(agoDays) : undefined}
-                    >
-                      {tp.dateLabel}
-                    </time>
+                    {agoDays !== null ? (
+                      <HintTooltip label={tp.dateLabel} hint={formatDaysAgo(agoDays)}>
+                        <time
+                          tabIndex={0}
+                          className="w-[5.5rem] shrink-0 rounded-sm text-right text-xs font-medium text-muted-foreground tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          {tp.dateLabel}
+                        </time>
+                      </HintTooltip>
+                    ) : (
+                      <time className="w-[5.5rem] shrink-0 text-right text-xs font-medium text-muted-foreground tabular-nums">
+                        {tp.dateLabel}
+                      </time>
+                    )}
                     <span
                       className={`mx-3 grid h-9 w-9 shrink-0 place-items-center rounded-lg sm:mx-4 ${
                         isLatest

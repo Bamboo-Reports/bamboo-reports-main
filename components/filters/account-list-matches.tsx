@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react"
 import { RiArrowRightLine, RiSearchLine } from "@remixicon/react"
 import { AccountPicker } from "@/components/filters/account-picker"
+import { TruncatedText } from "@/components/ui/truncated-text"
 import { cn } from "@/lib/utils"
 import type { AccountListMatch } from "@/lib/accounts/account-lists"
 
@@ -93,15 +94,15 @@ export function AccountListMatches({ matches, onMap }: AccountListMatchesProps) 
                 const changed = isChanged(m)
                 return (
                   <tr key={`${m.input}-${index}`} className={cn("hover:bg-muted/50", m.via === "none" && "bg-exclude/[0.04]")}>
-                    <td className={cn("h-11 truncate border-b border-border/60 px-2", changed || m.via === "none" ? "text-foreground" : "text-muted-foreground")} title={m.input}>
-                      {m.input}
+                    <td className={cn("h-11 truncate border-b border-border/60 px-2", changed || m.via === "none" ? "text-foreground" : "text-muted-foreground")}>
+                      <TruncatedText text={m.input} />
                     </td>
                     <td className="border-b border-border/60 text-center text-muted-foreground">
                       <RiArrowRightLine className="mx-auto h-3.5 w-3.5" />
                     </td>
                     <td className="border-b border-border/60 px-2">
                       {m.account ? (
-                        <span className="block truncate font-medium" title={m.account}>{m.account}</span>
+                        <TruncatedText text={m.account} className="font-medium" />
                       ) : onMap ? (
                         <AccountPicker value={null} onChange={(name) => name && onMap(m.input, name)} placeholder="Map to an account" ariaLabel={`Account for ${m.input}`} />
                       ) : (

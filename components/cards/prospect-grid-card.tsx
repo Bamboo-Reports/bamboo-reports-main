@@ -3,6 +3,7 @@ import { RiArrowRightUpLine, RiExternalLinkLine, RiEyeLine, RiFileCopyLine } fro
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { HeadTypeBadge, isHighlightedHeadType } from "@/components/ui/head-type-badge"
+import { TruncatedText } from "@/components/ui/truncated-text"
 import {
   ContextMenu,
   ContextMenuContent,
@@ -52,18 +53,10 @@ export const ProspectGridCard = memo(({ prospect, onClick }: ProspectGridCardPro
                 <span className="text-sm font-semibold text-foreground">{initials || "?"}</span>
               </div>
               <div className="min-w-0 flex-1">
-                <h3
-                  className="min-w-0 truncate text-base font-medium leading-snug text-foreground"
-                  title={fullName || "Prospect"}
-                >
-                  {fullName || "Prospect"}
+                <h3 className="min-w-0 text-base font-medium leading-snug text-foreground">
+                  <TruncatedText text={fullName || "Prospect"} />
                 </h3>
-                <p
-                  className="text-sm text-muted-foreground mt-1 truncate"
-                  title={accountName}
-                >
-                  {accountName}
-                </p>
+                <TruncatedText text={accountName} className="text-sm text-muted-foreground mt-1" />
               </div>
               {isHighlightedHeadType(prospect.head_type) && <HeadTypeBadge headType={prospect.head_type!} />}
               {isEngagedProspect(prospect) && <EngagedIcon className="mt-0.5" />}
@@ -71,30 +64,27 @@ export const ProspectGridCard = memo(({ prospect, onClick }: ProspectGridCardPro
             <div className="space-y-2 text-sm">
               <div className="flex items-center justify-between gap-3 min-w-0">
                 <span className="text-muted-foreground">Location</span>
-                <span
-                  className="font-medium text-foreground text-right truncate max-w-[160px]"
-                  title={location || "-"}
-                >
-                  {location || "-"}
-                </span>
+                <TruncatedText
+                  text={location || "-"}
+                  className="font-medium text-foreground text-right max-w-[160px]"
+                  align="end"
+                />
               </div>
               <div className="flex items-center justify-between gap-3 min-w-0">
                 <span className="text-muted-foreground">Department</span>
-                <span
-                  className="font-medium text-foreground text-right truncate max-w-[160px]"
-                  title={prospect.prospect_department || "-"}
-                >
-                  {prospect.prospect_department || "-"}
-                </span>
+                <TruncatedText
+                  text={prospect.prospect_department || "-"}
+                  className="font-medium text-foreground text-right max-w-[160px]"
+                  align="end"
+                />
               </div>
               <div className="flex items-center justify-between gap-3 min-w-0">
                 <span className="text-muted-foreground">Level</span>
-                <span
-                  className="font-medium text-foreground text-right truncate max-w-[160px]"
-                  title={prospect.prospect_level || "-"}
-                >
-                  {prospect.prospect_level || "-"}
-                </span>
+                <TruncatedText
+                  text={prospect.prospect_level || "-"}
+                  className="font-medium text-foreground text-right max-w-[160px]"
+                  align="end"
+                />
               </div>
             </div>
             <Button

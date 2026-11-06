@@ -25,6 +25,7 @@ import { CenterGridCard } from "@/components/cards/center-grid-card"
 import { ProspectGridCard } from "@/components/cards/prospect-grid-card"
 import { RECORD_LIST_LAYOUT_STORAGE_KEY, useDataLayoutPreference } from "@/hooks/use-data-layout-preference"
 import { Button } from "@/components/ui/button"
+import { HintTooltip } from "@/components/ui/tooltip"
 import { TechTreemap } from "@/components/charts/tech-treemap"
 import { AnnualRevenueChart } from "@/components/charts/annual-revenue-chart"
 import { requestAccountFinancialInfo } from "@/lib/finance/request-client"
@@ -402,18 +403,22 @@ export function AccountDetailsDialog({
                 </div>
                 <div className="flex shrink-0 items-center gap-0.5">
                   {account.account_hq_website && (
-                    <Button asChild variant="ghost" size="icon-sm" title={account.account_hq_website}>
-                      <a href={withProtocol(account.account_hq_website)} target="_blank" rel="noopener noreferrer" onClick={() => trackOutboundLink("website")} aria-label="Website">
-                        <RiGlobalLine />
-                      </a>
-                    </Button>
+                    <HintTooltip label="Website" hint={account.account_hq_website}>
+                      <Button asChild variant="ghost" size="icon-sm">
+                        <a href={withProtocol(account.account_hq_website)} target="_blank" rel="noopener noreferrer" onClick={() => trackOutboundLink("website")} aria-label="Website">
+                          <RiGlobalLine />
+                        </a>
+                      </Button>
+                    </HintTooltip>
                   )}
                   {account.account_hq_linkedin_link && (
-                    <Button asChild variant="ghost" size="icon-sm" title="LinkedIn">
-                      <a href={withProtocol(account.account_hq_linkedin_link)} target="_blank" rel="noopener noreferrer" onClick={() => trackOutboundLink("linkedin")} aria-label="LinkedIn">
-                        <RiLinkedinBoxLine />
-                      </a>
-                    </Button>
+                    <HintTooltip label="LinkedIn">
+                      <Button asChild variant="ghost" size="icon-sm">
+                        <a href={withProtocol(account.account_hq_linkedin_link)} target="_blank" rel="noopener noreferrer" onClick={() => trackOutboundLink("linkedin")} aria-label="LinkedIn">
+                          <RiLinkedinBoxLine />
+                        </a>
+                      </Button>
+                    </HintTooltip>
                   )}
                   <Button variant="ghost" size="icon-sm" onClick={() => onOpenChange(false)} aria-label="Close">
                     <RiCloseLine />

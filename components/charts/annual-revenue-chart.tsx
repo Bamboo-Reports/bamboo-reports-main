@@ -1,7 +1,8 @@
 "use client"
 
-import { Bar, BarChart, Cell, LabelList, XAxis } from "recharts"
+import { Bar, BarChart, Cell, LabelList, Tooltip, XAxis } from "recharts"
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart"
+import { ChartTooltipCard } from "@/components/ui/chart-tooltip-card"
 import { DONUT_CHART_COLORS } from "@/lib/utils/chart-helpers"
 import { cn } from "@/lib/utils"
 import type { RevenueSeriesPoint } from "@/lib/types"
@@ -29,14 +30,16 @@ export function revenueColumnColor(index: number, count: number): string {
   return DONUT_CHART_COLORS[1 + Math.round((index * 2) / (earlier - 1))]
 }
 
-/** Latest year's change against the year before, as a whole percent, or null. */
-export function revenueChange(series: RevenueSeriesPoint[]): number | null {
-  if (series.length < 2) return null
-  const latest = series[series.length - 1].revenue
-  const previous = series[series.length - 2].revenue
+/** A year's change against the year before, as a whole percent, or null. Defaults to the latest year. */
+export function revenueChange(series: RevenueSeriesPoint[], index = series.length - 1): number | null {
+  if (index < 1 || index >= series.length) return null
+  const current = series[index].revenue
+  const previous = series[index - 1].revenue
   if (!previous) return null
-  return Math.round(((latest - previous) / Math.abs(previous)) * 100)
+  return Math.round(((current - previous) / Math.abs(previous)) * 100)
 }
+
+const formatChange = (change: number) => `${change >= 0 ? "+" : ""}${change}%`
 
 interface AnnualRevenueChartProps {
   series: RevenueSeriesPoint[]
@@ -63,8 +66,7 @@ export function AnnualRevenueChart({ series, className }: AnnualRevenueChartProp
               change >= 0 ? "text-green-700 dark:text-green-300" : "text-red-700 dark:text-red-300"
             )}
           >
-            {change >= 0 ? "+" : ""}
-            {change}% <span className="font-normal text-muted-foreground">vs {previous.label}</span>
+            {formatChange(change)} <span className="font-normal text-muted-foreground">vs {previous.label}</span>
           </span>
         )}
       </div>
@@ -76,11 +78,33 @@ export function AnnualRevenueChart({ series, className }: AnnualRevenueChartProp
           accessibilityLayer
         >
           <XAxis dataKey="label" tickLine={false} axisLine={{ stroke: "hsl(var(--border))" }} tickMargin={8} />
+          <Tooltip
+            cursor={false}
+            isAnimationActive={false}
+            content={({ active, payload }) => {
+              const point = payload?.[0]?.payload as RevenueSeriesPoint | undefined
+              if (!active || !point) return null
+              const index = series.findIndex((p) => p.date === point.date)
+              const yearChange = revenueChange(series, index)
+              return (
+                <ChartTooltipCard
+                  title={point.label}
+                  lines={[
+                    { label: "Revenue", value: formatRevenue(point.revenue) },
+                    ...(yearChange !== null && index > 0
+                      ? [{ value: `${formatChange(yearChange)} vs ${series[index - 1].label}` }]
+                      : []),
+                  ]}
+                />
+              )
+            }}
+          />
           <Bar
             dataKey="revenue"
             radius={[4, 4, 0, 0]}
             maxBarSize={112}
             isAnimationActive={false}
+            activeBar={{ stroke: "hsl(var(--foreground))", strokeWidth: 2 }}
           >
             {series.map((point, index) => (
               <Cell key={point.date} fill={revenueColumnColor(index, series.length)} />

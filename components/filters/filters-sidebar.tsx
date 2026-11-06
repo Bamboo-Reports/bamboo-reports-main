@@ -27,6 +27,7 @@ import { describeFilters } from '@/components/filters/filter-description'
 import { ProfileMenu } from '@/components/layout/profile-menu'
 import { useAccountLists } from '@/contexts/account-lists-context'
 import { Button } from '@/components/ui/button'
+import { HintTooltip, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useCurrentProfile } from '@/hooks/use-current-profile'
 import { cn } from '@/lib/utils'
 import type { AccountVisibilityMode, Alias, AvailableOptions, Filters } from '@/lib/types'
@@ -44,6 +45,11 @@ const SECTIONS: Array<{ id: FilterSectionId; label: string; icon: React.Componen
 ]
 
 const EXPORT_BLOCKED_MESSAGE = "You are not allowed to export data. Please contact an admin."
+const EXPORT_ADMIN_ONLY_HINT = "Only admins can export data"
+
+function filtersAppliedLabel(count: number) {
+  return `${count} ${count === 1 ? "filter" : "filters"} applied`
+}
 
 interface FiltersSidebarProps {
   filters: Filters
@@ -223,7 +229,6 @@ export function FiltersSidebar({
     <button
       type="button"
       className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-lg px-1.5 text-left transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      title="Account and settings"
       aria-label="Open profile menu"
     >
       <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-muted text-[11px] font-semibold text-foreground">
@@ -258,95 +263,108 @@ export function FiltersSidebar({
         // inert, not just aria-hidden: the hidden panel's buttons must leave the tab order too.
         inert={!isCollapsed}
       >
-        <button
-          type="button"
-          className={railButton}
-          onClick={onToggleCollapse}
-          title="Expand filters"
-          aria-label="Expand filters sidebar"
-          aria-expanded={false}
-          aria-controls="filters-sidebar"
-        >
-          <RiSideBarFill className="h-[18px] w-[18px]" />
-        </button>
-        {totalActiveFilters > 0 ? (
-          <span
-            className="my-1 grid h-6 w-10 place-items-center rounded-md bg-primary/10 text-xs font-medium tabular-nums text-primary-strong"
-            title={`${totalActiveFilters} ${totalActiveFilters === 1 ? "filter" : "filters"} applied`}
+        <HintTooltip label="Expand filters" side="right">
+          <button
+            type="button"
+            className={railButton}
+            onClick={onToggleCollapse}
+            aria-expanded={false}
+            aria-controls="filters-sidebar"
           >
-            {totalActiveFilters}
-          </span>
+            <RiSideBarFill className="h-[18px] w-[18px]" />
+          </button>
+        </HintTooltip>
+        {totalActiveFilters > 0 ? (
+          <HintTooltip label={filtersAppliedLabel(totalActiveFilters)} side="right">
+            <span
+              role="img"
+              tabIndex={0}
+              className="my-1 grid h-6 w-10 place-items-center rounded-md bg-primary/10 text-xs font-medium tabular-nums text-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {totalActiveFilters}
+            </span>
+          </HintTooltip>
         ) : (
           <span className="h-2" />
         )}
         {SECTIONS.map(({ id, label, icon: Icon }) => {
           const count = sectionCounts[id]
           return (
-            <button
-              key={id}
-              type="button"
-              className={railButton}
-              onClick={() => expandTo(id)}
-              title={count ? `${label}: ${count} ${count === 1 ? "filter" : "filters"}` : label}
-              aria-label={count ? `${label}, ${count} filters` : label}
-            >
-              <Icon className="h-[18px] w-[18px]" />
-              {count > 0 && <CountBadge count={count} className="absolute -right-0.5 top-0.5 h-4 min-w-4 rounded-full bg-primary px-1 text-[10px] text-primary-foreground shadow-[0_0_0_2px_hsl(var(--sidebar-background))]" />}
-            </button>
+            <HintTooltip key={id} label={label} hint={count ? filtersAppliedLabel(count) : undefined} side="right">
+              <button
+                type="button"
+                className={railButton}
+                onClick={() => expandTo(id)}
+              >
+                <Icon className="h-[18px] w-[18px]" />
+                {count > 0 && <CountBadge count={count} className="absolute -right-0.5 top-0.5 h-4 min-w-4 rounded-full bg-primary px-1 text-[10px] text-primary-foreground shadow-[0_0_0_2px_hsl(var(--sidebar-background))]" />}
+              </button>
+            </HintTooltip>
           )
         })}
         <span className="my-2 h-px w-6 bg-sidebar-border" />
-        <button
-          type="button"
-          className={railButton}
-          onClick={() => {
-            expandTo()
-            setSavedMenuSignal((n) => n + 1)
-          }}
-          title="Saved filters"
-          aria-label="Saved filters"
-        >
-          <RiBookmarkLine className="h-[18px] w-[18px]" />
-        </button>
-        <button
-          type="button"
-          className={railButton}
-          onClick={() => setAccountListsSignal((n) => n + 1)}
-          title="Account lists"
-          aria-label="Account lists"
-        >
-          <RiFileList3Line className="h-[18px] w-[18px]" />
-        </button>
-        <div className="mt-auto flex flex-col items-center gap-1">
-          {handleGenerateReport && (
-            <button
-              type="button"
-              className={railButton}
-              onClick={handleGenerateReport}
-              disabled={isGeneratingReport}
-              title="Download summary PDF"
-              aria-label="Download summary report as PDF"
-            >
-              {isGeneratingReport ? <RiLoader4Line className="h-[18px] w-[18px] animate-spin" /> : <RiFilePdf2Line className="h-[18px] w-[18px]" />}
-            </button>
-          )}
+        <HintTooltip label="Saved filters" side="right">
           <button
             type="button"
             className={railButton}
             onClick={() => {
-              if (!canExport) expandTo()
-              handleExport()
+              expandTo()
+              setSavedMenuSignal((n) => n + 1)
             }}
-            title={canExport ? "Export" : "Only admins can export data"}
-            aria-label={canExport ? "Export data" : "Export data (admin only)"}
           >
-            <RiDownload2Line className="h-[18px] w-[18px]" />
+            <RiBookmarkLine className="h-[18px] w-[18px]" />
           </button>
-          <ProfileMenu user={user} side="right" align="end" onStartTour={onStartTour} onOpenExports={onOpenExports} onOpenHistory={onOpenHistory}>
-            <button type="button" className={railButton} title={user.displayName} aria-label="Open profile menu">
-              <span className="grid h-7 w-7 place-items-center rounded-full bg-muted text-[11px] font-semibold text-foreground">{user.initials}</span>
+        </HintTooltip>
+        <HintTooltip label="Account lists" side="right">
+          <button
+            type="button"
+            className={railButton}
+            onClick={() => setAccountListsSignal((n) => n + 1)}
+          >
+            <RiFileList3Line className="h-[18px] w-[18px]" />
+          </button>
+        </HintTooltip>
+        <div className="mt-auto flex flex-col items-center gap-1">
+          {handleGenerateReport && (
+            <HintTooltip label="Download summary PDF" side="right">
+              <button
+                type="button"
+                className={railButton}
+                onClick={handleGenerateReport}
+                disabled={isGeneratingReport}
+              >
+                {isGeneratingReport ? <RiLoader4Line className="h-[18px] w-[18px] animate-spin" /> : <RiFilePdf2Line className="h-[18px] w-[18px]" />}
+              </button>
+            </HintTooltip>
+          )}
+          <HintTooltip label="Export data" hint={canExport ? undefined : EXPORT_ADMIN_ONLY_HINT} side="right">
+            <button
+              type="button"
+              className={cn(railButton, "aria-disabled:opacity-50")}
+              aria-disabled={canExport ? undefined : true}
+              onClick={() => {
+                // Not allowed: no export, just the reason in the expanded panel's footer.
+                if (!canExport) expandTo()
+                handleExport()
+              }}
+            >
+              <RiDownload2Line className="h-[18px] w-[18px]" />
             </button>
-          </ProfileMenu>
+          </HintTooltip>
+          {/* Tooltip wraps the menu so its trigger and the menu's trigger are the same button. */}
+          <Tooltip>
+            <ProfileMenu user={user} side="right" align="end" onStartTour={onStartTour} onOpenExports={onOpenExports} onOpenHistory={onOpenHistory}>
+              <TooltipTrigger asChild>
+                <button type="button" className={railButton} aria-label={user.displayName}>
+                  <span className="grid h-7 w-7 place-items-center rounded-full bg-muted text-[11px] font-semibold text-foreground">{user.initials}</span>
+                </button>
+              </TooltipTrigger>
+            </ProfileMenu>
+            <TooltipContent side="right" aria-label="Account and settings">
+              {user.displayName}
+              <span className="br-tip-hint">Account and settings</span>
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
@@ -375,18 +393,18 @@ export function FiltersSidebar({
             >
               Clear all
             </button>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={onToggleCollapse}
-              className="text-muted-foreground"
-              title="Collapse filters"
-              aria-label="Collapse filters sidebar"
-              aria-expanded={true}
-              aria-controls="filters-sidebar"
-            >
-              <RiSideBarLine className="h-[18px] w-[18px]" />
-            </Button>
+            <HintTooltip label="Collapse filters">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={onToggleCollapse}
+                className="text-muted-foreground"
+                aria-expanded={true}
+                aria-controls="filters-sidebar"
+              >
+                <RiSideBarLine className="h-[18px] w-[18px]" />
+              </Button>
+            </HintTooltip>
           </div>
 
           <div data-tour="saved-filters">
@@ -493,29 +511,42 @@ export function FiltersSidebar({
               {profileTrigger}
             </ProfileMenu>
             {handleGenerateReport && (
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-9 w-9 shrink-0"
-                onClick={handleGenerateReport}
-                disabled={isGeneratingReport}
-                aria-label="Download summary report as PDF"
-                title="Download a PDF with the current counts and applied filters"
-                data-tour="summary-report-button"
-              >
-                {isGeneratingReport ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiFilePdf2Line className="h-4 w-4" />}
-              </Button>
+              <HintTooltip label="Download summary PDF" hint="The current counts and applied filters">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9 shrink-0"
+                  onClick={handleGenerateReport}
+                  disabled={isGeneratingReport}
+                  data-tour="summary-report-button"
+                >
+                  {isGeneratingReport ? <RiLoader4Line className="h-4 w-4 animate-spin" /> : <RiFilePdf2Line className="h-4 w-4" />}
+                </Button>
+              </HintTooltip>
             )}
-            <Button
-              className="h-9 shrink-0 gap-2 px-3"
-              onClick={handleExport}
-              aria-label={canExport ? "Export data" : "Export data (admin only)"}
-              title={canExport ? "Export data" : "Only admins can export data"}
-              data-tour="export-button"
-            >
-              <RiDownload2Line className="h-4 w-4" />
-              Export
-            </Button>
+            {canExport ? (
+              <Button
+                className="h-9 shrink-0 gap-2 px-3"
+                onClick={handleExport}
+                data-tour="export-button"
+              >
+                <RiDownload2Line className="h-4 w-4" />
+                Export
+              </Button>
+            ) : (
+              <HintTooltip label="Export data" hint={EXPORT_ADMIN_ONLY_HINT}>
+                {/* aria-disabled, not disabled, so it keeps focus and shows why. A click shows the reason above. */}
+                <Button
+                  className="h-9 shrink-0 gap-2 px-3 opacity-50"
+                  aria-disabled="true"
+                  onClick={handleExport}
+                  data-tour="export-button"
+                >
+                  <RiDownload2Line className="h-4 w-4" />
+                  Export
+                </Button>
+              </HintTooltip>
+            )}
           </div>
         </div>
       </div>

@@ -4,6 +4,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useEffect, useState } from "react"
 import { RiBriefcaseLine, RiBuildingLine, RiCheckDoubleLine, RiFileList2Line, RiGroupLine, RiNotification3Line } from "@remixicon/react"
 import { Button } from "@/components/ui/button"
+import { HintTooltip, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { TruncatedText } from "@/components/ui/truncated-text"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -66,20 +68,22 @@ export function NotificationDropdown() {
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="relative"
-          title="Updates"
-          aria-label={unreadCount > 0 ? `Open updates, ${unreadCount} unread` : "Open updates"}
-        >
-          <RiNotification3Line className="h-4 w-4" />
-          {unreadCount > 0 ? (
-            <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-primary ring-2 ring-background" />
-          ) : null}
-        </Button>
-      </DropdownMenuTrigger>
+      <Tooltip>
+        <DropdownMenuTrigger asChild>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon-sm" className="relative" aria-label="Updates">
+              <RiNotification3Line className="h-4 w-4" />
+              {unreadCount > 0 ? (
+                <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-primary ring-2 ring-background" />
+              ) : null}
+            </Button>
+          </TooltipTrigger>
+        </DropdownMenuTrigger>
+        <TooltipContent side="bottom" aria-label={unreadCount > 0 ? `${unreadCount} unread` : ""}>
+          Updates
+          {unreadCount > 0 && <span className="br-tip-hint">{unreadCount} unread</span>}
+        </TooltipContent>
+      </Tooltip>
       <DropdownMenuContent align="end" className="w-[380px] overflow-hidden p-0">
         <div className="flex items-center gap-2.5 border-b px-3.5 py-3">
           <p className="text-sm font-medium text-foreground">Updates</p>
@@ -144,18 +148,20 @@ export function NotificationDropdown() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline justify-between gap-2">
                         <p className="text-[13px] font-medium tabular-nums text-foreground">{itemTitle(summary)}</p>
-                        <p
-                          className="shrink-0 text-xs tabular-nums text-muted-foreground"
-                          title={formatAbsoluteEventDate(summary.latest_changed_at)}
-                        >
-                          {formatRelativeEventDate(summary.latest_changed_at)}
-                        </p>
+                        <HintTooltip label={formatAbsoluteEventDate(summary.latest_changed_at)}>
+                          <p
+                            tabIndex={0}
+                            className="shrink-0 rounded-sm text-xs tabular-nums text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            {formatRelativeEventDate(summary.latest_changed_at)}
+                          </p>
+                        </HintTooltip>
                       </div>
                       {summary.record_labels.length > 0 ? (
-                        <p className="mt-0.5 truncate text-xs text-muted-foreground" title={summary.record_labels.join(", ")}>
-                          {summary.record_labels.join(", ")}
-                          {more > 0 ? ` and ${more.toLocaleString()} more` : ""}
-                        </p>
+                        <TruncatedText
+                          text={`${summary.record_labels.join(", ")}${more > 0 ? ` and ${more.toLocaleString()} more` : ""}`}
+                          className="mt-0.5 text-xs text-muted-foreground"
+                        />
                       ) : null}
                     </div>
                   </div>

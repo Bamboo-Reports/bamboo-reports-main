@@ -7,6 +7,8 @@ import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
+import { HintTooltip } from "@/components/ui/tooltip"
+import { TruncatedText } from "@/components/ui/truncated-text"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -200,7 +202,7 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
           icon={tab === "mine" ? <RiFileList3Line className="h-4 w-4" /> : <RiGroupLine className="h-4 w-4" />}
           name={list.name}
           meta={[plural(list.accounts.length, "account"), tab === "mine" ? (list.updated_at && `updated ${formatDate(list.updated_at)}`) : list.owner_email && `from ${list.owner_email}`].filter(Boolean).join(" · ")}
-          badge={list.unmatched.length > 0 ? <LibraryCountBadge count={list.unmatched.length} title={`${plural(list.unmatched.length, "name")} not matched`} /> : undefined}
+          badge={list.unmatched.length > 0 ? <LibraryCountBadge count={list.unmatched.length} label={`${plural(list.unmatched.length, "name")} not matched`} /> : undefined}
         />
       ))
     }
@@ -277,28 +279,36 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
             .join(" · ")}
           actions={
             <>
-              <Button variant="outline" size="sm" className="text-include" onClick={() => handleApply(selected, "include")} title="Show only these accounts on the dashboard">
+              <Button variant="outline" size="sm" className="text-include" onClick={() => handleApply(selected, "include")}>
                 <RiAddLine />
                 Include in filters
               </Button>
-              <Button variant="outline" size="sm" className="text-exclude" onClick={() => handleApply(selected, "exclude")} title="Hide these accounts from the dashboard">
+              <Button variant="outline" size="sm" className="text-exclude" onClick={() => handleApply(selected, "exclude")}>
                 <RiSubtractLine />
                 Exclude
               </Button>
               {own && (
                 <span className="ml-auto flex items-center gap-0.5">
-                  <Button size="icon-sm" variant="ghost" onClick={() => openShare(selected)} aria-label={`Share ${selected.name}`} title="Share">
-                    <RiShareLine />
-                  </Button>
-                  <Button size="icon-sm" variant="ghost" onClick={() => setRenamingId(selected.id)} aria-label={`Rename ${selected.name}`} title="Rename">
-                    <RiPencilLine />
-                  </Button>
-                  <Button size="icon-sm" variant="ghost" onClick={() => openUpload(selected)} aria-label={`Replace ${selected.name} from a file`} title="Replace from a file">
-                    <RiFileUploadLine />
-                  </Button>
-                  <Button size="icon-sm" variant="ghost-destructive" onClick={() => setListToDelete(selected)} aria-label={`Delete ${selected.name}`} title="Delete">
-                    <RiDeleteBinLine />
-                  </Button>
+                  <HintTooltip label="Share list">
+                    <Button size="icon-sm" variant="ghost" onClick={() => openShare(selected)}>
+                      <RiShareLine />
+                    </Button>
+                  </HintTooltip>
+                  <HintTooltip label="Rename list">
+                    <Button size="icon-sm" variant="ghost" onClick={() => setRenamingId(selected.id)}>
+                      <RiPencilLine />
+                    </Button>
+                  </HintTooltip>
+                  <HintTooltip label="Replace from a file">
+                    <Button size="icon-sm" variant="ghost" onClick={() => openUpload(selected)}>
+                      <RiFileUploadLine />
+                    </Button>
+                  </HintTooltip>
+                  <HintTooltip label="Delete list">
+                    <Button size="icon-sm" variant="ghost-destructive" onClick={() => setListToDelete(selected)}>
+                      <RiDeleteBinLine />
+                    </Button>
+                  </HintTooltip>
                 </span>
               )}
             </>
@@ -341,8 +351,8 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
           {accounts.length > 0 ? (
             <ul className="gap-x-6 text-[13px] sm:columns-2">
               {accounts.map((name) => (
-                <li key={name} className="break-inside-avoid truncate border-b border-border/50 py-1.5" title={name}>
-                  {name}
+                <li key={name} className="break-inside-avoid border-b border-border/50 py-1.5">
+                  <TruncatedText text={name} />
                 </li>
               ))}
             </ul>

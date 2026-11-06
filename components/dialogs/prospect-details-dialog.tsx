@@ -14,6 +14,7 @@ import { formatProspectLocation } from "@/lib/utils/helpers"
 import type { Prospect } from "@/lib/types"
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard"
 import { Button } from "@/components/ui/button"
+import { HintTooltip } from "@/components/ui/tooltip"
 import { DialogBreadcrumb, type DialogBreadcrumbItem } from "@/components/ui/dialog-breadcrumb"
 import { ProspectGridCard } from "@/components/cards/prospect-grid-card"
 import { useAccountRelated } from "@/hooks/use-account-related"
@@ -251,7 +252,6 @@ export function ProspectDetailsDialog({
                         onAccountOpen(p.account_global_legal_name)
                       }}
                       className="inline-flex items-center gap-0.5 font-medium text-primary hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      title={`Open ${p.account_global_legal_name}`}
                     >
                       {p.account_global_legal_name}
                       <RiArrowRightUpLine className="h-3.5 w-3.5" />
@@ -263,28 +263,32 @@ export function ProspectDetailsDialog({
             </div>
             <div className="flex shrink-0 items-center gap-0.5">
               {p.prospect_email && (
-                <Button asChild variant="ghost" size="icon-sm" title={`Email ${p.prospect_email}`}>
-                  <a
-                    href={`mailto:${p.prospect_email}`}
-                    aria-label="Send email"
-                    onClick={() => captureEvent(ANALYTICS_EVENTS.CONTACT_EMAIL_CLICKED, { entity: "prospect" })}
-                  >
-                    <RiMailLine />
-                  </a>
-                </Button>
+                <HintTooltip label="Send email" hint={p.prospect_email}>
+                  <Button asChild variant="ghost" size="icon-sm">
+                    <a
+                      href={`mailto:${p.prospect_email}`}
+                      aria-label="Send email"
+                      onClick={() => captureEvent(ANALYTICS_EVENTS.CONTACT_EMAIL_CLICKED, { entity: "prospect" })}
+                    >
+                      <RiMailLine />
+                    </a>
+                  </Button>
+                </HintTooltip>
               )}
               {p.prospect_linkedin_url && (
-                <Button asChild variant="ghost" size="icon-sm" title="LinkedIn">
-                  <a
-                    href={ensureAbsoluteUrl(p.prospect_linkedin_url)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="View LinkedIn profile"
-                    onClick={() => captureEvent(ANALYTICS_EVENTS.OUTBOUND_LINK_CLICKED, { entity: "prospect", link_type: "linkedin" })}
-                  >
-                    <RiLinkedinBoxLine />
-                  </a>
-                </Button>
+                <HintTooltip label="View LinkedIn profile">
+                  <Button asChild variant="ghost" size="icon-sm">
+                    <a
+                      href={ensureAbsoluteUrl(p.prospect_linkedin_url)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="View LinkedIn profile"
+                      onClick={() => captureEvent(ANALYTICS_EVENTS.OUTBOUND_LINK_CLICKED, { entity: "prospect", link_type: "linkedin" })}
+                    >
+                      <RiLinkedinBoxLine />
+                    </a>
+                  </Button>
+                </HintTooltip>
               )}
               <Button variant="ghost" size="icon-sm" onClick={() => onOpenChange(false)} aria-label="Close">
                 <RiCloseLine />
@@ -369,22 +373,22 @@ export function ProspectDetailsDialog({
                       p.prospect_email ? (
                         <span className="inline-flex max-w-full items-center gap-1">
                           <span className="break-all">{p.prospect_email}</span>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-xs"
-                            onClick={() => {
-                              captureEvent(ANALYTICS_EVENTS.CONTACT_EMAIL_COPIED, { entity: "prospect" })
-                              copy(p.prospect_email!, "Email")
-                              setCopied(true)
-                              setTimeout(() => setCopied(false), 1500)
-                            }}
-                            className="shrink-0 text-muted-foreground"
-                            title={copied ? "Copied" : "Copy email"}
-                            aria-label="Copy email"
-                          >
-                            {copied ? <RiCheckLine className="h-3.5 w-3.5 text-include" /> : <RiFileCopyLine className="h-3.5 w-3.5" />}
-                          </Button>
+                          <HintTooltip label={copied ? "Copied" : "Copy email"}>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-xs"
+                              onClick={() => {
+                                captureEvent(ANALYTICS_EVENTS.CONTACT_EMAIL_COPIED, { entity: "prospect" })
+                                copy(p.prospect_email!, "Email")
+                                setCopied(true)
+                                setTimeout(() => setCopied(false), 1500)
+                              }}
+                              className="shrink-0 text-muted-foreground"
+                            >
+                              {copied ? <RiCheckLine className="h-3.5 w-3.5 text-include" /> : <RiFileCopyLine className="h-3.5 w-3.5" />}
+                            </Button>
+                          </HintTooltip>
                         </span>
                       ) : null,
                     ],

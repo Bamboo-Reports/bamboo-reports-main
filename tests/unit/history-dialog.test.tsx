@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { act, cleanup, fireEvent, render, renderHook, screen } from "@testing-library/react"
 import { toast } from "sonner"
 import { HistoryDialog } from "@/components/history/history-dialog"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import { useRecentItems, type RecentItem } from "@/hooks/use-recent-items"
 
 vi.mock("@/lib/analytics/client", () => ({ captureEvent: () => {} }))
@@ -24,7 +25,12 @@ function renderDialog(overrides: Partial<React.ComponentProps<typeof HistoryDial
     onRestoreHistory: vi.fn(),
     ...overrides,
   }
-  render(<HistoryDialog {...props} />)
+  // The app mounts TooltipProvider once in app/providers.tsx.
+  render(
+    <TooltipProvider>
+      <HistoryDialog {...props} />
+    </TooltipProvider>
+  )
   return props
 }
 

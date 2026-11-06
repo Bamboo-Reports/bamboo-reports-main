@@ -92,7 +92,6 @@ export function CompanyLogo({
         sizeConfig.container,
         className
       )}
-      title={companyName}
       aria-label={`${companyName} logo fallback`}
     >
       {fallbackMode === "monogram" ? (
@@ -128,7 +127,6 @@ export function CompanyLogo({
         sizeConfig.container,
         className
       )}
-      title={companyName}
     >
       {/* Fallback while loading */}
       {!imageLoaded && (

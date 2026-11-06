@@ -3,6 +3,7 @@
 import { createColumnHelper } from "@tanstack/react-table"
 import { RiExternalLinkLine, RiEyeLine, RiFileCopyLine } from "@remixicon/react"
 import { ContextMenuItem, ContextMenuSeparator } from "@/components/ui/context-menu"
+import { TruncatedText as TruncatedSpan } from "@/components/ui/truncated-text"
 import { TruncatedText, createSelectColumn } from "@/components/tables/data-table"
 import { DataTableColumnHeader } from "@/components/tables/data-table-column-header"
 import type { DataTableFeatures } from "@/components/tables/data-table-features"
@@ -37,12 +38,8 @@ function ProspectNameCell({ prospect }: { prospect: Prospect }) {
   const accountName = prospect.account_global_legal_name || "N/A"
   return (
     <div className="min-w-0">
-      <div className="truncate font-medium" title={fullName}>
-        {fullName}
-      </div>
-      <div className="truncate text-xs text-muted-foreground" title={accountName}>
-        {accountName}
-      </div>
+      <TruncatedSpan text={fullName} className="font-medium" />
+      <TruncatedSpan text={accountName} className="text-xs text-muted-foreground" />
     </div>
   )
 }

@@ -6,6 +6,7 @@ import { RiPieChartLine } from "@remixicon/react"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { DONUT_CHART_COLORS } from "@/lib/utils/chart-helpers"
+import { HIGHCHARTS_TOOLTIP_BASE, chartTooltipHtml } from "@/lib/tooltip/markup"
 import { ChartWaveSkeleton } from "@/components/ui/chart-wave-skeleton"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -140,6 +141,11 @@ export const PieChartCard = memo(({
   order = "size",
 }: PieChartCardProps) => {
   const OTHERS_THRESHOLD_PERCENT = 5
+  // "Total accounts" reads as "Accounts: 1,184" in the tooltip.
+  const countLineLabel = React.useMemo(() => {
+    const label = countLabel.replace(/^total\s+/i, "")
+    return label.charAt(0).toUpperCase() + label.slice(1)
+  }, [countLabel])
   // Safety check: ensure data is an array
   const safeData = React.useMemo(() => data || [], [data])
   const [chartLib, setChartLib] = React.useState<{
@@ -257,28 +263,21 @@ export const PieChartCard = memo(({
         enabled: false,
       },
       tooltip: {
-        useHTML: true,
-        backgroundColor: "transparent",
-        borderWidth: 0,
-        shadow: false,
+        ...HIGHCHARTS_TOOLTIP_BASE,
         formatter: function () {
           const point = this as unknown as Point
           const value = typeof point.y === "number" ? point.y : 0
           const percent = total > 0 ? Math.round((value / total) * 100) : 0
-          const color = point.color || DONUT_CHART_COLORS[DONUT_CHART_COLORS.length - 1]
-          return `
-            <div class="rounded-lg border border-border bg-popover px-3 py-2 shadow-float">
-              <p class="text-sm font-medium text-foreground mb-1">${point.name}</p>
-              <div class="space-y-1">
-                <p class="text-xs text-muted-foreground">
-                  ${countLabel}: <span class="font-medium tabular-nums text-foreground" style="color:${color}">${Number(value).toLocaleString()}</span>
-                </p>
-                <p class="text-xs text-muted-foreground">
-                  ${showBigPercentage ? `<span class="text-2xl font-medium tabular-nums" style="color:${color}">${percent}%</span>` : `<span class="font-medium tabular-nums" style="color:${color}">${percent}%</span>`}
-                </p>
-              </div>
-            </div>
-          `
+          const share = `${percent}%`
+          const count = { label: countLineLabel, value: Number(value).toLocaleString("en-US") }
+          // Name, then the share as the large figure, then the count. Figures stay
+          // in the text colour; the swatch carries the slice's colour.
+          return chartTooltipHtml({
+            title: point.name,
+            swatch: typeof point.color === "string" ? point.color : undefined,
+            lead: showBigPercentage ? share : undefined,
+            lines: showBigPercentage ? [count] : [count, { label: "Share", value: share }],
+          })
         },
       },
       plotOptions: {
@@ -324,11 +323,12 @@ export const PieChartCard = memo(({
           // A 2px gap in the card colour keeps neighbouring slices apart.
           borderWidth: 2,
           borderColor: "hsl(var(--card))",
-          // Hovering a slice dims the other slices and their labels.
-          inactiveOtherPoints: true,
+          // Hovering brightens the slice a touch. The others are not dimmed: a
+          // dimmed orange turns muddy brown on the dark background.
+          inactiveOtherPoints: false,
           states: {
-            hover: { halo: { size: 0 }, brightness: 0 },
-            inactive: { opacity: 0.3 },
+            hover: { halo: { size: 0 }, brightness: 0.08 },
+            inactive: { opacity: 1 },
           },
           point: {
             events: {
@@ -382,7 +382,7 @@ export const PieChartCard = memo(({
         ],
       },
     }
-  }, [seriesData, total, countLabel, showBigPercentage, title, analyticsTitle, labelDisplay])
+  }, [seriesData, total, countLabel, countLineLabel, showBigPercentage, title, analyticsTitle, labelDisplay])
 
   return (
     <Card className="border shadow-sm">

@@ -1,5 +1,6 @@
 "use client"
 
+import { ChartTooltipCard } from "@/components/ui/chart-tooltip-card"
 import React, { useMemo, useState, useEffect, useLayoutEffect } from "react"
 import { Map as MapGL, Source, Layer, NavigationControl, FullscreenControl, type MapRef } from "@vis.gl/react-maplibre"
 import type { ExpressionSpecification, FilterSpecification } from "maplibre-gl"
@@ -583,50 +584,19 @@ export function CentersChoroplethMap({
             style={{
               left: `${(tooltipPosition?.x ?? hoverInfo.x + 15)}px`,
               top: `${(tooltipPosition?.y ?? hoverInfo.y + 15)}px`,
-              fontFamily:
-                "var(--font-sans), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
             }}
           >
-            <div className="flex min-w-[220px] overflow-hidden rounded-lg border border-border/80 bg-popover text-popover-foreground shadow-[0_8px_24px_rgba(0,0,0,0.08)] animate-in fade-in-0 zoom-in-95 duration-150">
-              <div className="w-0.5 bg-orange-500/80" aria-hidden="true" />
-              <div className="flex-1 space-y-3 p-4">
-                {/* Location */}
-                <div>
-                  <div className="text-sm font-medium leading-tight text-foreground">
-                    {hoverInfo.state || "Unknown state"}
-                  </div>
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    {hoverInfo.country || "Unknown country"}
-                  </div>
-                </div>
-
-                {/* Hero metric: centers count */}
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-medium leading-none tabular-nums text-foreground">
-                    {hoverInfo.count.toLocaleString()}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {hoverInfo.count === 1 ? 'centre' : 'centres'}
-                  </span>
-                </div>
-
-                {/* Secondary metrics */}
-                <div className="space-y-1 border-t border-border/60 pt-2 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Accounts</span>
-                    <span className="font-medium tabular-nums text-foreground">
-                      {hoverInfo.accountsCount.toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Headcount</span>
-                    <span className="font-medium tabular-nums text-foreground">
-                      {hoverInfo.headcount.toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <ChartTooltipCard
+              variant="card"
+              title={hoverInfo.state || "Unknown state"}
+              subtitle={hoverInfo.country || "Unknown country"}
+              lead={hoverInfo.count.toLocaleString("en-US")}
+              leadUnit={hoverInfo.count === 1 ? "centre" : "centres"}
+              lines={[
+                { label: "Accounts", value: hoverInfo.accountsCount.toLocaleString("en-US") },
+                { label: "Headcount", value: hoverInfo.headcount.toLocaleString("en-US") },
+              ]}
+            />
           </div>
         )}
 

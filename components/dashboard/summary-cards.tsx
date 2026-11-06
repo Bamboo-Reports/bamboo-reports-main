@@ -3,6 +3,8 @@ import { RiBriefcaseLine, RiBuildingLine, RiGroupLine, RiTimeLine, RiUserFollowL
 import { toast } from 'sonner'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { TruncatedText } from '@/components/ui/truncated-text'
 import { useNumberFormatPreference } from '@/hooks/use-number-format-preference'
 import { cn } from '@/lib/utils'
 
@@ -75,6 +77,28 @@ function useCompactLevel(value: number, total: number) {
   return { level, rowRef, fullRef, totalCompactRef }
 }
 
+/**
+ * A figure with a label tooltip showing its full value, opened only when the
+ * shown text is shortened (1.5M for 1,500,000) or cut off by the card.
+ */
+function FigureText({ text, full, className }: { text: string; full: string; className?: string }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const [open, setOpen] = useState(false)
+  const onOpenChange = (next: boolean) => {
+    const node = ref.current
+    if (next && text === full && (!node || node.scrollWidth <= node.clientWidth)) return
+    setOpen(next)
+  }
+  return (
+    <Tooltip open={open} onOpenChange={onOpenChange}>
+      <TooltipTrigger asChild>
+        <span ref={ref} className={className}>{text}</span>
+      </TooltipTrigger>
+      <TooltipContent side="top" align="start">{full}</TooltipContent>
+    </Tooltip>
+  )
+}
+
 const SummaryFigure = React.memo(function SummaryFigure({
   value,
   total,
@@ -121,19 +145,17 @@ const SummaryFigure = React.memo(function SummaryFigure({
           <span className="invisible inline-block w-16" />
         </span>
       ) : (
-        <span
+        <FigureText
+          text={shownValue}
+          full={fullValue}
           className={cn('shrink-0 text-sidebar-foreground', NUMBER_CLASS)}
-          title={shownValue === fullValue ? undefined : fullValue}
-        >
-          {shownValue}
-        </span>
+        />
       )}
-      <span
+      <FigureText
+        text={`of ${shownTotal}`}
+        full={`of ${fullTotal}`}
         className={cn('min-w-0 truncate text-muted-foreground', TOTAL_CLASS)}
-        title={shownTotal === fullTotal && preference !== 'full' ? undefined : `of ${fullTotal}`}
-      >
-        of {shownTotal}
-      </span>
+      />
     </div>
   )
 })
@@ -260,7 +282,7 @@ export const SummaryCards = React.memo(function SummaryCards({
           >
             <div className="flex items-center gap-2 text-[13px] font-medium text-sidebar-foreground">
               <Icon className={cn('h-4 w-4 shrink-0', card.iconClassName)} />
-              <span className="truncate">{card.title}</span>
+              <TruncatedText text={card.title} className="min-w-0" />
             </div>
             <SummaryFigure
               value={card.value}

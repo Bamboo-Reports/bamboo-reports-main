@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from "@/components/ui/context-menu"
 import { TableSkeletonRows, type TableLeadColumn } from "@/components/ui/data-skeletons"
+import { TruncatedText as TruncatedSpan } from "@/components/ui/truncated-text"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ViewSwitcher } from "@/components/ui/view-switcher"
@@ -15,13 +16,9 @@ import { cn } from "@/lib/utils"
 
 type DashboardTable<TData extends RowData> = ReactTable<DataTableFeatures, TData>
 
-/** Single-line cell text with a tooltip for the full value. */
+/** Single-line cell text with a tooltip for the full value when it is cut off. */
 export function TruncatedText({ value }: { value: string | null | undefined }) {
-  return (
-    <div className="truncate" title={value || "N/A"}>
-      {value || "N/A"}
-    </div>
-  )
+  return <TruncatedSpan text={value || "N/A"} />
 }
 
 /** Leading checkbox column; the header toggles every selectable row on the page. */

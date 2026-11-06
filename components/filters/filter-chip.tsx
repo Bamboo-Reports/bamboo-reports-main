@@ -1,6 +1,8 @@
 "use client"
 
 import { RiAddLine, RiCloseLine, RiSubtractLine } from "@remixicon/react"
+import { HintTooltip, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { TruncatedText } from "@/components/ui/truncated-text"
 import { cn } from "@/lib/utils"
 import type { FilterValue } from "@/lib/types"
 
@@ -26,48 +28,54 @@ export function FilterChip({ item, onToggleMode, onRemove, className }: FilterCh
         className
       )}
     >
-      <button
-        type="button"
-        onClick={(event) => {
-          event.preventDefault()
-          event.stopPropagation()
-          onToggleMode()
-        }}
-        className={cn(
-          "grid h-5 w-5 shrink-0 place-items-center rounded hover:bg-foreground/[0.08]",
-          isInclude ? "text-include" : "text-exclude"
-        )}
-        title={isInclude ? "Switch to exclude" : "Switch to include"}
-        aria-label={isInclude ? `Exclude ${item.value}` : `Include ${item.value}`}
-      >
-        {isInclude ? <RiAddLine className="h-3.5 w-3.5" /> : <RiSubtractLine className="h-3.5 w-3.5" />}
-      </button>
-      <span className={cn("min-w-0 truncate px-0.5", !isInclude && "text-exclude")} title={item.value}>
-        {item.value}
-      </span>
-      <button
-        type="button"
-        onClick={(event) => {
-          event.preventDefault()
-          event.stopPropagation()
-          onRemove()
-        }}
-        className="grid h-5 w-5 shrink-0 place-items-center rounded text-muted-foreground hover:bg-foreground/[0.08] hover:text-foreground"
-        title="Remove"
-        aria-label={`Remove ${item.value}`}
-      >
-        <RiCloseLine className="h-3.5 w-3.5" />
-      </button>
+      <HintTooltip label={isInclude ? `Exclude ${item.value}` : `Include ${item.value}`}>
+        <button
+          type="button"
+          onClick={(event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            onToggleMode()
+          }}
+          className={cn(
+            "grid h-5 w-5 shrink-0 place-items-center rounded hover:bg-foreground/[0.08]",
+            isInclude ? "text-include" : "text-exclude"
+          )}
+        >
+          {isInclude ? <RiAddLine className="h-3.5 w-3.5" /> : <RiSubtractLine className="h-3.5 w-3.5" />}
+        </button>
+      </HintTooltip>
+      <TruncatedText text={item.value} className={cn("min-w-0 px-0.5", !isInclude && "text-exclude")} />
+      <HintTooltip label={`Remove ${item.value}`}>
+        <button
+          type="button"
+          onClick={(event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            onRemove()
+          }}
+          className="grid h-5 w-5 shrink-0 place-items-center rounded text-muted-foreground hover:bg-foreground/[0.08] hover:text-foreground"
+        >
+          <RiCloseLine className="h-3.5 w-3.5" />
+        </button>
+      </HintTooltip>
     </span>
   )
 }
 
-/** A collapsed filter row's summary: how many values are set. Hovering lists them. */
+/**
+ * A collapsed filter row's summary: how many values are set. Hovering lists them.
+ * It sits inside the row's toggle button, so it cannot take focus; opening the row shows the values as chips.
+ */
 export function FilterValuesSummary({ values }: { values: FilterValue[] }) {
   return (
-    <span className="tabular-nums" title={values.map((item) => (item.mode === "exclude" ? `not ${item.value}` : item.value)).join(", ")}>
-      {values.length}
-    </span>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="tabular-nums">{values.length}</span>
+      </TooltipTrigger>
+      <TooltipContent aria-label="">
+        {values.map((item) => (item.mode === "exclude" ? `not ${item.value}` : item.value)).join(", ")}
+      </TooltipContent>
+    </Tooltip>
   )
 }
 
@@ -86,7 +94,7 @@ export function FilterValueTag({ item }: { item: FilterValue }) {
       ) : (
         <RiSubtractLine className="h-3.5 w-3.5 shrink-0" aria-label="excluding" />
       )}
-      <span className="truncate" title={item.value}>{item.value}</span>
+      <TruncatedText text={item.value} />
     </span>
   )
 }

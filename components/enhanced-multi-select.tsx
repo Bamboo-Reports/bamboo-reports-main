@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { FilterChip } from "@/components/filters/filter-chip"
+import { HintTooltip } from "@/components/ui/tooltip"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import {
@@ -76,7 +77,6 @@ const EnhancedSelectItem = React.memo(({
         handler()
       }}
       className={cn("inline-flex h-5 items-center gap-0.5 rounded px-1.5 text-[11px] font-medium", className)}
-      title={label}
       aria-label={ariaLabel ?? `${label} ${value}`}
     >
       {children}
@@ -109,7 +109,7 @@ const EnhancedSelectItem = React.memo(({
         <span className="hidden shrink-0 items-center gap-0.5 group-hover:flex group-data-[selected=true]:flex">
           {mode !== "include" && action("Include", onSelectInclude, "bg-include/[0.12] text-include", <><RiAddLine className="h-3 w-3" />Include</>)}
           {mode !== "exclude" && action("Exclude", onSelectExclude, "bg-exclude/10 text-exclude", <><RiSubtractLine className="h-3 w-3" />Exclude</>)}
-          {mode && action("Remove", onRemove, "w-5 justify-center bg-muted px-0 text-muted-foreground", <RiCloseLine className="h-3 w-3" />)}
+          {mode && <HintTooltip label={`Remove ${value}`}>{action("Remove", onRemove, "w-5 justify-center bg-muted px-0 text-muted-foreground", <RiCloseLine className="h-3 w-3" />)}</HintTooltip>}
         </span>
       )}
     </CommandItem>

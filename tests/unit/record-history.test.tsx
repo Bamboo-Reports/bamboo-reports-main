@@ -6,8 +6,19 @@ import { RecordHistoryProvider } from "@/contexts/record-history-context"
 import { ProspectDetailsDialog } from "@/components/dialogs/prospect-details-dialog"
 import { CenterDetailsDialog } from "@/components/dialogs/center-details-dialog"
 import { createQueryWrapper } from "../fixtures/query-client"
+import { TooltipProvider } from "@/components/ui/tooltip"
 
-const render = (ui: React.ReactElement) => baseRender(ui, { wrapper: createQueryWrapper() })
+// The dialogs' icon buttons use label tooltips, which need the provider the app mounts once.
+const render = (ui: React.ReactElement) => {
+  const QueryWrapper = createQueryWrapper()
+  return baseRender(ui, {
+    wrapper: ({ children }) => (
+      <QueryWrapper>
+        <TooltipProvider>{children}</TooltipProvider>
+      </QueryWrapper>
+    ),
+  })
+}
 
 vi.mock("@/lib/analytics/client", () => ({ captureEvent: () => {} }))
 

@@ -3,6 +3,8 @@ import { RiArrowRightUpLine, RiExternalLinkLine, RiEyeLine, RiGlobalLine } from 
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CompanyLogo } from "@/components/ui/company-logo"
+import { HintTooltip } from "@/components/ui/tooltip"
+import { TruncatedText } from "@/components/ui/truncated-text"
 import {
   ContextMenu,
   ContextMenuContent,
@@ -51,48 +53,43 @@ export const CenterGridCard = memo(({ center, onClick }: CenterGridCardProps) =>
                 zoom
               />
               <div className="min-w-0">
-                <h3
-                  className="min-w-0 truncate text-base font-medium leading-snug text-foreground flex items-center gap-2"
-                  title={center.center_status ? `${centerName}: ${center.center_status}` : centerName}
-                >
-                  <span className="truncate">{centerName}</span>
-                  <span className={`inline-flex h-2.5 w-2.5 shrink-0 rounded-full ${statusColor}`} aria-label={center.center_status ?? "Unknown status"} />
+                <h3 className="min-w-0 text-base font-medium leading-snug text-foreground flex items-center gap-2">
+                  <TruncatedText text={centerName} className="min-w-0" />
+                  <HintTooltip label={center.center_status ?? "Unknown status"}>
+                    <span
+                      role="img"
+                      tabIndex={0}
+                      className={`inline-flex h-2.5 w-2.5 shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${statusColor}`}
+                    />
+                  </HintTooltip>
                 </h3>
-                <p
-                  className="text-sm text-muted-foreground mt-1 truncate"
-                  title={accountName}
-                >
-                  {accountName}
-                </p>
+                <TruncatedText text={accountName} className="text-sm text-muted-foreground mt-1" />
               </div>
             </div>
             <div className="space-y-2 text-sm">
               <div className="flex items-center justify-between gap-3 min-w-0">
                 <span className="text-muted-foreground">Centre type</span>
-                <span
-                  className="font-medium text-foreground text-right truncate max-w-[160px]"
-                  title={center.center_type || "-"}
-                >
-                  {center.center_type || "-"}
-                </span>
+                <TruncatedText
+                  text={center.center_type || "-"}
+                  className="font-medium text-foreground text-right max-w-[160px]"
+                  align="end"
+                />
               </div>
               <div className="flex items-center justify-between gap-3 min-w-0">
                 <span className="text-muted-foreground">Location</span>
-                <span
-                  className="font-medium text-foreground text-right truncate max-w-[160px]"
-                  title={location}
-                >
-                  {location}
-                </span>
+                <TruncatedText
+                  text={location}
+                  className="font-medium text-foreground text-right max-w-[160px]"
+                  align="end"
+                />
               </div>
               <div className="flex items-center justify-between gap-3 min-w-0">
                 <span className="text-muted-foreground">Headcount range</span>
-                <span
-                  className="font-medium text-foreground text-right truncate max-w-[160px]"
-                  title={center.center_employees_range || "-"}
-                >
-                  {center.center_employees_range || "-"}
-                </span>
+                <TruncatedText
+                  text={center.center_employees_range || "-"}
+                  className="font-medium text-foreground text-right max-w-[160px]"
+                  align="end"
+                />
               </div>
             </div>
             <Button

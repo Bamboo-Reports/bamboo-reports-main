@@ -13,6 +13,8 @@ import {
 } from "@remixicon/react"
 import { devError } from "@/lib/utils/dev-log"
 import { Button } from "@/components/ui/button"
+import { HintTooltip } from "@/components/ui/tooltip"
+import { TruncatedText } from "@/components/ui/truncated-text"
 import {
   LibraryDialog,
   LibraryEmpty,
@@ -316,10 +318,9 @@ export function ExportsDialog({ open, onOpenChange, describeFilters }: ExportsDi
                   <span
                     key={field.label}
                     className="inline-flex h-6 max-w-full items-center gap-1 rounded-md border bg-card px-2 text-xs font-medium"
-                    title={`${field.label}: ${fieldText(field)}`}
                   >
                     <span className="shrink-0 font-normal text-muted-foreground">{field.label}</span>
-                    <span className="truncate">{fieldText(field)}</span>
+                    <TruncatedText text={fieldText(field)} />
                   </span>
                 ))}
               </div>
@@ -339,7 +340,17 @@ export function ExportsDialog({ open, onOpenChange, describeFilters }: ExportsDi
               <dt className="text-muted-foreground">IP address</dt>
               <dd className="text-xs tabular-nums">{ip ?? "Not recorded"}</dd>
               <dt className="text-muted-foreground">Browser</dt>
-              <dd title={selected.user_agent ?? undefined}>{browser ?? "Not recorded"}</dd>
+              <dd>
+                {browser && selected.user_agent ? (
+                  <HintTooltip label={browser} hint={selected.user_agent} align="start">
+                    <span tabIndex={0} className="rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                      {browser}
+                    </span>
+                  </HintTooltip>
+                ) : (
+                  browser ?? "Not recorded"
+                )}
+              </dd>
             </dl>
           </details>
         </div>
