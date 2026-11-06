@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   RiArrowDownSLine,
   RiBookmarkLine,
@@ -22,7 +22,7 @@ import {
   CenterFiltersSection,
   ProspectFiltersSection,
 } from '@/components/filters/filter-sections'
-import { countActiveFields, countActiveFilters, type FilterRangeBounds, type FilterSectionId } from '@/components/filters/filter-fields'
+import { countActiveFields, countActiveFilters, type FilterRangeBounds, type FilterSectionId } from '@/lib/dashboard/active-filters'
 import { describeFilters } from '@/components/filters/filter-description'
 import { ProfileMenu } from '@/components/layout/profile-menu'
 import { useAccountLists } from '@/contexts/account-lists-context'
@@ -133,12 +133,27 @@ export function FiltersSidebar({
   const [canScrollDown, setCanScrollDown] = useState(false)
   const [optimisticVisibilityMode, setOptimisticVisibilityMode] = useState(pendingFilters.accountVisibilityMode)
 
-  const bounds: FilterRangeBounds = { revenue: revenueRange, yearsInIndia: yearsInIndiaRange, centerIncYear: centerIncYearRange }
-  const listNames = new Map(accountLists.map((list) => [list.id, list.name]))
-  const sectionCounts = Object.fromEntries(
-    SECTIONS.map(({ id }) => [id, countActiveFields(id, pendingFilters, bounds)])
-  ) as Record<FilterSectionId, number>
+  // Memoised, with the two callbacks below, so SavedFiltersManager (memo) is
+  // left alone while a filter is being typed.
+  const bounds = useMemo<FilterRangeBounds>(
+    () => ({ revenue: revenueRange, yearsInIndia: yearsInIndiaRange, centerIncYear: centerIncYearRange }),
+    [revenueRange, yearsInIndiaRange, centerIncYearRange]
+  )
+  const listNames = useMemo(() => new Map(accountLists.map((list) => [list.id, list.name])), [accountLists])
+  const sectionCounts = useMemo(
+    () =>
+      Object.fromEntries(SECTIONS.map(({ id }) => [id, countActiveFields(id, pendingFilters, bounds)])) as Record<
+        FilterSectionId,
+        number
+      >,
+    [pendingFilters, bounds]
+  )
   const totalActiveFilters = countActiveFilters(pendingFilters, bounds)
+  const countSavedFilters = useCallback((saved: Partial<Filters>) => countActiveFilters(saved, bounds), [bounds])
+  const describeSavedFilters = useCallback(
+    (saved: Partial<Filters>) => describeFilters(saved, bounds, listNames),
+    [bounds, listNames]
+  )
 
   const checkScroll = useCallback(() => {
     requestAnimationFrame(() => {
@@ -414,8 +429,8 @@ export function FiltersSidebar({
               totalActiveFilters={totalActiveFilters}
               openMenuSignal={savedMenuSignal}
               openAccountListsSignal={accountListsSignal}
-              countFilters={(saved) => countActiveFilters(saved, bounds)}
-              describeFilters={(saved) => describeFilters(saved, bounds, listNames)}
+              countFilters={countSavedFilters}
+              describeFilters={describeSavedFilters}
             />
           </div>
 

@@ -1,4 +1,4 @@
-import { isRangeActive, type FilterRangeBounds, type FilterSectionId } from "@/components/filters/filter-fields"
+import { isRangeActive, type FilterRangeBounds, type FilterSectionId } from "@/lib/dashboard/active-filters"
 import { formatRangeSummary, type RangeUnit } from "@/components/filters/filter-range-field"
 import { withFilterDefaults } from "@/lib/dashboard/filter-summary"
 import type { AccountVisibilityMode, FilterValue, Filters } from "@/lib/types"

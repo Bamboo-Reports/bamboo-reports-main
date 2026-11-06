@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { countActiveFilters, isRangeActive } from "@/components/filters/filter-fields"
+import { countActiveFilters, isRangeActive } from "@/lib/dashboard/active-filters"
 import { createDefaultFilters } from "@/lib/dashboard/defaults"
 import type { Filters } from "@/lib/types"
 
@@ -47,6 +47,42 @@ describe("countActiveFilters", () => {
   it("fills in fields a saved filter predates", () => {
     const saved = { accountHqCountryValues: [{ value: "India", mode: "exclude" as const }] }
     expect(countActiveFilters(saved, bounds)).toBe(1)
+  })
+})
+
+describe("countActiveFilters without the data's limits", () => {
+  // Analytics on saved filters have no bounds to hand, so the widest range a
+  // filter can hold stands in for them.
+  it("is zero for a freshly created filter set", () => {
+    expect(countActiveFilters(createDefaultFilters())).toBe(0)
+  })
+
+  it("counts each range whose records with no value are switched off", () => {
+    const filters = createDefaultFilters({
+      accountHqRevenueIncludeNull: false,
+      yearsInIndiaIncludeNull: false,
+      centerIncYearIncludeNull: false,
+    })
+    expect(countActiveFilters(filters)).toBe(3)
+  })
+
+  it("counts a narrowed range once, with or without its toggle", () => {
+    expect(countActiveFilters(createDefaultFilters({ accountHqRevenueRange: [100, 500] }))).toBe(1)
+    expect(
+      countActiveFilters(createDefaultFilters({ accountHqRevenueRange: [100, 500], accountHqRevenueIncludeNull: false }))
+    ).toBe(1)
+  })
+
+  it("counts fields, not values, like the sidebar badge", () => {
+    const filters = createDefaultFilters({
+      accountHqCountryValues: [
+        { value: "India", mode: "include" },
+        { value: "USA", mode: "include" },
+      ],
+      centerCityValues: [{ value: "Bangalore", mode: "include" }],
+      accountVisibilityMode: "all",
+    })
+    expect(countActiveFilters(filters)).toBe(3)
   })
 })
 

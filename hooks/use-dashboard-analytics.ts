@@ -26,6 +26,11 @@ type Range = { min: number; max: number }
 
 export interface UseDashboardAnalyticsParams {
   authReady: boolean
+  /**
+   * True once the section and view from the address bar have been applied.
+   * Until then changes are the page opening, not the user moving around.
+   */
+  layoutRestored?: boolean
   userId: string | null
   userEmail: string | null
   userRole: UserRole
@@ -55,6 +60,7 @@ export interface UseDashboardAnalyticsParams {
  */
 export function useDashboardAnalytics({
   authReady,
+  layoutRestored = true,
   userId,
   userEmail,
   userRole,
@@ -76,6 +82,9 @@ export function useDashboardAnalytics({
   const hasTrackedDashboardLoadRef = useRef(false)
   const sessionStartRef = useRef<number | null>(null)
   const currentScreenStartRef = useRef<number | null>(null)
+  // Set once the opening section and views are known; section and view
+  // changes before that are the address bar being applied, not navigation.
+  const baselinedRef = useRef(false)
   const currentScreenRef = useRef<DashboardSection>(DEFAULT_SECTION)
   const previousPageRef = useRef<Record<DashboardSection, number>>({ accounts: 1, centers: 1, prospects: 1 })
   const previousAccountsViewRef = useRef<EntityView>("map")
@@ -135,7 +144,6 @@ export function useDashboardAnalytics({
     hasTrackedDashboardLoadRef.current = false
     sessionStartRef.current = Date.now()
     currentScreenStartRef.current = Date.now()
-    currentScreenRef.current = DEFAULT_SECTION
     previousPageRef.current = { accounts: 1, centers: 1, prospects: 1 }
     viewSwitchCountRef.current = 0
     exportCountRef.current = 0
@@ -272,8 +280,20 @@ export function useDashboardAnalytics({
     })
   }, [pageError])
 
+  // Declared before the change effects below so that, in the render where the
+  // address bar's section and view land, the baseline is taken first and they
+  // see nothing to report.
   useEffect(() => {
-    if (currentScreenRef.current === activeSection) {
+    if (baselinedRef.current || !layoutRestored) return
+    baselinedRef.current = true
+    currentScreenRef.current = activeSection
+    previousAccountsViewRef.current = accountsView
+    previousCentersViewRef.current = centersView
+    previousProspectsViewRef.current = prospectsView
+  }, [layoutRestored, activeSection, accountsView, centersView, prospectsView])
+
+  useEffect(() => {
+    if (!baselinedRef.current || currentScreenRef.current === activeSection) {
       return
     }
     captureCurrentScreenTime("section_change")
@@ -287,7 +307,7 @@ export function useDashboardAnalytics({
   }, [activeSection, captureCurrentScreenTime])
 
   useEffect(() => {
-    if (previousAccountsViewRef.current === accountsView) {
+    if (!baselinedRef.current || previousAccountsViewRef.current === accountsView) {
       return
     }
     captureEvent(ANALYTICS_EVENTS.SECTION_VIEW_CHANGED, {
@@ -300,7 +320,7 @@ export function useDashboardAnalytics({
   }, [accountsView])
 
   useEffect(() => {
-    if (previousCentersViewRef.current === centersView) {
+    if (!baselinedRef.current || previousCentersViewRef.current === centersView) {
       return
     }
     captureEvent(ANALYTICS_EVENTS.SECTION_VIEW_CHANGED, {
@@ -313,7 +333,7 @@ export function useDashboardAnalytics({
   }, [centersView])
 
   useEffect(() => {
-    if (previousProspectsViewRef.current === prospectsView) {
+    if (!baselinedRef.current || previousProspectsViewRef.current === prospectsView) {
       return
     }
     captureEvent(ANALYTICS_EVENTS.SECTION_VIEW_CHANGED, {

@@ -108,6 +108,22 @@ describe("useDashboardAnalytics", () => {
     expect(events("session_ended")[0][1]).toMatchObject({ view_switch_count: 2 })
   })
 
+  it("treats the section and view restored from the address bar as where the page opened", () => {
+    const { rerender, unmount } = setup({ layoutRestored: false })
+    // The address bar lands: centers in the data view, in the same render as layoutRestored.
+    rerender({ ...base, layoutRestored: true, activeSection: "centers", centersView: "data", activeView: "data" })
+    expect(events("section_changed")).toHaveLength(0)
+    expect(events("section_view_changed")).toHaveLength(0)
+    expect(events("screen_time_spent")).toHaveLength(0)
+
+    // A real move afterwards is reported from the restored section.
+    rerender({ ...base, layoutRestored: true, activeSection: "prospects", centersView: "data", activeView: "chart" })
+    expect(events("section_changed")).toEqual([["section_changed", { from_screen: "centers", to_screen: "prospects" }]])
+
+    unmount()
+    expect(events("session_ended")[0][1]).toMatchObject({ view_switch_count: 1 })
+  })
+
   it("reports an empty filter result once per filter state", () => {
     const empty = { accounts: 0, centers: 0, prospects: 0 }
     const { rerender } = setup({ activeFiltersCount: 1, filteredCounts: empty })

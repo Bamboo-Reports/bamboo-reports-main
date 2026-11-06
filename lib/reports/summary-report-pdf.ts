@@ -110,6 +110,10 @@ export async function renderSummaryReportPdf(model: SummaryReportModel, assets: 
     }
   }
 
+  // The built-in Helvetica only covers WinAnsi, which has neither glyph.
+  const MINUS = hasBrandFont ? "\u2212" : "-"
+  const ELLIPSIS = hasBrandFont ? "\u2026" : "..."
+
   const setText = (size: number, color: RGB, weight: Weight = "regular") => {
     if (hasBrandFont) doc.setFont(FONT_FAMILY, weight)
     else doc.setFont("helvetica", weight === "regular" ? "normal" : "bold")
@@ -120,8 +124,8 @@ export async function renderSummaryReportPdf(model: SummaryReportModel, assets: 
   const truncate = (text: string, maxWidth: number) => {
     if (doc.getTextWidth(text) <= maxWidth) return text
     let out = text
-    while (out.length > 1 && doc.getTextWidth(`${out}…`) > maxWidth) out = out.slice(0, -1)
-    return `${out.trimEnd()}…`
+    while (out.length > 1 && doc.getTextWidth(`${out}${ELLIPSIS}`) > maxWidth) out = out.slice(0, -1)
+    return `${out.trimEnd()}${ELLIPSIS}`
   }
 
   const generatedDate = formatDate(model.generatedAt)
@@ -245,7 +249,7 @@ export async function renderSummaryReportPdf(model: SummaryReportModel, assets: 
 
   sectionHeading(
     "Filters applied",
-    filterRows.length > 0 ? "Values marked + are included and − are excluded" : undefined
+    filterRows.length > 0 ? `Values marked + are included and ${MINUS} are excluded` : undefined
   )
   for (const row of scopeRows) scopeLine(row.label, row.included.join(", "))
 
@@ -261,7 +265,7 @@ export async function renderSummaryReportPdf(model: SummaryReportModel, assets: 
     const w = chipWidth(text)
     doc.setFillColor(...(mode === "include" ? INCLUDE_BG : EXCLUDE_BG))
     doc.roundedRect(x, y, w, CHIP_HEIGHT, 4, 4, "F")
-    const sign = mode === "include" ? "+" : "−"
+    const sign = mode === "include" ? "+" : MINUS
     setText(9, mode === "include" ? INCLUDE : EXCLUDE, "medium")
     doc.text(sign, x + 6, y + 11.5)
     const signWidth = doc.getTextWidth(`${sign} `)

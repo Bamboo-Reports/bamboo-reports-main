@@ -5,7 +5,8 @@ import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { buildTrackedFiltersSnapshot, normalizeTrackedText } from "@/lib/analytics/tracking"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
-import { calculateActiveFilters, withFilterDefaults } from "@/lib/dashboard/filter-summary"
+import { countActiveFilters } from "@/lib/dashboard/active-filters"
+import { withFilterDefaults } from "@/lib/dashboard/filter-summary"
 import type { Filters } from "@/lib/types"
 
 export interface SavedFilter {
@@ -166,7 +167,7 @@ export function useSavedFilters() {
         saved_filter_id: data?.id ?? null,
         saved_filter_name: normalizeTrackedText(normalizedName),
         filter_name_length: normalizedName.length,
-        active_filters_count: calculateActiveFilters(filters),
+        active_filters_count: countActiveFilters(filters),
         saved_filters_snapshot: buildTrackedFiltersSnapshot(filters),
       })
       return (data?.id as string | undefined) ?? null
@@ -194,7 +195,7 @@ export function useSavedFilters() {
       captureEvent(ANALYTICS_EVENTS.SAVED_FILTER_DELETED, {
         saved_filter_id: id,
         saved_filter_name: filterToDelete ? normalizeTrackedText(filterToDelete.name) : null,
-        active_filters_count: filterToDelete ? calculateActiveFilters(filterToDelete.filters) : null,
+        active_filters_count: filterToDelete ? countActiveFilters(filterToDelete.filters) : null,
         deleted_filters_snapshot: filterToDelete ? buildTrackedFiltersSnapshot(filterToDelete.filters) : null,
       })
       return true
@@ -229,7 +230,7 @@ export function useSavedFilters() {
         previous_filter_name: previousFilter ? normalizeTrackedText(previousFilter.name) : null,
         next_filter_name: normalizeTrackedText(normalizedName),
         filter_name_length: normalizedName.length,
-        active_filters_count: calculateActiveFilters(filters),
+        active_filters_count: countActiveFilters(filters),
         updated_filters_snapshot: buildTrackedFiltersSnapshot(filters),
       })
       return true

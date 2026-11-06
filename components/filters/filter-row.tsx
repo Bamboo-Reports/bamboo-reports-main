@@ -14,11 +14,17 @@ interface FilterRowProps {
 
 /**
  * One filter as a single line (label, current value, chevron) that opens in
- * place to edit. Rows that are set open on first render.
+ * place to edit. Rows that are set open on first render, and a row opens when
+ * it becomes set later (a saved filter, a shared link or an account list);
+ * one the user closed stays closed while its value only changes.
  */
 export function FilterRow({ label, summary, active, children }: FilterRowProps) {
   const [open, setOpen] = React.useState(active)
   const bodyId = React.useId()
+
+  React.useEffect(() => {
+    if (active) setOpen(true)
+  }, [active])
 
   return (
     <div data-filter-row className={cn("rounded-lg", open && "my-0.5 bg-sidebar-accent")}>

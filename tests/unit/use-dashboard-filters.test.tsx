@@ -70,7 +70,7 @@ describe("useDashboardFilters", () => {
     expect(result.current.filters.centerCityValues).toEqual([inc("Pune")])
   })
 
-  it("counts values, a non-default visibility, narrowed ranges and switched-off toggles", () => {
+  it("counts fields, a non-default visibility, narrowed ranges and switched-off toggles", () => {
     const { result } = setup()
     change(result, (f) => ({
       ...f,
@@ -81,14 +81,14 @@ describe("useDashboardFilters", () => {
       yearsInIndiaIncludeNull: false,
       prospectTitleKeywords: [inc("cto")],
     }))
-    // 2 regions + visibility + revenue range + inc-year range + toggle + keyword
-    expect(result.current.getTotalActiveFilters()).toBe(7)
+    // Regions (one field, two values) + visibility + revenue range + inc-year range + years toggle + keyword
+    expect(result.current.getTotalActiveFilters()).toBe(6)
   })
 
-  it("counts account lists instead of the names they expand to", () => {
+  it("counts account names and lists as one field", () => {
     const { result } = setup()
     change(result, (f) => ({ ...f, accountNameValues: [inc("A"), inc("B"), inc("C")] }))
-    expect(result.current.getTotalActiveFilters()).toBe(3)
+    expect(result.current.getTotalActiveFilters()).toBe(1)
     change(result, (f) => ({ ...f, accountListValues: [inc("list-1")] }))
     expect(result.current.getTotalActiveFilters()).toBe(1)
   })
@@ -201,7 +201,7 @@ describe("useDashboardFilters", () => {
           previous_exclude_values: [],
           added_values: ["exclude:Delhi", "include:Pune"],
           removed_values: [],
-          active_filters_count: 2,
+          active_filters_count: 1,
         },
       ])
     })
@@ -238,7 +238,8 @@ describe("useDashboardFilters", () => {
         previous_range_max: 1000,
         range_delta_min: 9,
         range_delta_max: -100,
-        active_filters_count: 3,
+        // The revenue range and its toggle are one field; visibility is the other.
+        active_filters_count: 2,
       })
       expect(byKey.accountHqRevenueIncludeNull).toMatchObject({
         change_type: "toggle",

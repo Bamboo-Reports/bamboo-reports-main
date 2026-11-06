@@ -71,7 +71,7 @@ final_accounts    acc0 restricted by prospect_accounts and surviving_centers
 
 `buildWith` resolves only the CTEs a query transitively needs (driven by `computeFlags`, which mirrors the engine's `hasAccountFilters` / `hasProspectFilters` flags and section entitlements) and emits them `AS MATERIALIZED`: a pure planner hint that avoids a nested-loop blow-up from under-estimated CTE cardinalities (`materialized: false` for pg-mem, which does not parse the keyword). Predicates are built at emit time so parameter order always matches SQL text order.
 
-Public builders: `buildAccountsQuery` / `buildCentersQuery` / `buildProspectsQuery` (+ `...CountQuery` variants) with `columns` / `orderBy` / `limit` / `offset` options, and `buildEntityAggregateQuery(entity, filters, access, select, { groupBy, where })`, which reuses the same cascade for the summary, charts, and map endpoints. `buildFacetCountsQuery(specs, filters, access)` emits the cascade once and one `union all` branch per facet, so the 24 sidebar lists are one statement when no facet is active (one extra statement per active facet, which excludes itself). A disabled section returns a `where false` query. `buildEntityUnionQuery(entity, filters, access, branches)` is the many-branch form (one cascade, `union all` members that must share a column list); `lib/dashboard/centers-map.ts` uses it to fetch the city and state map aggregates as one statement (`buildCentersMapQuery`, rows split by `kind`).
+Public builders: `buildAccountsQuery` / `buildCentersQuery` / `buildProspectsQuery` (+ `...CountQuery` variants) with `columns` / `orderBy` / `limit` / `offset` options, and `buildEntityAggregateQuery(entity, filters, select, { groupBy, where })`, which reuses the same cascade for the summary, charts, and map endpoints. `buildFacetCountsQuery(specs, filters)` emits the cascade once and one `union all` branch per facet, so the 24 sidebar lists are one statement when no facet is active (one extra statement per active facet, which excludes itself). `buildEntityUnionQuery(entity, filters, branches)` is the many-branch form (one cascade, `union all` members that must share a column list); `lib/dashboard/centers-map.ts` uses it to fetch the city and state map aggregates as one statement (`buildCentersMapQuery`, rows split by `kind`).
 
 ### Parity guarantee
 
@@ -82,7 +82,6 @@ The SQL MUST produce exactly the same id-sets as the client engine. The client e
 `lib/dashboard/filters-request.ts` is the trust boundary:
 
 - `parseFilters(body.filters)` coerces an untrusted body into a valid `Filters`: unknown/malformed fields fall back to defaults, value arrays are shape-checked (`{ value, mode }`), ranges must be finite number pairs, and unknown keys (including removed filters in old saved filters) are ignored.
-- `resolveAccess()` resolves server-side section entitlements (accounts/centers/prospects enabled), mirroring the client.
 
 ## Ordering rules
 
@@ -118,7 +117,7 @@ The rendered charts come from `/api/dashboard/charts`. `lib/dashboard/charts.ts`
 
 The client never holds a list of every filtered key, so "export all filtered" sends the **filter state** instead of key lists (#249 Phase 4):
 
-- `POST /api/exports/generate` accepts a `filters` body field. When present it takes precedence: the route runs it through `parseFilters` + `resolveAccess` and calls `buildServerExport({ datasets, filters, access })`; the legacy `accountNames` / `centerKeys` / `prospectKeys` / `keylessProspectIds` lists are ignored.
+- `POST /api/exports/generate` accepts a `filters` body field. When present it takes precedence: the route runs it through `parseFilters` and calls `buildServerExport({ datasets, filters })`; the legacy `accountNames` / `centerKeys` / `prospectKeys` / `keylessProspectIds` lists are ignored.
 - `lib/exports/server-builder.ts` then fetches each dataset through the proven SQL builders with `columns: "*"` (`buildAccountsQuery` / `buildCentersQuery` / `buildProspectsQuery` via `queryWarehouse`). Services have no filter engine of their own: they are wrapped as `where cn_unique_key in (<centers subquery>)` over the surviving centers, matching the filtered services count on `/api/dashboard/summary`.
 - Without `filters`, the builder keeps the legacy Prisma key-list path (used by precise row-selection exports, which are unchanged).
 - The admin role gate, hourly export rate limit, Storage upload, and audit logging are the same for filter-based and key-list exports; see [user-exports.md](user-exports.md).
@@ -150,7 +149,7 @@ Per the historical [security-249-progress.md](../archive/security-249-progress.m
 |------|---------|
 | `lib/dashboard/filtering-sql.ts` | Filters to parameterized SQL: clause builders, cascade CTEs, entity/aggregate query builders |
 | `lib/dashboard/filtering.ts` | Client filter engine (parity reference for the SQL tests only) |
-| `lib/dashboard/filters-request.ts` | `parseFilters` (untrusted body coercion) + `resolveAccess` (section entitlements) |
+| `lib/dashboard/filters-request.ts` | `parseFilters` (untrusted body coercion and size caps) |
 | `lib/dashboard/entity-query.ts` | Pagination, sort whitelist, class-based text ordering, tiebreaks, `queryEntity` |
 | `lib/dashboard/entity-query-route.ts` | Shared handler for the three `/query` routes (auth, rate limit, cache) |
 | `lib/dashboard/entity-columns.ts` | Column projections shared by query/search/lookup endpoints |

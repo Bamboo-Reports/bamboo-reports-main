@@ -59,6 +59,8 @@ export function useDashboardUrlSync({
   const { lists } = useAccountLists()
   const pendingRef = useRef<Partial<Filters> | null>(null)
   const [restored, setRestored] = useState(false)
+  // The section and view are applied on the first effect; the filters may wait for the data's limits.
+  const [layoutRestored, setLayoutRestored] = useState(false)
   const [listWaitOver, setListWaitOver] = useState(false)
 
   // Read the address once, on load.
@@ -67,6 +69,7 @@ export function useDashboardUrlSync({
     const startSection = decoded.section ?? section
     if (decoded.section) setSection(decoded.section)
     if (decoded.view && !(startSection === "prospects" && decoded.view === "map")) setView(startSection, decoded.view)
+    setLayoutRestored(true)
     pendingRef.current = decoded.filters
     if (!decoded.filters) {
       setRestored(true)
@@ -97,4 +100,6 @@ export function useDashboardUrlSync({
     if (search === window.location.search) return
     window.history.replaceState(window.history.state, "", `${window.location.pathname}${search}${window.location.hash}`)
   }, [restored, filters, section, view, bounds])
+
+  return { layoutRestored }
 }

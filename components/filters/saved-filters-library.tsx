@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { HintTooltip } from "@/components/ui/tooltip"
 import { FilterValueTag } from "@/components/filters/filter-chip"
 import type { DescribedSection } from "@/components/filters/filter-description"
-import type { FilterSectionId } from "@/components/filters/filter-fields"
+import type { FilterSectionId } from "@/lib/dashboard/active-filters"
 import {
   LibraryDialog,
   LibraryEmpty,

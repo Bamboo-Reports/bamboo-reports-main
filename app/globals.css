@@ -240,11 +240,11 @@
   .animate-stagger:nth-child(3) { animation-delay: 80ms; }
   .animate-stagger:nth-child(4) { animation-delay: 120ms; }
   .animate-stagger:nth-child(5) { animation-delay: 160ms; }
-  .animate-stagger:nth-child(6) { animation-delay: 125ms; }
-  .animate-stagger:nth-child(7) { animation-delay: 150ms; }
-  .animate-stagger:nth-child(8) { animation-delay: 175ms; }
-  .animate-stagger:nth-child(9) { animation-delay: 200ms; }
-  .animate-stagger:nth-child(10) { animation-delay: 225ms; }
+  .animate-stagger:nth-child(6) { animation-delay: 200ms; }
+  .animate-stagger:nth-child(7) { animation-delay: 240ms; }
+  .animate-stagger:nth-child(8) { animation-delay: 280ms; }
+  .animate-stagger:nth-child(9) { animation-delay: 320ms; }
+  .animate-stagger:nth-child(10) { animation-delay: 360ms; }
 
   /* Smooth transition for all interactive elements */
   .interactive {

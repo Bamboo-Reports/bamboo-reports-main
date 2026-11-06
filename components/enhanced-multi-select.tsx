@@ -16,6 +16,7 @@ import {
   toTrackedStringArray,
 } from "@/lib/analytics/tracking"
 import type { FilterValue } from "@/lib/types"
+import { compareRangeLabels } from "@/lib/utils/range-order"
 
 interface EnhancedMultiSelectProps {
   options: Array<{ value: string; count?: number; disabled?: boolean }>
@@ -31,19 +32,6 @@ interface EnhancedMultiSelectProps {
 
 const DEFAULT_VISIBLE_OPTIONS = 20
 const MAX_SEARCH_RESULTS = 100
-
-const UNIT: Record<string, number> = { k: 1e3, m: 1e6, mn: 1e6, b: 1e9, bn: 1e9 }
-
-/** Sort key for a band label: "<50" sorts before "51 - 100", ">10K" after "5K - 10K". */
-export function bandSortKey(label: string) {
-  const match = label.toLowerCase().match(/(\d+(?:\.\d+)?)\s*(bn|mn|k|m|b)?/)
-  if (!match) return Number.POSITIVE_INFINITY
-  const amount = Number.parseFloat(match[1]) * (UNIT[match[2] ?? ""] ?? 1)
-  const trimmed = label.trim()
-  if (trimmed.startsWith("<")) return amount - 0.5
-  if (trimmed.startsWith(">")) return amount + 0.5
-  return amount
-}
 
 // One option in the list. No checkbox: a value is off, included or excluded,
 // shown by the +/− mark and tint; the labelled buttons appear on hover.
@@ -257,7 +245,8 @@ export const EnhancedMultiSelect = React.memo(function EnhancedMultiSelect({
     }
 
     if (ordered) {
-      return [...allOptions].sort((a, b) => bandSortKey(a.value) - bandSortKey(b.value)).slice(0, DEFAULT_VISIBLE_OPTIONS)
+      // The same order the charts and the sorted tables use for these bands.
+      return [...allOptions].sort((a, b) => compareRangeLabels(a.value, b.value)).slice(0, DEFAULT_VISIBLE_OPTIONS)
     }
     const selectedValues = new Set(selected.map((item) => item.value))
     const sorted = [...allOptions].sort(

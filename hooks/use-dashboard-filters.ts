@@ -22,7 +22,7 @@ import {
 } from "@/lib/dashboard/filtering"
 import { getAccountChartData, getCenterChartData, getProspectChartData } from "@/lib/dashboard/charts"
 import { perfLog } from "@/lib/utils/dev-log"
-import { countActiveFilters, type RangeBaselines } from "@/lib/dashboard/active-filters"
+import { countActiveFilters, type FilterRangeBounds } from "@/lib/dashboard/active-filters"
 import { useAccountLists } from "@/contexts/account-lists-context"
 import { expandAccountLists } from "@/lib/accounts/account-lists"
 import { useFilterChangeTracking } from "@/hooks/use-filter-change-tracking"
@@ -301,7 +301,7 @@ export function useDashboardFilters({
   )
 
   // The full extent of each range slider: a range at these bounds is not a filter.
-  const rangeBaselines: RangeBaselines = useMemo(
+  const rangeBaselines: FilterRangeBounds = useMemo(
     () => ({ revenue: revenueRange, yearsInIndia: yearsInIndiaRange, centerIncYear: centerIncYearRange }),
     [revenueRange, yearsInIndiaRange, centerIncYearRange]
   )

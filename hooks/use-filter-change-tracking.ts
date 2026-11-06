@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { buildFilterChangedEvents } from "@/lib/analytics/filter-change-events"
-import { countActiveFilters, type RangeBaselines } from "@/lib/dashboard/active-filters"
+import { countActiveFilters, type FilterRangeBounds } from "@/lib/dashboard/active-filters"
 import type { Filters } from "@/lib/types"
 
 // Changes this close together are reported as one batch.
@@ -27,9 +27,9 @@ const isFullRange = (range: [number, number], bounds: { min: number; max: number
  */
 function withoutBoundsMoves(
   previous: Filters,
-  previousBaselines: RangeBaselines,
+  previousBaselines: FilterRangeBounds,
   current: Filters,
-  currentBaselines: RangeBaselines
+  currentBaselines: FilterRangeBounds
 ): Filters {
   let result = previous
   for (const [key, baseline] of RANGE_BASELINE_KEYS) {
@@ -51,8 +51,8 @@ function withoutBoundsMoves(
  * bounds that applied to it, so the sliders settling on the real bounds after
  * the first load is not reported.
  */
-export function useFilterChangeTracking(filters: Filters, baselines: RangeBaselines) {
-  const previousTrackedRef = useRef<{ filters: Filters; baselines: RangeBaselines } | null>(null)
+export function useFilterChangeTracking(filters: Filters, baselines: FilterRangeBounds) {
+  const previousTrackedRef = useRef<{ filters: Filters; baselines: FilterRangeBounds } | null>(null)
   const filterTrackTimeoutRef = useRef<number | null>(null)
 
   useEffect(() => {

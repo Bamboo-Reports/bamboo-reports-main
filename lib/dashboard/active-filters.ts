@@ -1,58 +1,118 @@
-import type { Filters } from "@/lib/types"
+import {
+  DEFAULT_CENTER_INC_YEAR_RANGE,
+  DEFAULT_REVENUE_RANGE,
+  DEFAULT_YEARS_IN_INDIA_RANGE,
+} from "@/lib/dashboard/defaults"
+import { withFilterDefaults } from "@/lib/dashboard/filter-summary"
+import type { FilterValue, Filters } from "@/lib/types"
+
+export type FilterSectionId = "accounts" | "centers" | "prospects"
 
 type Bounds = { min: number; max: number }
 
-export type RangeBaselines = {
+/** The data's own limits for each range filter; a range only counts as set once it moves inside them. */
+export interface FilterRangeBounds {
   revenue: Bounds
   yearsInIndia: Bounds
   centerIncYear: Bounds
 }
 
-const isNarrowed = (range: [number, number], bounds: Bounds) => range[0] !== bounds.min || range[1] !== bounds.max
+const toBounds = ([min, max]: readonly [number, number]): Bounds => ({ min, max })
 
 /**
- * How many filters are active: each selected value counts once, a list of
- * accounts counts by list (not by the names it expands to), a visibility
- * other than GCCs counts once, a range counts once when narrowed from its
- * baseline, and an "Include all" toggle counts once when switched off.
+ * The widest range each filter can hold. Used where the data's limits are not
+ * to hand (analytics on saved filters): a saved range narrower than this
+ * counts as set even when it merely restates the data's limits.
  */
-export function countActiveFilters(filters: Filters, baselines: RangeBaselines): number {
-  let count = 0
-  count += filters.accountHqRegionValues.length
-  if ((filters.accountVisibilityMode ?? "gcc") !== "gcc") count += 1
-  count += filters.accountHqCountryValues.length
-  count += filters.accountHqIndustryValues.length
-  count += filters.accountPrimaryCategoryValues.length
-  count += filters.accountPrimaryNatureValues.length
-  count += filters.accountNasscomStatusValues.length
-  count += filters.accountHqEmployeeRangeValues.length
-  count += filters.accountCenterEmployeesRangeValues.length
-  count += filters.accountGlobalLegalNameKeywords.length
-  count += filters.accountListValues.length > 0 ? filters.accountListValues.length : filters.accountNameValues.length
-  count += filters.centerTypeValues.length
-  count += filters.centerFocusValues.length
-  count += filters.centerCityValues.length
-  count += filters.centerStateValues.length
-  count += filters.centerEmployeesRangeValues.length
-  count += filters.centerStatusValues.length
-  count += filters.functionNameValues.length
-  count += filters.techSoftwareInUseKeywords.length
-  count += filters.prospectDepartmentValues.length
-  count += filters.prospectHeadTypeValues.length
-  count += filters.prospectLevelValues.length
-  count += filters.prospectEngagedValues.length
-  count += filters.prospectCityValues.length
-  count += filters.prospectTitleKeywords.length
+export const DEFAULT_RANGE_BOUNDS: FilterRangeBounds = {
+  revenue: toBounds(DEFAULT_REVENUE_RANGE),
+  yearsInIndia: toBounds(DEFAULT_YEARS_IN_INDIA_RANGE),
+  centerIncYear: toBounds(DEFAULT_CENTER_INC_YEAR_RANGE),
+}
 
-  if (isNarrowed(filters.accountHqRevenueRange, baselines.revenue)) count += 1
-  if (isNarrowed(filters.accountYearsInIndiaRange, baselines.yearsInIndia)) count += 1
-  if (isNarrowed(filters.centerIncYearRange, baselines.centerIncYear)) count += 1
+interface FieldCheck {
+  /** The filter key this check reads. */
+  key: string
+  isActive: (filters: Filters, bounds: FilterRangeBounds) => boolean
+}
 
-  // "Include all" toggles are on by default; they only narrow the results
-  // (and count as a filter) when switched off.
-  if (!filters.accountHqRevenueIncludeNull) count += 1
-  if (!filters.yearsInIndiaIncludeNull) count += 1
-  if (!filters.centerIncYearIncludeNull) count += 1
+const values = (key: keyof Filters): FieldCheck => ({
+  key,
+  isActive: (filters) => (filters[key] as FilterValue[]).length > 0,
+})
 
-  return count
+/** A range is set when it narrows the data's limits (a wider one, like an old saved default, isn't). */
+export function isRangeActive(range: [number, number], bounds: Bounds, includeNull = true) {
+  return range[0] > bounds.min || range[1] < bounds.max || !includeNull
+}
+
+/** Every filter field, by section, as the sidebar counts them: one per field, however many values it has. */
+const SECTION_FIELDS: Record<FilterSectionId, FieldCheck[]> = {
+  accounts: [
+    values("accountGlobalLegalNameKeywords"),
+    {
+      key: "accountListValues",
+      isActive: (f) => f.accountListValues.length > 0 || f.accountNameValues.length > 0,
+    },
+    {
+      key: "accountHqRevenueRange",
+      isActive: (f, b) => isRangeActive(f.accountHqRevenueRange, b.revenue, f.accountHqRevenueIncludeNull),
+    },
+    values("accountCenterEmployeesRangeValues"),
+    {
+      key: "accountYearsInIndiaRange",
+      isActive: (f, b) => isRangeActive(f.accountYearsInIndiaRange, b.yearsInIndia, f.yearsInIndiaIncludeNull),
+    },
+    values("accountPrimaryCategoryValues"),
+    values("accountHqCountryValues"),
+    values("accountHqRegionValues"),
+    values("accountHqEmployeeRangeValues"),
+    values("accountHqIndustryValues"),
+    values("accountPrimaryNatureValues"),
+    values("accountNasscomStatusValues"),
+  ],
+  centers: [
+    values("centerStatusValues"),
+    values("centerTypeValues"),
+    values("functionNameValues"),
+    values("centerCityValues"),
+    {
+      key: "centerIncYearRange",
+      isActive: (f, b) => isRangeActive(f.centerIncYearRange, b.centerIncYear, f.centerIncYearIncludeNull),
+    },
+    values("centerEmployeesRangeValues"),
+    values("centerStateValues"),
+    values("centerFocusValues"),
+    values("techSoftwareInUseKeywords"),
+  ],
+  prospects: [
+    values("prospectTitleKeywords"),
+    values("prospectHeadTypeValues"),
+    values("prospectLevelValues"),
+    values("prospectDepartmentValues"),
+    values("prospectCityValues"),
+    values("prospectEngagedValues"),
+  ],
+}
+
+/** How many fields in a section are set. */
+export function countActiveFields(section: FilterSectionId, filters: Filters, bounds: FilterRangeBounds) {
+  return SECTION_FIELDS[section].filter((field) => field.isActive(filters, bounds)).length
+}
+
+const DEFAULT_VISIBILITY_MODE = "gcc"
+
+/**
+ * How many filters are set: one per field (however many values it has), plus
+ * the "Accounts to show" switch when it isn't on GCCs. The one count behind
+ * the sidebar badge, each saved filter, the exports, the PDF report and
+ * analytics, so they always agree.
+ */
+export function countActiveFilters(source: Partial<Filters>, bounds: FilterRangeBounds = DEFAULT_RANGE_BOUNDS) {
+  // Saved filters can predate newer fields; fill those in before counting.
+  const filters = withFilterDefaults(source)
+  const sections = Object.keys(SECTION_FIELDS) as FilterSectionId[]
+  const fields = sections.reduce((sum, section) => sum + countActiveFields(section, filters, bounds), 0)
+  const visibility = (filters.accountVisibilityMode ?? DEFAULT_VISIBILITY_MODE) !== DEFAULT_VISIBILITY_MODE
+  return fields + (visibility ? 1 : 0)
 }

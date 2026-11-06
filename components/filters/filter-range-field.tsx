@@ -88,6 +88,9 @@ function RangeInput({
   onCommit: (value: number | null) => void
 }) {
   const [draft, setDraft] = React.useState<string | null>(null)
+  // Escape blurs the input before the cleared draft reaches the blur handler,
+  // so the discard is flagged here rather than read from state.
+  const discardRef = React.useRef(false)
   return (
     <input
       aria-label={label}
@@ -99,13 +102,14 @@ function RangeInput({
       }}
       onChange={(event) => setDraft(event.target.value)}
       onBlur={() => {
-        if (draft !== null) onCommit(parseRangeValue(draft, unit))
+        if (draft !== null && !discardRef.current) onCommit(parseRangeValue(draft, unit))
+        discardRef.current = false
         setDraft(null)
       }}
       onKeyDown={(event) => {
         if (event.key === "Enter") event.currentTarget.blur()
         if (event.key === "Escape") {
-          setDraft(null)
+          discardRef.current = true
           event.currentTarget.blur()
         }
       }}

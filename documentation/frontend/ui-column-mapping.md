@@ -55,7 +55,7 @@ The old `filter-column-ui-label-map.json` has moved to `documentation/archive/` 
 
 The filter sidebar is on the left side of the dashboard. Filters are grouped into three collapsible sections: **Account Attributes**, **Centre Attributes** and **Prospect Attributes** (the config section ids are `accounts`, `centers`, `prospects`).
 
-Each section can hide some filters behind a premium "Show More" reveal (`premiumFilterKeys` in `lib/config/filters.ts`).
+Each section lists its less-used filters under a "More" divider (`moreFilterKeys` in `lib/config/filters.ts`).
 
 **Source files:**
 - `lib/config/filters.ts`

@@ -1,4 +1,4 @@
-import { calculateActiveFilters } from "@/lib/dashboard/filter-summary"
+import { countActiveFilters } from "@/lib/dashboard/active-filters"
 import { getFilterMetadata } from "@/lib/analytics/filter-metadata"
 import type { FilterValue, Filters } from "@/lib/types"
 
@@ -109,7 +109,7 @@ export const buildTrackedFiltersSnapshot = (
   pushIfActive("prospectTitleKeywords", filters.prospectTitleKeywords.length > 0)
 
   return {
-    active_filters_count: calculateActiveFilters(filters),
+    active_filters_count: countActiveFilters(filters),
     active_filter_keys: activeFilterKeys,
     active_filter_names: activeFilterKeys.map((key) => getFilterMetadata(key as keyof Filters).label),
     active_filter_details: activeFilterKeys.map((key) => {

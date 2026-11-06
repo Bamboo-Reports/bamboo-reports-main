@@ -37,7 +37,7 @@ import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { buildTrackedFiltersSnapshot, normalizeTrackedText, toTrackedStringArray } from "@/lib/analytics/tracking"
 import type { Filters } from "@/lib/types"
-import { calculateActiveFilters } from "@/lib/dashboard/filter-summary"
+import { countActiveFilters } from "@/lib/dashboard/active-filters"
 import { cn } from "@/lib/utils"
 import { SavedFiltersLibrary } from "@/components/filters/saved-filters-library"
 import type { DescribedSection } from "@/components/filters/filter-description"
@@ -79,7 +79,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
   totalActiveFilters,
   openMenuSignal = 0,
   openAccountListsSignal = 0,
-  countFilters = calculateActiveFilters,
+  countFilters = countActiveFilters,
   describeFilters = () => [],
 }: SavedFiltersManagerProps) {
   const {
@@ -180,10 +180,10 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
     captureEvent(ANALYTICS_EVENTS.SAVED_FILTER_LOADED, {
       saved_filter_id: savedFilter.id,
       saved_filter_name: normalizeTrackedText(savedFilter.name),
-      loaded_active_filters_count: calculateActiveFilters(savedFilter.filters),
+      loaded_active_filters_count: countFilters(savedFilter.filters),
       loaded_filters_snapshot: buildTrackedFiltersSnapshot(savedFilter.filters),
     })
-  }, [onLoadFilters, currentFilters, userId])
+  }, [onLoadFilters, currentFilters, userId, countFilters])
 
   // Writes the current filters into the applied saved filter.
   const handleUpdateApplied = useCallback(async () => {
@@ -302,10 +302,10 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
     captureEvent(ANALYTICS_EVENTS.SAVED_FILTER_DELETE_CONFIRM_OPENED, {
       saved_filter_id: filterToDelete?.id ?? null,
       saved_filter_name: filterToDelete?.name ? normalizeTrackedText(filterToDelete.name) : null,
-      saved_filter_active_filters_count: filterToDelete ? calculateActiveFilters(filterToDelete.filters) : null,
+      saved_filter_active_filters_count: filterToDelete ? countFilters(filterToDelete.filters) : null,
       saved_filter_snapshot: filterToDelete ? buildTrackedFiltersSnapshot(filterToDelete.filters) : null,
     })
-  }, [deleteConfirmOpen, filterToDelete])
+  }, [deleteConfirmOpen, filterToDelete, countFilters])
 
   const renderSavedItem = (filter: SavedFilter, owned: boolean) => {
     const applied = activeSavedFilter?.id === filter.id

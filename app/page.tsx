@@ -146,7 +146,7 @@ function DashboardContent(): React.JSX.Element | null {
     },
     [setAccountsView, setCentersView, setProspectsView]
   )
-  useDashboardUrlSync({
+  const { layoutRestored } = useDashboardUrlSync({
     filters,
     bounds: serverRanges,
     applyFilters: handleLoadSavedFilters,
@@ -201,6 +201,7 @@ function DashboardContent(): React.JSX.Element | null {
   )
   const { trackExportCompleted } = useDashboardAnalytics({
     authReady,
+    layoutRestored,
     userId,
     userEmail,
     userRole,

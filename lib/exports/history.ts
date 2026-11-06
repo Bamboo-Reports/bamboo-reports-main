@@ -30,13 +30,15 @@ export function formatBytes(bytes: number): string {
 /** "Chrome on Windows" from a user agent string; null when it cannot tell. */
 export function describeUserAgent(ua: string | null | undefined): string | null {
   if (!ua) return null
-  const browser = /Edg\//.test(ua)
+  // Mobile builds carry their own token next to Chrome's or Safari's (EdgA,
+  // EdgiOS, CriOS, FxiOS), so those are checked before the generic ones.
+  const browser = /Edg(?:e|A|iOS)?\//.test(ua)
     ? "Edge"
     : /OPR\/|Opera/.test(ua)
       ? "Opera"
-      : /Firefox\//.test(ua)
+      : /Firefox\/|FxiOS\//.test(ua)
         ? "Firefox"
-        : /Chrome\//.test(ua)
+        : /Chrome\/|CriOS\//.test(ua)
           ? "Chrome"
           : /Safari\//.test(ua)
             ? "Safari"
