@@ -61,8 +61,7 @@ Every deployment gets the whole product: all three sections (accounts, centres, 
 
 1. **Create Component:**
     Create `components/charts/my-new-chart.tsx`.
-    - Use `highcharts` for donut charts, treemaps, and other categorical visualizations (see `components/charts/pie-chart-card.tsx`).
-    - Use `recharts` via the shadcn `components/ui/chart.tsx` wrapper for line/area trend charts.
+    - Use `highcharts` for donut charts and other categorical visualizations (see `components/charts/pie-chart-card.tsx`).
 
 2. **Prepare Data:**
     Create a helper in `lib/utils/chart-helpers.ts` to transform raw data into the format required by the chart library.

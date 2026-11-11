@@ -56,7 +56,7 @@ The dashboard covers six entities: accounts, centers, services, functions, tech 
 ### Dashboard
 
 - Summary cards show the filtered count and the total count for each entity.
-- Highcharts donut charts break down accounts and centers by country, industry, revenue and headcount, and a treemap shows technologies. The account dialog adds a Recharts revenue trend chart.
+- Highcharts donut charts break down accounts and centers by country, industry, revenue and headcount, and a treemap shows technologies.
 - The Accounts and Centers tabs switch between chart, map and table views. The Prospects tab has chart and table views.
 - `lib/config/dashboard-access.ts` turns the Accounts, Centers and Prospects sections on or off per deployment.
 - The MapLibre cluster map plots 5,000+ center locations on a Carto basemap that needs no API key.
@@ -145,7 +145,7 @@ graph TD
 
 ## Tech stack
 
-The app uses Next.js 16 with the App Router, React 19 and TypeScript. The UI uses Tailwind CSS and shadcn/ui components built on Radix. Charts use Highcharts and Recharts, and maps use MapLibre GL. Prisma reads the Neon PostgreSQL warehouse, Supabase handles auth and user data, and Upstash Redis holds the cache and rate-limit counters. ExcelJS and jsPDF generate exports, PostHog and Vercel Analytics collect usage data, and Vitest runs the tests.
+The app uses Next.js 16 with the App Router, React 19 and TypeScript. The UI uses Tailwind CSS and shadcn/ui components built on Radix. Charts use Highcharts, and maps use MapLibre GL. Prisma reads the Neon PostgreSQL warehouse, Supabase handles auth and user data, and Upstash Redis holds the cache and rate-limit counters. ExcelJS and jsPDF generate exports, PostHog and Vercel Analytics collect usage data, and Vitest runs the tests.
 
 The [Tech Stack Reference](documentation/tech-stack.md) lists versions and explains each choice. Update that file, not this one, when the stack changes.
 

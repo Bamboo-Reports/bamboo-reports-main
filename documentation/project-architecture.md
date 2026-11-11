@@ -79,7 +79,7 @@ Organized by feature domain:
 | `auth/` | `AuthShell`, the card frame shared by the sign-in and password pages under `app/(auth)/` |
 | `brand/` | `BrandMark` (inline animated logo) and `BrandPage` (frame for every screen outside the dashboard shell) |
 | `cards/` | Card component variants |
-| `charts/` | Highcharts donut charts and the Technology treemap (the Recharts revenue area chart lives in `dialogs/`) |
+| `charts/` | Highcharts donut charts and the Technology treemap (plain HTML, laid out by `lib/charts/tech-treemap-layout.ts`) |
 | `dashboard/` | Summary cards with filtered vs. total counts |
 | `dialogs/` | Tabbed detail views for Accounts, Centers, Prospects |
 | `export/` | Excel export workflow and dialog |
