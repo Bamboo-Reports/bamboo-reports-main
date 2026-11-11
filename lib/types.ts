@@ -198,6 +198,8 @@ export interface Ticker {
   uuid?: string | null
   account_global_legal_name: string
   account_hq_stock_ticker: string | null
+  /** Code of the exchange the ticker trades on (NYSE, LON, TYO, ...); see lib/finance/tickers.ts. */
+  account_hq_stock_exchange?: string | null
   notes?: string | null
 }
 

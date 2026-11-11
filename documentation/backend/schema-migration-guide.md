@@ -125,6 +125,7 @@ Columns:
 - `uuid`
 - `account_global_legal_name` (PK and FK to `accounts`)
 - `account_hq_stock_ticker`
+- `account_hq_stock_exchange`: the code of the exchange the ticker trades on (`NYSE`, `LON`, `TYO`, ...). Market data is looked up as exchange plus ticker, because a ticker alone is ambiguous (`BA` is Boeing in New York and BAE Systems in London). The codes the app knows are in `lib/finance/tickers.ts`; a blank or unknown code falls back to the bare ticker.
 - `notes`
 
 ### 2.9 Table: `subscribers`

@@ -51,4 +51,29 @@ describe("normalizeTickerForYahoo", () => {
     expect(yahooTickerCandidates("  ")).toEqual([])
     expect(normalizeTickerForYahoo("LON:")).toBe("")
   })
+
+  it("lets the sheet's exchange settle which company a ticker means", () => {
+    expect(normalizeTickerForYahoo("BA", "United Kingdom", "LON")).toBe("BA.L")
+    expect(normalizeTickerForYahoo("BA", "United States", "NYSE")).toBe("BA")
+    expect(normalizeTickerForYahoo("ADM", "United Kingdom", "lon ")).toBe("ADM.L")
+    expect(yahooTickerCandidates("247540", "South Korea", "KOSDAQ")).toEqual(["247540.KQ"])
+    expect(normalizeTickerForYahoo("3382", "United States", "TYO")).toBe("3382.T")
+  })
+
+  it("writes share classes the way the feed does on a known exchange", () => {
+    expect(normalizeTickerForYahoo("BRK.B", null, "NYSE")).toBe("BRK-B")
+    expect(normalizeTickerForYahoo("MAERSK-B", null, "CPH")).toBe("MAERSK-B.CO")
+    expect(normalizeTickerForYahoo("ATCO A", null, "STO")).toBe("ATCO-A.ST")
+  })
+
+  it("falls back to the old rules when the sheet gives no exchange", () => {
+    expect(normalizeTickerForYahoo("7203", "Japan", "")).toBe("7203.T")
+    expect(normalizeTickerForYahoo("AAPL", "United States", null)).toBe("AAPL")
+  })
+
+  it("looks nothing up for an exchange the feed does not cover", () => {
+    // HPS on Casablanca: the bare ticker is a US fund, which must not be shown.
+    expect(yahooTickerCandidates("HPS", "Morocco", "CSE")).toEqual([])
+    expect(normalizeTickerForYahoo("SBER", "Russia", "MOEX")).toBe("SBER.ME")
+  })
 })

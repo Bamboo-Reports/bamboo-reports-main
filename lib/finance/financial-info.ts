@@ -79,8 +79,12 @@ const inUsd = (amount: number | null, rate: number | null) => (amount != null &&
  * app/api/financials/route.ts). Do not expose it as a bare server action:
  * each call fans out to two Yahoo Finance requests (up to five when a ticker has to be placed on a board and currencies need converting).
  */
-export async function fetchAccountFinancialInfo(rawTicker: string, hqCountry?: string | null): Promise<AccountFinancialInfoResponse> {
-  const candidates = yahooTickerCandidates(rawTicker, hqCountry)
+export async function fetchAccountFinancialInfo(
+  rawTicker: string,
+  hqCountry?: string | null,
+  exchangeCode?: string | null
+): Promise<AccountFinancialInfoResponse> {
+  const candidates = yahooTickerCandidates(rawTicker, hqCountry, exchangeCode)
   if (candidates.length === 0) {
     return {
       success: false,

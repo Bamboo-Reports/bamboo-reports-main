@@ -339,7 +339,7 @@ export function AccountDetailsDialog({
       setFinancialLoading(true)
       setFinancialError(null)
 
-      const response = await requestAccountFinancialInfo(ticker, account?.account_hq_country)
+      const response = await requestAccountFinancialInfo(ticker, account?.account_hq_country, account?.account_global_legal_name)
       if (cancelled) return
 
       if (response.success && response.data) {
