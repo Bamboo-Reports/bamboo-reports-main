@@ -105,6 +105,8 @@ export function useDashboardFilters({
 
   const isRevenueRangeAutoRef = useRef(true)
   const previousBaseRangesRef = useRef(baseRanges)
+  // The limits in place before the data's own arrived (the first ones seen).
+  const placeholderRangesRef = useRef(baseRanges)
 
   // Interaction timing instrumentation (dev only).
   const applyStartRef = useRef<number | null>(null)
@@ -121,13 +123,17 @@ export function useDashboardFilters({
     // kept, pulled inside the new limits.
     const previous = previousBaseRangesRef.current
     previousBaseRangesRef.current = baseRanges
-    // The revenue range only goes back to following the data while nobody has narrowed it.
-    const revenueNow = prevPendingFiltersRef.current.accountHqRevenueRange
-    isRevenueRangeAutoRef.current = revenueNow[0] <= previous.revenueRange.min && revenueNow[1] >= previous.revenueRange.max
     // An unchanged range keeps its array (and unchanged filters their object),
     // so nothing downstream sees a change where there is none.
+    // Before the data's limits arrive the placeholder stands in for them, and
+    // only a range that is exactly the placeholder counts as left alone: a
+    // link may carry a range wider than the placeholder, which must be kept.
+    const untouched = (value: [number, number], before: { min: number; max: number }) =>
+      previous === placeholderRangesRef.current
+        ? value[0] === before.min && value[1] === before.max
+        : value[0] <= before.min && value[1] >= before.max
     const follow = (value: [number, number], before: { min: number; max: number }, now: { min: number; max: number }): [number, number] => {
-      const next = value[0] <= before.min && value[1] >= before.max ? ([now.min, now.max] as [number, number]) : clampRange(value, now)
+      const next = untouched(value, before) ? ([now.min, now.max] as [number, number]) : clampRange(value, now)
       return next[0] === value[0] && next[1] === value[1] ? value : next
     }
     const withNewLimits = (prev: Filters): Filters => {
@@ -139,7 +145,13 @@ export function useDashboardFilters({
     }
 
     setFilters(withNewLimits)
-    setPendingFilters(withNewLimits)
+    setPendingFilters((prev) => {
+      // The revenue range goes back to following the data only while nobody
+      // has narrowed it. Read from the filters being updated, so a filter
+      // loaded in the same batch as new limits is seen.
+      isRevenueRangeAutoRef.current = untouched(prev.accountHqRevenueRange, previous.revenueRange)
+      return withNewLimits(prev)
+    })
   }, [baseRanges])
 
   useEffect(() => {
@@ -347,7 +359,10 @@ export function useDashboardFilters({
     }
   }, [baseRanges, filters, getActiveFilterCountFor])
 
-  const handleLoadSavedFilters = useCallback((savedFilters: Filters) => {
+  const handleLoadSavedFilters = useCallback((savedFilters: Filters, options: { clampRanges?: boolean } = {}) => {
+    const clamp = options.clampRanges !== false
+      ? clampRange
+      : (range: [number, number]) => range
     // Re-derive exact names from the current account lists so edits to a list
     // reach saved filters that reference it.
     const expanded = expandAccountLists(savedFilters, accountLists)
@@ -355,9 +370,9 @@ export function useDashboardFilters({
     // data (and its slider); pull them back inside so the inputs and slider agree.
     const sanitizedSavedFilters: Filters = {
       ...expanded,
-      accountHqRevenueRange: clampRange(expanded.accountHqRevenueRange, baseRanges.revenueRange),
-      accountYearsInIndiaRange: clampRange(expanded.accountYearsInIndiaRange, baseRanges.yearsInIndiaRange),
-      centerIncYearRange: clampRange(expanded.centerIncYearRange, baseRanges.centerIncYearRange),
+      accountHqRevenueRange: clamp(expanded.accountHqRevenueRange, baseRanges.revenueRange),
+      accountYearsInIndiaRange: clamp(expanded.accountYearsInIndiaRange, baseRanges.yearsInIndiaRange),
+      centerIncYearRange: clamp(expanded.centerIncYearRange, baseRanges.centerIncYearRange),
     }
     isRevenueRangeAutoRef.current = false
     setPendingFilters(sanitizedSavedFilters)

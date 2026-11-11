@@ -16,7 +16,7 @@ function json(body: unknown, status = 200) {
   })
 }
 
-// Each request fans out to two to four Yahoo Finance calls, so keep the per-user
+// Each request fans out to two to five Yahoo Finance calls, so keep the per-user
 // budget tighter than the general data endpoints.
 const FINANCIALS_MAX_PER_MIN = 20
 

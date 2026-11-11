@@ -128,7 +128,8 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
       })
       setShareSuccess(`Shared with ${shareEmail.trim()}`)
       setShareEmail("")
-      setCurrentShares(await getListShares(listToShare.id))
+      const shares = await getListShares(listToShare.id)
+      if (shareTargetRef.current === listToShare.id) setCurrentShares(shares)
     } else {
       setShareError(result.error ?? "Failed to share list")
     }

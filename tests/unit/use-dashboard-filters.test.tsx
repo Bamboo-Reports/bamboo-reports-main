@@ -151,6 +151,46 @@ describe("useDashboardFilters", () => {
     expect(result.current.filters.accountYearsInIndiaRange).toEqual([2, 3])
   })
 
+  describe("filters applied before the data's limits arrive (a link)", () => {
+    // No server ranges yet: the hook holds the placeholder limits.
+    const setupBeforeLimits = () => setup(null as unknown as typeof RANGES)
+    const linkFilters = (result: Hook, ranges: Partial<Filters>): Filters => ({ ...result.current.filters, ...ranges })
+
+    it("keeps a narrowed range and lets the others follow the limits", () => {
+      const { result, rerender } = setupBeforeLimits()
+      act(() =>
+        result.current.handleLoadSavedFilters(linkFilters(result, { accountHqRevenueRange: [100, 700] }), { clampRanges: false })
+      )
+      rerender({ serverRanges: RANGES })
+      expect(result.current.filters.accountHqRevenueRange).toEqual([100, 700])
+      expect(result.current.filters.accountYearsInIndiaRange).toEqual([1, 50])
+      expect(result.current.filters.centerIncYearRange).toEqual([1990, 2030])
+    })
+
+    it("keeps a range wider than the placeholder limits", () => {
+      const { result, rerender } = setupBeforeLimits()
+      act(() =>
+        result.current.handleLoadSavedFilters(linkFilters(result, { accountHqRevenueRange: [0, 2_000_000] }), { clampRanges: false })
+      )
+      expect(result.current.filters.accountHqRevenueRange).toEqual([0, 2_000_000])
+      rerender({ serverRanges: { ...RANGES, revenue: { min: 0, max: 5_000_000 } } })
+      expect(result.current.filters.accountHqRevenueRange).toEqual([0, 2_000_000])
+    })
+
+    it("keeps the revenue range of a filter loaded in the same batch as the limits", () => {
+      const { result, rerender } = setupBeforeLimits()
+      act(() => {
+        result.current.handleLoadSavedFilters(
+          linkFilters(result, { accountHqRevenueRange: [100, 700], accountYearsInIndiaRange: [2, 3] }),
+          { clampRanges: false }
+        )
+        rerender({ serverRanges: RANGES })
+      })
+      expect(result.current.filters.accountHqRevenueRange).toEqual([100, 700])
+      expect(result.current.filters.accountYearsInIndiaRange).toEqual([2, 3])
+    })
+  })
+
   describe("filter_changed tracking", () => {
     // The sliders move from their placeholders to the server's bounds once the
     // facets load. That is not a filter change by the user.

@@ -11,13 +11,19 @@ export type ParsedAccountTable = {
 }
 
 // In a table with several columns, a first-row cell is a header when it is
-// made up only of label words ("Account Name", "Company", "Legal entity name").
-// A cell that merely contains one ("Acme Company") is a name, so that row is data.
-const HEADER_WORD_RE = /^(?:accounts?|compan(?:y|ies)|organi[sz]ations?|customers?|clients?|names?|legal|global|entity|parent|full|official|business|hq)$/i
+// made up only of label words ("Account Name", "Company Name (Legal)",
+// "Name of the Company", "Vendor Name*"). A cell that merely contains one
+// ("Acme Company") is a name, so that row is data. Brackets, their contents
+// and punctuation are ignored, and "CompanyName" is read as two words.
+const HEADER_WORD_RE = /^(?:accounts?|compan(?:y|ies)|organi[sz]ations?|customers?|clients?|vendors?|suppliers?|names?|legal|global|entity|parent|full|official|registered|business|hq|target|of|the)$/i
 const NAME_WORD_RE = /^(?:accounts?|compan(?:y|ies)|organi[sz]ations?|customers?|clients?|names?)$/i
 
 function isNameHeaderCell(cell: string): boolean {
-  const words = cell.trim().split(/[\s_/-]+/).filter(Boolean)
+  const words = cell
+    .replace(/\([^)]*\)|\[[^\]]*\]/g, " ")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .split(/[^A-Za-z]+/)
+    .filter(Boolean)
   return words.length > 0 && words.every((word) => HEADER_WORD_RE.test(word)) && words.some((word) => NAME_WORD_RE.test(word))
 }
 
@@ -103,7 +109,12 @@ export function parsePastedNames(text: string): ParsedAccountTable {
     .filter((line) => line.trim().length > 0)
   if (lines.length === 0) return { headers: [], rows: [], hasHeader: false }
   const tabbed = lines.some((line) => line.includes("\t"))
-  return tableFromRows(lines.map((line) => (tabbed ? splitDelimitedLine(line, "\t") : [line.trim()])))
+  // A line copied out of a CSV may still be wrapped in quotes: "Acme, Inc."
+  const unquote = (line: string) => {
+    const quoted = line.trim().match(/^"(.*)"$/)
+    return quoted ? quoted[1].replace(/""/g, '"') : line.trim()
+  }
+  return tableFromRows(lines.map((line) => (tabbed ? splitDelimitedLine(line, "\t") : [unquote(line)])))
 }
 
 /** Builds a table from already-split rows (for example spreadsheet cells), detecting a header row. */

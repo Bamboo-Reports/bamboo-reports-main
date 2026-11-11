@@ -25,6 +25,8 @@ export type AccountListInput = {
 type AccountListsContextValue = {
   lists: AccountList[]
   loading: boolean
+  /** True once the lists have been loaded (or there is nobody signed in to load them for). */
+  loaded: boolean
   userId: string | null
   refresh: () => Promise<void>
   createList: (input: AccountListInput) => Promise<AccountList | null>
@@ -80,6 +82,7 @@ export function AccountListsProvider({ children }: { children: ReactNode }) {
   const supabase = getSupabaseBrowserClient()
   const [lists, setLists] = useState<AccountList[]>([])
   const [loading, setLoading] = useState(false)
+  const [loaded, setLoaded] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [authReady, setAuthReady] = useState(false)
   // Flips off once the database says the matches column is missing, so later calls skip it.
@@ -105,6 +108,7 @@ export function AccountListsProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     if (!userId) {
       setLists([])
+      setLoaded(true)
       return
     }
     setLoading(true)
@@ -149,6 +153,7 @@ export function AccountListsProvider({ children }: { children: ReactNode }) {
       devError("Failed to load account lists:", describeError(error))
     } finally {
       setLoading(false)
+      setLoaded(true)
     }
   }, [supabase, userId])
 
@@ -313,8 +318,8 @@ export function AccountListsProvider({ children }: { children: ReactNode }) {
   )
 
   const value = useMemo<AccountListsContextValue>(
-    () => ({ lists, loading, userId, refresh, createList, updateList, deleteList, shareList, unshareList, getListShares }),
-    [lists, loading, userId, refresh, createList, updateList, deleteList, shareList, unshareList, getListShares]
+    () => ({ lists, loading, loaded, userId, refresh, createList, updateList, deleteList, shareList, unshareList, getListShares }),
+    [lists, loading, loaded, userId, refresh, createList, updateList, deleteList, shareList, unshareList, getListShares]
   )
 
   return <AccountListsContext.Provider value={value}>{children}</AccountListsContext.Provider>
@@ -323,6 +328,7 @@ export function AccountListsProvider({ children }: { children: ReactNode }) {
 const EMPTY: AccountListsContextValue = {
   lists: [],
   loading: false,
+  loaded: true,
   userId: null,
   refresh: async () => {},
   createList: async () => null,

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import type { Filters } from "@/lib/types"
 import { useAccountLists } from "@/contexts/account-lists-context"
-import { countActiveFilters, DEFAULT_RANGE_BOUNDS, type FilterRangeBounds } from "@/lib/dashboard/active-filters"
+import { countActiveFilters, type FilterRangeBounds } from "@/lib/dashboard/active-filters"
 import {
   decodeDashboardUrl,
   encodeDashboardUrl,
@@ -12,7 +12,7 @@ import {
   type UrlView,
 } from "@/lib/dashboard/url-state"
 
-/** How long a link's account lists may take to load before the filters are restored without them. */
+/** The longest a link waits for its account lists; it stops sooner, as soon as the lists have loaded. */
 const LIST_WAIT_MS = 4000
 
 /**
@@ -30,10 +30,16 @@ const hasAppliedFilter = (filters: Filters) =>
 interface UseDashboardUrlSyncParams {
   /** Applied filters. */
   filters: Filters
-  /** Slider bounds from the server; null until they arrive. */
-  bounds: FilterRangeBounds | null
-  /** Applies restored filters (the saved-filter loader: clamps ranges, expands lists). */
-  applyFilters: (filters: Filters) => void
+  /**
+   * The limits the filters are measured against right now: the same ones the
+   * filters hook holds, so the two never disagree for a render. They are
+   * placeholders until the data's own limits arrive (boundsKnown).
+   */
+  bounds: FilterRangeBounds
+  /** False while the limits are still placeholders. */
+  boundsKnown: boolean
+  /** Applies restored filters (the saved-filter loader: expands lists, and clamps ranges unless told not to). */
+  applyFilters: (filters: Filters, options?: { clampRanges?: boolean }) => void
   section: UrlSection
   setSection: (section: UrlSection) => void
   /** The open view (Charts, Map or Data) of the current section. */
@@ -52,13 +58,14 @@ interface UseDashboardUrlSyncParams {
 export function useDashboardUrlSync({
   filters,
   bounds,
+  boundsKnown,
   applyFilters,
   section,
   setSection,
   view,
   setView,
 }: UseDashboardUrlSyncParams) {
-  const { lists } = useAccountLists()
+  const { lists, loaded: listsLoaded } = useAccountLists()
   const pendingRef = useRef<Partial<Filters> | null>(null)
   const [restored, setRestored] = useState(false)
   // The section and view are applied on the first effect; the filters may wait for the account lists.
@@ -95,18 +102,21 @@ export function useDashboardUrlSync({
     }
     const known = new Set(lists.map((list) => list.id))
     const listsReady = (pending.accountListValues ?? []).every((entry) => known.has(entry.value))
-    if (!listsReady && !listWaitOver) return
+    // Once the lists have loaded, a list that is still missing is not coming
+    // (someone else's, or deleted): the link's own names stand in for it.
+    if (!listsReady && !listsLoaded && !listWaitOver) return
     pendingRef.current = null
     // The data's limits are not needed to apply a link: a range the link sets
-    // is kept as it is, and the others follow the limits once they arrive.
-    applyFilters(filtersFromUrl(pending, bounds ?? DEFAULT_RANGE_BOUNDS))
+    // is kept as it is (not clamped to the placeholder limits), and the
+    // others follow the limits once they arrive.
+    applyFilters(filtersFromUrl(pending, bounds), { clampRanges: boundsKnown })
     setRestored(true)
-  }, [restored, bounds, lists, listWaitOver, applyFilters, filters])
+  }, [restored, bounds, boundsKnown, lists, listsLoaded, listWaitOver, applyFilters, filters])
 
   // Write every change back to the address.
   useEffect(() => {
     if (!restored) return
-    const search = encodeDashboardUrl({ section, view, filters }, bounds ?? DEFAULT_RANGE_BOUNDS)
+    const search = encodeDashboardUrl({ section, view, filters }, bounds)
     if (search === window.location.search) return
     window.history.replaceState(window.history.state, "", `${window.location.pathname}${search}${window.location.hash}`)
   }, [restored, filters, section, view, bounds])

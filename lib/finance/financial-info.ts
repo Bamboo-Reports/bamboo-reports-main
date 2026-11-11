@@ -1,5 +1,5 @@
 import YahooFinance from "yahoo-finance2"
-import { normalizeTickerForYahoo } from "@/lib/finance/tickers"
+import { yahooTickerCandidates } from "@/lib/finance/tickers"
 import { createLogger } from "@/lib/logger"
 import type { AccountFinancialInfoResponse } from "@/lib/types"
 
@@ -29,12 +29,17 @@ function toDateIso(value: unknown): string | null {
   return null
 }
 
+// London, Johannesburg and Tel Aviv quote prices in a minor unit (pence, cents,
+// agorot) and the feed names the currency that way. Totals such as market cap
+// still come in the major unit, so the major unit's rate is the one to use.
+const MAJOR_UNIT: Record<string, string> = { GBp: "GBP", GBX: "GBP", ZAc: "ZAR", ZAC: "ZAR", ILA: "ILS" }
+
 /**
  * How many US dollars one unit of a currency buys, or null when that cannot
- * be said (no currency, a failed lookup, or a minor unit such as pence, which
- * the feed writes with a lower-case letter: "GBp").
+ * be said (no currency, an unknown code, or a failed lookup).
  */
-async function usdRate(currency: string | null): Promise<number | null> {
+async function usdRate(rawCurrency: string | null): Promise<number | null> {
+  const currency = rawCurrency ? (MAJOR_UNIT[rawCurrency] ?? rawCurrency) : null
   if (!currency || !/^[A-Z]{3}$/.test(currency)) return null
   if (currency === "USD") return 1
   try {
@@ -46,6 +51,24 @@ async function usdRate(currency: string | null): Promise<number | null> {
   }
 }
 
+/**
+ * Picks the symbol the feed actually lists. A number-only ticker can belong
+ * to either of a country's boards; a board that does not list it answers
+ * with nothing or with an empty shell, so the first one with a market cap
+ * wins and the last is the fallback.
+ */
+async function resolveTicker(candidates: string[]): Promise<string> {
+  for (const candidate of candidates.slice(0, -1)) {
+    try {
+      const probe = await yahooFinance.quote(candidate)
+      if (toNumber(probe?.marketCap) != null) return candidate
+    } catch {
+      // Not on this board: try the next.
+    }
+  }
+  return candidates[candidates.length - 1]
+}
+
 const inUsd = (amount: number | null, rate: number | null) => (amount != null && rate != null ? amount * rate : null)
 
 /**
@@ -54,17 +77,18 @@ const inUsd = (amount: number | null, rate: number | null) => (amount != null &&
  * This is a plain server-side helper with NO auth check. It must only be
  * called from an authenticated, rate-limited context (see
  * app/api/financials/route.ts). Do not expose it as a bare server action:
- * each call fans out to two Yahoo Finance requests (up to four when currencies need converting).
+ * each call fans out to two Yahoo Finance requests (up to five when a ticker has to be placed on a board and currencies need converting).
  */
 export async function fetchAccountFinancialInfo(rawTicker: string, hqCountry?: string | null): Promise<AccountFinancialInfoResponse> {
-  const normalizedTicker = normalizeTickerForYahoo(rawTicker, hqCountry)
-  if (!normalizedTicker) {
+  const candidates = yahooTickerCandidates(rawTicker, hqCountry)
+  if (candidates.length === 0) {
     return {
       success: false,
       error: "Ticker is missing or invalid",
       data: null,
     }
   }
+  const normalizedTicker = await resolveTicker(candidates)
 
   try {
     const [quote, summary] = await Promise.all([

@@ -38,9 +38,13 @@ const WIDE_RANGE: [number, number] = [0, Number.MAX_SAFE_INTEGER]
 export function normalizeFiltersForServer(filters: Filters, ranges: FacetRanges | null): Filters {
   // Before the data's limits arrive, the widest range stands in for them, so
   // a range a link narrowed is sent with the very first request.
+  // (Then only a range that is exactly the placeholder counts as unset; a
+  // link's range may be wider than the placeholder and still be a real one.)
   const bounds = ranges ?? DEFAULT_RANGE_BOUNDS
-  const norm = (value: [number, number], base: { min: number; max: number }): [number, number] =>
-    value[0] <= base.min && value[1] >= base.max ? WIDE_RANGE : value
+  const norm = (value: [number, number], base: { min: number; max: number }): [number, number] => {
+    const unset = ranges ? value[0] <= base.min && value[1] >= base.max : value[0] === base.min && value[1] === base.max
+    return unset ? WIDE_RANGE : value
+  }
   return {
     ...filters,
     accountHqRevenueRange: norm(filters.accountHqRevenueRange, bounds.revenue),

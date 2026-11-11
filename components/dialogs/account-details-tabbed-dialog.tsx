@@ -509,7 +509,7 @@ export function AccountDetailsDialog({
                         ]}
                       />
                     )}
-                    {ticker && financialError && !financialLoading && (
+                    {ticker && !financialLoading && (financialError || (financialData && financialData.marketCap == null && financialData.netProfit == null)) && (
                       <p className="mt-2 text-xs text-muted-foreground">Market cap and net profit are not available for {ticker} right now.</p>
                     )}
                   </Section>

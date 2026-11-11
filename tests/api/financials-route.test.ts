@@ -76,4 +76,12 @@ describe("financials API route", () => {
     await expect(res.json()).resolves.toEqual({ success: true, error: null, data: { symbol: "AAPL" } })
     expect(financeMocks.fetchAccountFinancialInfo).toHaveBeenCalledWith("AAPL", null)
   })
+
+  it("passes the account's HQ country on to the lookup", async () => {
+    const res = await getFinancials(
+      new Request("https://example.com/api/financials?ticker=7203&country=Japan", { headers: { authorization: "Bearer token-1" } })
+    )
+    expect(res.status).toBe(200)
+    expect(financeMocks.fetchAccountFinancialInfo).toHaveBeenCalledWith("7203", "Japan")
+  })
 })

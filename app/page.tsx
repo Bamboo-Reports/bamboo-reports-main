@@ -126,9 +126,17 @@ function DashboardContent(): React.JSX.Element | null {
     },
     [setAccountsView, setCentersView, setProspectsView]
   )
+  // The limits the filters hook measures ranges against. They change in the
+  // same render as the filters, so the address is never written from a mix
+  // of new limits and old ranges.
+  const reportRanges = useMemo(
+    () => ({ revenue: revenueRange, yearsInIndia: yearsInIndiaRange, centerIncYear: centerIncYearRange }),
+    [revenueRange, yearsInIndiaRange, centerIncYearRange]
+  )
   const { layoutRestored, filtersRestored } = useDashboardUrlSync({
     filters,
-    bounds: serverRanges,
+    bounds: reportRanges,
+    boundsKnown: serverRanges !== null,
     applyFilters: handleLoadSavedFilters,
     section: activeSection,
     setSection: setActiveSection,
@@ -197,10 +205,6 @@ function DashboardContent(): React.JSX.Element | null {
   const pageError = serverData.summary ? null : serverData.error
   const dataLoaded = !pageLoading && !pageError
 
-  const reportRanges = useMemo(
-    () => ({ revenue: revenueRange, yearsInIndia: yearsInIndiaRange, centerIncYear: centerIncYearRange }),
-    [revenueRange, yearsInIndiaRange, centerIncYearRange]
-  )
   const { trackExportCompleted } = useDashboardAnalytics({
     authReady,
     layoutRestored,

@@ -74,8 +74,17 @@ describe("account list parser", () => {
   })
 
   it("still reads real headers in a table with several columns", () => {
-    for (const header of ["Account Name", "Company", "Legal entity name", "Client", "account_global_legal_name"]) {
+    for (const header of [
+      "Account Name", "Company", "Legal entity name", "Client", "account_global_legal_name",
+      "Company Name (Legal)", "Company Name*", "Account Name:", "Customer Name (required)", "Account Name (Global)",
+      "CompanyName", "Vendor Name", "Target Accounts", "Name of the Company",
+    ]) {
       expect(parseDelimitedText(`${header},Country\nInfosys,IN`).hasHeader).toBe(true)
     }
+  })
+
+  it("takes the quotes off a pasted line copied from a CSV", () => {
+    const table = parsePastedNames('"Acme, Inc."\n"Acme ""Rocket"" Co"\nGlobex')
+    expect(extractNames(table, 0)).toEqual(["Acme, Inc.", 'Acme "Rocket" Co', "Globex"])
   })
 })

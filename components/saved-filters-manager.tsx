@@ -284,7 +284,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
       setShareEmail("")
       // Refresh shares list
       const shares = await getFilterShares(filterToShare.id)
-      setCurrentShares(shares)
+      if (shareTargetRef.current === filterToShare.id) setCurrentShares(shares)
     } else {
       setShareError(result.error ?? "Failed to share filter")
     }
