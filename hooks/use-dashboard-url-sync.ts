@@ -44,8 +44,9 @@ interface UseDashboardUrlSyncParams {
 
 /**
  * Keeps the dashboard's filters and view in the address bar. On load the
- * address is read once: the section and view right away, the filters once the
- * slider bounds (and any account lists the link names) have loaded. From then
+ * address is read once: the section and view right away, and the filters too,
+ * unless the link names account lists, which are waited for briefly. The
+ * dashboard holds its first data request until then (filtersRestored). From then
  * on every change replaces the address, without adding history entries.
  */
 export function useDashboardUrlSync({
@@ -60,7 +61,7 @@ export function useDashboardUrlSync({
   const { lists } = useAccountLists()
   const pendingRef = useRef<Partial<Filters> | null>(null)
   const [restored, setRestored] = useState(false)
-  // The section and view are applied on the first effect; the filters may wait for the data's limits.
+  // The section and view are applied on the first effect; the filters may wait for the account lists.
   const [layoutRestored, setLayoutRestored] = useState(false)
   const [listWaitOver, setListWaitOver] = useState(false)
 
@@ -85,7 +86,7 @@ export function useDashboardUrlSync({
   // Restore the filters once what they depend on has loaded.
   useEffect(() => {
     const pending = pendingRef.current
-    if (restored || !pending || !bounds) return
+    if (restored || !pending) return
     // Filters applied while the link was still loading win over the link's.
     if (hasAppliedFilter(filters)) {
       pendingRef.current = null
@@ -96,7 +97,9 @@ export function useDashboardUrlSync({
     const listsReady = (pending.accountListValues ?? []).every((entry) => known.has(entry.value))
     if (!listsReady && !listWaitOver) return
     pendingRef.current = null
-    applyFilters(filtersFromUrl(pending, bounds))
+    // The data's limits are not needed to apply a link: a range the link sets
+    // is kept as it is, and the others follow the limits once they arrive.
+    applyFilters(filtersFromUrl(pending, bounds ?? DEFAULT_RANGE_BOUNDS))
     setRestored(true)
   }, [restored, bounds, lists, listWaitOver, applyFilters, filters])
 
@@ -108,5 +111,5 @@ export function useDashboardUrlSync({
     window.history.replaceState(window.history.state, "", `${window.location.pathname}${search}${window.location.hash}`)
   }, [restored, filters, section, view, bounds])
 
-  return { layoutRestored }
+  return { layoutRestored, filtersRestored: restored }
 }

@@ -130,14 +130,25 @@ describe("useDashboardFilters", () => {
     })
   })
 
-  it("moves the revenue range to new server bounds, even one the user set", () => {
+  it("moves an untouched revenue range to new server bounds", () => {
     const { result, rerender } = setup()
     rerender({ serverRanges: { ...RANGES, revenue: { min: 1, max: 800 } } })
     expect(result.current.filters.accountHqRevenueRange).toEqual([1, 800])
+  })
 
-    act(() => result.current.handleRevenueRangeChange([100, 700]))
+  // A link or saved filter can set a range before the data's limits arrive;
+  // the limits arriving must not throw that range away.
+  it("keeps a narrowed range when the server bounds change, pulled inside them", () => {
+    const { result, rerender } = setup()
+    rerender({ serverRanges: { ...RANGES, revenue: { min: 1, max: 800 } } })
+
+    act(() => {
+      result.current.handleRevenueRangeChange([100, 700])
+      result.current.handleYearsInIndiaRangeChange([2, 3])
+    })
     rerender({ serverRanges: { ...RANGES, revenue: { min: 1, max: 600 } } })
-    expect(result.current.filters.accountHqRevenueRange).toEqual([1, 600])
+    expect(result.current.filters.accountHqRevenueRange).toEqual([100, 600])
+    expect(result.current.filters.accountYearsInIndiaRange).toEqual([2, 3])
   })
 
   describe("filter_changed tracking", () => {

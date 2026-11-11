@@ -13,6 +13,7 @@ import { devError } from "@/lib/utils/dev-log"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { createDefaultFilters } from "@/lib/dashboard/defaults"
+import { DEFAULT_RANGE_BOUNDS } from "@/lib/dashboard/active-filters"
 import { getQueryClient } from "@/lib/query-client"
 import {
   fetchCentersMap,
@@ -35,13 +36,16 @@ const WIDE_RANGE: [number, number] = [0, Number.MAX_SAFE_INTEGER]
  * loaded. Narrowed ranges pass through unchanged.
  */
 export function normalizeFiltersForServer(filters: Filters, ranges: FacetRanges | null): Filters {
-  const norm = (value: [number, number], base: { min: number; max: number } | undefined): [number, number] =>
-    !base || (value[0] <= base.min && value[1] >= base.max) ? WIDE_RANGE : value
+  // Before the data's limits arrive, the widest range stands in for them, so
+  // a range a link narrowed is sent with the very first request.
+  const bounds = ranges ?? DEFAULT_RANGE_BOUNDS
+  const norm = (value: [number, number], base: { min: number; max: number }): [number, number] =>
+    value[0] <= base.min && value[1] >= base.max ? WIDE_RANGE : value
   return {
     ...filters,
-    accountHqRevenueRange: norm(filters.accountHqRevenueRange, ranges?.revenue),
-    accountYearsInIndiaRange: norm(filters.accountYearsInIndiaRange, ranges?.yearsInIndia),
-    centerIncYearRange: norm(filters.centerIncYearRange, ranges?.centerIncYear),
+    accountHqRevenueRange: norm(filters.accountHqRevenueRange, bounds.revenue),
+    accountYearsInIndiaRange: norm(filters.accountYearsInIndiaRange, bounds.yearsInIndia),
+    centerIncYearRange: norm(filters.centerIncYearRange, bounds.centerIncYear),
   }
 }
 

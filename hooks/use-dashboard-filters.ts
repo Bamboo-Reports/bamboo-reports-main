@@ -104,6 +104,7 @@ export function useDashboardFilters({
   const [centerIncYearRange, setCenterIncYearRange] = useState(baseRanges.centerIncYearRange)
 
   const isRevenueRangeAutoRef = useRef(true)
+  const previousBaseRangesRef = useRef(baseRanges)
 
   // Interaction timing instrumentation (dev only).
   const applyStartRef = useRef<number | null>(null)
@@ -111,28 +112,34 @@ export function useDashboardFilters({
   const prevPendingFiltersRef = useRef<Filters>(pendingFilters)
 
   useEffect(() => {
-    isRevenueRangeAutoRef.current = true
     setRevenueRange(baseRanges.revenueRange)
     setYearsInIndiaRange(baseRanges.yearsInIndiaRange)
     setCenterIncYearRange(baseRanges.centerIncYearRange)
 
-    const baseRevenue: [number, number] = [baseRanges.revenueRange.min, baseRanges.revenueRange.max]
-    const baseYears: [number, number] = [baseRanges.yearsInIndiaRange.min, baseRanges.yearsInIndiaRange.max]
-    const baseCenterInc: [number, number] = [baseRanges.centerIncYearRange.min, baseRanges.centerIncYearRange.max]
+    // A range left at the old limits moves to the new ones. A narrowed range
+    // (from a link or a saved filter applied before the limits arrived) is
+    // kept, pulled inside the new limits.
+    const previous = previousBaseRangesRef.current
+    previousBaseRangesRef.current = baseRanges
+    // The revenue range only goes back to following the data while nobody has narrowed it.
+    const revenueNow = prevPendingFiltersRef.current.accountHqRevenueRange
+    isRevenueRangeAutoRef.current = revenueNow[0] <= previous.revenueRange.min && revenueNow[1] >= previous.revenueRange.max
+    // An unchanged range keeps its array (and unchanged filters their object),
+    // so nothing downstream sees a change where there is none.
+    const follow = (value: [number, number], before: { min: number; max: number }, now: { min: number; max: number }): [number, number] => {
+      const next = value[0] <= before.min && value[1] >= before.max ? ([now.min, now.max] as [number, number]) : clampRange(value, now)
+      return next[0] === value[0] && next[1] === value[1] ? value : next
+    }
+    const withNewLimits = (prev: Filters): Filters => {
+      const revenue = follow(prev.accountHqRevenueRange, previous.revenueRange, baseRanges.revenueRange)
+      const years = follow(prev.accountYearsInIndiaRange, previous.yearsInIndiaRange, baseRanges.yearsInIndiaRange)
+      const incYear = follow(prev.centerIncYearRange, previous.centerIncYearRange, baseRanges.centerIncYearRange)
+      if (revenue === prev.accountHqRevenueRange && years === prev.accountYearsInIndiaRange && incYear === prev.centerIncYearRange) return prev
+      return { ...prev, accountHqRevenueRange: revenue, accountYearsInIndiaRange: years, centerIncYearRange: incYear }
+    }
 
-    setFilters((prev) => ({
-      ...prev,
-      accountHqRevenueRange: baseRevenue,
-      accountYearsInIndiaRange: baseYears,
-      centerIncYearRange: baseCenterInc,
-    }))
-
-    setPendingFilters((prev) => ({
-      ...prev,
-      accountHqRevenueRange: baseRevenue,
-      accountYearsInIndiaRange: baseYears,
-      centerIncYearRange: baseCenterInc,
-    }))
+    setFilters(withNewLimits)
+    setPendingFilters(withNewLimits)
   }, [baseRanges])
 
   useEffect(() => {

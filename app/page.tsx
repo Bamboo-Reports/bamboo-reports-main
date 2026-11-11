@@ -117,8 +117,29 @@ function DashboardContent(): React.JSX.Element | null {
     [activeView, activeSection]
   )
 
+  // Filters and view live in the address bar too, so a refresh or a pasted link keeps them.
+  const setViewFor = useCallback(
+    (section: "accounts" | "centers" | "prospects", view: "chart" | "data" | "map") => {
+      if (section === "accounts") setAccountsView(view)
+      else if (section === "centers") setCentersView(view)
+      else if (view !== "map") setProspectsView(view)
+    },
+    [setAccountsView, setCentersView, setProspectsView]
+  )
+  const { layoutRestored, filtersRestored } = useDashboardUrlSync({
+    filters,
+    bounds: serverRanges,
+    applyFilters: handleLoadSavedFilters,
+    section: activeSection,
+    setSection: setActiveSection,
+    view: activeView,
+    setView: setViewFor,
+  })
+
+  // Nothing is fetched until a link's filters are in place, so a shared or
+  // refreshed link asks for its own data once instead of the unfiltered data first.
   const serverData = useServerDashboardData({
-    enabled: authReady && !!userId,
+    enabled: authReady && !!userId && filtersRestored,
     filters,
     pages: { accounts: accountsPage, centers: centersPage, prospects: prospectsPage },
     sorts: entitySorts,
@@ -136,25 +157,6 @@ function DashboardContent(): React.JSX.Element | null {
     if (!ranges) return
     setServerRanges((prev) => (prev && JSON.stringify(prev) === JSON.stringify(ranges) ? prev : ranges))
   }, [serverData.facets])
-
-  // Filters and view live in the address bar too, so a refresh or a pasted link keeps them.
-  const setViewFor = useCallback(
-    (section: "accounts" | "centers" | "prospects", view: "chart" | "data" | "map") => {
-      if (section === "accounts") setAccountsView(view)
-      else if (section === "centers") setCentersView(view)
-      else if (view !== "map") setProspectsView(view)
-    },
-    [setAccountsView, setCentersView, setProspectsView]
-  )
-  const { layoutRestored } = useDashboardUrlSync({
-    filters,
-    bounds: serverRanges,
-    applyFilters: handleLoadSavedFilters,
-    section: activeSection,
-    setSection: setActiveSection,
-    view: activeView,
-    setView: setViewFor,
-  })
 
   const {
     accounts: accountsServerProps,
@@ -191,7 +193,7 @@ function DashboardContent(): React.JSX.Element | null {
   const canExport = canExportData(userRole)
 
   const activeFiltersCount = getTotalActiveFilters()
-  const pageLoading = serverData.initialLoading
+  const pageLoading = serverData.initialLoading || !filtersRestored
   const pageError = serverData.summary ? null : serverData.error
   const dataLoaded = !pageLoading && !pageError
 
