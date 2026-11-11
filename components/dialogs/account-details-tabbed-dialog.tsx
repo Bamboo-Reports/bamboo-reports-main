@@ -27,7 +27,6 @@ import { RECORD_LIST_LAYOUT_STORAGE_KEY, useDataLayoutPreference } from "@/hooks
 import { Button } from "@/components/ui/button"
 import { HintTooltip } from "@/components/ui/tooltip"
 import { TechTreemap } from "@/components/charts/tech-treemap"
-import { AnnualRevenueChart } from "@/components/charts/annual-revenue-chart"
 import { requestAccountFinancialInfo } from "@/lib/finance/request-client"
 import { useAccountRelated } from "@/hooks/use-account-related"
 import { RelatedLoadError } from "./related-load-error"
@@ -340,7 +339,7 @@ export function AccountDetailsDialog({
       setFinancialLoading(true)
       setFinancialError(null)
 
-      const response = await requestAccountFinancialInfo(ticker)
+      const response = await requestAccountFinancialInfo(ticker, account?.account_hq_country)
       if (cancelled) return
 
       if (response.success && response.data) {
@@ -379,6 +378,13 @@ export function AccountDetailsDialog({
   const tabTriggerClass =
     "relative h-10 rounded-none bg-transparent px-0 text-sm font-medium text-muted-foreground shadow-none hover:bg-transparent hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:inset-x-0 data-[state=active]:after:-bottom-px data-[state=active]:after:h-0.5 data-[state=active]:after:rounded-full data-[state=active]:after:bg-primary"
 
+  // The Centres and Prospects tabs only exist while they have rows (not while
+  // loading, nor after a failed load), so fall back rather than show an empty body.
+  const shownTab =
+    (activeTab === "centers" && accountCenters.length === 0) || (activeTab === "prospects" && accountProspects.length === 0)
+      ? "info"
+      : activeTab
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -387,7 +393,7 @@ export function AccountDetailsDialog({
           <DialogDescription className="sr-only">
             Account profile, centres and prospects.
           </DialogDescription>
-          <Tabs value={activeTab} onValueChange={handleTabChange} className="flex min-h-0 flex-1 flex-col">
+          <Tabs value={shownTab} onValueChange={handleTabChange} className="flex min-h-0 flex-1 flex-col">
             <div className="shrink-0 border-b px-6 pt-5">
               <div className="flex items-center gap-3">
                 <CompanyLogo domain={account.account_hq_website ?? undefined} companyName={account.account_global_legal_name} size="md" theme="auto" />
@@ -503,8 +509,8 @@ export function AccountDetailsDialog({
                         ]}
                       />
                     )}
-                    {ticker && !financialError && !financialLoading && financialData && financialData.annualRevenueSeries.length > 0 && (
-                      <AnnualRevenueChart series={financialData.annualRevenueSeries} className="mt-3" />
+                    {ticker && financialError && !financialLoading && (
+                      <p className="mt-2 text-xs text-muted-foreground">Market cap and net profit are not available for {ticker} right now.</p>
                     )}
                   </Section>
 

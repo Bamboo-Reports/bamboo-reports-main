@@ -153,12 +153,15 @@ export function layoutTechTreemap(
   const { trayInset, headerHeight, tileAreaInset, tileInset } = sizing
   const trays: TreemapTray[] = []
   const tiles: TreemapTile[] = []
-  const cells = squarify(
-    categories.map((category) => category.tools.reduce((sum, tool) => sum + techTileWeight(tool.count), 0)),
-    0, 0, width, height
-  )
+  // Laid out by weight, largest first, which is what squarify expects. The
+  // incoming order is by total count, and that can differ: many small tools
+  // outweigh one large one.
+  const weighted = categories
+    .map((category) => ({ category, weight: category.tools.reduce((sum, tool) => sum + techTileWeight(tool.count), 0) }))
+    .sort((a, b) => b.weight - a.weight)
+  const cells = squarify(weighted.map((entry) => entry.weight), 0, 0, width, height)
   cells.forEach(([cx, cy, cw, ch], index) => {
-    const category = categories[index]
+    const category = weighted[index].category
     const tray = { name: category.name, x: cx + trayInset, y: cy + trayInset, width: cw - trayInset * 2, height: ch - trayInset * 2 }
     trays.push(tray)
     squarify(

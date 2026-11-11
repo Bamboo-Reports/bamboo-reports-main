@@ -4,6 +4,7 @@ import { compareRangeLabels } from "@/lib/utils/range-order"
 import { accountHeadcountChartTitle } from "@/lib/utils/chart-helpers"
 import { formatRevenueInMillions, formatRevenueRange } from "@/lib/utils/helpers"
 import { FIELD_LABELS } from "@/lib/dashboard/filter-spec"
+import { isRangeActive } from "@/lib/dashboard/active-filters"
 
 /**
  * Builds the data model behind the downloadable summary PDF: the headline
@@ -187,9 +188,6 @@ const splitByMode = (values: FilterValue[]) => {
   return { included, excluded }
 }
 
-const isRangeActive = (range: [number, number], baseline: SummaryReportRange) =>
-  range[0] !== baseline.min || range[1] !== baseline.max
-
 // Range filters carry a toggle for records with no value in that field. The
 // note lands in the included or excluded column so the colouring tells the
 // story without extra prose.
@@ -254,7 +252,7 @@ export function buildReportFilterRows(
     })
   }
 
-  if (isRangeActive(filters.accountHqRevenueRange, baselineRanges.revenue)) {
+  if (isRangeActive(filters.accountHqRevenueRange, baselineRanges.revenue, filters.accountHqRevenueIncludeNull)) {
     const [min, max] = filters.accountHqRevenueRange
     rows.push(rangeRow({
       group: "Account",
@@ -265,7 +263,7 @@ export function buildReportFilterRows(
     }))
   }
 
-  if (isRangeActive(filters.accountYearsInIndiaRange, baselineRanges.yearsInIndia)) {
+  if (isRangeActive(filters.accountYearsInIndiaRange, baselineRanges.yearsInIndia, filters.yearsInIndiaIncludeNull)) {
     const [min, max] = filters.accountYearsInIndiaRange
     rows.push(rangeRow({
       group: "Account",
@@ -281,7 +279,7 @@ export function buildReportFilterRows(
     if (row) rows.push(row)
   }
 
-  if (isRangeActive(filters.centerIncYearRange, baselineRanges.centerIncYear)) {
+  if (isRangeActive(filters.centerIncYearRange, baselineRanges.centerIncYear, filters.centerIncYearIncludeNull)) {
     const [min, max] = filters.centerIncYearRange
     rows.push(rangeRow({
       group: "Center",

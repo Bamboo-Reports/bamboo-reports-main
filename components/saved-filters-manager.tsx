@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect, useMemo, memo } from "react"
+import { useState, useCallback, useEffect, useMemo, useRef, memo } from "react"
 import { toast } from "sonner"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -116,6 +116,11 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
     () => (appliedFilter?.snapshot ? countFilters(JSON.parse(appliedFilter.snapshot) as Filters) === 0 : false),
     [appliedFilter?.snapshot, countFilters]
   )
+  // Once every filter is cleared the saved filter is no longer applied, so
+  // filters chosen afterwards are not offered as an update to it.
+  if (appliedFilter?.snapshot != null && !savedNothing && countFilters(currentFilters) === 0) {
+    setAppliedFilter(null)
+  }
   const activeSavedFilter =
     appliedFilter?.snapshot != null && (savedNothing || countFilters(currentFilters) > 0) ? appliedFilter : null
   const isModified = activeSavedFilter != null && JSON.stringify(currentFilters) !== activeSavedFilter.snapshot
@@ -131,6 +136,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
   // Share dialog state
   const [shareDialogOpen, setShareDialogOpen] = useState(false)
   const [filterToShare, setFilterToShare] = useState<SavedFilter | null>(null)
+  const shareTargetRef = useRef<string | null>(null)
   const [shareEmail, setShareEmail] = useState("")
   const [shareError, setShareError] = useState<string | null>(null)
   const [shareSuccess, setShareSuccess] = useState<string | null>(null)
@@ -176,7 +182,9 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
       const selection = already
         ? currentFilters.accountListValues.map((v) => (v.value === list.id ? { ...v, mode } : v))
         : [...currentFilters.accountListValues, { value: list.id, mode }]
-      const lists = accountLists.some((l) => l.id === list.id) ? accountLists : [...accountLists, list]
+      // The list handed in is the latest copy (it may have been saved a moment
+      // ago, after this render), so it replaces the one from the context.
+      const lists = [...accountLists.filter((l) => l.id !== list.id), list]
       onLoadFilters(withAccountLists(currentFilters, selection, lists))
     },
     [currentFilters, accountLists, onLoadFilters]
@@ -197,7 +205,12 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
   const handleUpdateApplied = useCallback(async () => {
     if (!activeSavedFilter) return
     const success = await updateFilter(activeSavedFilter.id, activeSavedFilter.name, currentFilters)
-    if (success) setAppliedFilter({ ...activeSavedFilter, snapshot: JSON.stringify(currentFilters) })
+    if (success) {
+      setAppliedFilter({ ...activeSavedFilter, snapshot: JSON.stringify(currentFilters) })
+      toast.success(`Updated "${activeSavedFilter.name}"`)
+    } else {
+      toast.error("Could not update the filter")
+    }
   }, [activeSavedFilter, currentFilters, updateFilter])
 
   useEffect(() => {
@@ -221,6 +234,8 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
       if (appliedFilter?.id === filterToDelete.id) setAppliedFilter(null)
       setDeleteConfirmOpen(false)
       setFilterToDelete(null)
+    } else {
+      toast.error("Could not delete the filter")
     }
   }, [filterToDelete, deleteFilter, appliedFilter])
 
@@ -232,6 +247,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
       return false
     }
     const success = await updateFilter(filter.id, name, filter.filters)
+    if (!success) toast.error("Could not rename the filter")
     if (success && appliedFilter?.id === filter.id) setAppliedFilter({ ...appliedFilter, name: name.trim() })
     return success
   }, [updateFilter, appliedFilter, myFilters])
@@ -250,8 +266,10 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
       saved_filter_name: normalizeTrackedText(filter.name),
     })
 
+    shareTargetRef.current = filter.id
     const shares = await getFilterShares(filter.id)
-    setCurrentShares(shares)
+    // A slow answer for a filter opened earlier must not land under this one.
+    if (shareTargetRef.current === filter.id) setCurrentShares(shares)
   }, [getFilterShares])
 
   const handleShareFilter = useCallback(async () => {

@@ -80,9 +80,17 @@ export function useRecentItems() {
   }, [])
 
   /** Puts back a list removed by clearRecentItems or removeRecentItem (the History "Undo", #311). */
+  // Puts removed records back without touching what is there now: an undo
+  // must not drop records opened, or bring back ones removed, since it was offered.
   const restoreRecentItems = useCallback((items: RecentItem[]) => {
-    setRecentItems(items)
-    saveToStorage(STORAGE_KEY, items)
+    setRecentItems((prev) => {
+      const present = new Set(prev.map((r) => `${r.type}::${r.id}`))
+      const missing = items.filter((r) => !present.has(`${r.type}::${r.id}`))
+      if (missing.length === 0) return prev
+      const next = [...prev, ...missing].sort((a, b) => b.viewedAt - a.viewedAt)
+      saveToStorage(STORAGE_KEY, next)
+      return next
+    })
   }, [])
 
   const clearRecentSearches = useCallback(() => {

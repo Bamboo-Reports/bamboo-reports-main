@@ -40,6 +40,7 @@ export function NotificationDropdown() {
     unreadCount,
     loadingList: isLoading,
     error,
+    markAllError,
     hasSession,
     loadNotifications,
     markAllAsRead,
@@ -105,6 +106,12 @@ export function NotificationDropdown() {
         </div>
 
         <div className="max-h-[420px] overflow-y-auto p-1">
+          {showList && markAllError ? (
+            <p className="m-2 rounded-lg bg-exclude/[0.06] px-3 py-2.5 text-[13px] text-exclude" role="alert">
+              Could not mark the updates as read. {markAllError}
+            </p>
+          ) : null}
+
           {!isLoading && error ? (
             <p className="m-2 rounded-lg bg-exclude/[0.06] px-3 py-2.5 text-[13px] text-exclude" role="alert">
               Could not load updates. {error}

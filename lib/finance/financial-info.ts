@@ -29,32 +29,24 @@ function toDateIso(value: unknown): string | null {
   return null
 }
 
-function getQuarterLabel(date: Date): string {
-  const month = date.getUTCMonth()
-  const quarter = Math.floor(month / 3) + 1
-  return `Q${quarter} ${date.getUTCFullYear()}`
+/**
+ * How many US dollars one unit of a currency buys, or null when that cannot
+ * be said (no currency, a failed lookup, or a minor unit such as pence, which
+ * the feed writes with a lower-case letter: "GBp").
+ */
+async function usdRate(currency: string | null): Promise<number | null> {
+  if (!currency || !/^[A-Z]{3}$/.test(currency)) return null
+  if (currency === "USD") return 1
+  try {
+    const fx = await yahooFinance.quote(`${currency}USD=X`)
+    const rate = toNumber(fx?.regularMarketPrice)
+    return rate && rate > 0 ? rate : null
+  } catch {
+    return null
+  }
 }
 
-function buildRevenueSeries(
-  rows: Array<{ date?: Date; totalRevenue?: number }>,
-  kind: "annual" | "quarterly",
-  limit: number
-) {
-  const mapped = rows
-    .filter((row) => row.date instanceof Date && Number.isFinite(row.date.getTime()) && typeof row.totalRevenue === "number")
-    .sort((a, b) => a.date!.getTime() - b.date!.getTime())
-    .slice(-limit)
-    .map((row) => {
-      const date = row.date as Date
-      return {
-        date: date.toISOString(),
-        label: kind === "annual" ? `FY ${date.getUTCFullYear()}` : getQuarterLabel(date),
-        revenue: row.totalRevenue as number,
-      }
-    })
-
-  return mapped
-}
+const inUsd = (amount: number | null, rate: number | null) => (amount != null && rate != null ? amount * rate : null)
 
 /**
  * Fetches company financials from Yahoo Finance for a ticker.
@@ -62,10 +54,10 @@ function buildRevenueSeries(
  * This is a plain server-side helper with NO auth check. It must only be
  * called from an authenticated, rate-limited context (see
  * app/api/financials/route.ts). Do not expose it as a bare server action:
- * each call fans out to four Yahoo Finance requests.
+ * each call fans out to two Yahoo Finance requests (up to four when currencies need converting).
  */
-export async function fetchAccountFinancialInfo(rawTicker: string): Promise<AccountFinancialInfoResponse> {
-  const normalizedTicker = normalizeTickerForYahoo(rawTicker)
+export async function fetchAccountFinancialInfo(rawTicker: string, hqCountry?: string | null): Promise<AccountFinancialInfoResponse> {
+  const normalizedTicker = normalizeTickerForYahoo(rawTicker, hqCountry)
   if (!normalizedTicker) {
     return {
       success: false,
@@ -75,31 +67,29 @@ export async function fetchAccountFinancialInfo(rawTicker: string): Promise<Acco
   }
 
   try {
-    const [quote, summary, annualFinancials, quarterlyFinancials] = await Promise.all([
+    const [quote, summary] = await Promise.all([
       yahooFinance.quote(normalizedTicker),
       yahooFinance.quoteSummary(normalizedTicker, {
         modules: ["assetProfile", "summaryDetail", "financialData", "defaultKeyStatistics", "price"],
       }),
-      yahooFinance.fundamentalsTimeSeries(normalizedTicker, {
-        period1: "2016-01-01",
-        type: "annual",
-        module: "financials",
-      }),
-      yahooFinance.fundamentalsTimeSeries(normalizedTicker, {
-        period1: "2022-01-01",
-        type: "quarterly",
-        module: "financials",
-      }),
     ])
+
+    // The dashboard shows money in US dollars everywhere. The feed gives market
+    // cap in the listing's currency and net profit in the company's reporting
+    // currency, so both are converted, or left out when no rate is to hand.
+    const quoteCurrency = toStringValue(quote.currency)
+    const reportingCurrency = toStringValue(quote.financialCurrency) ?? quoteCurrency
+    const [quoteRate, reportingRate] = await Promise.all([
+      usdRate(quoteCurrency),
+      reportingCurrency === quoteCurrency ? null : usdRate(reportingCurrency),
+    ])
+    const netProfitRate = reportingCurrency === quoteCurrency ? quoteRate : reportingRate
 
     const assetProfile = summary.assetProfile
     const summaryDetail = summary.summaryDetail
     const financialData = summary.financialData
     const keyStats = summary.defaultKeyStatistics
     const price = summary.price
-
-    const annualRevenueSeries = buildRevenueSeries(annualFinancials, "annual", 6)
-    const quarterlyRevenueSeries = buildRevenueSeries(quarterlyFinancials, "quarterly", 8)
 
     return {
       success: true,
@@ -121,7 +111,7 @@ export async function fetchAccountFinancialInfo(rawTicker: string): Promise<Acco
         regularMarketPreviousClose: toNumber(quote.regularMarketPreviousClose),
         regularMarketVolume: toNumber(quote.regularMarketVolume),
         averageVolume: toNumber(summaryDetail?.averageVolume),
-        marketCap: toNumber(summaryDetail?.marketCap) ?? toNumber(quote.marketCap),
+        marketCap: inUsd(toNumber(summaryDetail?.marketCap) ?? toNumber(quote.marketCap), quoteRate),
         fiftyTwoWeekLow: toNumber(summaryDetail?.fiftyTwoWeekLow) ?? toNumber(quote.fiftyTwoWeekLow),
         fiftyTwoWeekHigh: toNumber(summaryDetail?.fiftyTwoWeekHigh) ?? toNumber(quote.fiftyTwoWeekHigh),
         trailingPE: toNumber(summaryDetail?.trailingPE) ?? toNumber(quote.trailingPE),
@@ -142,7 +132,7 @@ export async function fetchAccountFinancialInfo(rawTicker: string): Promise<Acco
         targetLowPrice: toNumber(financialData?.targetLowPrice),
         targetMeanPrice: toNumber(financialData?.targetMeanPrice),
         totalRevenue: toNumber(financialData?.totalRevenue),
-        netProfit: toNumber(keyStats?.netIncomeToCommon),
+        netProfit: inUsd(toNumber(keyStats?.netIncomeToCommon), netProfitRate),
         ebitda: toNumber(financialData?.ebitda),
         grossMargins: toNumber(financialData?.grossMargins),
         operatingMargins: toNumber(financialData?.operatingMargins),
@@ -156,8 +146,6 @@ export async function fetchAccountFinancialInfo(rawTicker: string): Promise<Acco
         sharesOutstanding: toNumber(keyStats?.sharesOutstanding),
         heldPercentInstitutions: toNumber(keyStats?.heldPercentInstitutions),
         heldPercentInsiders: toNumber(keyStats?.heldPercentInsiders),
-        annualRevenueSeries,
-        quarterlyRevenueSeries,
       },
     }
   } catch (error) {

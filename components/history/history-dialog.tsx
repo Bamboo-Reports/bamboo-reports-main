@@ -89,9 +89,8 @@ export function HistoryDialog({
   }
 
   const removeOne = (item: RecentItem) => {
-    const before = recentItems
     onRemoveItem(item)
-    withUndo(`Removed ${item.title} from history`, before)
+    withUndo(`Removed ${item.title} from history`, [item])
   }
 
   const empty = recentItems.length === 0

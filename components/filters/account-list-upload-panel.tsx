@@ -16,8 +16,8 @@ import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { normalizeTrackedText } from "@/lib/analytics/tracking"
 import { fetchAccountMatches } from "@/lib/dashboard/api-client"
-import { MAX_MATCH_NAMES, type AccountMatchCandidate, type AccountMatchResult, type AccountMatchStatus } from "@/lib/accounts/account-match"
-import { extractNames, guessNameColumn, parseDelimitedText, tableFromRows, type ParsedAccountTable } from "@/lib/accounts/account-list-parser"
+import { MAX_MATCH_NAMES, MAX_NAME_LENGTH, type AccountMatchCandidate, type AccountMatchResult, type AccountMatchStatus } from "@/lib/accounts/account-match"
+import { extractNames, guessNameColumn, parseDelimitedText, parsePastedNames, tableFromRows, type ParsedAccountTable } from "@/lib/accounts/account-list-parser"
 import { devError } from "@/lib/utils/dev-log"
 import { useAccountLists } from "@/contexts/account-lists-context"
 import type { AccountList, AccountListMatch, AccountListMatchVia } from "@/lib/accounts/account-lists"
@@ -42,7 +42,8 @@ type ReviewRow = {
 
 type Step = "input" | "review"
 
-const ACCEPTED_EXTENSIONS = [".csv", ".tsv", ".txt", ".xlsx", ".xls"]
+// Legacy .xls is not offered: the reader only understands .xlsx.
+const ACCEPTED_EXTENSIONS = [".csv", ".tsv", ".txt", ".xlsx"]
 
 async function readSpreadsheet(file: File): Promise<ParsedAccountTable> {
   const ExcelJS = (await import("exceljs")).default
@@ -144,7 +145,10 @@ export function AccountListUploadPanel({ existingList = null, onDone, onApply }:
 
   const names = useMemo(() => {
     if (table) return extractNames(table, column)
-    if (pasted.trim()) return extractNames(parseDelimitedText(pasted), 0)
+    if (pasted.trim()) {
+      const pastedTable = parsePastedNames(pasted)
+      return extractNames(pastedTable, guessNameColumn(pastedTable))
+    }
     return []
   }, [table, column, pasted])
 
@@ -158,7 +162,7 @@ export function AccountListUploadPanel({ existingList = null, onDone, onApply }:
       return
     }
     try {
-      const parsed = lower.endsWith(".xlsx") || lower.endsWith(".xls") ? await readSpreadsheet(file) : parseDelimitedText(await file.text())
+      const parsed = lower.endsWith(".xlsx") ? await readSpreadsheet(file) : parseDelimitedText(await file.text())
       if (parsed.rows.length === 0) {
         captureEvent(ANALYTICS_EVENTS.ACCOUNT_LIST_PARSE_FAILED, { reason: "empty_file", file_ext: fileExt })
         setParseError("The file has no rows to import")
@@ -178,6 +182,14 @@ export function AccountListUploadPanel({ existingList = null, onDone, onApply }:
 
   const handleMatch = useCallback(async () => {
     if (names.length === 0) return
+    // Said here, with the name, so the whole list is not turned away without saying which one.
+    const tooLong = names.slice(0, MAX_MATCH_NAMES).find((name) => name.length > MAX_NAME_LENGTH)
+    if (tooLong) {
+      toast.error(`A name is longer than ${MAX_NAME_LENGTH} characters`, {
+        description: `Shorten or remove the one starting "${tooLong.slice(0, 40)}".`,
+      })
+      return
+    }
     setMatching(true)
     try {
       const { results } = await fetchAccountMatches(names.slice(0, MAX_MATCH_NAMES))

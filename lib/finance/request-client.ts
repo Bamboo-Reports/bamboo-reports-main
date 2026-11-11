@@ -7,7 +7,9 @@ import type { AccountFinancialInfoResponse } from "@/lib/types"
  * getAccountFinancialInfo server action.
  */
 export async function requestAccountFinancialInfo(
-  ticker: string
+  ticker: string,
+  // The account's HQ country: it tells which exchange a number-only ticker belongs to.
+  hqCountry?: string | null
 ): Promise<AccountFinancialInfoResponse> {
   const supabase = getSupabaseBrowserClient()
   const { data: sessionData } = await supabase.auth.getSession()
@@ -17,7 +19,9 @@ export async function requestAccountFinancialInfo(
   }
 
   try {
-    const res = await fetch(`/api/financials?ticker=${encodeURIComponent(ticker)}`, {
+    const query = new URLSearchParams({ ticker })
+    if (hqCountry) query.set("country", hqCountry)
+    const res = await fetch(`/api/financials?${query}`, {
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     })

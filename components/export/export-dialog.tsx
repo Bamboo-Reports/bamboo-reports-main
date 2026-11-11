@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { devError } from "@/lib/utils/dev-log"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -409,7 +410,10 @@ export function ExportDialog({
         source: "export_dialog",
         error_message: err instanceof Error ? err.message : "Unknown download error",
       })
-      setError(err instanceof Error ? err.message : "Could not download the export")
+      // The footer keeps showing the finished file, so the failure is a toast and Download stays for a retry.
+      toast.error("The download did not start", {
+        description: err instanceof Error ? err.message : "Try again.",
+      })
     }
   }
 

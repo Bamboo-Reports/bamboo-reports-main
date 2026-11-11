@@ -15,6 +15,7 @@ import { AuthNotice, AuthShell } from "@/components/auth/auth-shell"
 import { captureEvent, identifyUser } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { getSupabaseBrowserClient, setSupabaseAuthStoragePreference } from "@/lib/supabase/client"
+import { returnPathFrom } from "@/lib/auth/return-to"
 import { signInSchema, type SignInValues } from "@/lib/validators/auth"
 
 function SignInForm() {
@@ -40,10 +41,10 @@ function SignInForm() {
     const supabase = getSupabaseBrowserClient()
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) {
-        router.replace("/")
+        router.replace(returnPathFrom(searchParams))
       }
     })
-  }, [router])
+  }, [router, searchParams])
 
   const onSubmit = async (values: SignInValues) => {
     setSubmitError(null)
@@ -107,7 +108,7 @@ function SignInForm() {
       }
     }
 
-    router.replace("/")
+    router.replace(returnPathFrom(searchParams))
   }
 
   return (

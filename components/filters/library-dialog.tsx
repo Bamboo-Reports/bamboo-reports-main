@@ -203,6 +203,7 @@ export function LibraryRename({
 }) {
   const [value, setValue] = React.useState(initial)
   const save = () => {
+    if (saving) return
     const name = value.trim()
     if (name && name !== initial) onSave(name)
     else onCancel()

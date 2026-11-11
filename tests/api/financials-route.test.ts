@@ -74,6 +74,6 @@ describe("financials API route", () => {
     const res = await getFinancials(new Request(url, { headers: { authorization: "Bearer token-1" } }))
     expect(res.status).toBe(200)
     await expect(res.json()).resolves.toEqual({ success: true, error: null, data: { symbol: "AAPL" } })
-    expect(financeMocks.fetchAccountFinancialInfo).toHaveBeenCalledWith("AAPL")
+    expect(financeMocks.fetchAccountFinancialInfo).toHaveBeenCalledWith("AAPL", null)
   })
 })

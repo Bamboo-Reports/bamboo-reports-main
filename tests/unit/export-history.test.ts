@@ -76,4 +76,11 @@ describe("export history", () => {
     expect(keywords[MAX_LISTED_FILTER_VALUES]).toEqual({ value: "and 30 more", mode: "include" })
     expect(summary.centerCityValues).toEqual([{ value: "Pune", mode: "include" }])
   })
+
+  it("reports the full number of account names beside a shortened list", () => {
+    const names = Array.from({ length: 2400 }, (_, i) => ({ value: `Co ${i}`, mode: "include" }))
+    const summary = summarizeExportFilters({ accountNameValues: names }) as Record<string, unknown>
+    expect(summary.accountNameValues).toHaveLength(MAX_LISTED_FILTER_VALUES)
+    expect(summary.accountNameCount).toBe(2400)
+  })
 })

@@ -14,6 +14,7 @@ import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import type { Center, Prospect } from "@/lib/types"
 import { cn, ensureAbsoluteUrl } from "@/lib/utils"
+import { rangeLowerBound } from "@/lib/utils/range-order"
 import { formatCenterLocation, formatProspectLocation } from "@/lib/utils/helpers"
 
 /**
@@ -82,7 +83,12 @@ export const accountCenterColumns = centerHelper.columns([
     id: "employees",
     header: ({ column }) => <DataTableColumnHeader column={column} title="Centre headcount" />,
     cell: ({ getValue }) => <TruncatedText value={getValue()} />,
-    sortFn: "text",
+    // Bands sort by size ("51 - 100" before "1K - 5K"), as in the main centres table.
+    sortFn: (a, b, columnId) => {
+      const low = rangeLowerBound(String(a.getValue(columnId) ?? ""))
+      const high = rangeLowerBound(String(b.getValue(columnId) ?? ""))
+      return low === high ? 0 : low < high ? -1 : 1
+    },
     meta: { className: "w-[160px]" },
   }),
   centerHelper.accessor((center) => (center.center_inc_year != null ? String(center.center_inc_year) : null), {

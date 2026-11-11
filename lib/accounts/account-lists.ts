@@ -144,6 +144,15 @@ export function expandAccountLists(filters: Filters, lists: AccountList[]): Filt
 
 /** Sets the selected lists on a filter and re-derives the exact names. */
 export function withAccountLists(filters: Filters, selection: FilterValue[], lists: AccountList[]): Filters {
-  const next: Filters = { ...filters, accountListValues: selection, accountNameValues: [] }
+  const byId = new Map(lists.map((l) => [l.id, l]))
+  // Names of the lists to hand are derived again below. If the selection also
+  // names a list that is not to hand, whatever the filters hold beyond the
+  // known lists' names is that list's, so it is carried rather than dropped.
+  let carried: FilterValue[] = []
+  if (selection.some((entry) => !byId.has(entry.value))) {
+    const derivable = new Set(filters.accountListValues.flatMap((entry) => byId.get(entry.value)?.accounts ?? []))
+    carried = filters.accountNameValues.filter((entry) => !derivable.has(entry.value))
+  }
+  const next: Filters = { ...filters, accountListValues: selection, accountNameValues: carried }
   return expandAccountLists(next, lists)
 }

@@ -78,10 +78,17 @@ export function ProspectDetailsDialog({
     setPagination((prev) => ({ ...prev, pageIndex: 0 }))
   }, [])
 
-  useEffect(() => {
-    setCurrent(prospect)
-    resetContacts()
-  }, [prospect, resetContacts])
+  // Start from the prospect handed in whenever it changes or the dialog opens
+  // again, so a contact switched to last time is not what reopens. Done while
+  // rendering, not in an effect, so nothing below ever sees the previous record.
+  const [synced, setSynced] = useState({ prospect, open })
+  if (synced.prospect !== prospect || synced.open !== open) {
+    setSynced({ prospect, open })
+    if (synced.prospect !== prospect || open) {
+      setCurrent(prospect)
+      resetContacts()
+    }
+  }
 
   const p = current
 

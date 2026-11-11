@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import type { Filters } from "@/lib/types"
 import { useAccountLists } from "@/contexts/account-lists-context"
-import { DEFAULT_RANGE_BOUNDS, type FilterRangeBounds } from "@/lib/dashboard/active-filters"
+import { countActiveFilters, DEFAULT_RANGE_BOUNDS, type FilterRangeBounds } from "@/lib/dashboard/active-filters"
 import {
   decodeDashboardUrl,
   encodeDashboardUrl,
@@ -15,6 +15,17 @@ import {
 /** How long a link's account lists may take to load before the filters are restored without them. */
 const LIST_WAIT_MS = 4000
 
+/**
+ * Whether a filter has been applied since the page loaded. The ranges are
+ * measured against themselves: they move on their own when the data's limits
+ * arrive, so only the other fields say that someone made a choice.
+ */
+const hasAppliedFilter = (filters: Filters) =>
+  countActiveFilters(filters, {
+    revenue: { min: filters.accountHqRevenueRange[0], max: filters.accountHqRevenueRange[1] },
+    yearsInIndia: { min: filters.accountYearsInIndiaRange[0], max: filters.accountYearsInIndiaRange[1] },
+    centerIncYear: { min: filters.centerIncYearRange[0], max: filters.centerIncYearRange[1] },
+  }) > 0
 
 interface UseDashboardUrlSyncParams {
   /** Applied filters. */
@@ -75,13 +86,19 @@ export function useDashboardUrlSync({
   useEffect(() => {
     const pending = pendingRef.current
     if (restored || !pending || !bounds) return
+    // Filters applied while the link was still loading win over the link's.
+    if (hasAppliedFilter(filters)) {
+      pendingRef.current = null
+      setRestored(true)
+      return
+    }
     const known = new Set(lists.map((list) => list.id))
     const listsReady = (pending.accountListValues ?? []).every((entry) => known.has(entry.value))
     if (!listsReady && !listWaitOver) return
     pendingRef.current = null
     applyFilters(filtersFromUrl(pending, bounds))
     setRestored(true)
-  }, [restored, bounds, lists, listWaitOver, applyFilters])
+  }, [restored, bounds, lists, listWaitOver, applyFilters, filters])
 
   // Write every change back to the address.
   useEffect(() => {

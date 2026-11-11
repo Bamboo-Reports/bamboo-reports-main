@@ -94,6 +94,11 @@ export function summarizeExportFilters(filters: unknown): unknown {
       const s = value as { dataset?: unknown; accountNames?: unknown; centerKeys?: unknown; prospectIds?: unknown }
       const keys = s.dataset === "centers" ? s.centerKeys : s.dataset === "prospects" ? s.prospectIds : s.accountNames
       out[key] = { dataset: s.dataset, count: Array.isArray(keys) ? keys.length : 0 }
+    } else if (key === "accountNameValues" && Array.isArray(value) && value.length > MAX_LISTED_FILTER_VALUES) {
+      // Account names are only ever shown as a count, so the count travels
+      // beside the shortened list instead of as a stand-in value inside it.
+      out[key] = value.slice(0, MAX_LISTED_FILTER_VALUES)
+      out.accountNameCount = value.length
     } else if (Array.isArray(value) && value.length > MAX_LISTED_FILTER_VALUES) {
       const more = value.length - MAX_LISTED_FILTER_VALUES
       out[key] = [...value.slice(0, MAX_LISTED_FILTER_VALUES), { value: `and ${more.toLocaleString()} more`, mode: "include" }]

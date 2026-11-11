@@ -115,7 +115,13 @@ export const EnhancedMultiSelect = React.memo(function EnhancedMultiSelect({
   isApplying = false,
   ordered = false,
 }: EnhancedMultiSelectProps) {
-  const [open, setOpen] = React.useState(false)
+  const [open, setOpenState] = React.useState(false)
+  // The selection as it was when the list opened: what the list is ordered by.
+  const [pinnedValues, setPinnedValues] = React.useState<ReadonlySet<string>>(() => new Set())
+  const setOpen = (next: boolean) => {
+    if (next) setPinnedValues(new Set(selected.map((item) => item.value)))
+    setOpenState(next)
+  }
   const [searchQuery, setSearchQuery] = React.useState("")
   const listId = React.useId()
   const searchTrackTimeoutRef = React.useRef<number | null>(null)
@@ -248,12 +254,17 @@ export const EnhancedMultiSelect = React.memo(function EnhancedMultiSelect({
       // The same order the charts and the sorted tables use for these bands.
       return [...allOptions].sort((a, b) => compareRangeLabels(a.value, b.value)).slice(0, DEFAULT_VISIBLE_OPTIONS)
     }
-    const selectedValues = new Set(selected.map((item) => item.value))
+    // Values selected when the list opened lead it. Ones picked since stay
+    // where they are, so rows never move under the pointer between clicks; a
+    // pick that would fall outside the short list is added at its end.
     const sorted = [...allOptions].sort(
-      (a, b) => Number(selectedValues.has(b.value)) - Number(selectedValues.has(a.value)) || b.count - a.count
+      (a, b) => Number(pinnedValues.has(b.value)) - Number(pinnedValues.has(a.value)) || b.count - a.count
     )
-    return sorted.slice(0, Math.max(DEFAULT_VISIBLE_OPTIONS, selectedValues.size))
-  }, [options, deferredSearchQuery, ordered, selected])
+    const visible = sorted.slice(0, Math.max(DEFAULT_VISIBLE_OPTIONS, pinnedValues.size))
+    const shown = new Set(visible.map((option) => option.value))
+    const selectedValues = new Set(selected.map((item) => item.value))
+    return [...visible, ...sorted.filter((option) => selectedValues.has(option.value) && !shown.has(option.value))]
+  }, [options, deferredSearchQuery, ordered, selected, pinnedValues])
 
   const hasMoreOptions = normalizedSearchQuery.length === 0 && options.length > DEFAULT_VISIBLE_OPTIONS
 

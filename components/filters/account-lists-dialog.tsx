@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { RiAddLine, RiCloseLine, RiDeleteBinLine, RiErrorWarningLine, RiFileList3Line, RiFileUploadLine, RiGroupLine, RiPencilLine, RiSearchLine, RiShareLine, RiSubtractLine, RiUploadLine } from "@remixicon/react"
 import { toast } from "sonner"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -88,6 +88,12 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
 
   // Share dialog state
   const [listToShare, setListToShare] = useState<AccountList | null>(null)
+  const shareTargetRef = useRef<string | null>(null)
+  // Mappings run one at a time, each on top of the last saved copy of its
+  // list: two quick ones would otherwise both start from the same copy and
+  // the second would undo the first.
+  const mapQueueRef = useRef<Promise<void>>(Promise.resolve())
+  const mappedListsRef = useRef(new Map<string, AccountList>())
   const [shareEmail, setShareEmail] = useState("")
   const [shareError, setShareError] = useState<string | null>(null)
   const [shareSuccess, setShareSuccess] = useState<string | null>(null)
@@ -101,7 +107,10 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
       setShareError(null)
       setShareSuccess(null)
       setCurrentShares([])
-      setCurrentShares(await getListShares(list.id))
+      shareTargetRef.current = list.id
+      const shares = await getListShares(list.id)
+      // A slow answer for a list opened earlier must not land under this one.
+      if (shareTargetRef.current === list.id) setCurrentShares(shares)
     },
     [getListShares]
   )
@@ -153,10 +162,21 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
   )
 
   const mapName = useCallback(
-    async (list: AccountList, input: string, account: string) => {
-      const updated = await updateList(list.id, mapUnmatchedName(list, input, account))
-      if (updated) toast.success(`Matched "${input}"`, { description: `to ${account}` })
-      else toast.error("Could not update the list")
+    (list: AccountList, input: string, account: string) => {
+      const run = async () => {
+        const saved = mappedListsRef.current.get(list.id)
+        // The copy saved by an earlier mapping, unless the list has moved on since.
+        const base = saved && saved.updated_at >= list.updated_at ? saved : list
+        const updated = await updateList(list.id, mapUnmatchedName(base, input, account))
+        if (updated) {
+          mappedListsRef.current.set(list.id, updated)
+          toast.success(`Matched "${input}"`, { description: `to ${account}` })
+        } else {
+          toast.error("Could not update the list")
+        }
+      }
+      mapQueueRef.current = mapQueueRef.current.then(run, run)
+      return mapQueueRef.current
     },
     [updateList]
   )

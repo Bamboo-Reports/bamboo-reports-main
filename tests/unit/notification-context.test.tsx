@@ -115,7 +115,8 @@ describe("NotificationProvider", () => {
       ok = await result.current.markAllAsRead()
     })
     expect(ok).toBe(false)
-    await waitFor(() => expect(result.current.error).toBe("Nope"))
+    await waitFor(() => expect(result.current.markAllError).toBe("Nope"))
+    expect(result.current.error).toBeNull()
     expect(result.current.unreadCount).toBe(3)
   })
 

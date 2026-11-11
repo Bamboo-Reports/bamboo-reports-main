@@ -16,7 +16,7 @@ function json(body: unknown, status = 200) {
   })
 }
 
-// Each request fans out to four Yahoo Finance calls, so keep the per-user
+// Each request fans out to two to four Yahoo Finance calls, so keep the per-user
 // budget tighter than the general data endpoints.
 const FINANCIALS_MAX_PER_MIN = 20
 
@@ -32,12 +32,13 @@ export async function GET(request: Request) {
   })
   if (!limited.ok) return limited.response
 
-  const ticker = new URL(request.url).searchParams.get("ticker")
+  const url = new URL(request.url)
+  const ticker = url.searchParams.get("ticker")
   if (!ticker || !ticker.trim()) {
     return json({ success: false, error: "Ticker is missing or invalid", data: null }, 400)
   }
 
-  const result = await fetchAccountFinancialInfo(ticker)
+  const result = await fetchAccountFinancialInfo(ticker, url.searchParams.get("country"))
   logger.info("financials_served", { user_id: userId, success: result.success })
   captureServerEvent({
     distinctId: userId,

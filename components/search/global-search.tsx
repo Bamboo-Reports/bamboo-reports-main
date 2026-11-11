@@ -126,7 +126,7 @@ export function GlobalSearch({
   onQueryChange,
   results,
   isSearching = false,
-  focus = null,
+  focus: requestedFocus = null,
   onFocusChange,
   recentItems,
   recentSearches,
@@ -197,6 +197,9 @@ export function GlobalSearch({
   const hasResults = results.total > 0
   const hasRecentItems = visibleRecentItems.length > 0
   const hasRecentSearches = recentSearches.length > 0
+  // A narrowed type with nothing in it for this query falls back to every type,
+  // so a new query is never reported as matching nothing while others match.
+  const focus = requestedFocus && results[requestedFocus].totalMatches > 0 ? requestedFocus : null
   const visibleGroups = GROUPS.filter((group) => !focus || focus === group.key)
 
   // Actions stay reachable by name: "theme" or "go to prospects" finds them too.

@@ -342,8 +342,6 @@ export interface AccountFinancialInfo {
   sharesOutstanding: number | null
   heldPercentInstitutions: number | null
   heldPercentInsiders: number | null
-  annualRevenueSeries: RevenueSeriesPoint[]
-  quarterlyRevenueSeries: RevenueSeriesPoint[]
 }
 
 export interface AccountFinancialInfoResponse {
@@ -352,8 +350,3 @@ export interface AccountFinancialInfoResponse {
   data: AccountFinancialInfo | null
 }
 
-export interface RevenueSeriesPoint {
-  date: string
-  label: string
-  revenue: number
-}

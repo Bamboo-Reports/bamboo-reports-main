@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { DEFAULT_USER_ROLE, normalizeUserRole, type UserRole } from "@/lib/auth/roles"
 import { devError } from "@/lib/utils/dev-log"
+import { signInPath } from "@/lib/auth/return-to"
 import { captureEvent, resetAnalytics } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 
@@ -64,7 +65,7 @@ export function useAuthGuard() {
       if (!isMounted) return
       const session = data.session
       if (!session) {
-        router.replace("/signin")
+        router.replace(signInPath(window.location.search))
         setUserId(null)
         setUserEmail(null)
         setUserRole(DEFAULT_USER_ROLE)
@@ -89,13 +90,15 @@ export function useAuthGuard() {
           captureEvent(ANALYTICS_EVENTS.AUTH_SESSION_EXPIRED, { auth_event: event })
           resetAnalytics()
         }
+        // An expired session comes back to the same view; a deliberate sign-out starts clean.
+        const destination = manualSignOutPending ? "/signin" : signInPath(window.location.search)
         manualSignOutPending = false
         hadSession = false
         roleLoad = null
         setUserId(null)
         setUserEmail(null)
         setUserRole(DEFAULT_USER_ROLE)
-        router.replace("/signin")
+        router.replace(destination)
         return
       }
       hadSession = true

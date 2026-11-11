@@ -187,6 +187,8 @@ export const TechTreemap = memo(({ tech, title = "Technology stack", className }
                   background: DONUT_CHART_COLORS[techShadeIndex(tile.count, maxCount)],
                   color: TILE_INK,
                 }}
+                // Moving onto a header or a gap leaves no tile hovered.
+                onPointerLeave={() => setHovered(null)}
                 onPointerMove={(event) => {
                   const rect = event.currentTarget.offsetParent?.getBoundingClientRect()
                   if (!rect) return

@@ -74,13 +74,13 @@ describe("History dialog", () => {
     cleanup()
   })
 
-  it("removes one record and offers an Undo that puts the list back", () => {
+  it("removes one record and offers an Undo that puts that record back", () => {
     const props = renderDialog()
     fireEvent.click(screen.getByRole("button", { name: "Remove Asha Rao from History" }))
     expect(props.onRemoveItem).toHaveBeenCalledWith(items[1])
     const options = vi.mocked(toast).mock.calls[0][1] as unknown as { action: { onClick: () => void } }
     options.action.onClick()
-    expect(props.onRestoreHistory).toHaveBeenCalledWith(items)
+    expect(props.onRestoreHistory).toHaveBeenCalledWith([items[1]])
   })
 
   it("filters by type and search", () => {
@@ -119,6 +119,26 @@ describe("useRecentItems remove", () => {
 describe("useRecentItems restore (#311)", () => {
   beforeEach(() => {
     window.localStorage.clear()
+  })
+
+  it("undoes two removals in any order without losing either record", () => {
+    const { result } = renderHook(() => useRecentItems())
+    act(() => result.current.restoreRecentItems(items))
+    act(() => result.current.removeRecentItem("account", items[0].id))
+    act(() => result.current.removeRecentItem("prospect", "p1"))
+    act(() => result.current.restoreRecentItems([items[0]]))
+    act(() => result.current.restoreRecentItems([items[1]]))
+    expect(result.current.recentItems).toEqual([...items].sort((a, b) => b.viewedAt - a.viewedAt))
+  })
+
+  it("keeps a record opened after the removal when the removal is undone", () => {
+    const { result } = renderHook(() => useRecentItems())
+    act(() => result.current.restoreRecentItems(items))
+    act(() => result.current.removeRecentItem("prospect", "p1"))
+    act(() => result.current.addRecentItem({ type: "center", id: "c9", title: "New centre", subtitle: "Pune" } as Parameters<typeof result.current.addRecentItem>[0]))
+    act(() => result.current.restoreRecentItems([items[1]]))
+    expect(result.current.recentItems.map((r) => r.id)).toContain("c9")
+    expect(result.current.recentItems.map((r) => r.id)).toContain("p1")
   })
 
   it("puts cleared items back in state and storage", () => {

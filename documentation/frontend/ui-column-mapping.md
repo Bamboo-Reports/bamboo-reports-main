@@ -232,7 +232,6 @@ A tabbed dialog with **Account Info**, **Centres** and **Prospects** tabs. The C
 | Market Cap | `financialData.marketCap` | Caption: ticker and exchange. Shown only when financial data loaded. |
 | Net Profit | `financialData.netProfit` | Same as above |
 | Employees | `account_hq_employee_count` (caption: `account_hq_employee_range`) | |
-| Annual Revenue (FY) chart | `financialData.annualRevenueSeries` | Array of `{ label, revenue }`, Recharts area chart |
 
 Financial data is fetched on the client by `requestAccountFinancialInfo(ticker)` in `lib/finance/request-client.ts`, which calls the authenticated, rate-limited `/api/financials?ticker=...` route. It loads only when the account has a ticker and the Account Info tab is open. It replaces the former `getAccountFinancialInfo` server action.
 

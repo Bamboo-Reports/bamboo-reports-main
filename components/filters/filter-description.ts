@@ -26,7 +26,8 @@ const VISIBILITY_LABELS: Record<AccountVisibilityMode, string> = { all: "All", g
  * ids to their names.
  */
 export function describeFilters(
-  source: Partial<Filters>,
+  // accountNameCount: the full number of names when the list was shortened (the exports list does this).
+  source: Partial<Filters> & { accountNameCount?: number },
   bounds: FilterRangeBounds,
   listNames: ReadonlyMap<string, string>
 ): DescribedSection[] {
@@ -57,7 +58,7 @@ export function describeFilters(
             values: filters.accountListValues.map((item) => ({ ...item, value: listNames.get(item.value) ?? "Unavailable list" })),
           })
         } else if (filters.accountNameValues.length > 0) {
-          const n = filters.accountNameValues.length
+          const n = source.accountNameCount ?? filters.accountNameValues.length
           fields.push({ label: spec.label, text: `${n.toLocaleString()} ${n === 1 ? "account" : "accounts"}` })
         }
       }

@@ -148,6 +148,8 @@ export function FilterRangeField({
     onChange(next[0] <= next[1] ? next : [next[1], next[0]])
   }
 
+  const sliderPositions = [toSlider(lo, bounds, log), toSlider(hi, bounds, log)]
+
   // Presets clipped to what the data covers; ones that fall outside it are dropped.
   const usablePresets = presets
     .map((preset) => ({
@@ -165,9 +167,15 @@ export function FilterRangeField({
       </div>
       <div className="px-1.5">
         <Slider
-          value={[toSlider(lo, bounds, log), toSlider(hi, bounds, log)]}
+          value={sliderPositions}
           onValueChange={(positions) =>
-            onChange([fromSlider(positions[0], bounds, log), fromSlider(positions[1], bounds, log)])
+            // Only the thumb that moved gets a new value: the slider's steps are
+            // coarser than typed values and presets, so reading the other end
+            // back from its position would change it too.
+            onChange([
+              positions[0] === sliderPositions[0] ? lo : fromSlider(positions[0], bounds, log),
+              positions[1] === sliderPositions[1] ? hi : fromSlider(positions[1], bounds, log),
+            ])
           }
           min={log ? 0 : bounds.min}
           max={log ? LOG_STEPS : bounds.max}

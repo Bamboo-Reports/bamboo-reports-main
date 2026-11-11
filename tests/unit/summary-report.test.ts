@@ -35,6 +35,20 @@ const counts = {
 
 
 describe("buildReportFilterRows", () => {
+  it("lists a range left at full extent once records with no value are excluded", () => {
+    const rows = buildReportFilterRows(
+      createDefaultFilters({
+        accountHqRevenueRange: [0, 5000],
+        accountYearsInIndiaRange: [0, 40],
+        centerIncYearRange: [1990, 2026],
+        accountHqRevenueIncludeNull: false,
+      }),
+      baselineRanges
+    )
+    const revenue = rows.find((row) => row.label === "HQ revenue")
+    expect(revenue?.excluded).toEqual(["Accounts with no recorded value"])
+  })
+
   it("always leads with the account visibility scope", () => {
     const rows = buildReportFilterRows(
       createDefaultFilters({ accountHqRevenueRange: [0, 5000], accountYearsInIndiaRange: [0, 40], centerIncYearRange: [1990, 2026] }),

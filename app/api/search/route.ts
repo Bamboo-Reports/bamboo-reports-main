@@ -72,7 +72,7 @@ export async function GET(request: Request) {
 
   try {
     const body = await getOrCompute(
-      focus ? `search:${focus}:${term}` : `search:${term}`,
+      `search:${focus ?? "all"}:${term}`,
       searchCacheTtl(),
       async () => {
         const acc = buildAccountSearch(term, limitFor("accounts"))

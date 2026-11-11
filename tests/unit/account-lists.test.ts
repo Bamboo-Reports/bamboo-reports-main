@@ -127,4 +127,23 @@ describe("account list matches", () => {
     const before: AccountList = { ...list("a", ["Shell plc"]), unmatched: ["Royal Dutch"], matches: [{ input: "Royal Dutch", account: null, via: "none" }] }
     expect(mapUnmatchedName(before, "Royal Dutch", "shell PLC").accounts).toEqual(["Shell plc"])
   })
+
+  it("keeps the accounts of an unavailable list when another list is added", () => {
+    // "gone" is someone else's list: only its stored names are to hand.
+    const stored = createDefaultFilters({
+      accountListValues: [{ value: "gone", mode: "include" }],
+      accountNameValues: [{ value: "Hooli", mode: "include" }],
+    })
+    const filters = withAccountLists(stored, [{ value: "gone", mode: "include" }, { value: "a", mode: "include" }], lists)
+    expect(filters.accountNameValues.map((v) => v.value).sort()).toEqual(["Acme Corp", "Globex", "Hooli"])
+  })
+
+  it("drops a removed list's accounts while keeping an unavailable list's", () => {
+    const stored = createDefaultFilters({
+      accountListValues: [{ value: "gone", mode: "include" }, { value: "a", mode: "include" }],
+      accountNameValues: [{ value: "Hooli", mode: "include" }, { value: "Acme Corp", mode: "include" }, { value: "Globex", mode: "include" }],
+    })
+    const filters = withAccountLists(stored, [{ value: "gone", mode: "include" }], lists)
+    expect(filters.accountNameValues).toEqual([{ value: "Hooli", mode: "include" }])
+  })
 })
