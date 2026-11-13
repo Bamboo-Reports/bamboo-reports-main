@@ -39,7 +39,7 @@ export function BrandMark({ className = "h-8 w-8" }: { className?: string }) {
         @keyframes petal-in {
           from {
             opacity: 0;
-            transform: scale(0.55);
+            transform: scale(0.8);
           }
           to {
             opacity: 1;
@@ -50,20 +50,23 @@ export function BrandMark({ className = "h-8 w-8" }: { className?: string }) {
         .petal {
           transform-box: fill-box;
           transform-origin: center;
-          animation: petal-in 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+          animation: petal-in 300ms cubic-bezier(0.23, 1, 0.32, 1) both;
         }
 
-        .petal-1 {
-          animation-delay: 60ms;
-        }
         .petal-2 {
-          animation-delay: 160ms;
+          animation-delay: 50ms;
         }
         .petal-3 {
-          animation-delay: 260ms;
+          animation-delay: 100ms;
         }
         .petal-4 {
-          animation-delay: 360ms;
+          animation-delay: 150ms;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .petal {
+            animation: none;
+          }
         }
       `}</style>
     </>

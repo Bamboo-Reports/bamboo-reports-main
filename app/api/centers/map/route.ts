@@ -1,7 +1,7 @@
-import { extractBearerToken, resolveAuthenticatedUserId } from "@/lib/auth/server"
+import { authenticateRequest } from "@/lib/auth/request"
 import { enforceRateLimit } from "@/lib/rate-limit/server"
 import { createLogger } from "@/lib/logger"
-import { parseFilters, resolveAccess } from "@/lib/dashboard/filters-request"
+import { parseFilters } from "@/lib/dashboard/filters-request"
 import { buildCentersMapQuery, splitCentersMapRows } from "@/lib/dashboard/centers-map"
 import { queryWarehouse } from "@/lib/db/warehouse"
 import { dashboardCacheTtlMs, getOrCompute } from "@/lib/cache/memory"
@@ -22,14 +22,9 @@ function json(body: unknown, status = 200) {
  * and per-state choropleth aggregates over the filtered centers set.
  */
 export async function POST(request: Request) {
-  const token = extractBearerToken(request.headers.get("authorization"))
-  if (!token) return json({ error: "Missing authorization token" }, 401)
-  let userId: string
-  try {
-    userId = await resolveAuthenticatedUserId(token)
-  } catch {
-    return json({ error: "Invalid or expired token" }, 401)
-  }
+  const auth = await authenticateRequest(request)
+  if (auth instanceof Response) return auth
+  const { userId } = auth
   // Started now so the counter round trip overlaps the request parsing below;
   // awaited before any warehouse work so an over-limit caller never reaches it.
   const limitedPromise = enforceRateLimit({ userId, bucket: "centers:map" })
@@ -44,7 +39,6 @@ export async function POST(request: Request) {
     rawBody = {}
   }
   const filters = parseFilters((rawBody as { filters?: unknown })?.filters)
-  const access = resolveAccess()
 
   try {
     const body = await getOrCompute(
@@ -53,7 +47,7 @@ export async function POST(request: Request) {
       async () => {
         // One statement for both groupings (one cascade evaluation).
         const { cities: cityRows, states: stateRows } = splitCentersMapRows(
-          await queryWarehouse<Parameters<typeof splitCentersMapRows>[0][number]>(buildCentersMapQuery(filters, access))
+          await queryWarehouse<Parameters<typeof splitCentersMapRows>[0][number]>(buildCentersMapQuery(filters))
         )
         return {
           cities: cityRows.map((r) => ({

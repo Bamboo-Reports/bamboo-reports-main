@@ -98,7 +98,7 @@ gated("centers map aggregation parity against the real Neon warehouse", () => {
 
   async function parity(overrides: Partial<Filters>) {
     const filters = createDefaultFilters({ accountHqRevenueRange: WIDE, ...overrides })
-    const engine = getFilteredData(accounts, centers, [], [], [], [], filters, {})
+    const engine = getFilteredData(accounts, centers, [], [], [], [], filters)
 
     // The endpoint's single combined statement, split back into the two shapes.
     const combined = buildCentersMapQuery(filters)

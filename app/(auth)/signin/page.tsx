@@ -11,11 +11,11 @@ import { Input } from "@/components/ui/input"
 import { PasswordInput } from "@/components/ui/password-input"
 import { Label } from "@/components/ui/label"
 import { devError } from "@/lib/utils/dev-log"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AuthShell } from "@/components/auth/auth-shell"
+import { AuthNotice, AuthShell } from "@/components/auth/auth-shell"
 import { captureEvent, identifyUser } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { getSupabaseBrowserClient, setSupabaseAuthStoragePreference } from "@/lib/supabase/client"
+import { returnPathFrom } from "@/lib/auth/return-to"
 import { signInSchema, type SignInValues } from "@/lib/validators/auth"
 
 function SignInForm() {
@@ -41,10 +41,10 @@ function SignInForm() {
     const supabase = getSupabaseBrowserClient()
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) {
-        router.replace("/")
+        router.replace(returnPathFrom(searchParams))
       }
     })
-  }, [router])
+  }, [router, searchParams])
 
   const onSubmit = async (values: SignInValues) => {
     setSubmitError(null)
@@ -108,16 +108,36 @@ function SignInForm() {
       }
     }
 
-    router.replace("/")
+    router.replace(returnPathFrom(searchParams))
   }
 
   return (
     <AuthShell
-      title="Welcome back"
-      description="Sign in to access Bamboo Reports."
-      footer="Accounts are created by your administrator."
+      title="Sign in"
+      description="Use the email your administrator set up for you."
+      footer="Need an account? Ask your administrator."
     >
       <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
+        {submitError ? (
+          // Supabase answers a wrong email or password with this exact message.
+          submitError === "Invalid login credentials" ? (
+            <AuthNotice tone="error" title="That email and password don't match">
+              Check both and try again, or{" "}
+              <Link href="/forgot-password" className="font-medium text-primary hover:underline">
+                reset your password
+              </Link>
+              .
+            </AuthNotice>
+          ) : (
+            <AuthNotice tone="error" title="Could not sign you in">
+              {submitError}
+            </AuthNotice>
+          )
+        ) : resetStatus === "success" ? (
+          <AuthNotice tone="success" title="Password updated">
+            Sign in with your new password.
+          </AuthNotice>
+        ) : null}
         <div className="space-y-2">
           <Label htmlFor="email" className="text-sm font-medium">
             Email
@@ -127,7 +147,6 @@ function SignInForm() {
             type="email"
             autoComplete="email"
             required
-            className="h-10 rounded-lg"
             {...register("email")}
           />
           {errors.email ? <p className="text-xs text-destructive">{errors.email.message}</p> : null}
@@ -148,7 +167,6 @@ function SignInForm() {
             id="password"
             autoComplete="current-password"
             required
-            className="h-10 rounded-lg"
             {...register("password")}
           />
           {errors.password ? <p className="text-xs text-destructive">{errors.password.message}</p> : null}
@@ -166,19 +184,9 @@ function SignInForm() {
             )}
           />
           <Label htmlFor="rememberMe" className="text-sm font-normal text-muted-foreground">
-            Remember me
+            Keep me signed in on this device
           </Label>
         </div>
-        {submitError ? (
-          <Alert variant="destructive" className="border-destructive/40 bg-destructive/5">
-            <AlertDescription>{submitError}</AlertDescription>
-          </Alert>
-        ) : null}
-        {resetStatus === "success" ? (
-          <Alert className="border-emerald-500/30 bg-emerald-500/10 text-foreground">
-            <AlertDescription>Password updated. Please sign in with your new password.</AlertDescription>
-          </Alert>
-        ) : null}
         <Button size="lg" className="w-full" type="submit" loading={isSubmitting}>
           {isSubmitting ? "Signing in" : "Sign in"}
         </Button>

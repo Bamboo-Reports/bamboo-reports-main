@@ -85,12 +85,12 @@ gated("filtering-sql parity against the real Neon warehouse", () => {
 
   async function parity(overrides: Partial<Filters>) {
     const filters = createDefaultFilters({ accountHqRevenueRange: WIDE, ...overrides })
-    const engine = getFilteredData(accounts, centers, functions, [], prospects, tech, filters, {})
+    const engine = getFilteredData(accounts, centers, functions, [], prospects, tech, filters)
 
-    const sqlAccounts = await runSql(buildAccountsQuery(filters, {}, { orderBy: null }), "account_global_legal_name")
-    const sqlCenters = await runSql(buildCentersQuery(filters, {}, { orderBy: null }), "cn_unique_key")
+    const sqlAccounts = await runSql(buildAccountsQuery(filters, { orderBy: null }), "account_global_legal_name")
+    const sqlCenters = await runSql(buildCentersQuery(filters, { orderBy: null }), "cn_unique_key")
     const sqlProspects = await runSql(
-      buildProspectsQuery(filters, {}, { orderBy: null, columns: "ctid::text as _rid" }),
+      buildProspectsQuery(filters, { orderBy: null, columns: "ctid::text as _rid" }),
       "_rid"
     )
 

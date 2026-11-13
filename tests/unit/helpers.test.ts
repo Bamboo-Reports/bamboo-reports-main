@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 import {
+  formatAccountLocation,
+  formatLocation,
   formatRevenueInMillions,
   getPageInfo,
   getPaginatedData,
@@ -37,6 +39,34 @@ describe("formatRevenueInMillions", () => {
 
   it("uses locale grouping for large values", () => {
     expect(formatRevenueInMillions(1000)).toBe(`${(1000).toLocaleString()}M`)
+  })
+})
+
+describe("formatLocation", () => {
+  it("shows only the city when the city is known", () => {
+    expect(formatLocation("Pune", "Maharashtra", "India")).toBe("Pune")
+    expect(formatLocation(" Pune ", "TBA", "India")).toBe("Pune")
+  })
+
+  it("falls back to the state when the city is blank or TBA", () => {
+    expect(formatLocation("TBA", "Karnataka", "India")).toBe("Karnataka")
+    expect(formatLocation("  ", "Karnataka", "India")).toBe("Karnataka")
+    expect(formatLocation(null, "Karnataka")).toBe("Karnataka")
+  })
+
+  it("falls back to the country, then India", () => {
+    expect(formatLocation("tba", "", "United States")).toBe("United States")
+    expect(formatLocation(null, null, "TBA")).toBe("India")
+    expect(formatLocation(undefined, undefined)).toBe("India")
+  })
+})
+
+describe("formatAccountLocation", () => {
+  it("uses the HQ city, else state, else country, and stays blank with none", () => {
+    expect(formatAccountLocation({ account_hq_city: "Campbell", account_hq_state: "California", account_hq_country: "United States" })).toBe("Campbell")
+    expect(formatAccountLocation({ account_hq_city: "TBA", account_hq_state: "California", account_hq_country: "United States" })).toBe("California")
+    expect(formatAccountLocation({ account_hq_city: null, account_hq_state: "", account_hq_country: "Japan" })).toBe("Japan")
+    expect(formatAccountLocation({ account_hq_city: null, account_hq_country: null })).toBe("")
   })
 })
 

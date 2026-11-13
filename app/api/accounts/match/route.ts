@@ -1,4 +1,4 @@
-import { extractBearerToken, resolveAuthenticatedUserId } from "@/lib/auth/server"
+import { authenticateRequest } from "@/lib/auth/request"
 import { enforceRateLimit } from "@/lib/rate-limit/server"
 import { createLogger } from "@/lib/logger"
 import { queryWarehouse } from "@/lib/db/warehouse"
@@ -62,14 +62,9 @@ async function loadIndex(bypassRead: boolean): Promise<AccountMatchIndex> {
  * user can review the mapping and save it as a filter.
  */
 export async function POST(request: Request) {
-  const token = extractBearerToken(request.headers.get("authorization"))
-  if (!token) return json({ error: "Missing authorization token" }, 401)
-  let userId: string
-  try {
-    userId = await resolveAuthenticatedUserId(token)
-  } catch {
-    return json({ error: "Invalid or expired token" }, 401)
-  }
+  const auth = await authenticateRequest(request)
+  if (auth instanceof Response) return auth
+  const { userId } = auth
   // Started now so the counter round trip overlaps the request parsing below;
   // awaited before any warehouse work so an over-limit caller never reaches it.
   const limitedPromise = enforceRateLimit({ userId, bucket: "accounts:match", maxPerWindow: 20 })

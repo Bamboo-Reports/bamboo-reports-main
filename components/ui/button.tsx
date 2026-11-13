@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils"
 // Filled buttons get a 1px inner highlight and a crisp dark bottom edge instead
 // of a soft drop shadow, and every button presses down 1px when clicked.
 const buttonVariants = cva(
-  "inline-flex select-none items-center justify-center whitespace-nowrap rounded-md font-medium leading-none ring-offset-background interactive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:translate-y-px motion-reduce:active:translate-y-0 disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none aria-busy:cursor-progress [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "inline-flex select-none items-center justify-center whitespace-nowrap rounded-md font-medium leading-none ring-offset-background interactive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-[0.97] motion-reduce:active:scale-100 disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none aria-busy:cursor-progress [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -33,7 +33,7 @@ const buttonVariants = cva(
         // In-row delete and remove actions.
         "ghost-destructive":
           "text-muted-foreground hover:bg-destructive/10 hover:text-destructive",
-        link: "text-primary underline-offset-4 hover:underline active:translate-y-0",
+        link: "text-primary underline-offset-4 hover:underline active:scale-100",
       },
       size: {
         xs: "h-7 gap-1.5 px-2.5 text-xs [&_svg]:size-3.5",

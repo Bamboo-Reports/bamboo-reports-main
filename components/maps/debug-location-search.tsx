@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
-import { Marker } from "@vis.gl/react-maplibre"
+import { Marker, type MapRef } from "@vis.gl/react-maplibre"
 import { RiCloseLine } from "@remixicon/react"
 import { Button } from "@/components/ui/button"
 import { devError } from "@/lib/utils/dev-log"
@@ -14,7 +14,7 @@ interface SearchResult {
 
 interface DebugLocationSearchProps {
   // Ref to the react-maplibre <Map> (or the underlying maplibre Map).
-  mapRef: React.MutableRefObject<any>
+  mapRef: React.RefObject<MapRef | null>
 }
 
 // Debug-only location finder. Hidden by default; toggle with Ctrl/Cmd+Shift+F.
@@ -63,8 +63,8 @@ export function DebugLocationSearch({ mapRef }: DebugLocationSearchProps) {
     setPin(r)
     setResults([])
     setQuery(r.label.split(",")[0])
-    const map = mapRef.current?.getMap?.() ?? mapRef.current
-    map?.flyTo({ center: [r.lng, r.lat], zoom: 11, duration: 1000 })
+    const map = mapRef.current?.getMap()
+    map?.flyTo({ center: [r.lng, r.lat], zoom: 11, duration: 400 })
   }
 
   if (!open) return null
@@ -72,7 +72,7 @@ export function DebugLocationSearch({ mapRef }: DebugLocationSearchProps) {
   return (
     <>
       <div className="absolute top-3 right-3 z-20 w-[260px]">
-        <div className="flex items-center gap-1 rounded-lg border border-border/80 bg-popover/95 px-2 py-1 shadow-md backdrop-blur-md">
+        <div className="flex items-center gap-1 rounded-lg border border-border/80 bg-popover px-2 py-1 shadow-float">
           <input
             autoFocus
             value={query}
@@ -81,7 +81,7 @@ export function DebugLocationSearch({ mapRef }: DebugLocationSearchProps) {
               if (e.key === "Enter") handleSearch()
               if (e.key === "Escape") setOpen(false)
             }}
-            placeholder="Search a location (debug)..."
+            placeholder="Find a location (debug)"
             className="w-full bg-transparent px-1 py-1 text-sm outline-none placeholder:text-muted-foreground"
           />
           {pin && (
@@ -106,19 +106,19 @@ export function DebugLocationSearch({ mapRef }: DebugLocationSearchProps) {
             size="xs"
             onClick={handleSearch}
             loading={searching}
-            className="shrink-0 text-primary"
+            className="shrink-0"
           >
             Search
           </Button>
         </div>
         {results.length > 0 && (
-          <ul className="mt-1 max-h-64 overflow-auto rounded-lg border border-border/80 bg-popover/95 shadow-lg backdrop-blur-md">
+          <ul className="mt-1 max-h-64 overflow-auto rounded-lg border border-border/80 bg-popover shadow-float">
             {results.map((r, i) => (
               <li key={`${r.lat}-${r.lng}-${i}`}>
                 <button
                   type="button"
                   onClick={() => handleSelect(r)}
-                  className="block w-full px-3 py-2 text-left text-xs text-popover-foreground hover:bg-accent"
+                  className="block w-full px-3 py-2 text-left text-xs text-popover-foreground transition-colors hover:bg-accent"
                 >
                   {r.label}
                 </button>

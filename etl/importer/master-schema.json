@@ -1402,6 +1402,14 @@
       },
       {
         "Table": "ticker",
+        "Column": "account_hq_stock_exchange",
+        "Type": "TEXT",
+        "Nullable": "YES",
+        "Default": "",
+        "PK": ""
+      },
+      {
+        "Table": "ticker",
         "Column": "notes",
         "Type": "TEXT",
         "Nullable": "YES",

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { type KeyboardEvent, useEffect, useId, useMemo, useRef, useState } from "react"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { RiCheckLine, RiExpandUpDownLine, RiLoader4Line, RiSearchLine } from "@remixicon/react"
 import { Button } from "@/components/ui/button"
@@ -35,6 +35,9 @@ export function AccountPicker({ value, onChange, suggestions = [], placeholder =
   const [query, setQuery] = useState("")
   const [debouncedQuery, setDebouncedQuery] = useState("")
   const inputRef = useRef<HTMLInputElement>(null)
+  const listId = useId()
+  // The option the arrow keys are on; focus stays in the search box.
+  const [active, setActive] = useState(0)
 
   useEffect(() => {
     if (!open) {
@@ -85,6 +88,25 @@ export function AccountPicker({ value, onChange, suggestions = [], placeholder =
     setOpen(false)
   }
 
+  // Back to the top whenever the list itself changes (not on every render: suggestions arrive as fresh arrays).
+  const optionsKey = options.map((option) => option.name).join("\n")
+  useEffect(() => setActive(0), [optionsKey])
+  const activeId = options[active] ? `${listId}-${active}` : undefined
+  useEffect(() => {
+    if (activeId) document.getElementById(activeId)?.scrollIntoView?.({ block: "nearest" })
+  }, [activeId])
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (options.length === 0) return
+    if (event.key === "ArrowDown") setActive((i) => Math.min(i + 1, options.length - 1))
+    else if (event.key === "ArrowUp") setActive((i) => Math.max(i - 1, 0))
+    else if (event.key === "Home") setActive(0)
+    else if (event.key === "End") setActive(options.length - 1)
+    else if (event.key === "Enter" && options[active]) select(options[active].name)
+    else return
+    event.preventDefault()
+  }
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -98,38 +120,45 @@ export function AccountPicker({ value, onChange, suggestions = [], placeholder =
           className={cn("w-full justify-between font-normal", !value && "text-muted-foreground", className)}
         >
           <span className="truncate">{value ?? placeholder}</span>
-          <RiExpandUpDownLine className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
+          <RiExpandUpDownLine className="ml-2 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[360px] p-0" align="start">
         <div className="flex items-center gap-2 border-b px-3">
-          <RiSearchLine className="h-4 w-4 shrink-0 opacity-50" />
+          <RiSearchLine className="h-4 w-4 shrink-0 text-muted-foreground" />
           <input
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search accounts..."
+            onKeyDown={handleKeyDown}
+            placeholder="Search accounts"
             aria-label="Search accounts"
+            aria-controls={listId}
+            aria-activedescendant={activeId}
             className="flex h-10 w-full bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground"
           />
-          {searching && <RiLoader4Line className="h-4 w-4 shrink-0 animate-spin opacity-60" />}
+          {searching && <RiLoader4Line className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />}
         </div>
-        <div className="max-h-[260px] overflow-y-auto p-1" role="listbox">
+        <div id={listId} className="max-h-[260px] overflow-y-auto p-1" role="listbox" aria-label="Accounts">
           {options.length === 0 ? (
             <p className="px-3 py-4 text-center text-sm text-muted-foreground">
-              {showSuggestions ? "Type at least 2 characters to search" : searching ? "Searching..." : "No accounts found"}
+              {showSuggestions ? "Type at least 2 characters to search" : searching ? "Searching…" : "No accounts found"}
             </p>
           ) : (
-            options.map((option) => (
+            options.map((option, index) => (
               <button
                 type="button"
                 key={option.name}
+                id={`${listId}-${index}`}
                 role="option"
+                tabIndex={-1}
                 aria-selected={option.name === value}
                 onClick={() => select(option.name)}
+                onMouseMove={() => setActive(index)}
                 className={cn(
-                  "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent focus:bg-accent focus:outline-none",
-                  option.name === value && "bg-accent/60"
+                  "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm focus:outline-none",
+                  option.name === value && "bg-accent/60",
+                  index === active && "bg-accent"
                 )}
               >
                 <RiCheckLine className={cn("h-3.5 w-3.5 shrink-0", option.name === value ? "opacity-100" : "opacity-0")} />
@@ -140,7 +169,7 @@ export function AccountPicker({ value, onChange, suggestions = [], placeholder =
                   )}
                 </span>
                 {option.visibility?.visibility === "exclude" && (
-                  <span className="shrink-0 rounded-full border border-amber-500/40 bg-amber-500/10 px-1.5 text-[10px] font-medium text-amber-700 dark:text-amber-300">
+                  <span className="inline-flex h-5 shrink-0 items-center rounded-md bg-amber-500/10 px-1.5 text-xs font-medium text-amber-700 dark:text-amber-300">
                     Non-GCC
                   </span>
                 )}
@@ -156,7 +185,7 @@ export function AccountPicker({ value, onChange, suggestions = [], placeholder =
                 onChange(null)
                 setOpen(false)
               }}
-              className="w-full rounded-sm px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-accent"
+              className="w-full rounded-sm px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
             >
               Clear selection
             </button>

@@ -1,7 +1,7 @@
-import { extractBearerToken, resolveAuthenticatedUserId } from "@/lib/auth/server"
+import { authenticateRequest } from "@/lib/auth/request"
 import { enforceRateLimit } from "@/lib/rate-limit/server"
 import { createLogger } from "@/lib/logger"
-import { parseFilters, resolveAccess } from "@/lib/dashboard/filters-request"
+import { parseFilters } from "@/lib/dashboard/filters-request"
 import { queryEntity, type QueryEntity } from "@/lib/dashboard/entity-query"
 import { dashboardCacheTtlMs, getOrCompute } from "@/lib/cache/memory"
 
@@ -17,14 +17,9 @@ function json(body: unknown, status = 200) {
  * Body: { filters, page, pageSize, sort: { column, direction } }.
  */
 export async function handleEntityQuery(entity: QueryEntity, request: Request): Promise<Response> {
-  const token = extractBearerToken(request.headers.get("authorization"))
-  if (!token) return json({ error: "Missing authorization token" }, 401)
-  let userId: string
-  try {
-    userId = await resolveAuthenticatedUserId(token)
-  } catch {
-    return json({ error: "Invalid or expired token" }, 401)
-  }
+  const auth = await authenticateRequest(request)
+  if (auth instanceof Response) return auth
+  const { userId } = auth
   // Started now so the counter round trip overlaps the request parsing below;
   // awaited before any warehouse work so an over-limit caller never reaches it.
   const limitedPromise = enforceRateLimit({ userId, bucket: `${entity}:query` })
@@ -39,7 +34,6 @@ export async function handleEntityQuery(entity: QueryEntity, request: Request): 
     body = {}
   }
   const filters = parseFilters(body?.filters)
-  const access = resolveAccess()
 
   try {
     const cacheKey = `query:${entity}:${JSON.stringify({ f: filters, p: body?.page, s: body?.pageSize, o: body?.sort })}`
@@ -47,7 +41,7 @@ export async function handleEntityQuery(entity: QueryEntity, request: Request): 
       cacheKey,
       dashboardCacheTtlMs(),
       () =>
-        queryEntity(entity, filters, access, {
+        queryEntity(entity, filters, {
           page: body?.page,
           pageSize: body?.pageSize,
           sort: body?.sort,

@@ -7,9 +7,16 @@
  *
  * Resolution order per input name:
  *   1. exact (case-insensitive) legal name
- *   2. exact (case-insensitive) alias value ("Known as")
- *   3. normalized key (legal suffixes and punctuation stripped)
- *   4. fuzzy token overlap, offered as candidates only, never auto-matched
+ *   2. normalized legal name (legal suffixes and punctuation stripped), when
+ *      exactly one account has it, so "microsoft corp" finds "Microsoft Corp."
+ *      before any alias can claim it
+ *   3. exact (case-insensitive) alias value: short legal name, brand name or
+ *      abbreviation
+ *   4. an ambiguous normalized name, offered for review
+ *   5. the "currently known as" value, offered for review only: on an acquired
+ *      company it names the acquirer ("Nuance ... currently known as Microsoft
+ *      Corp"), so it must never auto-match the acquirer's name to the subsidiary
+ *   6. fuzzy token overlap, offered as candidates only, never auto-matched
  */
 
 import type { SqlQuery } from "@/lib/dashboard/filtering-sql"
@@ -103,8 +110,13 @@ export type AccountMatchIndex = {
   byLowerName: Map<string, IndexedAccount>
   byKey: Map<string, IndexedAccount[]>
   byLowerAlias: Map<string, { account: IndexedAccount; aliasValue: string }[]>
+  /** "Currently known as" values, kept apart because they can name a parent company. */
+  byLowerParent: Map<string, { account: IndexedAccount; aliasValue: string }[]>
   all: IndexedAccount[]
 }
+
+// Alias fields that name the account itself; "currently_known_as" can name its acquirer.
+const PARENT_ALIAS_FIELD: AliasField = "currently_known_as"
 
 export function buildAccountMatchIndex(accounts: AccountIndexRow[], aliases: AliasIndexRow[]): AccountMatchIndex {
   const byLowerName = new Map<string, IndexedAccount>()
@@ -126,6 +138,7 @@ export function buildAccountMatchIndex(accounts: AccountIndexRow[], aliases: Ali
   }
 
   const byLowerAlias = new Map<string, { account: IndexedAccount; aliasValue: string }[]>()
+  const byLowerParent = new Map<string, { account: IndexedAccount; aliasValue: string }[]>()
   for (const row of aliases) {
     const account = byLowerName.get(String(row.account_global_legal_name ?? "").toLowerCase())
     if (!account) continue
@@ -135,17 +148,18 @@ export function buildAccountMatchIndex(accounts: AccountIndexRow[], aliases: Ali
       const aliasValue = raw.trim()
       if (!aliasValue) continue
       const lower = aliasValue.toLowerCase()
-      const list = byLowerAlias.get(lower)
+      const target = field === PARENT_ALIAS_FIELD ? byLowerParent : byLowerAlias
+      const list = target.get(lower)
       const entry = { account, aliasValue }
       if (list) {
         if (!list.some((e) => e.account.name === account.name)) list.push(entry)
       } else {
-        byLowerAlias.set(lower, [entry])
+        target.set(lower, [entry])
       }
     }
   }
 
-  return { byLowerName, byKey, byLowerAlias, all }
+  return { byLowerName, byKey, byLowerAlias, byLowerParent, all }
 }
 
 function candidate(account: IndexedAccount, via: AccountMatchVia, aliasValue?: string): AccountMatchCandidate {
@@ -180,26 +194,43 @@ export function matchAccountName(input: string, index: AccountMatchIndex): Accou
   const trimmed = input.trim()
   const lower = trimmed.toLowerCase()
 
+  // 1. Exact legal name.
   const exact = index.byLowerName.get(lower)
   if (exact) return { input: trimmed, status: "matched", match: candidate(exact, "name"), candidates: [] }
 
-  const aliasHits = index.byLowerAlias.get(lower) ?? []
-  if (aliasHits.length === 1) {
-    return { input: trimmed, status: "matched", match: candidate(aliasHits[0].account, "alias", aliasHits[0].aliasValue), candidates: [] }
-  }
-  if (aliasHits.length > 1) {
-    return { input: trimmed, status: "review", match: null, candidates: aliasHits.map((h) => candidate(h.account, "alias", h.aliasValue)) }
-  }
-
+  // 2. The legal name without its suffix, when exactly one account has it.
   const key = normalizeAccountKey(trimmed)
   const keyHits = key ? index.byKey.get(key) ?? [] : []
   if (keyHits.length === 1) {
     return { input: trimmed, status: "matched", match: candidate(keyHits[0], "normalized"), candidates: [] }
   }
-  if (keyHits.length > 1) {
-    return { input: trimmed, status: "review", match: null, candidates: keyHits.map((a) => candidate(a, "normalized")) }
+
+  // 3. An alias that names the account itself.
+  const aliasHits = index.byLowerAlias.get(lower) ?? []
+  if (aliasHits.length === 1) {
+    return { input: trimmed, status: "matched", match: candidate(aliasHits[0].account, "alias", aliasHits[0].aliasValue), candidates: [] }
   }
 
+  // 4. Ambiguous names and aliases are offered for review.
+  if (keyHits.length > 1 || aliasHits.length > 1) {
+    return {
+      input: trimmed,
+      status: "review",
+      match: null,
+      candidates: [
+        ...keyHits.map((a) => candidate(a, "normalized")),
+        ...aliasHits.filter((h) => !keyHits.includes(h.account)).map((h) => candidate(h.account, "alias", h.aliasValue)),
+      ],
+    }
+  }
+
+  // 5. "Currently known as" can name the acquirer of a subsidiary: review only.
+  const parentHits = index.byLowerParent.get(lower) ?? []
+  if (parentHits.length > 0) {
+    return { input: trimmed, status: "review", match: null, candidates: parentHits.map((h) => candidate(h.account, "alias", h.aliasValue)) }
+  }
+
+  // 6. Fuzzy candidates, never auto-matched.
   const fuzzy = fuzzyCandidates(trimmed, index)
   return { input: trimmed, status: fuzzy.length > 0 ? "review" : "not_found", match: null, candidates: fuzzy }
 }

@@ -198,6 +198,8 @@ export interface Ticker {
   uuid?: string | null
   account_global_legal_name: string
   account_hq_stock_ticker: string | null
+  /** Code of the exchange the ticker trades on (NYSE, LON, TYO, ...); see lib/finance/tickers.ts. */
+  account_hq_stock_exchange?: string | null
   notes?: string | null
 }
 
@@ -223,9 +225,6 @@ export interface Filters {
   accountHqRegionValues: FilterValue[]
   accountHqCountryValues: FilterValue[]
   accountHqIndustryValues: FilterValue[]
-  accountDataCoverageValues: FilterValue[]
-  accountSourceValues: FilterValue[]
-  accountTypeValues: FilterValue[]
   accountPrimaryCategoryValues: FilterValue[]
   accountPrimaryNatureValues: FilterValue[]
   accountNasscomStatusValues: FilterValue[]
@@ -244,7 +243,6 @@ export interface Filters {
   centerFocusValues: FilterValue[]
   centerCityValues: FilterValue[]
   centerStateValues: FilterValue[]
-  centerCountryValues: FilterValue[]
   centerEmployeesRangeValues: FilterValue[]
   centerStatusValues: FilterValue[]
   centerIncYearRange: [number, number]
@@ -269,9 +267,6 @@ export interface AvailableOptions {
   accountHqRegionValues: FilterOption[]
   accountHqCountryValues: FilterOption[]
   accountHqIndustryValues: FilterOption[]
-  accountDataCoverageValues: FilterOption[]
-  accountSourceValues: FilterOption[]
-  accountTypeValues: FilterOption[]
   accountPrimaryCategoryValues: FilterOption[]
   accountPrimaryNatureValues: FilterOption[]
   accountNasscomStatusValues: FilterOption[]
@@ -281,7 +276,6 @@ export interface AvailableOptions {
   centerFocusValues: FilterOption[]
   centerCityValues: FilterOption[]
   centerStateValues: FilterOption[]
-  centerCountryValues: FilterOption[]
   centerEmployeesRangeValues: FilterOption[]
   centerStatusValues: FilterOption[]
   functionNameValues: FilterOption[]
@@ -350,8 +344,6 @@ export interface AccountFinancialInfo {
   sharesOutstanding: number | null
   heldPercentInstitutions: number | null
   heldPercentInsiders: number | null
-  annualRevenueSeries: RevenueSeriesPoint[]
-  quarterlyRevenueSeries: RevenueSeriesPoint[]
 }
 
 export interface AccountFinancialInfoResponse {
@@ -360,8 +352,3 @@ export interface AccountFinancialInfoResponse {
   data: AccountFinancialInfo | null
 }
 
-export interface RevenueSeriesPoint {
-  date: string
-  label: string
-  revenue: number
-}

@@ -1,0 +1,573 @@
+"use client"
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { RiArrowLeftLine, RiCheckLine, RiCheckboxCircleLine, RiCloseCircleLine, RiErrorWarningLine, RiFileExcelLine, RiLoader4Line, RiQuestionLine, RiUploadLine } from "@remixicon/react"
+import { toast } from "sonner"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
+import { HintTooltip } from "@/components/ui/tooltip"
+import { TruncatedText } from "@/components/ui/truncated-text"
+import { LibraryPaneHeader, LibraryPaneTitle } from "@/components/filters/library-dialog"
+import { AccountPicker, type AccountPickerOption } from "@/components/filters/account-picker"
+import { cn } from "@/lib/utils"
+import { captureEvent } from "@/lib/analytics/client"
+import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
+import { normalizeTrackedText } from "@/lib/analytics/tracking"
+import { fetchAccountMatches } from "@/lib/dashboard/api-client"
+import { MAX_MATCH_NAMES, MAX_NAME_LENGTH, type AccountMatchCandidate, type AccountMatchResult, type AccountMatchStatus } from "@/lib/accounts/account-match"
+import { extractNames, guessNameColumn, parseDelimitedText, parsePastedNames, tableFromRows, type ParsedAccountTable } from "@/lib/accounts/account-list-parser"
+import { devError } from "@/lib/utils/dev-log"
+import { useAccountLists } from "@/contexts/account-lists-context"
+import type { AccountList, AccountListMatch, AccountListMatchVia } from "@/lib/accounts/account-lists"
+
+interface AccountListUploadPanelProps {
+  /** When set, the upload replaces the accounts of this existing list instead of creating a new one. */
+  existingList?: AccountList | null
+  /** Leaves the panel: with the saved list, or null when cancelled. */
+  onDone: (saved: AccountList | null) => void
+  /** Called after the list is saved when the user chose "Save and apply". */
+  onApply?: (list: AccountList) => void
+}
+
+type ReviewRow = {
+  input: string
+  status: AccountMatchStatus
+  auto: AccountMatchCandidate | null
+  candidates: AccountMatchCandidate[]
+  /** The account the row currently maps to; null means unmapped (skipped on save). */
+  selected: string | null
+}
+
+type Step = "input" | "review"
+
+// Legacy .xls is not offered: the reader only understands .xlsx.
+const ACCEPTED_EXTENSIONS = [".csv", ".tsv", ".txt", ".xlsx"]
+
+async function readSpreadsheet(file: File): Promise<ParsedAccountTable> {
+  const ExcelJS = (await import("exceljs")).default
+  const workbook = new ExcelJS.Workbook()
+  await workbook.xlsx.load(await file.arrayBuffer())
+  const sheet = workbook.worksheets[0]
+  if (!sheet) return { headers: [], rows: [], hasHeader: false }
+  const rows: string[][] = []
+  sheet.eachRow({ includeEmpty: false }, (row) => {
+    const cells: string[] = []
+    const values = Array.isArray(row.values) ? row.values : []
+    // ExcelJS row.values is 1-based; index 0 is always empty.
+    for (let i = 1; i < values.length; i += 1) cells.push(cellToString(values[i]))
+    rows.push(cells)
+  })
+  return tableFromRows(rows)
+}
+
+function cellToString(value: unknown): string {
+  if (value == null) return ""
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value)
+  if (value instanceof Date) return value.toISOString()
+  if (typeof value === "object") {
+    const v = value as { text?: unknown; result?: unknown; richText?: { text: string }[]; hyperlink?: unknown }
+    if (Array.isArray(v.richText)) return v.richText.map((r) => r.text).join("")
+    if (v.text != null) return cellToString(v.text)
+    if (v.result != null) return cellToString(v.result)
+  }
+  return ""
+}
+
+function toPickerOptions(candidates: AccountMatchCandidate[]): AccountPickerOption[] {
+  return candidates.map((c) => ({
+    name: c.name,
+    matchedAlias: c.aliasValue ? { field: "alias", value: c.aliasValue } : null,
+    visibility: c.visibility,
+  }))
+}
+
+function rowsFromResults(results: AccountMatchResult[]): ReviewRow[] {
+  return results.map((r) => ({
+    input: r.input,
+    status: r.status,
+    auto: r.match,
+    candidates: r.candidates,
+    selected: r.match?.name ?? null,
+  }))
+}
+
+const STATUS_DOT: Record<AccountMatchStatus, string> = { matched: "bg-include", review: "bg-amber-500", not_found: "bg-exclude" }
+
+const STATUS_META: Record<AccountMatchStatus, { label: string; className: string; Icon: typeof RiCheckboxCircleLine }> = {
+  matched: { label: "Matched", className: "border-include/35 bg-include/[0.08] text-include-strong", Icon: RiCheckboxCircleLine },
+  review: { label: "Needs review", className: "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300", Icon: RiQuestionLine },
+  not_found: { label: "Not found", className: "border-exclude/35 bg-exclude/[0.07] text-exclude", Icon: RiCloseCircleLine },
+}
+
+function viaLabel(candidate: AccountMatchCandidate | null): string | null {
+  if (!candidate) return null
+  if (candidate.via === "alias") return candidate.aliasValue ? `matched via alias "${candidate.aliasValue}"` : "matched via alias"
+  if (candidate.via === "normalized") return "matched ignoring legal suffix"
+  return null
+}
+
+/** How a reviewed row became an account, as stored on the saved list. */
+function matchVia(row: ReviewRow): AccountListMatchVia {
+  if (!row.selected) return "none"
+  if (!row.auto || row.auto.name !== row.selected) return "manual"
+  if (row.auto.via === "name") return "exact"
+  if (row.auto.via === "normalized") return "suffix"
+  if (row.auto.via === "alias") return "alias"
+  return "close"
+}
+
+function rowsToMatches(rows: ReviewRow[]): AccountListMatch[] {
+  return rows.map((row) => ({ input: row.input, account: row.selected, via: matchVia(row) }))
+}
+
+/**
+ * Upload or paste account names, check how each one matched, and save the
+ * list. Rendered inside the account lists window, in place of a list's details.
+ */
+export function AccountListUploadPanel({ existingList = null, onDone, onApply }: AccountListUploadPanelProps) {
+  const { createList, updateList, loading: saving } = useAccountLists()
+  const [step, setStep] = useState<Step>("input")
+  const [fileName, setFileName] = useState<string | null>(null)
+  const [table, setTable] = useState<ParsedAccountTable | null>(null)
+  const [column, setColumn] = useState(0)
+  const [pasted, setPasted] = useState("")
+  const [parseError, setParseError] = useState<string | null>(null)
+  const [matching, setMatching] = useState(false)
+  const [rows, setRows] = useState<ReviewRow[]>([])
+  const [filterName, setFilterName] = useState(existingList?.name ?? "")
+  const [statusFilter, setStatusFilter] = useState<AccountMatchStatus | "all">("all")
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [dragging, setDragging] = useState(false)
+  // Which save button was pressed, so only that one shows the spinner.
+  const [pendingSave, setPendingSave] = useState<"save" | "apply" | null>(null)
+
+  useEffect(() => {
+    captureEvent(ANALYTICS_EVENTS.ACCOUNT_LIST_UPLOAD_OPENED, { mode: existingList ? "update" : "create" })
+  }, [existingList])
+
+  const names = useMemo(() => {
+    if (table) return extractNames(table, column)
+    if (pasted.trim()) {
+      const pastedTable = parsePastedNames(pasted)
+      return extractNames(pastedTable, guessNameColumn(pastedTable))
+    }
+    return []
+  }, [table, column, pasted])
+
+  const handleFile = useCallback(async (file: File) => {
+    setParseError(null)
+    const lower = file.name.toLowerCase()
+    const fileExt = lower.includes(".") ? lower.slice(lower.lastIndexOf(".")) : null
+    if (!ACCEPTED_EXTENSIONS.some((ext) => lower.endsWith(ext))) {
+      captureEvent(ANALYTICS_EVENTS.ACCOUNT_LIST_PARSE_FAILED, { reason: "unsupported_type", file_ext: fileExt })
+      setParseError("Unsupported file type. Upload a CSV, TSV, TXT or XLSX file.")
+      return
+    }
+    try {
+      const parsed = lower.endsWith(".xlsx") ? await readSpreadsheet(file) : parseDelimitedText(await file.text())
+      if (parsed.rows.length === 0) {
+        captureEvent(ANALYTICS_EVENTS.ACCOUNT_LIST_PARSE_FAILED, { reason: "empty_file", file_ext: fileExt })
+        setParseError("The file has no rows to import")
+        return
+      }
+      setTable(parsed)
+      setColumn(guessNameColumn(parsed))
+      setFileName(file.name)
+      setPasted("")
+      if (!filterName) setFilterName(file.name.replace(/\.[^.]+$/, ""))
+    } catch (err) {
+      devError("account list parse failed:", err)
+      captureEvent(ANALYTICS_EVENTS.ACCOUNT_LIST_PARSE_FAILED, { reason: "read_error", file_ext: fileExt })
+      setParseError("Could not read that file. Try saving it as CSV and uploading again.")
+    }
+  }, [filterName])
+
+  const handleMatch = useCallback(async () => {
+    if (names.length === 0) return
+    // Said here, with the name, so the whole list is not turned away without saying which one.
+    const tooLong = names.slice(0, MAX_MATCH_NAMES).find((name) => name.length > MAX_NAME_LENGTH)
+    if (tooLong) {
+      toast.error(`A name is longer than ${MAX_NAME_LENGTH} characters`, {
+        description: `Shorten or remove the one starting "${tooLong.slice(0, 40)}".`,
+      })
+      return
+    }
+    setMatching(true)
+    try {
+      const { results } = await fetchAccountMatches(names.slice(0, MAX_MATCH_NAMES))
+      const nextRows = rowsFromResults(results)
+      setRows(nextRows)
+      setStep("review")
+      const counts = countByStatus(nextRows)
+      captureEvent(ANALYTICS_EVENTS.ACCOUNT_LIST_MATCHED, {
+        source: fileName ? "file" : "paste",
+        uploaded_count: names.length,
+        matched_count: counts.matched,
+        review_count: counts.review,
+        not_found_count: counts.not_found,
+      })
+    } catch (err) {
+      devError("account list match failed:", err)
+      toast.error("Could not match the list", err instanceof Error && err.message ? { description: err.message } : undefined)
+    } finally {
+      setMatching(false)
+    }
+  }, [names, fileName])
+
+  const updateRow = useCallback((index: number, selected: string | null) => {
+    setRows((prev) => prev.map((row, i) => (i === index ? { ...row, selected } : row)))
+  }, [])
+
+  const counts = useMemo(() => countByStatus(rows), [rows])
+  const mappedNames = useMemo(() => {
+    const seen = new Set<string>()
+    const out: string[] = []
+    for (const row of rows) {
+      if (!row.selected) continue
+      const key = row.selected.toLowerCase()
+      if (seen.has(key)) continue
+      seen.add(key)
+      out.push(row.selected)
+    }
+    return out
+  }, [rows])
+  const unmappedCount = rows.filter((r) => !r.selected).length
+
+  const visibleRows = useMemo(
+    () => rows.map((row, index) => ({ row, index })).filter(({ row }) => statusFilter === "all" || row.status === statusFilter),
+    [rows, statusFilter]
+  )
+
+  const handleSave = useCallback(
+    async (apply: boolean) => {
+      const name = filterName.trim()
+      if (!name || mappedNames.length === 0) return
+      const unmatched = rows.filter((r) => !r.selected).map((r) => r.input)
+      const input = { name, accounts: mappedNames, unmatched, matches: rowsToMatches(rows), sourceFile: fileName }
+      setPendingSave(apply ? "apply" : "save")
+      const saved = existingList ? await updateList(existingList.id, input) : await createList(input)
+      setPendingSave(null)
+      if (!saved) {
+        toast.error("Could not save the list", { description: "Try again in a moment" })
+        return
+      }
+      captureEvent(ANALYTICS_EVENTS.ACCOUNT_LIST_FILTER_SAVED, {
+        account_list_id: saved.id,
+        account_list_name: normalizeTrackedText(name),
+        mode: existingList ? "update" : "create",
+        uploaded_count: rows.length,
+        mapped_count: mappedNames.length,
+        unmapped_count: unmappedCount,
+        applied: apply,
+      })
+      toast.success(`Saved "${name}"`, {
+        description:
+          unmappedCount > 0
+            ? `${mappedNames.length.toLocaleString()} accounts matched, ${unmappedCount.toLocaleString()} skipped`
+            : `${mappedNames.length.toLocaleString()} accounts matched`,
+      })
+      if (apply && onApply) onApply(saved)
+      else onDone(saved)
+    },
+    [filterName, mappedNames, rows, fileName, existingList, updateList, createList, unmappedCount, onApply, onDone]
+  )
+
+  return (
+    <>
+      <LibraryPaneHeader
+        title={<LibraryPaneTitle>{existingList ? `Replace "${existingList.name}"` : "Upload a list"}</LibraryPaneTitle>}
+        meta={<UploadSteps step={step} />}
+      />
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+        {step === "input" ? (
+          <div className="min-w-0 space-y-4">
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => fileInputRef.current?.click()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault()
+                  fileInputRef.current?.click()
+                }
+              }}
+              onDragOver={(e) => {
+                e.preventDefault()
+                setDragging(true)
+              }}
+              // dragleave also fires when the pointer crosses the icon and text inside.
+              onDragLeave={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragging(false)
+              }}
+              onDrop={(e) => {
+                e.preventDefault()
+                setDragging(false)
+                const file = e.dataTransfer.files?.[0]
+                if (file) void handleFile(file)
+              }}
+              className={cn(
+                "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-8 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                dragging ? "border-primary bg-primary/5" : "border-muted-foreground/30 hover:border-primary/60 hover:bg-accent/30"
+              )}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={ACCEPTED_EXTENSIONS.join(",")}
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) void handleFile(file)
+                  e.target.value = ""
+                }}
+              />
+              {fileName ? (
+                <>
+                  <RiFileExcelLine className="h-6 w-6 text-muted-foreground" />
+                  <TruncatedText text={fileName} className="max-w-full text-sm font-medium" />
+                  <p className="text-xs text-muted-foreground">Click or drop another file to replace it</p>
+                </>
+              ) : (
+                <>
+                  <RiUploadLine className="h-6 w-6 text-muted-foreground" />
+                  <p className="text-sm font-medium">Drop a file here or click to browse</p>
+                  <p className="text-xs text-muted-foreground">CSV, TSV, TXT or XLSX. Up to {MAX_MATCH_NAMES} names per upload.</p>
+                </>
+              )}
+            </div>
+
+            {table && table.headers.length > 1 && (
+              <div className="space-y-1.5">
+                <Label htmlFor="account-list-column">Column with account names</Label>
+                <select
+                  id="account-list-column"
+                  value={column}
+                  onChange={(e) => setColumn(Number(e.target.value))}
+                  className="flex h-9 w-full max-w-full min-w-0 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-[border-color,box-shadow] focus-visible:border-primary/60 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/15"
+                >
+                  {table.headers.map((header, i) => (
+                    <option key={`${header}-${i}`} value={i}>
+                      {header || `Column ${i + 1}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {!table && (
+              <div className="space-y-1.5">
+                <Label htmlFor="account-list-paste">Or paste account names, one per line</Label>
+                <textarea
+                  id="account-list-paste"
+                  value={pasted}
+                  onChange={(e) => setPasted(e.target.value)}
+                  rows={6}
+                  placeholder={"Infosys Ltd\nTata Consultancy Services\nAccenture"}
+                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-[border-color,box-shadow] placeholder:text-muted-foreground focus-visible:border-primary/60 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/15"
+                />
+              </div>
+            )}
+
+            {parseError && (
+              <p role="alert" className="flex items-center gap-2 text-sm text-destructive">
+                <RiErrorWarningLine className="h-4 w-4 shrink-0" />
+                {parseError}
+              </p>
+            )}
+
+            {names.length > 0 && (
+              <div className="min-w-0 rounded-md border bg-muted/30 px-3 py-2 text-sm">
+                <span className="font-medium">{Math.min(names.length, MAX_MATCH_NAMES)}</span> unique names ready to match
+                {names.length > MAX_MATCH_NAMES && (
+                  <span className="text-muted-foreground"> (only the first {MAX_MATCH_NAMES} will be used)</span>
+                )}
+                <TruncatedText
+                  text={`${names.slice(0, 5).join(", ")}${names.length > 5 ? ", …" : ""}`}
+                  className="mt-1 text-xs text-muted-foreground"
+                />
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="min-w-0 space-y-4">
+            <p className="text-[13px] text-muted-foreground">
+              Check each match. Names without an account are left out of the list.
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              {(["all", "matched", "review", "not_found"] as const).map((key) => {
+                const count = key === "all" ? rows.length : counts[key]
+                const active = statusFilter === key
+                const label = key === "all" ? "All" : STATUS_META[key].label
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setStatusFilter(key)}
+                    aria-pressed={active}
+                    // Same chip as the matches view in the list details (account-list-matches.tsx).
+                    className={cn(
+                      "inline-flex h-7 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      active ? "border-primary/50 bg-primary/10 text-primary-strong" : "border-border bg-card text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {key !== "all" && <span className={cn("h-2 w-2 rounded-full", STATUS_DOT[key])} />}
+                    {label}
+                    <span className={cn("tabular-nums", active ? "text-primary-strong" : "text-foreground")}>{count}</span>
+                  </button>
+                )
+              })}
+              <span className="ml-auto text-xs tabular-nums text-muted-foreground">
+                {mappedNames.length} account{mappedNames.length === 1 ? "" : "s"} will be saved to the list
+              </span>
+            </div>
+
+            <div className="min-w-0 overflow-x-auto rounded-md border">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 z-10 bg-muted">
+                  <tr className="text-left text-xs font-medium text-muted-foreground">
+                    <th className="px-3 py-2 font-medium">Uploaded name</th>
+                    <th className="px-3 py-2 font-medium">Status</th>
+                    <th className="px-3 py-2 font-medium">Account in database</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={3} className="px-3 py-6 text-center text-sm text-muted-foreground">
+                        No rows in this group
+                      </td>
+                    </tr>
+                  ) : (
+                    visibleRows.map(({ row, index }) => {
+                      const meta = STATUS_META[row.status]
+                      const hint = viaLabel(row.auto)
+                      return (
+                        <tr key={`${row.input}-${index}`} className="border-t align-top">
+                          <td className="max-w-[240px] px-3 py-2">
+                            <TruncatedText text={row.input} className="font-medium" />
+                            {hint && <span className="block text-xs text-muted-foreground">{hint}</span>}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2">
+                            <Badge variant="outline" className={cn("gap-1 font-medium", meta.className)}>
+                              <meta.Icon className="h-3.5 w-3.5" />
+                              {meta.label}
+                            </Badge>
+                          </td>
+                          <td className="px-3 py-2">
+                            <AccountPicker
+                              value={row.selected}
+                              onChange={(name) => updateRow(index, name)}
+                              suggestions={toPickerOptions(row.candidates)}
+                              placeholder={row.status === "not_found" ? "Search to map manually" : "Select account"}
+                              ariaLabel={`Account for ${row.input}`}
+                            />
+                            {row.candidates.length > 0 && !row.selected && (
+                              <div className="mt-1.5 flex flex-wrap gap-1">
+                                {row.candidates.slice(0, 3).map((c) => (
+                                  <HintTooltip key={c.name} label={c.name} hint={c.aliasValue ? `Known as ${c.aliasValue}` : undefined}>
+                                    <button
+                                      type="button"
+                                      onClick={() => updateRow(index, c.name)}
+                                      className="max-w-[220px] truncate rounded-md border px-2 py-0.5 text-xs transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                    >
+                                      {c.name}
+                                    </button>
+                                  </HintTooltip>
+                                ))}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="account-list-filter-name">List name</Label>
+              <Input
+                id="account-list-filter-name"
+                value={filterName}
+                onChange={(e) => setFilterName(e.target.value)}
+                placeholder="Acme target accounts Q4"
+              />
+            </div>
+          </div>
+        )}
+
+      </div>
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-t px-5 py-3">
+          {step === "input" ? (
+            <>
+              <Button variant="outline" onClick={() => onDone(null)}>
+                Cancel
+              </Button>
+              <Button onClick={handleMatch} disabled={names.length === 0} loading={matching} className="ml-auto">
+                {matching ? "Matching…" : "Match accounts"}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="ghost" onClick={() => setStep("input")} disabled={saving} className="mr-auto">
+                <RiArrowLeftLine className="h-4 w-4" />
+                Back
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handleSave(false)}
+                disabled={!filterName.trim() || mappedNames.length === 0 || (saving && pendingSave !== "save")}
+                loading={pendingSave === "save"}
+              >
+                {existingList ? "Update list" : "Save list"}
+              </Button>
+              {onApply && (
+                <Button
+                  onClick={() => handleSave(true)}
+                  disabled={!filterName.trim() || mappedNames.length === 0 || (saving && pendingSave !== "apply")}
+                  loading={pendingSave === "apply"}
+                >
+                  Save and apply
+                </Button>
+              )}
+            </>
+          )}
+      </div>
+    </>
+  )
+}
+
+/** "1 Add names", then "2 Check matches", marking the current step. */
+function UploadSteps({ step }: { step: Step }) {
+  const item = (index: number, label: string, state: "done" | "current" | "next") => (
+    <span className={cn("inline-flex items-center gap-1.5", state === "current" && "font-medium text-foreground")}>
+      <span
+        className={cn(
+          "grid h-5 w-5 place-items-center rounded-full text-xs font-medium tabular-nums",
+          state === "current" && "bg-primary text-primary-foreground",
+          state === "done" && "bg-include/15 text-include",
+          state === "next" && "bg-muted text-muted-foreground"
+        )}
+      >
+        {state === "done" ? <RiCheckLine className="h-3 w-3" /> : index}
+      </span>
+      {label}
+    </span>
+  )
+  return (
+    <span className="mt-1 inline-flex items-center gap-2 text-xs">
+      {item(1, "Add names", step === "input" ? "current" : "done")}
+      <span className="h-px w-6 bg-border" aria-hidden="true" />
+      {item(2, "Check matches", step === "review" ? "current" : "next")}
+    </span>
+  )
+}
+
+function countByStatus(rows: ReviewRow[]): Record<AccountMatchStatus, number> {
+  const counts: Record<AccountMatchStatus, number> = { matched: 0, review: 0, not_found: 0 }
+  for (const row of rows) counts[row.status] += 1
+  return counts
+}

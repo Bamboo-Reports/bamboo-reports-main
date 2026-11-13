@@ -33,7 +33,7 @@ A comprehensive breakdown of every technology used in the Bamboo Reports project
 |----------|-------------|
 | **Frontend** | Next.js 16, React 19, TypeScript 5, Tailwind CSS |
 | **Component Library** | shadcn/ui (built on Radix UI primitives) |
-| **Charts** | Highcharts, Recharts |
+| **Charts** | Highcharts |
 | **Maps** | MapLibre GL, Carto Positron, local GeoJSON |
 | **Database** | Neon PostgreSQL (data warehouse), Supabase PostgreSQL (auth/user data) |
 | **Authentication** | Supabase Auth |
@@ -153,16 +153,6 @@ Technologies responsible for how the application looks and feels.
 ## 3. Data Visualization
 
 Technologies for rendering charts, graphs, and data insights.
-
-### Recharts
-
-| | |
-|---|---|
-| **What it is** | A composable charting library built on React and D3 |
-| **Version** | 3.8.1 |
-| **Why we use it** | Provides declarative, React-native chart components with responsive containers. Used through the shadcn/ui `chart.tsx` wrapper |
-| **Used for** | The annual revenue trend area chart in the Account details dialog |
-| **Package** | `recharts` |
 
 ### Highcharts
 
@@ -426,8 +416,8 @@ Each database serves a distinct purpose:
 
 This separation keeps the BI data warehouse isolated from user mutations and simplifies security boundaries.
 
-### Why Highcharts AND Recharts?
-Highcharts renders the dashboard donut charts and the Technology treemap, where its interactivity and treemap support fit the categorical-breakdown use case. Recharts handles the single revenue-trend area chart in the Account details dialog, through the shadcn/ui `chart.tsx` wrapper. Each library is used where it fits best rather than forcing one solution everywhere.
+### Why only Highcharts?
+Highcharts renders the dashboard donut charts. The Technology treemap is plain HTML with our own layout (`lib/charts/tech-treemap-layout.ts`), because the Highcharts treemap could not match the design. Recharts was removed with the annual revenue chart, its only use.
 
 ### Why MapLibre instead of Google Maps or Mapbox?
 MapLibre is open-source (no per-load pricing), supports WebGL rendering for large point datasets (5000+ centers), and works with any tile provider. The application uses the keyless Carto Positron basemap with a local administrative boundary overlay, avoiding vendor-specific SDKs and credentials.

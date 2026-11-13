@@ -2,7 +2,8 @@ import { memo } from "react"
 import { RiArrowRightUpLine, RiExternalLinkLine, RiEyeLine, RiFileCopyLine } from "@remixicon/react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { HeadTypeBadge, isHighlightedHeadType } from "@/components/ui/head-type-badge"
+import { TruncatedText } from "@/components/ui/truncated-text"
 import {
   ContextMenu,
   ContextMenuContent,
@@ -40,100 +41,83 @@ export const ProspectGridCard = memo(({ prospect, onClick }: ProspectGridCardPro
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <Card
-          className="h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className="h-full cursor-pointer select-none transition-[border-color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:border-border active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          onClick={onClick}
           tabIndex={0}
           role="button"
           aria-label={`View details for ${fullName || "prospect"}`}
-          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick() } }}
+          onKeyDown={(e) => { if (e.target !== e.currentTarget) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick() } }}
         >
-          <CardContent className="p-4 flex flex-col gap-4">
+          <CardContent className="p-4 flex flex-col gap-4 h-full">
             <div className="flex items-start gap-3">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <span className="text-sm font-bold text-primary">{initials || "?"}</span>
+              <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center shrink-0">
+                <span className="text-sm font-semibold text-foreground">{initials || "?"}</span>
               </div>
               <div className="min-w-0 flex-1">
-                <h3
-                  className="min-w-0 truncate text-base font-semibold leading-snug text-foreground"
-                  title={fullName || "Prospect"}
-                >
-                  {fullName || "Prospect"}
+                <h3 className="min-w-0 text-base font-medium leading-snug text-foreground">
+                  <TruncatedText text={fullName || "Prospect"} />
                 </h3>
-                <p
-                  className="text-sm text-muted-foreground mt-1 truncate"
-                  title={accountName}
-                >
-                  {accountName}
-                </p>
+                <TruncatedText text={accountName} className="text-sm text-muted-foreground mt-1" />
               </div>
-              {prospect.head_type === "GCC Head" && (
-                <Badge
-                  className="shrink-0 font-normal border-transparent bg-blue-100 text-blue-700 hover:bg-blue-100/80 dark:bg-blue-500/15 dark:text-blue-300"
-                >
-                  GCC Head
-                </Badge>
-              )}
-              {prospect.head_type === "HR Head" && (
-                <Badge
-                  className="shrink-0 font-normal border-transparent bg-orange-100 text-orange-700 hover:bg-orange-100/80 dark:bg-orange-500/15 dark:text-orange-300"
-                >
-                  HR Head
-                </Badge>
-              )}
-              {isEngagedProspect(prospect) && <EngagedIcon className="mt-[3px]" />}
+              {isHighlightedHeadType(prospect.head_type) && <HeadTypeBadge headType={prospect.head_type!} />}
+              {isEngagedProspect(prospect) && <EngagedIcon className="mt-0.5" />}
             </div>
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center justify-between gap-3 min-w-0">
-                <span className="text-muted-foreground">Location</span>
-                <span
-                  className="font-medium text-foreground text-right truncate max-w-[160px]"
-                  title={location || "-"}
-                >
-                  {location || "-"}
-                </span>
+            <div className="mt-auto flex flex-col gap-4">
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between gap-3 min-w-0">
+                  <span className="text-muted-foreground">Location</span>
+                  <TruncatedText
+                    text={location || "-"}
+                    className="font-medium text-foreground text-right max-w-[160px]"
+                    align="end"
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-3 min-w-0">
+                  <span className="text-muted-foreground">Job title</span>
+                  <TruncatedText
+                    text={prospect.prospect_title || "-"}
+                    className="font-medium text-foreground text-right max-w-[160px]"
+                    align="end"
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-3 min-w-0">
+                  <span className="text-muted-foreground">Department</span>
+                  <TruncatedText
+                    text={prospect.prospect_department || "-"}
+                    className="font-medium text-foreground text-right max-w-[160px]"
+                    align="end"
+                  />
+                </div>
               </div>
-              <div className="flex items-center justify-between gap-3 min-w-0">
-                <span className="text-muted-foreground">Department</span>
-                <span
-                  className="font-medium text-foreground text-right truncate max-w-[160px]"
-                  title={prospect.prospect_department || "-"}
-                >
-                  {prospect.prospect_department || "-"}
-                </span>
-              </div>
-              <div className="flex items-center justify-between gap-3 min-w-0">
-                <span className="text-muted-foreground">Level</span>
-                <span
-                  className="font-medium text-foreground text-right truncate max-w-[160px]"
-                  title={prospect.prospect_level || "-"}
-                >
-                  {prospect.prospect_level || "-"}
-                </span>
-              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  // The card opens on click too; open once.
+                  e.stopPropagation()
+                  onClick()
+                }}
+                className="w-full justify-between"
+              >
+                View details
+                <RiArrowRightUpLine className="h-4 w-4" />
+              </Button>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onClick}
-              className="w-full justify-between"
-            >
-              View Details
-              <RiArrowRightUpLine className="h-4 w-4" />
-            </Button>
           </CardContent>
         </Card>
       </ContextMenuTrigger>
       <ContextMenuContent className="w-48">
         <ContextMenuItem onClick={onClick}>
           <RiEyeLine className="h-4 w-4" />
-          View Details
+          View details
         </ContextMenuItem>
         {prospect.prospect_email && (
           <>
             <ContextMenuSeparator />
             <ContextMenuItem onClick={() => copy(prospect.prospect_email!, "Email")}>
               <RiFileCopyLine className="h-4 w-4" />
-              Copy Email
+              Copy email
             </ContextMenuItem>
           </>
         )}

@@ -16,6 +16,8 @@ const financeMocks = vi.hoisted(() => ({
 vi.mock("@/lib/auth/server", () => authMocks)
 vi.mock("@/lib/rate-limit/server", () => rateLimitMocks)
 vi.mock("@/lib/finance/financial-info", () => financeMocks)
+const warehouseMocks = vi.hoisted(() => ({ queryWarehouse: vi.fn() }))
+vi.mock("@/lib/db/warehouse", () => warehouseMocks)
 vi.mock("@/lib/logger", () => ({
   createLogger: () => ({ debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }),
 }))
@@ -74,6 +76,34 @@ describe("financials API route", () => {
     const res = await getFinancials(new Request(url, { headers: { authorization: "Bearer token-1" } }))
     expect(res.status).toBe(200)
     await expect(res.json()).resolves.toEqual({ success: true, error: null, data: { symbol: "AAPL" } })
-    expect(financeMocks.fetchAccountFinancialInfo).toHaveBeenCalledWith("AAPL")
+    expect(financeMocks.fetchAccountFinancialInfo).toHaveBeenCalledWith("AAPL", null, null)
+  })
+
+  it("passes the account's HQ country on to the lookup", async () => {
+    const res = await getFinancials(
+      new Request("https://example.com/api/financials?ticker=7203&country=Japan", { headers: { authorization: "Bearer token-1" } })
+    )
+    expect(res.status).toBe(200)
+    expect(financeMocks.fetchAccountFinancialInfo).toHaveBeenCalledWith("7203", "Japan", null)
+  })
+
+  it("looks up the exchange the account's ticker trades on", async () => {
+    warehouseMocks.queryWarehouse.mockResolvedValueOnce([{ account_hq_stock_exchange: " LON " }])
+    await getFinancials(
+      new Request("https://example.com/api/financials?ticker=BA&country=United%20Kingdom&account=BAE%20Systems%20plc", {
+        headers: { authorization: "Bearer token-1" },
+      })
+    )
+    expect(warehouseMocks.queryWarehouse).toHaveBeenCalledWith(expect.objectContaining({ values: ["BAE Systems plc"] }))
+    expect(financeMocks.fetchAccountFinancialInfo).toHaveBeenCalledWith("BA", "United Kingdom", "LON")
+  })
+
+  it("still serves market data when the exchange lookup fails", async () => {
+    warehouseMocks.queryWarehouse.mockRejectedValueOnce(new Error('column "account_hq_stock_exchange" does not exist'))
+    const res = await getFinancials(
+      new Request("https://example.com/api/financials?ticker=AAPL&account=Apple%20Inc.", { headers: { authorization: "Bearer token-1" } })
+    )
+    expect(res.status).toBe(200)
+    expect(financeMocks.fetchAccountFinancialInfo).toHaveBeenCalledWith("AAPL", null, null)
   })
 })

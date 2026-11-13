@@ -226,7 +226,11 @@ export const fetchProspectEngagements = (psUniqueKey: string) =>
 export const fetchProspectById = (id: string) =>
   request<{ prospect: Prospect }>(`/api/prospects/${encodeURIComponent(id)}`)
 
-export const fetchSearch = (query: string) => request<SearchResponse>(`/api/search?q=${encodeURIComponent(query)}`)
+export type SearchFocus = "accounts" | "centers" | "prospects"
+
+/** Global search; with a type, that group returns up to 50 hits instead of 10. */
+export const fetchSearch = (query: string, type?: SearchFocus | null) =>
+  request<SearchResponse>(`/api/search?q=${encodeURIComponent(query)}${type ? `&type=${type}` : ""}`)
 
 export const fetchAccountAutocomplete = (query: string) =>
   request<{ suggestions: AutocompleteSuggestion[] }>(`/api/accounts/autocomplete?q=${encodeURIComponent(query)}`)

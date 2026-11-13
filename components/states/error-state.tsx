@@ -21,7 +21,7 @@ export function ErrorState({ error, onRetry }: ErrorStateProps) {
     <BrandPage>
       <Card className="border-border/70 bg-card shadow-sm">
         <div className="p-6 sm:p-8">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+          <h1 className="text-[22px] font-semibold tracking-[-0.01em] text-foreground">
             The dashboard could not load
           </h1>
           <p className="mt-1.5 text-sm text-muted-foreground">

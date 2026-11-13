@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { extractNames, guessNameColumn, parseDelimitedText, splitDelimitedLine, tableFromRows } from "@/lib/accounts/account-list-parser"
+import { extractNames, guessNameColumn, parseDelimitedText, parsePastedNames, splitDelimitedLine, tableFromRows } from "@/lib/accounts/account-list-parser"
 
 describe("account list parser", () => {
   it("splits quoted CSV fields", () => {
@@ -33,5 +33,58 @@ describe("account list parser", () => {
     const table = parseDelimitedText("﻿Company\tCity\nInfosys\tBengaluru")
     expect(table.headers).toEqual(["Company", "City"])
     expect(extractNames(table, 0)).toEqual(["Infosys"])
+  })
+
+  it("drops a single-column title row like the sheet's name", () => {
+    const table = tableFromRows([["Accounts - Sales & Marketing"], ["Trelleborg AB"], ["Twilio Inc."]])
+    expect(table.hasHeader).toBe(true)
+    expect(extractNames(table, 0)).toEqual(["Trelleborg AB", "Twilio Inc."])
+  })
+
+  it("drops a single-column label header", () => {
+    for (const label of ["Account name", "Company", "Accounts", "Legal name", "Customer"]) {
+      expect(tableFromRows([[label], ["Infosys"], ["TCS"]]).hasHeader).toBe(true)
+    }
+  })
+
+  it("keeps a real first name that only contains a label word", () => {
+    for (const name of ["Acme Company", "Kraft Heinz Company", "Client Solutions Inc"]) {
+      const table = tableFromRows([[name], ["Infosys"]])
+      expect(table.hasHeader).toBe(false)
+      expect(extractNames(table, 0)[0]).toBe(name)
+    }
+  })
+
+  it("keeps commas inside pasted names", () => {
+    const table = parsePastedNames("Acme Company, Inc.\nGlobex, LLC\nAmazon.com, Inc.")
+    expect(table.hasHeader).toBe(false)
+    expect(extractNames(table, guessNameColumn(table))).toEqual(["Acme Company, Inc.", "Globex, LLC", "Amazon.com, Inc."])
+  })
+
+  it("splits a paste from a spreadsheet on tabs and finds the name column", () => {
+    const table = parsePastedNames("Country\tAccount Name\nIN\tInfosys\nUS\tAcme, Inc.")
+    expect(table.hasHeader).toBe(true)
+    expect(extractNames(table, guessNameColumn(table))).toEqual(["Infosys", "Acme, Inc."])
+  })
+
+  it("does not take a first row of data for a header because a name contains a label word", () => {
+    const table = parseDelimitedText("Acme Company,USA\nGlobex,UK")
+    expect(table.hasHeader).toBe(false)
+    expect(extractNames(table, guessNameColumn(table))).toEqual(["Acme Company", "Globex"])
+  })
+
+  it("still reads real headers in a table with several columns", () => {
+    for (const header of [
+      "Account Name", "Company", "Legal entity name", "Client", "account_global_legal_name",
+      "Company Name (Legal)", "Company Name*", "Account Name:", "Customer Name (required)", "Account Name (Global)",
+      "CompanyName", "Vendor Name", "Target Accounts", "Name of the Company",
+    ]) {
+      expect(parseDelimitedText(`${header},Country\nInfosys,IN`).hasHeader).toBe(true)
+    }
+  })
+
+  it("takes the quotes off a pasted line copied from a CSV", () => {
+    const table = parsePastedNames('"Acme, Inc."\n"Acme ""Rocket"" Co"\nGlobex')
+    expect(extractNames(table, 0)).toEqual(["Acme, Inc.", 'Acme "Rocket" Co', "Globex"])
   })
 })

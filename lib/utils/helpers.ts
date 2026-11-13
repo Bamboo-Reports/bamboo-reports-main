@@ -17,7 +17,7 @@ export const formatRevenueInMillions = (value: number): string => {
 /**
  * Get paginated data
  */
-export const getPaginatedData = (data: any[], page: number, itemsPerPage: number) => {
+export const getPaginatedData = <T,>(data: T[], page: number, itemsPerPage: number): T[] => {
   const startIndex = (page - 1) * itemsPerPage
   const endIndex = startIndex + itemsPerPage
   return data.slice(startIndex, endIndex)
@@ -47,39 +47,31 @@ export const copyToClipboard = (text: string) => {
   navigator.clipboard.writeText(text)
 }
 
+/** A trimmed value, or null when it is blank or the "TBA" placeholder. */
+export const knownText = (value: string | null | undefined): string | null => {
+  const trimmed = value?.trim()
+  return trimmed && trimmed.toUpperCase() !== "TBA" ? trimmed : null
+}
+
 /**
- * Builds a human-readable location string for a prospect.
- * Values that are null, empty, or exactly "TBA" (case-insensitive) are ignored.
- * If nothing meaningful remains after filtering, falls back to `country`, then "India".
+ * Where a centre, prospect or account HQ is, as one place: the city when
+ * known, else the state, else the country, else `fallback`. Blank and "TBA"
+ * count as unknown at every level.
  */
-export const formatProspectLocation = (
+export const formatLocation = (
   city: string | null | undefined,
   state: string | null | undefined,
   country?: string | null | undefined,
-): string => {
-  const isMeaningful = (v: string | null | undefined): v is string =>
-    !!v && v.trim() !== "" && v.trim().toUpperCase() !== "TBA"
+  fallback = "India",
+): string => knownText(city) ?? knownText(state) ?? knownText(country) ?? fallback
 
-  if (isMeaningful(city)) {
-    return isMeaningful(state) ? `${city.trim()}, ${state.trim()}` : city.trim()
-  }
-  if (isMeaningful(country)) return country
-  return "India"
-}
-/**
- * Builds a human-readable location string for a center.
- * A city that is null, empty, or exactly "TBA" (case-insensitive) is treated as absent.
- * If city is absent, returns "India" as the fallback.
- */
-export const formatCenterLocation = (
-  city: string | null | undefined,
-  state: string | null | undefined,
-): string => {
-  const isMeaningful = (v: string | null | undefined): v is string =>
-    !!v && v.trim() !== "" && v.trim().toUpperCase() !== "TBA"
+/** An account's HQ location. With nothing known it is blank, not "India". */
+export const formatAccountLocation = (
+  account: { account_hq_city?: string | null; account_hq_state?: string | null; account_hq_country?: string | null },
+): string => formatLocation(account.account_hq_city, account.account_hq_state, account.account_hq_country, "")
 
-  if (isMeaningful(city)) {
-    return isMeaningful(state) ? `${city.trim()}, ${state.trim()}` : city.trim()
-  }
-  return "India"
-}
+export const formatProspectLocation = formatLocation
+export const formatCenterLocation = formatLocation
+
+/** "1 account", "2,400 accounts". */
+export const plural = (n: number, word: string) => `${n.toLocaleString()} ${word}${n === 1 ? "" : "s"}`

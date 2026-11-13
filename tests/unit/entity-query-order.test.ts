@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { resolveOrder } from "@/lib/dashboard/entity-query"
+import { resolveOrder, sortExpression } from "@/lib/dashboard/entity-query"
 import { buildCentersQuery } from "@/lib/dashboard/filtering-sql"
 import { createDefaultFilters } from "@/lib/dashboard/defaults"
 
@@ -42,6 +42,30 @@ describe("resolveOrder", () => {
     expect(order).toContain("case when center_city ~ '^[0-9]' then 1 when center_city ~ '^[a-zA-Z]' then 2 else 0 end asc")
     // Within a class, byte-order collation on the lowercased value.
     expect(order).toContain('lower(center_city) collate "C" asc')
+  })
+
+  it("sorts location by the shown place: city, else state, else country", () => {
+    const centres = sortExpression("centers", "location")
+    expect(centres).toBe(
+      "(coalesce(" +
+        "case when upper(trim(center_city)) in ('', 'TBA') then null else trim(center_city) end, " +
+        "case when upper(trim(center_state)) in ('', 'TBA') then null else trim(center_state) end, " +
+        "case when upper(trim(center_country)) in ('', 'TBA') then null else trim(center_country) end, " +
+        "'India'))"
+    )
+    expect(resolveOrder("centers", { column: "location", direction: "asc" })).toBe(
+      `${textOrder(centres, "asc")}, cn_unique_key asc`
+    )
+    // Accounts have no "India" fallback: an account with no place sorts last.
+    expect(sortExpression("accounts", "location")).not.toContain("'India'")
+    expect(resolveOrder("prospects", { column: "location", direction: "desc" })).toContain(
+      "trim(prospect_state)"
+    )
+  })
+
+  it("does not treat inherited object keys as derived sort columns", () => {
+    expect(resolveOrder("centers", { column: "toString", direction: "asc" })).toBe(resolveOrder("centers", undefined))
+    expect(sortExpression("centers", "toString")).toBe("toString")
   })
 
   it("keeps native numeric ordering for numeric columns", () => {
@@ -93,7 +117,7 @@ describe("resolveOrder", () => {
   })
 
   it("keeps every ordering total in the emitted SQL", () => {
-    const q = buildCentersQuery(createDefaultFilters(), {}, {
+    const q = buildCentersQuery(createDefaultFilters(), {
       columns: "cn_unique_key",
       orderBy: resolveOrder("centers", { column: "center_state", direction: "asc" }),
       limit: 10,

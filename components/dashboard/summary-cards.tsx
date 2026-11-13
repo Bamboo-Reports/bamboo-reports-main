@@ -3,28 +3,30 @@ import { RiBriefcaseLine, RiBuildingLine, RiGroupLine, RiTimeLine, RiUserFollowL
 import { toast } from 'sonner'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { getSectionUnavailableMessage, isSectionEnabled } from '@/lib/config/dashboard-access'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { TruncatedText } from '@/components/ui/truncated-text'
 import { useNumberFormatPreference } from '@/hooks/use-number-format-preference'
+import { HEADCOUNT_EXCLUDED_CENTER_TYPES } from '@/lib/dashboard/headcount'
 import { cn } from '@/lib/utils'
 
-// Truncate to one decimal instead of rounding, so 2,459 reads as 2.4K (not 2.5K)
-// and the compact value never overstates the real count.
-function truncateToOneDecimal(val: number): string {
-  const truncated = Math.floor(val * 10) / 10
-  return truncated % 1 === 0 ? truncated.toFixed(0) : truncated.toFixed(1)
+// Rounded to one decimal: 2,459 reads as 2.5K and 3,974,487 as 4M.
+function oneDecimal(val: number): string {
+  const rounded = Math.round(val * 10) / 10
+  return rounded % 1 === 0 ? rounded.toFixed(0) : rounded.toFixed(1)
 }
 
-function formatCompactNumber(num: number): string {
-  if (num >= 1_000_000) {
-    return `${truncateToOneDecimal(num / 1_000_000)}M`
+export function formatCompactNumber(num: number): string {
+  // From 999,950 the thousands would round up to "1000K", so switch to millions.
+  if (num >= 999_950) {
+    return `${oneDecimal(num / 1_000_000)}M`
   }
   if (num >= 1_000) {
-    return `${truncateToOneDecimal(num / 1_000)}K`
+    return `${oneDecimal(num / 1_000)}K`
   }
   return num.toLocaleString()
 }
 
-const NUMBER_CLASS = 'text-2xl font-semibold leading-tight tracking-tight tabular-nums'
+const NUMBER_CLASS = 'text-2xl font-medium leading-tight tabular-nums'
 const TOTAL_CLASS = 'text-xs tabular-nums'
 
 /**
@@ -76,15 +78,35 @@ function useCompactLevel(value: number, total: number) {
   return { level, rowRef, fullRef, totalCompactRef }
 }
 
+/**
+ * A figure with a label tooltip showing its full value, opened only when the
+ * shown text is shortened (1.5M for 1,500,000) or cut off by the card.
+ */
+function FigureText({ text, full, className }: { text: string; full: string; className?: string }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const [open, setOpen] = useState(false)
+  const onOpenChange = (next: boolean) => {
+    const node = ref.current
+    if (next && text === full && (!node || node.scrollWidth <= node.clientWidth)) return
+    setOpen(next)
+  }
+  return (
+    <Tooltip open={open} onOpenChange={onOpenChange}>
+      <TooltipTrigger asChild>
+        <span ref={ref} className={className}>{text}</span>
+      </TooltipTrigger>
+      <TooltipContent side="top" align="start">{full}</TooltipContent>
+    </Tooltip>
+  )
+}
+
 const SummaryFigure = React.memo(function SummaryFigure({
   value,
   total,
-  procured,
   updating,
 }: {
   value: number
   total: number
-  procured: boolean
   updating: boolean
 }): React.JSX.Element {
   const [preference] = useNumberFormatPreference()
@@ -124,19 +146,17 @@ const SummaryFigure = React.memo(function SummaryFigure({
           <span className="invisible inline-block w-16" />
         </span>
       ) : (
-        <span
-          className={cn('shrink-0', NUMBER_CLASS, procured ? 'text-sidebar-foreground' : 'text-muted-foreground')}
-          title={shownValue === fullValue ? undefined : fullValue}
-        >
-          {shownValue}
-        </span>
+        <FigureText
+          text={shownValue}
+          full={fullValue}
+          className={cn('shrink-0 text-foreground', NUMBER_CLASS)}
+        />
       )}
-      <span
+      <FigureText
+        text={`of ${shownTotal}`}
+        full={`of ${fullTotal}`}
         className={cn('min-w-0 truncate text-muted-foreground', TOTAL_CLASS)}
-        title={shownTotal === fullTotal && preference !== 'full' ? undefined : `of ${fullTotal}`}
-      >
-        of {shownTotal}
-      </span>
+      />
     </div>
   )
 })
@@ -158,6 +178,10 @@ interface SummaryCardsProps {
   updating?: boolean
 }
 
+const VIEWS_NOTE = "Only Accounts, Centres and Prospects open as views"
+// Why this can be lower than an account's "Centre employees": some centre types are left out.
+const HEADCOUNT_NOTE = `Employees at the centres shown, leaving out ${HEADCOUNT_EXCLUDED_CENTER_TYPES.map((type) => (type === type.toUpperCase() ? type : type.toLowerCase())).join(", ").replace(/, ([^,]*)$/, " and $1")} centres`
+
 export const SummaryCards = React.memo(function SummaryCards({
   filteredAccountsCount,
   totalAccountsCount,
@@ -173,9 +197,6 @@ export const SummaryCards = React.memo(function SummaryCards({
   onSelect,
   updating = false,
 }: SummaryCardsProps): React.JSX.Element {
-  const accountsEnabled = isSectionEnabled("accounts")
-  const centersEnabled = isSectionEnabled("centers")
-  const prospectsEnabled = isSectionEnabled("prospects")
   const cards = [
     {
       id: 'accounts' as const,
@@ -183,10 +204,9 @@ export const SummaryCards = React.memo(function SummaryCards({
       value: filteredAccountsCount,
       total: totalAccountsCount,
       icon: RiBuildingLine,
-      iconClassName: 'text-primary',
-      interactive: accountsEnabled,
-      procured: accountsEnabled,
-      message: accountsEnabled ? null : getSectionUnavailableMessage("accounts"),
+      iconClassName: 'text-muted-foreground',
+      interactive: true,
+      message: null,
     },
     {
       id: 'centers' as const,
@@ -194,23 +214,20 @@ export const SummaryCards = React.memo(function SummaryCards({
       value: filteredCentersCount,
       total: totalCentersCount,
       icon: RiBriefcaseLine,
-      iconClassName: 'text-primary',
-      interactive: centersEnabled,
-      procured: centersEnabled,
-      message: centersEnabled ? null : getSectionUnavailableMessage("centers"),
+      iconClassName: 'text-muted-foreground',
+      interactive: true,
+      message: null,
     },
     {
       id: 'upcoming-centers' as const,
-      title: 'Upcoming Centres',
+      title: 'Upcoming centres',
       value: filteredUpcomingCentersCount,
       total: totalUpcomingCentersCount,
       icon: RiTimeLine,
-      iconClassName: 'text-primary',
+      iconClassName: 'text-muted-foreground',
       interactive: false,
-      procured: centersEnabled,
-      message: centersEnabled
-        ? "Upcoming Centres is an overview stat. Only Accounts, Centres, and Prospects open as views."
-        : getSectionUnavailableMessage("centers"),
+      message: "Upcoming centres is an overview figure",
+      description: VIEWS_NOTE,
     },
     {
       id: 'prospects' as const,
@@ -218,10 +235,9 @@ export const SummaryCards = React.memo(function SummaryCards({
       value: filteredProspectsCount,
       total: totalProspectsCount,
       icon: RiGroupLine,
-      iconClassName: 'text-primary',
-      interactive: prospectsEnabled,
-      procured: prospectsEnabled,
-      message: prospectsEnabled ? null : getSectionUnavailableMessage("prospects"),
+      iconClassName: 'text-muted-foreground',
+      interactive: true,
+      message: null,
     },
     {
       id: 'headcount' as const,
@@ -229,12 +245,10 @@ export const SummaryCards = React.memo(function SummaryCards({
       value: filteredHeadcount,
       total: totalHeadcount,
       icon: RiUserFollowLine,
-      iconClassName: 'text-primary',
+      iconClassName: 'text-muted-foreground',
       interactive: false,
-      procured: centersEnabled,
-      message: centersEnabled
-        ? "Headcount is an overview stat. Only Accounts, Centres, and Prospects open as views."
-        : getSectionUnavailableMessage("centers"),
+      message: "Headcount is an overview figure",
+      description: HEADCOUNT_NOTE,
     },
   ]
 
@@ -255,7 +269,7 @@ export const SummaryCards = React.memo(function SummaryCards({
               }
               const message = card.message
               if (!message) return undefined
-              return () => toast.info(message, { id: `summary-readonly-${card.id}` })
+              return () => toast.info(message, { id: `summary-readonly-${card.id}`, description: card.description })
             })()}
             onKeyDown={card.interactive ? (event) => {
               if (event.key === 'Enter' || event.key === ' ') {
@@ -264,28 +278,22 @@ export const SummaryCards = React.memo(function SummaryCards({
               }
             } : undefined}
             className={cn(
-              'px-3.5 pt-2.5 pb-[11px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 ease-out animate-stagger',
-              card.interactive && 'cursor-pointer select-none',
+              'px-4 py-3 shadow-[0_1px_2px_rgba(0,0,0,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-[border-color,box-shadow,transform] duration-150 ease-[cubic-bezier(0.22,1,0.36,1)]',
+              card.interactive && 'cursor-pointer select-none active:scale-[0.98]',
               !card.interactive && card.message && 'cursor-help',
               isActive
-                ? 'ring-2 ring-sidebar-ring border-transparent shadow-[0_18px_55px_-35px_rgba(0,0,0,0.6)]'
-                : 'border-border/70 shadow-[0_14px_42px_-30px_rgba(0,0,0,0.45)]',
-              !isActive && card.interactive && 'hover:border-border hover:shadow-[0_16px_48px_-32px_rgba(0,0,0,0.5)]'
+                ? 'border-primary ring-1 ring-primary'
+                : 'border-border/70',
+              !isActive && card.interactive && 'hover:border-border'
             )}
           >
-            <div className="flex items-center gap-1.5 text-[13px] font-medium text-sidebar-foreground">
+            <div className="flex items-center gap-2 text-[13px] font-medium text-foreground">
               <Icon className={cn('h-4 w-4 shrink-0', card.iconClassName)} />
-              <span className={cn('truncate', !card.procured && 'text-muted-foreground')}>{card.title}</span>
-              {!card.procured && (
-                <span className="ml-auto inline-flex h-[18px] shrink-0 items-center rounded-full bg-muted px-1.5 text-[10.5px] font-semibold text-muted-foreground">
-                  Not procured
-                </span>
-              )}
+              <TruncatedText text={card.title} className="min-w-0" />
             </div>
             <SummaryFigure
               value={card.value}
               total={card.total}
-              procured={card.procured}
               updating={updating}
             />
           </Card>

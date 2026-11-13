@@ -56,7 +56,7 @@ The dashboard covers six entities: accounts, centers, services, functions, tech 
 ### Dashboard
 
 - Summary cards show the filtered count and the total count for each entity.
-- Highcharts donut charts break down accounts and centers by country, industry, revenue and headcount, and a treemap shows technologies. The account dialog adds a Recharts revenue trend chart.
+- Highcharts donut charts break down accounts and centers by country, industry, revenue and headcount, and a treemap shows technologies.
 - The Accounts and Centers tabs switch between chart, map and table views. The Prospects tab has chart and table views.
 - `lib/config/dashboard-access.ts` turns the Accounts, Centers and Prospects sections on or off per deployment.
 - The MapLibre cluster map plots 5,000+ center locations on a Carto basemap that needs no API key.
@@ -79,7 +79,7 @@ The dashboard covers six entities: accounts, centers, services, functions, tech 
 
 ### Tables and records
 
-- Tables show 51 rows per page, and each row component is memoized with `React.memo`.
+- Tables show 25 rows per page by default (10, 25, 50 or 100, remembered per browser; see `lib/dashboard/page-size.ts`), and rows are memoized so editing a filter does not re-render the rows on screen.
 - Clicking a row opens a tabbed dialog for that account, center or prospect.
 - One set of TypeScript types describes each entity from the database query to the UI.
 
@@ -145,7 +145,7 @@ graph TD
 
 ## Tech stack
 
-The app uses Next.js 16 with the App Router, React 19 and TypeScript. The UI uses Tailwind CSS and shadcn/ui components built on Radix. Charts use Highcharts and Recharts, and maps use MapLibre GL. Prisma reads the Neon PostgreSQL warehouse, Supabase handles auth and user data, and Upstash Redis holds the cache and rate-limit counters. ExcelJS and jsPDF generate exports, PostHog and Vercel Analytics collect usage data, and Vitest runs the tests.
+The app uses Next.js 16 with the App Router, React 19 and TypeScript. The UI uses Tailwind CSS and shadcn/ui components built on Radix. Charts use Highcharts, and maps use MapLibre GL. Prisma reads the Neon PostgreSQL warehouse, Supabase handles auth and user data, and Upstash Redis holds the cache and rate-limit counters. ExcelJS and jsPDF generate exports, PostHog and Vercel Analytics collect usage data, and Vitest runs the tests.
 
 The [Tech Stack Reference](documentation/tech-stack.md) lists versions and explains each choice. Update that file, not this one, when the stack changes.
 

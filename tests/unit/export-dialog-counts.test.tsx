@@ -73,6 +73,6 @@ describe("ExportDialog row counts in server mode (#307)", () => {
       expect(box(key).getAttribute("aria-checked")).toBe("false")
       expect(box(key).hasAttribute("disabled")).toBe(false)
     }
-    expect(screen.getByText("1 selected")).toBeTruthy()
+    expect(screen.getByText(/in 1 sheet/).textContent).toContain("3,484 rows in 1 sheet")
   })
 })

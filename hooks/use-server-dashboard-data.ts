@@ -12,8 +12,8 @@ import {
 import { devError } from "@/lib/utils/dev-log"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
-import { sanitizeFilters } from "@/lib/config/filters"
 import { createDefaultFilters } from "@/lib/dashboard/defaults"
+import { DEFAULT_RANGE_BOUNDS } from "@/lib/dashboard/active-filters"
 import { getQueryClient } from "@/lib/query-client"
 import {
   fetchCentersMap,
@@ -36,14 +36,21 @@ const WIDE_RANGE: [number, number] = [0, Number.MAX_SAFE_INTEGER]
  * loaded. Narrowed ranges pass through unchanged.
  */
 export function normalizeFiltersForServer(filters: Filters, ranges: FacetRanges | null): Filters {
-  const norm = (value: [number, number], base: { min: number; max: number } | undefined): [number, number] =>
-    !base || (value[0] <= base.min && value[1] >= base.max) ? WIDE_RANGE : value
-  return sanitizeFilters({
+  // Before the data's limits arrive, the widest range stands in for them, so
+  // a range a link narrowed is sent with the very first request.
+  // (Then only a range that is exactly the placeholder counts as unset; a
+  // link's range may be wider than the placeholder and still be a real one.)
+  const bounds = ranges ?? DEFAULT_RANGE_BOUNDS
+  const norm = (value: [number, number], base: { min: number; max: number }): [number, number] => {
+    const unset = ranges ? value[0] <= base.min && value[1] >= base.max : value[0] === base.min && value[1] === base.max
+    return unset ? WIDE_RANGE : value
+  }
+  return {
     ...filters,
-    accountHqRevenueRange: norm(filters.accountHqRevenueRange, ranges?.revenue),
-    accountYearsInIndiaRange: norm(filters.accountYearsInIndiaRange, ranges?.yearsInIndia),
-    centerIncYearRange: norm(filters.centerIncYearRange, ranges?.centerIncYear),
-  })
+    accountHqRevenueRange: norm(filters.accountHqRevenueRange, bounds.revenue),
+    accountYearsInIndiaRange: norm(filters.accountYearsInIndiaRange, bounds.yearsInIndia),
+    centerIncYearRange: norm(filters.centerIncYearRange, bounds.centerIncYear),
+  }
 }
 
 // ============================================
@@ -239,7 +246,7 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
   useLayoutEffect(() => {
     filtersRef.current = filters
   }, [filters])
-  const filtersKey = useMemo(() => JSON.stringify(sanitizeFilters(filters)), [filters])
+  const filtersKey = useMemo(() => JSON.stringify(filters), [filters])
 
   const reportError = useCallback((message: string) => {
     setError(message)
@@ -477,3 +484,5 @@ export function useServerDashboardData({ enabled, filters, pages, sorts, pageSiz
     reload,
   }
 }
+
+export type ServerDashboardData = ReturnType<typeof useServerDashboardData>

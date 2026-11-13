@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Account details</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css" rel="stylesheet" />
+<style>
+  /* Tokens copied from app/globals.css */
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 214 45% 15%;
+    --card: 0 0% 100%;
+    --primary: 204 100% 38%;
+    --primary-foreground: 0 0% 100%;
+    --muted: 210 25% 94%;
+    --muted-foreground: 215 20% 39%;
+    --border: 212 24% 86%;
+    --ring: 204 100% 38%;
+    --include: 142 64% 32%;
+    --exclude: 0 72% 46%;
+    --warn: 32 90% 40%;
+    --dialog-shadow: 0 30px 80px -30px rgba(15,30,50,.45), 0 2px 8px rgba(15,30,50,.08);
+  }
+  .dark {
+    --background: 0 0% 10%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 12%;
+    --primary: 204 92% 56%;
+    --primary-foreground: 0 0% 10%;
+    --muted: 0 0% 16%;
+    --muted-foreground: 0 0% 65%;
+    --border: 0 0% 24%;
+    --ring: 0 0% 83.1%;
+    --include: 142 55% 55%;
+    --exclude: 0 80% 66%;
+    --warn: 36 90% 60%;
+    --dialog-shadow: 0 30px 80px -30px rgba(0,0,0,.8);
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: light; }
+  html.dark { color-scheme: dark; }
+  body { margin: 0; font-family: "Inter", system-ui, sans-serif; background: hsl(var(--background)); color: hsl(var(--foreground)); -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; font-size: 13px; }
+  button, input { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+  ::selection { background: hsl(var(--primary) / .2); }
+
+  .page { max-width: 1100px; margin: 0 auto; padding: 32px 16px 80px; }
+  .top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+  .top h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .intro { margin: 0 0 16px; max-width: 82ch; line-height: 1.5; color: hsl(var(--muted-foreground)); }
+  .toggle { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 13px; font-weight: 500; }
+  .seg { display: inline-grid; grid-auto-flow: column; padding: 3px; border-radius: 9px; background: hsl(var(--muted) / .8); }
+  .seg button { height: 28px; padding: 0 12px; border: 0; border-radius: 6px; background: transparent; font-size: 12.5px; font-weight: 500; color: hsl(var(--muted-foreground)); white-space: nowrap; }
+  .seg button.on { background: hsl(var(--card)); color: hsl(var(--foreground)); box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 0 0 1px hsl(var(--border) / .6); }
+  .seg button .c { margin-left: 4px; font-size: 11.5px; color: hsl(var(--muted-foreground)); }
+  .bar2 { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; margin: 4px 0 12px; }
+  .bar2 > div { display: flex; align-items: center; gap: 8px; }
+  .ctl-label { font-size: 12px; font-weight: 500; color: hsl(var(--muted-foreground)); }
+  .variant-note { margin: 0 0 16px; padding-left: 12px; border-left: 2px solid hsl(var(--border)); max-width: 82ch; line-height: 1.5; color: hsl(var(--muted-foreground)); }
+  .variant-note b { color: hsl(var(--foreground)); font-weight: 600; }
+  .backdrop { padding: 24px 16px; border-radius: 16px; background: hsl(214 30% 12% / .08); }
+  .dark .backdrop { background: hsl(0 0% 0% / .35); }
+
+  /* ---------- shared ---------- */
+  .dlg { display: flex; flex-direction: column; height: 600px; margin: 0 auto; border-radius: 10px; border: 1px solid hsl(var(--border)); background: hsl(var(--background)); box-shadow: var(--dialog-shadow); overflow: hidden; }
+  .dlg.a { max-width: 920px; }
+  .dlg.b { max-width: 760px; }
+  .dh { flex: none; display: flex; align-items: center; gap: 10px; padding: 14px 16px 14px 20px; border-bottom: 1px solid hsl(var(--border)); }
+  .dh h2 { margin: 0; font-size: 16px; font-weight: 600; }
+  .dh .sub { font-size: 12.5px; color: hsl(var(--muted-foreground)); }
+  .dh .sp { flex: 1; }
+  .ib { display: grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 7px; background: transparent; color: hsl(var(--muted-foreground)); font-size: 16px; }
+  .ib:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
+  .ib.lg { font-size: 18px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 13px; font-weight: 500; white-space: nowrap; }
+  .btn:hover { border-color: hsl(var(--foreground) / .25); }
+  .btn i { font-size: 15px; }
+  .btn.primary { border-color: transparent; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+  .btn.sm { height: 28px; padding: 0 10px; font-size: 12.5px; }
+  .search { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; border-radius: 8px; border: 1px solid transparent; background: hsl(var(--muted) / .8); color: hsl(var(--muted-foreground)); }
+  .search:focus-within { border-color: hsl(var(--primary) / .6); box-shadow: 0 0 0 3px hsl(var(--primary) / .15); }
+  .search input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font-size: 13px; color: hsl(var(--foreground)); }
+  .search input::placeholder { color: hsl(var(--muted-foreground)); }
+  .chip { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px; border-radius: 6px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 12px; font-weight: 500; white-space: nowrap; }
+  .chip .k { color: hsl(var(--muted-foreground)); font-weight: 400; }
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .muted { color: hsl(var(--muted-foreground)); }
+  .grp { position: sticky; top: 0; z-index: 1; padding: 10px 10px 4px; background: inherit; font-size: 11.5px; font-weight: 600; color: hsl(var(--muted-foreground)); }
+  .state { display: grid; place-items: center; flex: 1; padding: 32px; text-align: center; }
+  .state i.big { font-size: 26px; color: hsl(var(--muted-foreground)); }
+  .state p { margin: 8px 0 0; max-width: 40ch; line-height: 1.5; color: hsl(var(--muted-foreground)); font-size: 12.5px; }
+  .state p b { display: block; margin-bottom: 2px; color: hsl(var(--foreground)); font-size: 13.5px; font-weight: 600; }
+  .state.err i.big { color: hsl(var(--exclude)); }
+  .sk { height: 10px; border-radius: 4px; background: hsl(var(--muted)); animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .5; } }
+  @media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
+
+  /* window */
+  .win { display: flex; flex-direction: column; height: 760px; max-width: 1180px; margin: 0 auto; border-radius: 12px; border: 1px solid hsl(var(--border)); background: hsl(var(--background)); box-shadow: var(--dialog-shadow); overflow: hidden; }
+  .wh { flex: none; padding: 18px 24px 0; border-bottom: 1px solid hsl(var(--border)); }
+  .idrow { display: flex; align-items: flex-start; gap: 14px; }
+  .logo3m { flex: none; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 12px; border: 1px solid hsl(var(--border)); background: #fff; color: #ff0000; font-weight: 800; font-size: 17px; letter-spacing: -0.04em; }
+  .idt { flex: 1; min-width: 0; }
+  .idt h2 { margin: 0; font-size: 21px; font-weight: 600; letter-spacing: -0.015em; }
+  .idt .loc { margin-top: 3px; font-size: 13px; color: hsl(var(--muted-foreground)); }
+  .facts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .fact { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px; border-radius: 6px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 12px; font-weight: 500; white-space: nowrap; }
+  .fact .k { color: hsl(var(--muted-foreground)); font-weight: 400; }
+  .fact.ok { border-color: hsl(var(--include) / .35); color: hsl(var(--include)); }
+  .links { display: flex; gap: 4px; }
+  .tabs { display: flex; gap: 22px; margin-top: 14px; }
+  .tabs button { position: relative; display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0; border: 0; background: none; font-size: 13.5px; font-weight: 500; color: hsl(var(--muted-foreground)); }
+  .tabs button .n { font-size: 12px; font-weight: 600; color: hsl(var(--muted-foreground)); }
+  .tabs button.on { color: hsl(var(--foreground)); }
+  .tabs button.on::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; border-radius: 2px; background: hsl(var(--primary)); }
+  .tabs button:hover { color: hsl(var(--foreground)); }
+  .wb { flex: 1; min-height: 0; overflow-y: auto; }
+
+  /* overview */
+  .ov { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 0; min-height: 100%; }
+  .ov main { padding: 22px 24px 32px; }
+  .ov aside { padding: 22px 22px 32px; border-left: 1px solid hsl(var(--border)); background: color-mix(in srgb, hsl(var(--muted)) 30%, hsl(var(--background))); }
+  .sec + .sec { margin-top: 28px; }
+  .sec h3 { margin: 0 0 10px; font-size: 14px; font-weight: 600; }
+  .sec h3 small { margin-left: 6px; font-size: 12px; font-weight: 400; color: hsl(var(--muted-foreground)); }
+  .about { margin: 0; max-width: 72ch; line-height: 1.6; font-size: 13.5px; }
+  .offer { display: flex; flex-wrap: wrap; gap: 6px; }
+  .offer span { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 999px; background: hsl(var(--muted) / .8); font-size: 12.5px; }
+  .offer button { height: 26px; padding: 0 10px; border-radius: 999px; border: 1px dashed hsl(var(--border)); background: none; font-size: 12.5px; color: hsl(var(--muted-foreground)); }
+  .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid hsl(var(--border)); border-radius: 10px; overflow: hidden; background: hsl(var(--card)); }
+  .stats > div { padding: 12px 14px; }
+  .stats > div + div { border-left: 1px solid hsl(var(--border)); }
+  .stats .k { font-size: 12px; color: hsl(var(--muted-foreground)); }
+  .stats .v { margin-top: 3px; font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
+  .stats .c { margin-top: 1px; font-size: 11.5px; color: hsl(var(--muted-foreground)); }
+  .chart { margin-top: 12px; padding: 12px 14px 8px; border: 1px solid hsl(var(--border)); border-radius: 10px; background: hsl(var(--card)); }
+  .chart .h { display: flex; justify-content: space-between; font-size: 12px; color: hsl(var(--muted-foreground)); }
+  .chart svg { display: block; width: 100%; height: auto; max-height: 150px; margin-top: 6px; }
+  .placeholder { display: grid; place-items: center; height: 240px; border: 1px solid hsl(var(--border)); border-radius: 10px; background: hsl(var(--card)); font-size: 12.5px; color: hsl(var(--muted-foreground)); text-align: center; line-height: 1.5; }
+  .placeholder i { display: block; font-size: 22px; margin-bottom: 4px; }
+  .sheet h4 { margin: 0 0 6px; font-size: 12px; font-weight: 500; color: hsl(var(--muted-foreground)); }
+  .sheet h4 + dl { margin-top: 0; }
+  .sheet dl { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 0; margin: 0 0 20px; font-size: 13px; }
+  .sheet dt, .sheet dd { padding: 6px 0; border-bottom: 1px solid hsl(var(--border) / .7); }
+  .sheet dt { color: hsl(var(--muted-foreground)); }
+  .sheet dd { margin: 0; font-weight: 500; text-align: right; }
+  .sheet dl > :nth-last-child(-n+2) { border-bottom: 0; }
+
+  /* lists */
+  .lt { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 14px 24px 10px; }
+  .lt .search { width: 260px; }
+  .dd { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); font-size: 12.5px; font-weight: 500; }
+  .dd .k { color: hsl(var(--muted-foreground)); font-weight: 400; }
+  .dd i { font-size: 15px; color: hsl(var(--muted-foreground)); }
+  .dd.on { border-color: hsl(var(--primary) / .5); background: hsl(var(--primary) / .08); color: hsl(var(--primary)); }
+  .lt .sp { flex: 1; }
+  .lt .cnt { font-size: 12.5px; color: hsl(var(--muted-foreground)); }
+  table.list { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.list th { position: sticky; top: 0; z-index: 1; height: 34px; padding: 0 12px; background: hsl(var(--background)); border-bottom: 1px solid hsl(var(--border)); text-align: left; font-size: 12px; font-weight: 500; color: hsl(var(--muted-foreground)); white-space: nowrap; }
+  table.list th:first-child, table.list td:first-child { padding-left: 24px; }
+  table.list th:last-child, table.list td:last-child { padding-right: 24px; }
+  table.list td { height: 48px; padding: 0 12px; border-bottom: 1px solid hsl(var(--border) / .6); white-space: nowrap; }
+  table.list tr { cursor: pointer; }
+  table.list tbody tr:hover td { background: hsl(var(--muted) / .5); }
+  table.list .nm { font-weight: 500; }
+  table.list .sub { font-size: 12px; color: hsl(var(--muted-foreground)); }
+  table.list .open { opacity: 0; color: hsl(var(--muted-foreground)); font-size: 16px; }
+  table.list tr:hover .open { opacity: 1; }
+  .st { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; }
+  .st::before { content: ""; width: 7px; height: 7px; border-radius: 999px; background: hsl(var(--include)); }
+  .st.off::before { background: hsl(var(--exclude)); }
+  .av { display: inline-grid; place-items: center; width: 30px; height: 30px; margin-right: 10px; border-radius: 999px; background: hsl(var(--muted)); font-size: 11.5px; font-weight: 600; vertical-align: middle; }
+  .person { display: flex; align-items: center; }
+  .tag { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 5px; background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); font-size: 11.5px; font-weight: 500; }
+  .tag.eng { background: hsl(var(--include) / .12); color: hsl(var(--include)); }
+  .ib.sm { width: 28px; height: 28px; font-size: 15px; }
+
+  /* B: centres split, prospects grouped */
+  .csplit { display: grid; grid-template-columns: minmax(0, 1fr) 420px; height: 100%; }
+  .csplit .mapcol { padding: 16px 0 16px 24px; }
+  .csplit .mapcol .placeholder { height: 100%; }
+  .clist { overflow-y: auto; padding: 6px 12px 16px; }
+  .crow { display: flex; gap: 10px; padding: 10px 12px; border-radius: 8px; cursor: pointer; }
+  .crow:hover { background: hsl(var(--muted) / .6); }
+  .crow .tx { flex: 1; min-width: 0; }
+  .crow .t { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .crow .s { margin-top: 2px; font-size: 12px; color: hsl(var(--muted-foreground)); }
+  .crow .pin { flex: none; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 999px; background: hsl(var(--primary) / .12); color: hsl(var(--primary)); font-size: 11.5px; font-weight: 600; }
+  .pgroups { padding: 6px 24px 24px; }
+  .pg + .pg { margin-top: 18px; }
+  .pg h4 { display: flex; justify-content: space-between; margin: 0 0 4px; padding-bottom: 6px; border-bottom: 1px solid hsl(var(--border)); font-size: 13px; font-weight: 600; }
+  .pg h4 span { font-weight: 400; color: hsl(var(--muted-foreground)); font-size: 12px; }
+  .pgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px 16px; }
+  .pp { display: flex; align-items: center; gap: 10px; padding: 8px 6px; border-radius: 8px; cursor: pointer; min-width: 0; }
+  .pp:hover { background: hsl(var(--muted) / .6); }
+  .pp .av { margin: 0; }
+  .pp .t { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pp .s { font-size: 12px; color: hsl(var(--muted-foreground)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; margin: 0; border-bottom: 1px solid hsl(var(--border)); }
+  .kpis > div { padding: 14px 24px; }
+  .kpis > div + div { border-left: 1px solid hsl(var(--border)); }
+  .kpis .k { font-size: 12px; color: hsl(var(--muted-foreground)); }
+  .kpis .v { margin-top: 3px; font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
+  .kpis .c { font-size: 11.5px; color: hsl(var(--muted-foreground)); }
+  .bcols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; padding: 22px 24px 32px; }
+
+  @media (max-width: 900px) {
+    .ov, .csplit, .bcols { grid-template-columns: 1fr; }
+    .ov aside { border-left: 0; border-top: 1px solid hsl(var(--border)); }
+    .stats, .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .pgrid { grid-template-columns: 1fr; }
+    .hide-sm { display: none; }
+    .win { height: auto; min-height: 760px; }
+  }
+</style>
+</head>
+<body>
+<div class="page" style="max-width:1240px">
+  <div class="top">
+    <h1>Account details</h1>
+    <button class="toggle" id="theme"><i class="ri-moon-line"></i><span>Dark</span></button>
+  </div>
+  <p class="intro">Options for the window that opens when you click an account, shown with 3M Co. Both keep the three tabs and everything they show today. The name, key facts and tabs stay pinned at the top while the content scrolls, the cards inside cards go, and Centres and Prospects become compact lists instead of six cards per page. Prospect names are placeholders. The map and tech stack charts stay as they are and are shown here as outlines.</p>
+  <div class="bar2">
+    <div><span class="ctl-label">Option</span><div class="seg" id="variants"></div></div>
+    <div><span class="ctl-label">Tab</span><div class="seg" id="tabsel"></div></div>
+  </div>
+  <p class="variant-note" id="note"></p>
+  <div class="backdrop" style="padding:20px 16px"><div id="stage"></div></div>
+</div>
+<script>
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const OFFERINGS = ["Abrasives", "Adhesives, Sealants & Fillers", "Advanced Materials", "Automotive Parts & Hardware", "Building Materials", "Cleaning Supplies", "Coatings", "Compounds & Polishes", "Dental & Orthodontics", "Electrical", "Filtration", "Medical Devices", "Personal Protective Equipment", "Tapes"];
+  const CENTRES = [
+    ["3M Electro And Communication India Pvt. Ltd.", "Manufacturing", "Pune, Maharashtra", "<50", "Inactive", 2011],
+    ["3M India Ltd.", "Manufacturing", "Ahmedabad, Gujarat", "201 - 500", "Active", 2012],
+    ["3M India Ltd.", "Manufacturing", "Pune, Maharashtra", "501 - 1K", "Active", 2013],
+    ["3M India Ltd.", "Manufacturing", "Bengaluru, Karnataka", "201 - 500", "Active", 2011],
+    ["3M India Ltd.", "R&D", "Bengaluru, Karnataka", "201 - 500", "Active", 2015],
+    ["3M India Ltd.", "R&D", "Gurugram, Haryana", "101 - 200", "Active", 2017],
+    ["3M India Ltd.", "CoE", "Bengaluru, Karnataka", "201 - 500", "Active", 2019],
+    ["3M India Ltd.", "Sales & Marketing", "Mumbai, Maharashtra", "201 - 500", "Active", 2014],
+  ];
+  const PEOPLE = [
+    ["Asha Rao", "Head of HR", "HR", "Head", "Bengaluru", true], ["Vikram Iyer", "GM, Procurement", "Procurement", "GM", "Bengaluru", false],
+    ["Neha Kapoor", "Head of IT Infrastructure", "IT", "Head", "Bengaluru", false], ["Rohan Desai", "VP Finance", "FnA", "VP", "Mumbai", true],
+    ["Meera Pillai", "GM, Finance Operations", "FnA", "GM", "Bengaluru", false], ["Arjun Nair", "Head of Applications", "IT", "Head", "Bengaluru", false],
+    ["Kavya Menon", "Chief Operating Officer", "Senior Management", "CXO", "Bengaluru", false], ["Sanjay Gupta", "Director, Procurement", "Procurement", "Director", "Pune", false],
+    ["Priya Shah", "GM, Accounts", "FnA", "GM", "Bengaluru", false], ["Rahul Verma", "Head of Facilities", "Admin", "Head", "Bengaluru", false],
+    ["Divya Joshi", "Senior Manager, HR", "HR", "Senior Manager", "Gurugram", false], ["Karthik Reddy", "Leader, Customer Support", "Customer Support", "Leader", "Bengaluru", false],
+  ];
+  const VARIANTS = [
+    { id: "a", label: "A. Profile and lists", note: "<b>Profile and lists.</b> Account info is a two-column profile: About, key offerings as tags, the numbers in one row with the revenue trend, then India presence with the map and the tech stack. A fact sheet on the right holds everything you look up (type, ticker, industry, rankings), grouped. Centres and Prospects are sortable tables with a search box and filter dropdowns, all on one scrolling page instead of six cards at a time." },
+    { id: "b", label: "B. Overview and places", note: "<b>Overview and places.</b> Overview opens with the five numbers that size the account up (revenue, employees, India centres, India headcount, years in India), then About and the facts side by side. Centres pairs the map with the list, so you see where each one is. Prospects are grouped by department, so you can jump to the finance or IT people." },
+  ];
+  const TABS = [["info", "Account info"], ["centres", "Centres"], ["prospects", "Prospects"]];
+  const state = { v: "a", tab: "info", more: false };
+
+  function header(v) {
+    const infoLabel = v === "b" ? "Overview" : "Account info";
+    const tabs = [["info", infoLabel, ""], ["centres", "Centres", "8"], ["prospects", "Prospects", "26"]];
+    return `<div class="wh">
+      <div class="idrow"><span class="logo3m">3M</span>
+        <div class="idt"><h2>3M Co.</h2><div class="loc">Saint Paul, Minnesota, United States</div>
+          <div class="facts"><span class="fact">Holding Companies</span><span class="fact"><span class="k">Public</span> NYSE: MMM</span><span class="fact ok"><i class="ri-check-line"></i>NASSCOM GCC</span><span class="fact"><span class="k">Fortune 500</span> #183</span></div>
+        </div>
+        <div class="links"><button class="ib" title="Website"><i class="ri-global-line"></i></button><button class="ib" title="LinkedIn"><i class="ri-linkedin-box-line"></i></button><button class="ib lg" title="Close"><i class="ri-close-line"></i></button></div>
+      </div>
+      <div class="tabs">${tabs.map(([id, l, n]) => `<button class="${state.tab === id ? "on" : ""}" data-tab="${id}">${l}${n ? `<span class="n">${n}</span>` : ""}</button>`).join("")}</div>
+    </div>`;
+  }
+
+  const chart = () => `<div class="chart"><div class="h"><span>Annual revenue</span><span>FY2022 to FY2025</span></div>
+    <svg viewBox="0 0 600 120" aria-label="Revenue from 26.2B in FY2022 to 24.6B in FY2023, 24.6B in FY2024 and 24.9B in FY2025">
+      <line x1="0" y1="110" x2="600" y2="110" stroke="hsl(var(--border))" />
+      <path d="M10 22 L200 34 L400 34 L590 31 L590 110 L10 110 Z" fill="hsl(var(--primary) / .1)" />
+      <path d="M10 22 L200 34 L400 34 L590 31" fill="none" stroke="hsl(var(--primary))" stroke-width="2" />
+      ${[[10, 22, "26.2B"], [200, 34, "24.6B"], [400, 34, "24.6B"], [590, 31, "24.9B"]].map(([x, y, t]) => `<circle cx="${x}" cy="${y}" r="3.5" fill="hsl(var(--primary))" /><text x="${Math.min(Math.max(x, 24), 570)}" y="${y - 9}" font-size="11" text-anchor="middle" fill="hsl(var(--muted-foreground))">${t}</text>`).join("")}
+      ${["FY22", "FY23", "FY24", "FY25"].map((t, i) => `<text x="${[18, 200, 400, 578][i]}" y="104" font-size="10.5" text-anchor="middle" fill="hsl(var(--muted-foreground))">${t}</text>`).join("")}
+    </svg></div>`;
+  const offerings = () => { const list = state.more ? OFFERINGS : OFFERINGS.slice(0, 8); return `<div class="offer">${list.map((o) => `<span>${esc(o)}</span>`).join("")}${state.more ? "" : `<button data-more>+${OFFERINGS.length - 8} more</button>`}</div>`; };
+  const about = `<p class="about">3M Co. is a multinational conglomerate that operates in healthcare, consumer goods and industrial products. It is known for products such as Post-it notes, Scotch tape and N95 respirators.</p>`;
+  const sheet = `<div class="sheet">
+      <h4>Company</h4><dl><dt>Type</dt><dd>Public</dd><dt>Stock ticker</dt><dd>MMM, NYSE</dd><dt>Industry</dt><dd>Holding Companies</dd><dt>Sub industry</dt><dd>Industrial Conglomerates</dd><dt>Category</dt><dd>Industrial</dd><dt>Nature</dt><dd>Conglomerate</dd></dl>
+      <h4>Headquarters</h4><dl><dt>City</dt><dd>Saint Paul, Minnesota</dd><dt>Country</dt><dd>United States</dd><dt>Region</dt><dd>North America</dd></dl>
+      <h4>Rankings and listings</h4><dl><dt>Forbes 2000</dt><dd>#403</dd><dt>Fortune 500</dt><dd>#183</dd><dt>NASSCOM GCC</dt><dd>Listed</dd></dl>
+    </div>`;
+
+  function infoA() {
+    return `<div class="ov"><main>
+      <div class="sec"><h3>About</h3>${about}</div>
+      <div class="sec"><h3>Key offerings<small>${OFFERINGS.length}</small></h3>${offerings()}</div>
+      <div class="sec"><h3>Scale and financials</h3>
+        <div class="stats"><div><div class="k">Revenue</div><div class="v">24.95B</div><div class="c">10Bn - 25Bn</div></div><div><div class="k">Market cap</div><div class="v">91.98B</div><div class="c">NYSE: MMM</div></div><div><div class="k">Net profit</div><div class="v">3.54B</div><div class="c">NYSE: MMM</div></div><div><div class="k">Employees</div><div class="v">60,500</div><div class="c">&gt;50K</div></div></div>
+        ${chart()}</div>
+      <div class="sec"><h3>India presence</h3>
+        <div class="stats"><div><div class="k">First centre</div><div class="v">2011</div><div class="c">15 years in India</div></div><div><div class="k">Centre employees</div><div class="v">2,213</div><div class="c">1K - 5K band</div></div><div><div class="k">Primary city</div><div class="v">Bengaluru</div></div><div><div class="k">Hub structure</div><div class="v" style="font-size:16px;margin-top:6px">Hub-dominant</div></div></div>
+        <div class="placeholder" style="margin-top:12px"><div><i class="ri-map-2-line"></i>Map of the 8 centres<br>(same map as today, without the extra card around it)</div></div></div>
+      <div class="sec"><h3>Technology stack</h3><div class="placeholder"><div><i class="ri-layout-grid-line"></i>Tech stack chart (same as today)</div></div></div>
+    </main><aside>${sheet}</aside></div>`;
+  }
+  function infoB() {
+    return `<div class="kpis"><div><div class="k">Revenue</div><div class="v">24.95B</div><div class="c">Market cap 91.98B</div></div><div><div class="k">Employees</div><div class="v">60,500</div><div class="c">Worldwide</div></div><div><div class="k">India centres</div><div class="v">8</div><div class="c">7 active</div></div><div><div class="k">India headcount</div><div class="v">2,213</div><div class="c">1K - 5K band</div></div><div><div class="k">Years in India</div><div class="v">15</div><div class="c">Since 2011</div></div></div>
+      <div class="bcols"><div>
+        <div class="sec"><h3>About</h3>${about}</div>
+        <div class="sec"><h3>Key offerings<small>${OFFERINGS.length}</small></h3>${offerings()}</div>
+        <div class="sec"><h3>Revenue trend</h3>${chart()}</div>
+        <div class="sec"><h3>Technology stack</h3><div class="placeholder"><div><i class="ri-layout-grid-line"></i>Tech stack chart (same as today)</div></div></div>
+      </div><div>${sheet.replace('<div class="sheet">', '<div class="sheet"><h4>India</h4><dl><dt>Primary city</dt><dd>Bengaluru</dd><dt>Hub structure</dt><dd>Hub-dominant</dd><dt>First centre</dt><dd>2011</dd></dl>')}</div></div>`;
+  }
+
+  function centresA() {
+    return `<div class="lt"><label class="search"><i class="ri-search-line"></i><input placeholder="Search 8 centres" /></label><button class="dd"><span class="k">Type</span> All<i class="ri-arrow-down-s-line"></i></button><button class="dd"><span class="k">Headcount</span> All<i class="ri-arrow-down-s-line"></i></button><button class="dd"><span class="k">Status</span> All<i class="ri-arrow-down-s-line"></i></button><span class="sp"></span><span class="cnt">8 centres</span></div>
+      <table class="list"><thead><tr><th>Centre</th><th>Type</th><th>City</th><th class="hide-sm">Headcount</th><th class="hide-sm">Since</th><th>Status</th><th></th></tr></thead><tbody>
+      ${CENTRES.map(([n, t, c, h, s, y]) => `<tr><td class="nm">${esc(n)}</td><td>${t}</td><td>${c}</td><td class="hide-sm">${h}</td><td class="hide-sm">${y}</td><td><span class="st ${s === "Active" ? "" : "off"}">${s}</span></td><td><i class="ri-arrow-right-up-line open"></i></td></tr>`).join("")}
+      </tbody></table>`;
+  }
+  function centresB() {
+    const byCity = {}; CENTRES.forEach((c) => (byCity[c[2]] = (byCity[c[2]] || 0) + 1));
+    return `<div class="csplit"><div class="mapcol"><div class="placeholder"><div><i class="ri-map-2-line"></i>Map of the 8 centres<br>Hovering a centre in the list highlights it here</div></div></div>
+      <div style="display:flex;flex-direction:column;min-height:0"><div class="lt" style="padding:16px 12px 6px 16px"><label class="search" style="flex:1;width:auto"><i class="ri-search-line"></i><input placeholder="Search 8 centres" /></label><button class="dd"><i class="ri-filter-3-line"></i>Filter</button></div>
+      <div class="clist">${Object.keys(byCity).map((city) => `<div class="sg" style="padding:10px 12px 2px;font-size:12px;font-weight:500;color:hsl(var(--muted-foreground))">${city} <span style="float:right">${byCity[city]}</span></div>${CENTRES.filter((c) => c[2] === city).map(([n, t, c, h, s, y]) => `<div class="crow"><div class="tx"><div class="t">${esc(n)}</div><div class="s">${t} · ${h} people · since ${y}</div></div><span class="st ${s === "Active" ? "" : "off"}" title="${s}"></span></div>`).join("")}`).join("")}</div></div></div>`;
+  }
+  const initials = (n) => n.split(" ").map((w) => w[0]).slice(0, 2).join("");
+  function prospectsA() {
+    return `<div class="lt"><label class="search"><i class="ri-search-line"></i><input placeholder="Search 26 prospects" /></label><button class="dd"><span class="k">Department</span> All<i class="ri-arrow-down-s-line"></i></button><button class="dd"><span class="k">Level</span> All<i class="ri-arrow-down-s-line"></i></button><button class="dd"><span class="k">Head type</span> All<i class="ri-arrow-down-s-line"></i></button><span class="sp"></span><span class="cnt">26 prospects</span></div>
+      <table class="list"><thead><tr><th>Name</th><th>Department</th><th>Level</th><th class="hide-sm">City</th><th></th></tr></thead><tbody>
+      ${PEOPLE.map(([n, t, d, l, c, e]) => `<tr><td><div class="person"><span class="av">${initials(n)}</span><div><div class="nm">${n} ${e ? '<span class="tag eng">Engaged</span>' : ""}</div><div class="sub">${t}</div></div></div></td><td>${d}</td><td>${l}</td><td class="hide-sm">${c}</td><td><div style="display:flex;justify-content:flex-end;gap:2px"><button class="ib sm" title="LinkedIn"><i class="ri-linkedin-box-line"></i></button><button class="ib sm" title="Copy email"><i class="ri-mail-line"></i></button></div></td></tr>`).join("")}
+      </tbody></table>`;
+  }
+  function prospectsB() {
+    const depts = {}; PEOPLE.forEach((p) => (depts[p[2]] = depts[p[2]] || []).push(p));
+    const order = Object.keys(depts).sort((a, b) => depts[b].length - depts[a].length);
+    return `<div class="lt"><label class="search"><i class="ri-search-line"></i><input placeholder="Search 26 prospects" /></label>${["All 26", ...order.slice(0, 5).map((d) => `${d} ${depts[d].length}`)].map((l, i) => `<button class="dd ${i === 0 ? "on" : ""}">${l}</button>`).join("")}</div>
+      <div class="pgroups">${order.map((d) => `<div class="pg"><h4>${d}<span>${depts[d].length}</span></h4><div class="pgrid">${depts[d].map(([n, t, , l, c, e]) => `<div class="pp"><span class="av">${initials(n)}</span><div style="min-width:0"><div class="t">${n}${e ? ' <span class="tag eng">Engaged</span>' : ""}</div><div class="s">${t} · ${c}</div></div></div>`).join("")}</div></div>`).join("")}</div>`;
+  }
+
+  function render() {
+    $("#variants").innerHTML = VARIANTS.map((x) => `<button class="${state.v === x.id ? "on" : ""}" data-v="${x.id}">${x.label}</button>`).join("");
+    $("#tabsel").innerHTML = TABS.map(([id, l]) => `<button class="${state.tab === id ? "on" : ""}" data-tab="${id}">${id === "info" && state.v === "b" ? "Overview" : l}</button>`).join("");
+    $("#note").innerHTML = VARIANTS.find((x) => x.id === state.v).note;
+    const body = state.tab === "info" ? (state.v === "a" ? infoA() : infoB()) : state.tab === "centres" ? (state.v === "a" ? centresA() : centresB()) : state.v === "a" ? prospectsA() : prospectsB();
+    $("#stage").innerHTML = `<div class="win">${header(state.v)}<div class="wb">${body}</div></div>`;
+  }
+  document.addEventListener("click", (e) => {
+    const t = (s) => e.target.closest(s);
+    if (t("#theme")) { const dark = document.documentElement.classList.toggle("dark"); $("#theme").innerHTML = dark ? '<i class="ri-sun-line"></i><span>Light</span>' : '<i class="ri-moon-line"></i><span>Dark</span>'; return; }
+    if (t("[data-v]")) { state.v = t("[data-v]").dataset.v; render(); return; }
+    if (t("[data-tab]")) { state.tab = t("[data-tab]").dataset.tab; render(); return; }
+    if (t("[data-more]")) { state.more = true; render(); }
+  });
+  render();
+</script>
+</body>
+</html>

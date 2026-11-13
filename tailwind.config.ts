@@ -11,9 +11,12 @@ const config: Config = {
   ],
   theme: {
   		extend: {
+  			boxShadow: {
+  				float: '0 8px 24px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04)'
+  			},
   		fontFamily: {
   			sans: [
-  				'var(--font-geist-sans)',
+  				'var(--font-sans)',
   				'system-ui',
   				'-apple-system',
   				'BlinkMacSystemFont',
@@ -34,7 +37,8 @@ const config: Config = {
   			},
   			primary: {
   				DEFAULT: 'hsl(var(--primary))',
-  				foreground: 'hsl(var(--primary-foreground))'
+  				foreground: 'hsl(var(--primary-foreground))',
+  				strong: 'hsl(var(--primary-strong))'
   			},
   			secondary: {
   				DEFAULT: 'hsl(var(--secondary))',
@@ -62,6 +66,11 @@ const config: Config = {
   				'4': 'hsl(var(--chart-4))',
   				'5': 'hsl(var(--chart-5))'
   			},
+  			include: {
+  				DEFAULT: 'hsl(var(--include))',
+  				strong: 'hsl(var(--include-strong))'
+  			},
+  			exclude: 'hsl(var(--exclude))',
   			sidebar: {
   				DEFAULT: 'hsl(var(--sidebar-background))',
   				foreground: 'hsl(var(--sidebar-foreground))',
@@ -95,26 +104,6 @@ const config: Config = {
   					height: '0'
   				}
   			},
-  			'fade-in': {
-  				from: {
-  					opacity: '0',
-  					transform: 'translateY(4px)'
-  				},
-  				to: {
-  					opacity: '1',
-  					transform: 'translateY(0)'
-  				}
-  			},
-  			'scale-in': {
-  				from: {
-  					transform: 'scale(0.97)',
-  					opacity: '0'
-  				},
-  				to: {
-  					transform: 'scale(1)',
-  					opacity: '1'
-  				}
-  			},
   			'shimmer': {
   				'0%': {
   					transform: 'translateX(-100%)'
@@ -135,9 +124,7 @@ const config: Config = {
   		animation: {
   			'accordion-down': 'accordion-down 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
   			'accordion-up': 'accordion-up 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
-  			'fade-in': 'fade-in 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
-  			'scale-in': 'scale-in 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)',
-  			'shimmer': 'shimmer 2s infinite',
+  			'shimmer': 'shimmer 1.5s linear infinite',
   			'chart-wave': 'chart-wave 6s linear infinite'
   		}
   	}

@@ -1,20 +1,22 @@
 import type { Metadata } from 'next'
-import { Geist } from 'next/font/google'
+import { DM_Sans } from 'next/font/google'
 import './globals.css'
 import { ThemeProvider } from '@/components/theme-provider'
 import { AppProviders } from '@/app/providers'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { Analytics } from '@vercel/analytics/next'
 import { MaintenancePage } from '@/components/maintenance-page'
-import { Toaster } from 'sonner'
+import { Toaster } from '@/components/ui/sonner'
 
 const isMaintenanceMode = process.env.NEXT_PUBLIC_MAINTENANCE_MODE === 'true'
 
-const geist = Geist({
+// Variable weight plus the optical-size axis, so 11 to 13px text gets the
+// sturdier small-size cut and large figures the finer one.
+const dmSans = DM_Sans({
   subsets: ['latin'],
   display: 'swap',
-  style: ['normal', 'italic'],
-  variable: '--font-geist-sans',
+  axes: ['opsz'],
+  variable: '--font-sans',
 })
 
 export const metadata: Metadata = {
@@ -34,7 +36,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={geist.variable} suppressHydrationWarning>
+    <html lang="en" className={dmSans.variable} suppressHydrationWarning>
       <body>
         <AppProviders>
           <ThemeProvider
@@ -44,7 +46,7 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             {isMaintenanceMode ? <MaintenancePage /> : children}
-            <Toaster richColors position="bottom-right" />
+            <Toaster />
           </ThemeProvider>
         </AppProviders>
         <SpeedInsights />

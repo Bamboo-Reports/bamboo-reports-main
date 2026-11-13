@@ -36,6 +36,9 @@ export function SelectionActionBar({
 }: SelectionActionBarProps) {
   const [mounted, setMounted] = useState(false)
   const [exiting, setExiting] = useState(false)
+  // False for the first frame after mounting, so the enter is a transition from
+  // the hidden state (interruptible, unlike a keyframe that restarts from zero).
+  const [entered, setEntered] = useState(false)
   const [displayCount, setDisplayCount] = useState(0)
 
   useEffect(() => {
@@ -50,26 +53,31 @@ export function SelectionActionBar({
     const timeout = setTimeout(() => {
       setMounted(false)
       setExiting(false)
-    }, 200)
+      setEntered(false)
+    }, 150)
     return () => clearTimeout(timeout)
   }, [show, count, mounted])
+
+  useEffect(() => {
+    if (!mounted || entered) return
+    const frame = requestAnimationFrame(() => setEntered(true))
+    return () => cancelAnimationFrame(frame)
+  }, [mounted, entered])
 
   if (!mounted) return null
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4">
+    <div className="pointer-events-none fixed inset-x-0 bottom-16 z-50 flex justify-center px-4">
       <div
+        data-mounted={entered && !exiting ? "" : undefined}
         className={
-          "pointer-events-auto flex items-center gap-3 rounded-full border bg-background/70 px-4 py-2 shadow-lg backdrop-blur-md supports-[backdrop-filter]:bg-background/60 ease-out " +
-          (exiting
-            ? "animate-out fade-out slide-out-to-bottom-4 duration-200"
-            : "animate-in fade-in slide-in-from-bottom-4 duration-300")
+          "pointer-events-auto flex items-center gap-3 rounded-lg border bg-card px-3 py-2 shadow-float transition-[opacity,transform] ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:translate-y-0 " +
+          (entered && !exiting ? "translate-y-0 opacity-100 duration-200" : "translate-y-4 opacity-0 duration-150")
         }
       >
         <Button
           variant="ghost"
           size="icon-sm"
-          className="rounded-full"
           onClick={() => {
             captureEvent(ANALYTICS_EVENTS.ROW_SELECTION_CLEARED, { entity, selected_count: count })
             onClear()
@@ -78,7 +86,7 @@ export function SelectionActionBar({
         >
           <RiCloseLine className="h-4 w-4" />
         </Button>
-        <span className="text-sm font-medium">{displayCount} selected</span>
+        <span className="text-sm font-medium tabular-nums">{displayCount.toLocaleString()} selected</span>
         {matchingCount !== undefined && onExportAll && (
           <Button
             variant="link"
@@ -96,11 +104,11 @@ export function SelectionActionBar({
             Need all {matchingCount.toLocaleString()}? Export all
           </Button>
         )}
-        <Button size="sm" className="rounded-full px-4" onClick={() => {
+        <Button size="sm" onClick={() => {
             captureEvent(ANALYTICS_EVENTS.SELECTION_EXPORT_CLICKED, { entity, selected_count: count })
             onExport()
           }}>
-          <RiDownloadLine className="h-3.5 w-3.5" />
+          <RiDownloadLine className="h-4 w-4" />
           Export
         </Button>
       </div>

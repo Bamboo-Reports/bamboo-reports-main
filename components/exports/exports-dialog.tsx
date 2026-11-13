@@ -1,37 +1,45 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
-import { RiDownloadLine, RiEyeLine, RiFileZipLine, RiLoader4Line, RiMoreLine } from "@remixicon/react"
-import { PaginationControls } from "@/components/ui/pagination-controls"
-import { getPaginatedData } from "@/lib/utils/helpers"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import {
+  RiArrowRightSLine,
+  RiBriefcaseLine,
+  RiBuildingLine,
+  RiDownloadLine,
+  RiErrorWarningLine,
+  RiFileExcel2Line,
+  RiGroupLine,
+  RiSparklingLine,
+} from "@remixicon/react"
 import { devError } from "@/lib/utils/dev-log"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
+import { HintTooltip } from "@/components/ui/tooltip"
+import { TruncatedText } from "@/components/ui/truncated-text"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+  LibraryDialog,
+  LibraryEmpty,
+  LibraryGroupLabel,
+  LibraryItem,
+  LibraryPaneHeader,
+  LibraryPaneTitle,
+} from "@/components/filters/library-dialog"
+import { fieldText, type DescribedField } from "@/components/filters/filter-description"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { resolveExportDownloadUrl } from "@/lib/exports/request-client"
+import {
+  datasetLabel,
+  describeUserAgent,
+  describeWhen,
+  exportTitle,
+  formatBytes,
+  groupByDay,
+  orderDatasets,
+  selectionSummary,
+} from "@/lib/exports/history"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
+import { plural } from "@/lib/utils/helpers"
 
 type ExportRow = {
   id: string
@@ -42,42 +50,41 @@ type ExportRow = {
   row_counts: Record<string, number>
   total_rows: number
   is_filtered: boolean
+  filters_applied?: unknown
   client_ip: string | null
   user_agent: string | null
 }
 
-function formatBytes(bytes: number): string {
-  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B"
-  const units = ["B", "KB", "MB", "GB"]
-  const i = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)))
-  return `${(bytes / 1024 ** i).toFixed(i === 0 ? 0 : 1)} ${units[i]}`
+const SHEET_ICONS: Record<string, typeof RiBuildingLine> = {
+  accounts: RiBuildingLine,
+  centers: RiBriefcaseLine,
+  services: RiSparklingLine,
+  prospects: RiGroupLine,
 }
 
-function formatDate(iso: string): string {
-  const d = new Date(iso)
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleString()
-}
-
-function formatIp(ip: string | null): string {
-  if (!ip) return "N/A"
-  if (ip === "::1" || ip === "127.0.0.1") return `${ip} (localhost)`
+function formatIp(ip: string | null): string | null {
+  if (!ip) return null
+  if (ip === "::1" || ip === "127.0.0.1") return `${ip} (this computer)`
   return ip
 }
 
 interface ExportsDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** Describes an export's saved filters the way the sidebar does. */
+  describeFilters?: (filters: unknown) => DescribedField[]
 }
 
-const ITEMS_PER_PAGE = 10
-
-export function ExportsDialog({ open, onOpenChange }: ExportsDialogProps) {
+/** My exports: every export you made, grouped by day, with its sheets, filters and a download. */
+export function ExportsDialog({ open, onOpenChange, describeFilters }: ExportsDialogProps) {
   const [exports, setExports] = useState<ExportRow[]>([])
+  const [loaded, setLoaded] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [downloadError, setDownloadError] = useState<string | null>(null)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
-  const [detailsRow, setDetailsRow] = useState<ExportRow | null>(null)
-  const [page, setPage] = useState(1)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [query, setQuery] = useState("")
 
   const fetchExports = useCallback(async () => {
     setLoading(true)
@@ -87,7 +94,7 @@ export function ExportsDialog({ open, onOpenChange }: ExportsDialogProps) {
       const { data: sessionData } = await supabase.auth.getSession()
       const token = sessionData.session?.access_token
       if (!token) {
-        setError("Not signed in.")
+        setError("You are signed out. Sign in again to see your exports.")
         setExports([])
         return
       }
@@ -96,7 +103,7 @@ export function ExportsDialog({ open, onOpenChange }: ExportsDialogProps) {
         cache: "no-store",
       })
       if (!res.ok) {
-        setError(`Failed to load exports (${res.status}).`)
+        setError(`The server returned an error (${res.status}).`)
         setExports([])
         return
       }
@@ -106,29 +113,56 @@ export function ExportsDialog({ open, onOpenChange }: ExportsDialogProps) {
       captureEvent(ANALYTICS_EVENTS.EXPORTS_HISTORY_OPENED, { exports_count: rows.length })
     } catch (err) {
       devError(err)
-      setError("Failed to load exports.")
+      setError("Check your connection and try again.")
     } finally {
       setLoading(false)
+      setLoaded(true)
     }
   }, [])
 
+  // Each opening loads the latest exports and starts on the newest one.
   useEffect(() => {
-    if (!open) { setPage(1); return }
+    if (!open) return
+    setQuery("")
+    setSelectedId(null)
+    setDownloadError(null)
     void fetchExports()
   }, [open, fetchExports])
 
+  const describe = useCallback(
+    (row: ExportRow): { selection: string | null; fields: DescribedField[] } => {
+      const selection = selectionSummary(row.filters_applied)
+      if (selection || !row.is_filtered || !row.filters_applied || !describeFilters) return { selection, fields: [] }
+      return { selection, fields: describeFilters(row.filters_applied) }
+    },
+    [describeFilters]
+  )
+
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return exports
+    return exports.filter((row) => {
+      const { selection, fields } = describe(row)
+      const haystack = [
+        exportTitle(row.datasets),
+        row.filename,
+        describeWhen(row.created_at).long,
+        selection ?? "",
+        ...fields.map((f) => `${f.label} ${fieldText(f)}`),
+      ]
+      return haystack.some((text) => text.toLowerCase().includes(q))
+    })
+  }, [exports, query, describe])
+  const selected = visible.find((row) => row.id === selectedId) ?? visible[0] ?? null
+
   const handleDownload = async (row: ExportRow) => {
     setDownloadingId(row.id)
+    setDownloadError(null)
     try {
-      const supabase = getSupabaseBrowserClient()
-      const { data: sessionData } = await supabase.auth.getSession()
-      const token = sessionData.session?.access_token
-      if (!token) {
-        setError("Session expired.")
-        return
-      }
       const url = await resolveExportDownloadUrl(row.id)
       window.open(url, "_self")
+      // Held a moment after success so the spinner covers the browser starting the download.
+      setTimeout(() => setDownloadingId(null), 1500)
       const createdAt = Date.parse(row.created_at)
       captureEvent(ANALYTICS_EVENTS.EXPORT_DOWNLOAD_CLICKED, {
         export_id: row.id,
@@ -144,281 +178,195 @@ export function ExportsDialog({ open, onOpenChange }: ExportsDialogProps) {
         source: "exports_history",
         error_message: err instanceof Error ? err.message : "Unknown download error",
       })
-      setError(err instanceof Error ? err.message : "Failed to download export.")
-    } finally {
-      setTimeout(() => setDownloadingId(null), 1500)
+      setDownloadError(err instanceof Error ? err.message : "The download did not start. Try again.")
+      setDownloadingId(null)
     }
   }
 
-  return (
-    <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="h-screen w-screen max-w-none overflow-hidden rounded-none p-0 sm:max-w-none glassmorphism-dialog flex flex-col">
-          <DialogHeader className="border-b border-border/60 px-6 py-5 shrink-0">
-            <div className="pr-10">
-              <DialogTitle className="text-2xl font-bold flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
-                  <RiFileZipLine className="h-4 w-4" />
-                </div>
-                My Exports
-              </DialogTitle>
-              <DialogDescription className="mt-1">
-                A record of every export you&apos;ve generated. Files are archived and can be re-downloaded.
-              </DialogDescription>
-            </div>
-          </DialogHeader>
-
-          <div className="flex-1 overflow-auto px-6 py-6">
-            {error && (
-              <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                {error}
-              </div>
-            )}
-
-            {loading && exports.length === 0 && (
-              <div className="overflow-hidden rounded-xl border border-border/60 bg-background/40 backdrop-blur-sm dark:bg-white/5 dark:border-white/10">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[180px]">Date</TableHead>
-                      <TableHead>Filename</TableHead>
-                      <TableHead>Datasets</TableHead>
-                      <TableHead className="w-[100px] text-right">Size</TableHead>
-                      <TableHead className="w-[60px] text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {Array.from({ length: 6 }).map((_, i) => (
-                      <TableRow key={i}>
-                        <TableCell><div className="skeleton-loading rounded h-3 w-28" /></TableCell>
-                        <TableCell><div className="skeleton-loading rounded h-3 w-48" /></TableCell>
-                        <TableCell><div className="skeleton-loading rounded h-3 w-32" /></TableCell>
-                        <TableCell className="text-right"><div className="skeleton-loading rounded h-3 w-12 ml-auto" /></TableCell>
-                        <TableCell className="text-right"><div className="skeleton-loading rounded h-3 w-6 ml-auto" /></TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-
-            {!loading && exports.length === 0 && !error && (
-              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 bg-background/40 py-24 text-center backdrop-blur-sm dark:bg-white/5 dark:border-white/10">
-                <RiFileZipLine className="mb-3 h-10 w-10 text-muted-foreground" />
-                <p className="text-sm font-medium">No exports yet</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Your past exports will appear here after you generate one from the dashboard.
-                </p>
-              </div>
-            )}
-
-            {exports.length > 0 && (
-              <div className="overflow-hidden rounded-xl border border-border/60 bg-background/40 backdrop-blur-sm dark:bg-white/5 dark:border-white/10">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[180px]">Date</TableHead>
-                      <TableHead>Filename</TableHead>
-                      <TableHead>Datasets</TableHead>
-                      <TableHead className="w-[100px] text-right">Size</TableHead>
-                      <TableHead className="w-[60px] text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {(getPaginatedData(exports, page, ITEMS_PER_PAGE) as ExportRow[]).map((row) => (
-                      <TableRow key={row.id}>
-                        <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                          {formatDate(row.created_at)}
-                        </TableCell>
-                        <TableCell className="font-mono text-xs">{row.filename}</TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {row.datasets.map((d) => (
-                              <Badge
-                                key={d}
-                                variant="secondary"
-                                className="text-[10px] capitalize"
-                              >
-                                {d}
-                              </Badge>
-                            ))}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right text-xs tabular-nums text-muted-foreground">
-                          {formatBytes(row.file_size_bytes)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                disabled={downloadingId === row.id}
-                                aria-label="Export actions"
-                              >
-                                {downloadingId === row.id ? (
-                                  <RiLoader4Line className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <RiMoreLine className="h-4 w-4" />
-                                )}
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-44">
-                              <DropdownMenuItem
-                                onSelect={() => setDetailsRow(row)}
-                                className="cursor-pointer"
-                              >
-                                <RiEyeLine className="h-4 w-4" />
-                                View details
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onSelect={() => handleDownload(row)}
-                                className="cursor-pointer"
-                              >
-                                <RiDownloadLine className="h-4 w-4" />
-                                Download
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                <PaginationControls
-                  currentPage={page}
-                  totalItems={exports.length}
-                  itemsPerPage={ITEMS_PER_PAGE}
-                  onPageChange={setPage}
-                  dataLength={exports.length}
-                />
-              </div>
-            )}
+  const renderItems = () => {
+    if (loading && !loaded) {
+      return Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className="flex items-center gap-2.5 px-2.5 py-2.5">
+          <Skeleton className="h-4 w-4 rounded" />
+          <div className="flex-1 space-y-1.5">
+            <Skeleton className="h-3 w-3/5 rounded" />
+            <Skeleton className="h-2.5 w-2/5 rounded" />
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      ))
+    }
+    if (visible.length === 0) {
+      if (query.trim()) return <LibraryEmpty>No exports match &ldquo;{query.trim()}&rdquo;</LibraryEmpty>
+      return error ? null : <LibraryEmpty>Your exports will appear here</LibraryEmpty>
+    }
+    return groupByDay(visible, (row) => row.created_at).map(({ group, rows }) => (
+      <div key={group}>
+        <LibraryGroupLabel>{group}</LibraryGroupLabel>
+        {rows.map((row) => (
+          <LibraryItem
+            key={row.id}
+            selected={selected?.id === row.id}
+            onSelect={() => {
+              setSelectedId(row.id)
+              setDownloadError(null)
+            }}
+            icon={<RiFileExcel2Line className="h-4 w-4" />}
+            name={exportTitle(row.datasets)}
+            meta={`${describeWhen(row.created_at).short} · ${plural(row.total_rows, "row")}`}
+          />
+        ))}
+      </div>
+    ))
+  }
 
-      <ExportDetailsDialog
-        row={detailsRow}
-        onOpenChange={(next) => {
-          if (!next) setDetailsRow(null)
-        }}
-        onDownload={(r) => handleDownload(r)}
-        isDownloading={(id) => downloadingId === id}
-      />
-    </>
-  )
-}
+  const renderDetail = () => {
+    if (error) {
+      return (
+        <div className="grid flex-1 place-items-center p-8 text-center" role="alert">
+          <div>
+            <RiErrorWarningLine className="mx-auto h-7 w-7 text-exclude" />
+            <p className="mt-3 text-sm font-medium">Could not load your exports</p>
+            <p className="mt-1 text-[13px] text-muted-foreground">{error}</p>
+            <Button variant="outline" size="sm" className="mt-3" onClick={() => void fetchExports()}>
+              Try again
+            </Button>
+          </div>
+        </div>
+      )
+    }
+    if (loading && !loaded) {
+      return (
+        <div className="space-y-3 p-5">
+          <Skeleton className="h-4 w-48 rounded" />
+          <Skeleton className="h-3 w-64 rounded" />
+        </div>
+      )
+    }
+    if (!selected) {
+      if (exports.length > 0) return null
+      return (
+        <div className="grid flex-1 place-items-center p-8 text-center">
+          <div className="max-w-sm">
+            <RiFileExcel2Line className="mx-auto h-7 w-7 text-muted-foreground" />
+            <p className="mt-3 text-sm font-medium">No exports yet</p>
+            <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
+              Use Export in the filters panel to download the dashboard as an Excel file. Every export is kept here so you can download it again.
+            </p>
+          </div>
+        </div>
+      )
+    }
 
-function ExportDetailsDialog({
-  row,
-  onOpenChange,
-  onDownload,
-  isDownloading,
-}: {
-  row: ExportRow | null
-  onOpenChange: (open: boolean) => void
-  onDownload: (row: ExportRow) => void
-  isDownloading: (id: string) => boolean
-}) {
-  return (
-    <Dialog open={row !== null} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl glassmorphism-dialog">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-bold flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
-              <RiFileZipLine className="h-4 w-4" />
-            </div>
-            Export details
-          </DialogTitle>
-          <DialogDescription>
-            Full audit record for this export.
-          </DialogDescription>
-        </DialogHeader>
-
-        {row && (
-          <div className="space-y-5">
-            <section className="rounded-xl border border-border/60 bg-background/40 backdrop-blur-sm p-4 dark:bg-white/5 dark:border-white/10">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-                File
-              </p>
-              <div className="space-y-2 text-sm">
-                <DetailRow label="Filename" value={<span className="font-mono text-xs">{row.filename}</span>} />
-                <DetailRow label="Size" value={formatBytes(row.file_size_bytes)} />
-                <DetailRow label="Exported at" value={formatDate(row.created_at)} />
-                <DetailRow
-                  label="Scope"
-                  value={row.is_filtered ? "Filtered dataset" : "Full dataset"}
-                />
-              </div>
-            </section>
-
-            <section className="rounded-xl border border-border/60 bg-background/40 backdrop-blur-sm p-4 dark:bg-white/5 dark:border-white/10">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-                Row counts
-              </p>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {row.datasets.map((d) => (
-                  <div
-                    key={d}
-                    className="rounded-lg border border-border/50 bg-background/50 px-3 py-2 dark:bg-white/5"
-                  >
-                    <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground capitalize">
-                      {d}
-                    </p>
-                    <p className="text-lg font-semibold tabular-nums">
-                      {(row.row_counts?.[d] ?? 0).toLocaleString()}
-                    </p>
+    const datasets = orderDatasets(selected.datasets)
+    const { selection, fields } = describe(selected)
+    const browser = describeUserAgent(selected.user_agent)
+    const ip = formatIp(selected.client_ip)
+    return (
+      <>
+        <LibraryPaneHeader
+          title={<LibraryPaneTitle>{exportTitle(selected.datasets)}</LibraryPaneTitle>}
+          meta={[describeWhen(selected.created_at).long, plural(selected.total_rows, "row"), formatBytes(selected.file_size_bytes)].join(" · ")}
+          actions={
+            <Button size="sm" onClick={() => handleDownload(selected)} loading={downloadingId === selected.id}>
+              {downloadingId === selected.id ? null : <RiDownloadLine />}
+              Download
+            </Button>
+          }
+        />
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-4">
+          {downloadError && (
+            <p className="rounded-lg bg-exclude/[0.06] px-3 py-2 text-[13px] text-exclude" role="alert">
+              {downloadError}
+            </p>
+          )}
+          <section>
+            <h4 className="mb-2 text-xs font-medium text-muted-foreground">Sheets</h4>
+            <div className="text-[13px]">
+              {datasets.map((key) => {
+                const Icon = SHEET_ICONS[key] ?? RiFileExcel2Line
+                return (
+                  <div key={key} className="flex items-center gap-2 border-b border-border/60 py-2">
+                    <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="flex-1">{datasetLabel(key)}</span>
+                    <span className="font-medium tabular-nums">{(selected.row_counts?.[key] ?? 0).toLocaleString()}</span>
                   </div>
+                )
+              })}
+              {datasets.length > 1 && (
+                <div className="flex items-center gap-2 py-2 font-medium">
+                  <span className="w-4 shrink-0" />
+                  <span className="flex-1">Total</span>
+                  <span className="tabular-nums">{selected.total_rows.toLocaleString()}</span>
+                </div>
+              )}
+            </div>
+          </section>
+
+          <section>
+            <h4 className="mb-2 text-xs font-medium text-muted-foreground">Filters it followed</h4>
+            {selection ? (
+              <p className="text-[13px]">Only the {selection} you selected.</p>
+            ) : !selected.is_filtered ? (
+              <p className="text-[13px] text-muted-foreground">No filters. Everything shown on the dashboard at the time.</p>
+            ) : fields.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {fields.map((field) => (
+                  <span
+                    key={field.key ?? field.label}
+                    className="inline-flex h-6 max-w-full items-center gap-1 rounded-md border bg-card px-2 text-xs font-medium"
+                  >
+                    <span className="shrink-0 font-normal text-muted-foreground">{field.label}</span>
+                    <TruncatedText text={fieldText(field)} />
+                  </span>
                 ))}
               </div>
-              <div className="mt-3 flex items-center justify-between border-t border-border/40 pt-3 text-sm">
-                <span className="text-muted-foreground">Total</span>
-                <span className="font-semibold tabular-nums">{row.total_rows.toLocaleString()}</span>
-              </div>
-            </section>
+            ) : (
+              <p className="text-[13px] text-muted-foreground">Filtered, but the filters were not recorded for this export.</p>
+            )}
+          </section>
 
-            <section className="rounded-xl border border-border/60 bg-background/40 backdrop-blur-sm p-4 dark:bg-white/5 dark:border-white/10">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-                Request context
-              </p>
-              <div className="space-y-2 text-sm">
-                <DetailRow label="IP address" value={<span className="font-mono text-xs">{formatIp(row.client_ip)}</span>} />
-                <DetailRow
-                  label="User agent"
-                  value={
-                    <span className="font-mono text-[11px] break-all text-right max-w-[400px] block">
-                      {row.user_agent ?? "N/A"}
+          <details className="group">
+            <summary className="inline-flex cursor-pointer list-none items-center gap-1 rounded-sm text-xs font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+              <RiArrowRightSLine className="h-4 w-4 transition-transform duration-200 ease-out motion-reduce:transition-none group-open:rotate-90" />
+              Request details
+            </summary>
+            <dl className="mt-2 grid grid-cols-[110px_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-[13px]">
+              <dt className="text-muted-foreground">File name</dt>
+              <dd className="break-all">{selected.filename}</dd>
+              <dt className="text-muted-foreground">IP address</dt>
+              <dd className="tabular-nums">{ip ?? "Not recorded"}</dd>
+              <dt className="text-muted-foreground">Browser</dt>
+              <dd>
+                {browser && selected.user_agent ? (
+                  <HintTooltip label={browser} hint={selected.user_agent} align="start">
+                    <span tabIndex={0} className="rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                      {browser}
                     </span>
-                  }
-                />
-              </div>
-            </section>
+                  </HintTooltip>
+                ) : (
+                  browser ?? "Not recorded"
+                )}
+              </dd>
+            </dl>
+          </details>
+        </div>
+      </>
+    )
+  }
 
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Close
-              </Button>
-              <Button
-                onClick={() => onDownload(row)}
-                loading={isDownloading(row.id)}
-              >
-                {isDownloading(row.id) ? null : <RiDownloadLine />}
-                Download
-              </Button>
-            </div>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-border/30 pb-1.5 last:border-b-0 last:pb-0">
-      <span className="text-muted-foreground shrink-0">{label}</span>
-      <span className="text-right text-foreground">{value}</span>
-    </div>
+    <LibraryDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="My exports"
+      titleMeta={loaded && !error && exports.length > 0 ? plural(exports.length, "export") : undefined}
+      description="Every export you have made, with its sheets and filters. Download any of them again."
+      searchPlaceholder="Search exports"
+      query={query}
+      onQueryChange={setQuery}
+      items={renderItems()}
+    >
+      {renderDetail()}
+    </LibraryDialog>
   )
 }

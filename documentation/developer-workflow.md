@@ -46,28 +46,22 @@ To add a new filter (e.g., "Founded Year") to the sidebar:
 6. **Update the server-side SQL translation:**
     Server mode translates filters to SQL in `lib/dashboard/filtering-sql.ts`. Every new filter must be implemented there and covered by the parity suite (`tests/unit/filtering-sql-parity.test.ts`). The old client engine, `lib/dashboard/filtering.ts`, no longer runs in the app; it survives only as the reference implementation that suite compares the SQL against. See [Server-Mode Dashboard](backend/server-dashboard-mode.md).
 
-### 2.2 Adjusting Deployment Access or Premium Filters
+### 2.2 Grouping Filters and Removing Them
 
-Prefer config changes over dashboard forks for client-specific packaging.
+Every deployment gets the whole product: all three sections (accounts, centres, prospects), every export dataset and every filter. There is no per-deployment or per-plan switch; a filter that should not ship is removed, not hidden.
 
-1. **Top-level section access:**
-    Edit `lib/config/dashboard-access.ts`.
-    - Use this to enable or disable `accounts`, `centers`, and `prospects`.
-
-2. **Filter availability and premium reveal:**
+1. **Filter "More" divider:**
     Edit `lib/config/filters.ts`.
-    - Use `enabled` on individual filters to turn them on or off.
-    - Use `showMoreEnabled` and `premiumFilterKeys` on `accounts` / `centers` to control premium `Show More` filters.
+    - Use `moreFilterKeys` on `accounts` / `centers` to list the less-used filters shown under the "More" divider.
 
-3. **Saved-filter behavior:**
-    Disabled section filters and premium-disabled filters are sanitized out at load/runtime, so these changes do not require saved-filter migrations.
+2. **Saved-filter behavior:**
+    Keys a saved filter carries for filters that no longer exist are dropped on load (`withFilterDefaults`, `parseFilters`), so removing a filter needs no saved-filter migration.
 
 ### 2.3 Adding a New Chart
 
 1. **Create Component:**
     Create `components/charts/my-new-chart.tsx`.
-    - Use `highcharts` for donut charts, treemaps, and other categorical visualizations (see `components/charts/pie-chart-card.tsx`).
-    - Use `recharts` via the shadcn `components/ui/chart.tsx` wrapper for line/area trend charts.
+    - Use `highcharts` for donut charts and other categorical visualizations (see `components/charts/pie-chart-card.tsx`).
 
 2. **Prepare Data:**
     Create a helper in `lib/utils/chart-helpers.ts` to transform raw data into the format required by the chart library.
@@ -157,7 +151,7 @@ If UI alignment needs tuning:
 - **Shared types** go in `lib/types.ts`.
 - **Configuration** goes in `lib/config/`.
 - **Validation schemas** go in `lib/validators/`.
-- **Deployment packaging config** goes in `lib/config/dashboard-access.ts` and `lib/config/filters.ts`.
+- **Filter grouping config** goes in `lib/config/filters.ts`.
 - **Tests** go in `tests/` mimicking the structure of the application.
 
 ### Testing

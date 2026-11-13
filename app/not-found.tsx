@@ -9,7 +9,7 @@ export default function NotFound() {
       <Card className="border-border/70 bg-card shadow-sm">
         <div className="p-6 sm:p-8">
           <p className="text-sm font-medium text-muted-foreground">Error 404</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
+          <h1 className="mt-1 text-[22px] font-semibold tracking-[-0.01em] text-foreground">
             This page does not exist
           </h1>
           <p className="mt-1.5 text-sm text-muted-foreground">

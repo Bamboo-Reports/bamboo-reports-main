@@ -148,7 +148,6 @@ describe("server export builder", () => {
         datasets: ["accounts", "centers", "services", "prospects"],
         accountNames: ["Should Be Ignored"],
         filters: { ...(await import("@/lib/dashboard/defaults")).createDefaultFilters(FILTERS) },
-        access: {},
       })
 
       expect(mocks.queryRaw).not.toHaveBeenCalled()
@@ -175,7 +174,6 @@ describe("server export builder", () => {
       const result = await buildServerExport({
         datasets: ["accounts"],
         filters: (await import("@/lib/dashboard/defaults")).createDefaultFilters(FILTERS),
-        access: {},
       })
       expect(result.rowCounts.accounts).toBe(1)
 

@@ -1,5 +1,17 @@
 import type { Filters, FilterValue } from "@/lib/types"
 
+/** How an uploaded name became an account. "none" means it was not matched. */
+export type AccountListMatchVia = "exact" | "suffix" | "alias" | "close" | "manual" | "none"
+
+const MATCH_VIAS: readonly AccountListMatchVia[] = ["exact", "suffix", "alias", "close", "manual", "none"]
+
+/** One name from the uploaded file and the account it was matched to. */
+export interface AccountListMatch {
+  input: string
+  account: string | null
+  via: AccountListMatchVia
+}
+
 /** A client-provided account list mapped to exact warehouse account names. */
 export interface AccountList {
   id: string
@@ -8,6 +20,8 @@ export interface AccountList {
   accounts: string[]
   /** Uploaded names that were not mapped to an account. */
   unmatched: string[]
+  /** Every uploaded name and what it became. Empty for lists saved before this was recorded. */
+  matches: AccountListMatch[]
   source_file: string | null
   created_at: string
   updated_at: string
@@ -29,6 +43,40 @@ function toStringArray(value: unknown): string[] {
   return value.filter((v): v is string => typeof v === "string" && v.trim().length > 0)
 }
 
+function toMatchArray(value: unknown): AccountListMatch[] {
+  if (typeof value === "string") {
+    try {
+      value = JSON.parse(value)
+    } catch {
+      return []
+    }
+  }
+  if (!Array.isArray(value)) return []
+  const out: AccountListMatch[] = []
+  for (const entry of value) {
+    if (!entry || typeof entry !== "object") continue
+    const { input, account, via } = entry as Record<string, unknown>
+    if (typeof input !== "string" || !input.trim()) continue
+    const name = typeof account === "string" && account.trim() ? account : null
+    const how = MATCH_VIAS.includes(via as AccountListMatchVia) ? (via as AccountListMatchVia) : name ? "exact" : "none"
+    out.push({ input, account: name, via: name ? (how === "none" ? "manual" : how) : "none" })
+  }
+  return out
+}
+
+/**
+ * Maps an unmatched uploaded name to an account: adds the account to the list,
+ * drops the name from the unmatched names and records it as picked by hand.
+ */
+export function mapUnmatchedName(list: AccountList, input: string, account: string): Pick<AccountList, "accounts" | "unmatched" | "matches"> {
+  const accounts = list.accounts.some((name) => name.toLowerCase() === account.toLowerCase()) ? list.accounts : [...list.accounts, account]
+  return {
+    accounts,
+    unmatched: list.unmatched.filter((name) => name !== input),
+    matches: list.matches.map((m) => (m.input === input && !m.account ? { input, account, via: "manual" } : m)),
+  }
+}
+
 /** Coerces a Supabase row into an AccountList, or null when malformed. */
 export function normalizeAccountList(row: Record<string, unknown> | null | undefined): AccountList | null {
   if (!row || typeof row.id !== "string" || typeof row.name !== "string") return null
@@ -38,6 +86,7 @@ export function normalizeAccountList(row: Record<string, unknown> | null | undef
     name: row.name,
     accounts: toStringArray(row.accounts),
     unmatched: toStringArray(row.unmatched),
+    matches: toMatchArray(row.matches),
     source_file: typeof row.source_file === "string" ? row.source_file : null,
     created_at: typeof row.created_at === "string" ? row.created_at : "",
     updated_at: typeof row.updated_at === "string" ? row.updated_at : "",
@@ -81,7 +130,13 @@ export function expandAccountLists(filters: Filters, lists: AccountList[]): Filt
     }
     ;(entry.mode === "exclude" ? exclude : include).push(...list.accounts)
   }
-  if (missing && include.length === 0 && exclude.length === 0) return filters
+  // A list that is not to hand (another user's, deleted, or created a moment
+  // ago and not yet in this context) keeps the names stored with it, so its
+  // accounts still apply; the known lists' names are added so an edit to one
+  // of them still reaches the filters.
+  if (missing) {
+    for (const entry of filters.accountNameValues) (entry.mode === "exclude" ? exclude : include).push(entry.value)
+  }
   const dedupe = (names: string[], mode: FilterValue["mode"]): FilterValue[] =>
     Array.from(new Set(names)).map((value) => ({ value, mode }))
   return { ...filters, accountNameValues: [...dedupe(include, "include"), ...dedupe(exclude, "exclude")] }
@@ -89,6 +144,15 @@ export function expandAccountLists(filters: Filters, lists: AccountList[]): Filt
 
 /** Sets the selected lists on a filter and re-derives the exact names. */
 export function withAccountLists(filters: Filters, selection: FilterValue[], lists: AccountList[]): Filters {
-  const next: Filters = { ...filters, accountListValues: selection, accountNameValues: [] }
+  const byId = new Map(lists.map((l) => [l.id, l]))
+  // Names of the lists to hand are derived again below. If the selection also
+  // names a list that is not to hand, whatever the filters hold beyond the
+  // known lists' names is that list's, so it is carried rather than dropped.
+  let carried: FilterValue[] = []
+  if (selection.some((entry) => !byId.has(entry.value))) {
+    const derivable = new Set(filters.accountListValues.flatMap((entry) => byId.get(entry.value)?.accounts ?? []))
+    carried = filters.accountNameValues.filter((entry) => !derivable.has(entry.value))
+  }
+  const next: Filters = { ...filters, accountListValues: selection, accountNameValues: carried }
   return expandAccountLists(next, lists)
 }

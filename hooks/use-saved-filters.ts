@@ -5,9 +5,20 @@ import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { buildTrackedFiltersSnapshot, normalizeTrackedText } from "@/lib/analytics/tracking"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
-import { calculateActiveFilters, withFilterDefaults } from "@/lib/dashboard/filter-summary"
-import type { SavedFilter } from "@/components/filters/saved-filter-card"
+import { countActiveFilters } from "@/lib/dashboard/active-filters"
+import { withFilterDefaults } from "@/lib/dashboard/filter-summary"
+import { withUnsetRanges } from "@/lib/dashboard/range-limits"
 import type { Filters } from "@/lib/types"
+
+export interface SavedFilter {
+  id: string
+  name: string
+  filters: Filters
+  created_at: string
+  updated_at: string
+  user_id: string
+  owner_email?: string
+}
 
 export interface FilterShare {
   id: string
@@ -138,15 +149,16 @@ export function useSavedFilters() {
     loadSavedFilters()
   }, [authReady, loadSavedFilters, userId])
 
-  const saveFilter = useCallback(async (name: string, filters: Filters) => {
-    if (!name.trim() || !userId) return false
+  /** Saves the filters under `name`; resolves to the new filter's id, or null on failure. */
+  const saveFilter = useCallback(async (name: string, filters: Filters): Promise<string | null> => {
+    if (!name.trim() || !userId) return null
     const normalizedName = name.trim()
 
     setLoading(true)
     try {
       const { data, error } = await supabase
         .from("saved_filters")
-        .insert({ name: normalizedName, filters: filters, user_id: userId })
+        .insert({ name: normalizedName, filters: withUnsetRanges(filters), user_id: userId })
         .select("id, name")
         .single()
 
@@ -156,13 +168,13 @@ export function useSavedFilters() {
         saved_filter_id: data?.id ?? null,
         saved_filter_name: normalizeTrackedText(normalizedName),
         filter_name_length: normalizedName.length,
-        active_filters_count: calculateActiveFilters(filters),
+        active_filters_count: countActiveFilters(filters),
         saved_filters_snapshot: buildTrackedFiltersSnapshot(filters),
       })
-      return true
+      return (data?.id as string | undefined) ?? null
     } catch (error) {
       devError("Error saving filter:", error)
-      return false
+      return null
     } finally {
       setLoading(false)
     }
@@ -184,7 +196,7 @@ export function useSavedFilters() {
       captureEvent(ANALYTICS_EVENTS.SAVED_FILTER_DELETED, {
         saved_filter_id: id,
         saved_filter_name: filterToDelete ? normalizeTrackedText(filterToDelete.name) : null,
-        active_filters_count: filterToDelete ? calculateActiveFilters(filterToDelete.filters) : null,
+        active_filters_count: filterToDelete ? countActiveFilters(filterToDelete.filters) : null,
         deleted_filters_snapshot: filterToDelete ? buildTrackedFiltersSnapshot(filterToDelete.filters) : null,
       })
       return true
@@ -206,7 +218,7 @@ export function useSavedFilters() {
         .from("saved_filters")
         .update({
           name: normalizedName,
-          filters: filters,
+          filters: withUnsetRanges(filters),
           updated_at: new Date().toISOString(),
         })
         .eq("id", id)
@@ -219,7 +231,7 @@ export function useSavedFilters() {
         previous_filter_name: previousFilter ? normalizeTrackedText(previousFilter.name) : null,
         next_filter_name: normalizeTrackedText(normalizedName),
         filter_name_length: normalizedName.length,
-        active_filters_count: calculateActiveFilters(filters),
+        active_filters_count: countActiveFilters(filters),
         updated_filters_snapshot: buildTrackedFiltersSnapshot(filters),
       })
       return true

@@ -83,17 +83,6 @@ describe("dashboard filtering", () => {
     expect(result.filteredProspects.map((p) => p.prospect_full_name)).toEqual(["Ada Lovelace"])
   })
 
-  it("can disable sections through access configuration", () => {
-    const result = getFilteredData(accounts, centers, functions, services, prospects, tech, makeFilters(), {
-      accountsEnabled: false,
-      centersEnabled: true,
-      prospectsEnabled: false,
-    })
-    expect(result.filteredAccounts).toEqual([])
-    expect(result.filteredProspects).toEqual([])
-    expect(result.filteredCenters.map((c) => c.cn_unique_key)).toEqual(["CN-1"])
-  })
-
   it("calculates dynamic revenue range after non-revenue filters", () => {
     const range = getDynamicRevenueRange(
       accounts,
@@ -116,22 +105,6 @@ describe("dashboard filtering", () => {
       { value: "USA", count: 1 },
     ])
     expect(options.centerCityValues).toEqual([{ value: "Bengaluru", count: 1 }])
-  })
-
-  it("handles prospectsEnabled isolated selection logic", () => {
-    const result = getFilteredData(
-      accounts,
-      centers,
-      functions,
-      services,
-      prospects,
-      tech,
-      makeFilters({ prospectDepartmentValues: [fv("Engineering")] }),
-      { accountsEnabled: false, centersEnabled: false, prospectsEnabled: true }
-    )
-    expect(result.filteredAccounts).toEqual([])
-    expect(result.filteredCenters).toEqual([])
-    expect(result.filteredProspects.map(p => p.prospect_full_name)).toEqual(["Ada Lovelace"])
   })
 
   it("handles dynamic revenue range with no matching accounts", () => {

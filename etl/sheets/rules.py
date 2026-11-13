@@ -947,6 +947,11 @@ ALL_RULES = {
             "Can Have URL": "No",
             "Description": "string",
         },
+        "account_hq_stock_exchange": {
+            "Can Be Nullable": "Yes",
+            "Can Have URL": "No",
+            "Description": "string",
+        },
         "notes": {
             "Can Be Nullable": "Yes",
             "Can Have URL": "Yes",

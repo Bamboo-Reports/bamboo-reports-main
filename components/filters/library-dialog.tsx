@@ -1,0 +1,274 @@
+"use client"
+
+import React from "react"
+import { RiCheckLine, RiCloseLine, RiSearchLine } from "@remixicon/react"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { TruncatedText } from "@/components/ui/truncated-text"
+import { cn } from "@/lib/utils"
+import { onSegmentKeyDown } from "@/components/filters/segment-keys"
+
+const LIBRARY_TABS: readonly LibraryTab[] = ["mine", "shared"]
+
+export type LibraryTab = "mine" | "shared"
+
+interface LibraryDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  title: string
+  description: string
+  searchPlaceholder: string
+  query: string
+  onQueryChange: (query: string) => void
+  /** Mine / Shared with me tabs; omitted for libraries that are only yours (My exports). */
+  tab?: LibraryTab
+  onTabChange?: (tab: LibraryTab) => void
+  mineCount?: number
+  sharedCount?: number
+  /** Shown beside the title, such as a count. */
+  titleMeta?: React.ReactNode
+  /** The items in the left column (LibraryItem elements, or an empty message). */
+  items: React.ReactNode
+  /** Pinned under the items, such as "Upload list". */
+  footer?: React.ReactNode
+  /** The selected item, or another view such as an upload step. */
+  children: React.ReactNode
+}
+
+/**
+ * A library of named things (account lists, saved filters): search and pick on
+ * the left, everything about the selected one on the right.
+ */
+export function LibraryDialog({
+  open,
+  onOpenChange,
+  title,
+  description,
+  searchPlaceholder,
+  query,
+  onQueryChange,
+  tab,
+  onTabChange,
+  mineCount,
+  sharedCount,
+  titleMeta,
+  items,
+  footer,
+  children,
+}: LibraryDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className="flex h-[min(620px,88vh)] w-[calc(100%-2rem)] max-w-[920px] flex-col gap-0 overflow-hidden p-0"
+        // Escape in a rename box cancels the rename; Radix would otherwise close the window first.
+        onEscapeKeyDown={(event) => {
+          if ((document.activeElement as HTMLElement | null)?.closest("[data-library-rename]")) event.preventDefault()
+        }}
+      >
+        <DialogHeader className="shrink-0 space-y-0 px-5 py-4 pr-12">
+          <div className="flex items-baseline gap-2.5">
+            <DialogTitle>{title}</DialogTitle>
+            {titleMeta && <span className="text-[13px] tabular-nums text-muted-foreground">{titleMeta}</span>}
+          </div>
+          <DialogDescription className="sr-only">{description}</DialogDescription>
+        </DialogHeader>
+        <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,38%)_minmax(0,1fr)] border-t sm:grid-cols-[288px_minmax(0,1fr)] sm:grid-rows-1">
+          <aside className="flex min-h-0 flex-col border-b bg-muted/30 sm:border-b-0 sm:border-r">
+            <div className="flex shrink-0 flex-col gap-2 p-3 pb-2">
+              <label className="flex h-9 items-center gap-2 rounded-lg border border-transparent bg-muted/80 px-2.5 text-muted-foreground transition-shadow focus-within:border-primary/60 focus-within:ring-[3px] focus-within:ring-primary/15">
+                <RiSearchLine className="h-4 w-4 shrink-0" />
+                <input
+                  value={query}
+                  onChange={(event) => onQueryChange(event.target.value)}
+                  placeholder={searchPlaceholder}
+                  aria-label={searchPlaceholder}
+                  className="min-w-0 flex-1 bg-transparent text-[13px] text-foreground placeholder:text-muted-foreground focus:outline-none"
+                />
+              </label>
+              {tab && onTabChange && (
+              <div className="grid grid-cols-2 rounded-lg bg-muted/80 p-0.5" role="tablist" aria-label={`${title} owner`}>
+                {([
+                  ["mine", "Mine", mineCount],
+                  ["shared", "Shared with me", sharedCount],
+                ] as const).map(([value, label, count]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    role="tab"
+                    aria-selected={tab === value}
+                    tabIndex={tab === value ? 0 : -1}
+                    onClick={() => onTabChange(value)}
+                    onKeyDown={(event) => onSegmentKeyDown(event, LIBRARY_TABS, tab, onTabChange)}
+                    className={cn(
+                      "h-7 rounded-md text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      tab === value
+                        ? "bg-background text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.08),0_0_0_1px_hsl(var(--border)/0.6)]"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {label}
+                    <span className="ml-1 text-xs font-normal tabular-nums text-muted-foreground">{count ?? 0}</span>
+                  </button>
+                ))}
+              </div>
+              )}
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">{items}</div>
+            {footer && <div className="shrink-0 border-t p-3">{footer}</div>}
+          </aside>
+          <section className="flex min-h-0 flex-col">{children}</section>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+interface LibraryItemProps {
+  selected: boolean
+  onSelect: () => void
+  icon: React.ReactNode
+  name: string
+  meta: string
+  badge?: React.ReactNode
+}
+
+export function LibraryItem({ selected, onSelect, icon, name, meta, badge }: LibraryItemProps) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-current={selected || undefined}
+      className={cn(
+        "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+        selected ? "bg-primary/10" : "hover:bg-muted/70"
+      )}
+    >
+      <span className={cn("grid h-4 w-4 shrink-0 place-items-center", selected ? "text-primary-strong" : "text-muted-foreground")}>{icon}</span>
+      <span className="min-w-0 flex-1">
+        <TruncatedText text={name} className={cn("text-[13px] font-medium", selected && "text-primary-strong")} />
+        <span className="block truncate text-xs tabular-nums text-muted-foreground">{meta}</span>
+      </span>
+      {badge}
+    </button>
+  )
+}
+
+/** A sticky heading over a run of items, such as "Today". Set --library-group-bg on a list whose background differs from the side column. */
+export function LibraryGroupLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="sticky top-0 z-[1] bg-[var(--library-group-bg,color-mix(in_srgb,hsl(var(--muted))_30%,hsl(var(--background))))] px-2.5 pb-1 pt-3 text-xs font-medium text-muted-foreground">
+      {children}
+    </div>
+  )
+}
+
+export function LibraryEmpty({ children }: { children: React.ReactNode }) {
+  return <p className="px-3 py-6 text-center text-[13px] leading-relaxed text-muted-foreground">{children}</p>
+}
+
+interface LibraryPaneHeaderProps {
+  title: React.ReactNode
+  meta?: React.ReactNode
+  actions?: React.ReactNode
+}
+
+export function LibraryPaneHeader({ title, meta, actions }: LibraryPaneHeaderProps) {
+  return (
+    <div className="shrink-0 border-b px-5 pb-4 pt-4">
+      {title}
+      {meta && <div className="mt-1 text-[13px] tabular-nums text-muted-foreground">{meta}</div>}
+      {actions && <div className="mt-3 flex flex-wrap items-center gap-1.5">{actions}</div>}
+    </div>
+  )
+}
+
+export function LibraryPaneTitle({ children, badge }: { children: React.ReactNode; badge?: React.ReactNode }) {
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      <h3 className="min-w-0 truncate text-[15px] font-semibold">{children}</h3>
+      {badge}
+    </div>
+  )
+}
+
+/** Edits a name in place: Enter or the tick saves, Escape or the cross cancels. */
+export function LibraryRename({
+  initial,
+  maxLength,
+  saving,
+  onSave,
+  onCancel,
+}: {
+  initial: string
+  maxLength?: number
+  saving?: boolean
+  onSave: (name: string) => void
+  onCancel: () => void
+}) {
+  const [value, setValue] = React.useState(initial)
+  // What had focus before the box opened (the Rename button). Read on the first
+  // render, before autoFocus moves focus into the box.
+  const [returnTo] = React.useState(() => (typeof document === "undefined" ? null : (document.activeElement as HTMLElement | null)))
+  React.useEffect(
+    () => () => {
+      // Once the box closes, hand focus back unless the user has moved it elsewhere
+      // (the dialog's focus trap parks lost focus on the dialog itself).
+      requestAnimationFrame(() => {
+        const active = document.activeElement
+        const lost = !active || active === document.body || active.getAttribute("role") === "dialog"
+        if (lost && returnTo?.isConnected) returnTo.focus()
+      })
+    },
+    [returnTo]
+  )
+  const save = () => {
+    if (saving) return
+    const name = value.trim()
+    if (name && name !== initial) onSave(name)
+    else onCancel()
+  }
+  return (
+    <div className="flex items-center gap-1.5">
+      <input
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") save()
+          if (event.key === "Escape") onCancel()
+        }}
+        maxLength={maxLength}
+        autoFocus
+        onFocus={(event) => event.target.select()}
+        aria-label="Name"
+        data-library-rename=""
+        className="h-8 min-w-0 flex-1 rounded-md border border-primary/60 bg-background px-2.5 text-[15px] font-semibold outline-none ring-[3px] ring-primary/15"
+      />
+      <Button size="icon-sm" variant="ghost" onClick={save} disabled={!value.trim() || saving} aria-label="Save name">
+        <RiCheckLine />
+      </Button>
+      <Button size="icon-sm" variant="ghost" onClick={onCancel} aria-label="Cancel rename">
+        <RiCloseLine />
+      </Button>
+    </div>
+  )
+}
+
+/**
+ * A small count inside a LibraryItem button. It cannot take focus there (no
+ * nested controls), so the label is also in the button's name as hidden text,
+ * and the tooltip shows it on hover.
+ */
+export function LibraryCountBadge({ count, label }: { count: number; label: string }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="grid h-5 min-w-5 shrink-0 place-items-center rounded-md bg-amber-500/10 px-1.5 text-xs font-medium tabular-nums text-amber-800 dark:text-amber-300">
+          <span aria-hidden="true">{count}</span>
+          <span className="sr-only">{label}</span>
+        </span>
+      </TooltipTrigger>
+      <TooltipContent aria-label="">{label}</TooltipContent>
+    </Tooltip>
+  )
+}

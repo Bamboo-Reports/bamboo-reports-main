@@ -38,6 +38,7 @@ interface NotificationState {
   loadingCount: boolean
   loadingSummaries: boolean
   error: string | null
+  markAllError: string | null
   hasSession: boolean
 }
 
@@ -162,15 +163,16 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     }
   }, [hasSession, markAllAsync])
 
-  // The most recent failure, if any piece is currently failing.
-  const error = hasSession
-    ? (markAllMutation.error ?? summariesQuery.error ?? countQuery.error)?.message ?? null
-    : null
+  // A failed load, if one is currently failing. A failed "mark all as read"
+  // is reported on its own: the list it acted on is still good and still shown.
+  const error = hasSession ? (summariesQuery.error ?? countQuery.error)?.message ?? null : null
+  const markAllError = hasSession ? markAllMutation.error?.message ?? null : null
 
   const unreadCount = hasSession ? (countQuery.data ?? 0) : 0
   const summaries = hasSession ? (summariesQuery.data ?? EMPTY_SUMMARIES) : EMPTY_SUMMARIES
   const loadingCount = hasSession && countQuery.isFetching
-  const loadingSummaries = hasSession && summariesQuery.isFetching
+  // Skeletons only before the first load: a reopen refetches behind the cached list.
+  const loadingSummaries = hasSession && summariesQuery.isLoading
 
   const value = useMemo<NotificationContextValue>(
     () => ({
@@ -179,12 +181,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       loadingCount,
       loadingSummaries,
       error,
+      markAllError,
       hasSession,
       refreshAll,
       loadSummaries,
       markAllAsRead,
     }),
-    [unreadCount, summaries, loadingCount, loadingSummaries, error, hasSession, refreshAll, loadSummaries, markAllAsRead]
+    [unreadCount, summaries, loadingCount, loadingSummaries, error, markAllError, hasSession, refreshAll, loadSummaries, markAllAsRead]
   )
 
   return (

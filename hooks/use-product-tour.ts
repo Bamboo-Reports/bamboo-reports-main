@@ -4,17 +4,18 @@ import "driver.js/dist/driver.css"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { TOUR_AUTO_START_DELAY_MS } from "@/lib/tour/constants"
-import { getDashboardTourSteps } from "@/lib/tour/steps"
+import { getAnalyticsStepTitle, getDashboardTourSteps } from "@/lib/tour/steps"
 import { useTourPersistence } from "@/hooks/use-tour-persistence"
+import { subscribePreference } from "@/hooks/use-persisted-preference"
+import { readSidebarCollapsed, SIDEBAR_COLLAPSED_STORAGE_KEY } from "@/hooks/use-sidebar-collapsed"
 
 interface UseProductTourOptions {
   userId: string | null
   dataLoaded: boolean
   hasMapView: boolean
-  isSidebarCollapsed: boolean
 }
 
-export function useProductTour({ userId, dataLoaded, hasMapView, isSidebarCollapsed }: UseProductTourOptions) {
+export function useProductTour({ userId, dataLoaded, hasMapView }: UseProductTourOptions) {
   const { isCompleted, isLoading, markCompleted } = useTourPersistence(userId)
   const [isRunning, setIsRunning] = useState(false)
   const driverRef = useRef<Driver | null>(null)
@@ -22,9 +23,13 @@ export function useProductTour({ userId, dataLoaded, hasMapView, isSidebarCollap
   const stepIndexRef = useRef(0)
   const isRefreshingRef = useRef(false)
   const tourLayoutRef = useRef<{ hasMapView: boolean; isSidebarCollapsed: boolean } | null>(null)
+  // The sidebar state is read when the tour needs it, not subscribed to, so a
+  // sidebar toggle does not re-render the page. Only a running tour listens,
+  // to re-point its steps at the new layout.
+  const [sidebarVersion, setSidebarVersion] = useState(0)
 
   const createDriver = useCallback(() => {
-    const steps = getDashboardTourSteps({ hasMapView, isSidebarCollapsed })
+    const steps = getDashboardTourSteps({ hasMapView, isSidebarCollapsed: readSidebarCollapsed() })
 
     const instance = driver({
       showProgress: true,
@@ -34,22 +39,21 @@ export function useProductTour({ userId, dataLoaded, hasMapView, isSidebarCollap
       overlayColor: "black",
       overlayOpacity: 0.5,
       stagePadding: 8,
-      stageRadius: 8,
+      stageRadius: 12,
       popoverClass: "br-tour-popover",
-      prevBtnText: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px"><path d="m15 18-6-6 6-6"/></svg>Previous',
-      nextBtnText: 'Next<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-left:4px"><path d="m9 18 6-6-6-6"/></svg>',
-      doneBtnText: 'Done<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-left:4px"><path d="M5 12l5 5L20 7"/></svg>',
+      prevBtnText: "Back",
+      nextBtnText: "Next",
+      doneBtnText: "Done",
       steps,
       onHighlightStarted: (_element, step, opts) => {
         stepIndexRef.current = opts.state.activeIndex ?? 0
         captureEvent(ANALYTICS_EVENTS.TOUR_STEP_VIEWED, {
           step_index: opts.state.activeIndex,
-          step_title: step.popover?.title,
+          step_title: getAnalyticsStepTitle(step.popover?.title),
         })
       },
       onDestroyStarted: (_element, _step, opts) => {
         if (isRefreshingRef.current) {
-          document.documentElement.classList.remove("tour-active")
           instance.destroy()
           return
         }
@@ -68,7 +72,6 @@ export function useProductTour({ userId, dataLoaded, hasMapView, isSidebarCollap
           })
         }
 
-        document.documentElement.classList.remove("tour-active")
         markCompleted()
         setIsRunning(false)
         instance.destroy()
@@ -76,14 +79,12 @@ export function useProductTour({ userId, dataLoaded, hasMapView, isSidebarCollap
     })
 
     return instance
-  }, [hasMapView, isSidebarCollapsed, markCompleted])
+  }, [hasMapView, markCompleted])
 
   const driveTour = useCallback(
     (startIndex = 0, trackStart = true) => {
       const instance = createDriver()
       driverRef.current = instance
-
-      document.documentElement.classList.add("tour-active")
 
       if (trackStart) {
         captureEvent(ANALYTICS_EVENTS.TOUR_STARTED, {
@@ -91,11 +92,11 @@ export function useProductTour({ userId, dataLoaded, hasMapView, isSidebarCollap
         })
       }
 
-      tourLayoutRef.current = { hasMapView, isSidebarCollapsed }
+      tourLayoutRef.current = { hasMapView, isSidebarCollapsed: readSidebarCollapsed() }
       setIsRunning(true)
       instance.drive(startIndex)
     },
-    [createDriver, isCompleted, hasMapView, isSidebarCollapsed]
+    [createDriver, isCompleted, hasMapView]
   )
 
   const startTour = useCallback(() => {
@@ -109,10 +110,16 @@ export function useProductTour({ userId, dataLoaded, hasMapView, isSidebarCollap
   }, [isRunning, driveTour])
 
   useEffect(() => {
+    if (!isRunning) return
+    return subscribePreference(SIDEBAR_COLLAPSED_STORAGE_KEY, () => setSidebarVersion((v) => v + 1))
+  }, [isRunning])
+
+  useEffect(() => {
     if (!isRunning || !driverRef.current) {
       return
     }
 
+    const isSidebarCollapsed = readSidebarCollapsed()
     const previousLayout = tourLayoutRef.current
     if (
       previousLayout &&
@@ -130,24 +137,31 @@ export function useProductTour({ userId, dataLoaded, hasMapView, isSidebarCollap
     isRefreshingRef.current = false
 
     driveTour(nextIndex, false)
-  }, [isRunning, hasMapView, isSidebarCollapsed, driveTour])
+  }, [isRunning, hasMapView, sidebarVersion, driveTour])
 
   // Auto-start for first-time users
   useEffect(() => {
     if (hasAutoStartedRef.current || isLoading || isCompleted || !dataLoaded) return
     hasAutoStartedRef.current = true
 
+    let fired = false
     const timer = window.setTimeout(() => {
+      fired = true
       startTour()
     }, TOUR_AUTO_START_DELAY_MS)
 
-    return () => window.clearTimeout(timer)
+    // A timer cancelled before it fired has not started the tour, so the next
+    // run schedules it again (startTour changes when the view does, and
+    // StrictMode re-runs effects).
+    return () => {
+      window.clearTimeout(timer)
+      if (!fired) hasAutoStartedRef.current = false
+    }
   }, [isLoading, isCompleted, dataLoaded, startTour])
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      document.documentElement.classList.remove("tour-active")
       if (driverRef.current) {
         driverRef.current.destroy()
       }

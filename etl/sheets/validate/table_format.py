@@ -16,6 +16,13 @@ from .sheet_cache import SheetCache
 # headers against it too, so the rules and the import cannot drift apart.
 SCHEMA_FILE = ETL_DIR / "importer" / "master-schema.json"
 
+# Year bounds. The oldest centre on record is 1913, and upcoming centres carry
+# announced years a few years ahead, so anything outside this is a sheet error
+# (a first centre year of 0 once turned years in India into 2026).
+EARLIEST_YEAR = 1800
+YEARS_AHEAD = 10
+MAX_YEARS_IN_INDIA = 150
+
 
 # -- Phase 0: Table Format Validation -----------------------------------------
 def check_table_format(cache: SheetCache, table_name: str) -> list[tuple[int, str, str]] | None:
@@ -176,6 +183,15 @@ def check_table_format(cache: SheetCache, table_name: str) -> list[tuple[int, st
                 if not clean_val.isdigit() or int(clean_val) > 500:
                     errors.append((row_idx, col_name, f"Must be number <= 500: {val}"))
 
+            # Computed in the sheet as this year minus the first centre year, so
+            # a missing first year shows up here as the whole year (2026).
+            elif col_name == "years_in_india":
+                clean_val = val.replace(",", "")
+                if not clean_val.isdigit() or int(clean_val) > MAX_YEARS_IN_INDIA:
+                    errors.append(
+                        (row_idx, col_name, f"Must be a number of years, at most {MAX_YEARS_IN_INDIA}: {val}")
+                    )
+
             elif "only number" in desc_lower or desc_lower == "number":
                 clean_val = val.replace(",", "")
                 if not clean_val.isdigit() and not re.match(
@@ -185,8 +201,11 @@ def check_table_format(cache: SheetCache, table_name: str) -> list[tuple[int, st
 
             elif "valid year" in desc_lower:
                 clean_val = val.replace(",", "")
-                if not clean_val.isdigit() or len(clean_val) > 4:
-                    errors.append((row_idx, col_name, f"Must be valid year: {val}"))
+                latest = datetime.now().year + YEARS_AHEAD
+                if not (clean_val.isdigit() and len(clean_val) == 4 and EARLIEST_YEAR <= int(clean_val) <= latest):
+                    errors.append(
+                        (row_idx, col_name, f"Must be a year from {EARLIEST_YEAR} to {latest}: {val}")
+                    )
 
             elif "no numbers" in desc_lower:
                 if re.search(r"\d", val):

@@ -16,7 +16,6 @@ describe("software exclude is null-safe", () => {
   const query = (mode: "include" | "exclude") =>
     buildCentersQuery(
       createDefaultFilters({ techSoftwareInUseKeywords: [{ value: "oracle", mode }] }),
-      {},
       { columns: "cn_unique_key", orderBy: null }
     ).text
 
@@ -35,7 +34,6 @@ describe("software exclude is null-safe", () => {
           { value: "sap", mode: "exclude" },
         ],
       }),
-      {},
       { columns: "cn_unique_key", orderBy: null }
     ).text
     expect(text).toMatch(/cn_unique_key is not null and \(software_in_use ilike \$\d+ or software_in_use ilike \$\d+\)\)/)

@@ -5,15 +5,29 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { RiCalendarLine, RiCodeLine, RiExternalLinkLine, RiGlobalLine, RiGroupLine, RiHeadphoneLine, RiLightbulbLine, RiLineChartLine, RiLinkedinBoxLine, RiMoneyDollarCircleLine, RiMoreLine, RiRobot2Line, RiShoppingCartLine, RiUserSettingsLine } from "@remixicon/react"
+import {
+  RiArrowRightUpLine,
+  RiCloseLine,
+  RiCodeLine,
+  RiGlobalLine,
+  RiHeadphoneLine,
+  RiLightbulbLine,
+  RiLineChartLine,
+  RiLinkedinBoxLine,
+  RiMoneyDollarCircleLine,
+  RiMoreLine,
+  RiRobot2Line,
+  RiShoppingCartLine,
+  RiUserSettingsLine,
+} from "@remixicon/react"
 import type { Center, Service, Tech } from "@/lib/types"
+import { Button } from "@/components/ui/button"
+import { HintTooltip } from "@/components/ui/tooltip"
 import { CompanyLogo } from "@/components/ui/company-logo"
-import { DialogBreadcrumb } from "@/components/ui/dialog-breadcrumb"
 import { TechTreemap } from "@/components/charts/tech-treemap"
-import { formatCenterLocation } from "@/lib/utils/helpers"
+import { knownText } from "@/lib/utils/helpers"
 import { useCenterDetail } from "@/hooks/use-center-detail"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
@@ -21,6 +35,10 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { RelatedLoadError } from "./related-load-error"
 import { useRecordHistory } from "@/contexts/record-history-context"
 import { centerHistoryItem } from "@/lib/dashboard/record-history"
+import { cn, ensureAbsoluteUrl } from "@/lib/utils"
+import { FactGroup, StatRow } from "./account-details-parts"
+import { centerStatusLabel, statusDot } from "./account-related-columns"
+import { Section } from "@/components/dialogs/record-section"
 
 interface CenterDetailsDialogProps {
   center: Center | null
@@ -33,54 +51,26 @@ interface CenterDetailsDialogProps {
   fetchDetail?: boolean
 }
 
+/** Lines of a multi-line field, without blanks or "-" placeholders. */
+const parseLines = (content: string | null | undefined) =>
+  content ? content.split(/\r?\n/).map((line) => line.trim()).filter((line) => line && line !== "-") : []
 
-function MetaRow({ label, value }: { label: string; value: string | number | null | undefined }) {
-  if (value === null || value === undefined) return null
-  const str = typeof value === "number" ? value.toString() : value
-  if (str.trim() === "") return null
+const present = (value: string | number | null | undefined) =>
+  value !== null && value !== undefined && (typeof value === "number" || (value.trim() !== "" && value.trim() !== "-"))
+
+function Tags({ items }: { items: string[] }) {
   return (
-    <div className="flex items-start justify-between gap-4 py-1.5 text-sm border-b border-border/30 last:border-b-0">
-      <span className="text-muted-foreground shrink-0">{label}</span>
-      <span className="font-medium text-right break-words">{str}</span>
+    <div className="flex flex-wrap gap-1.5">
+      {items.map((item, index) => (
+        <span key={`${item}-${index}`} className="inline-flex min-h-6 items-center rounded-md bg-muted px-2 py-0.5 text-xs">
+          {item}
+        </span>
+      ))}
     </div>
   )
 }
 
-function KPITile({
-  icon: Icon,
-  label,
-  value,
-  caption,
-}: {
-  icon: React.ComponentType<{ className?: string }>
-  label: string
-  value: string | number | null | undefined
-  caption?: string | null
-}) {
-  const isEmpty =
-    value === null || value === undefined || (typeof value === "string" && value.trim() === "")
-  if (isEmpty) return null
-  return (
-    <div className="rounded-lg border border-border/60 bg-background/40 p-3 backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
-      <div className="mb-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-        <Icon className="h-3.5 w-3.5" />
-        {label}
-      </div>
-      <div className="text-lg font-semibold leading-tight text-foreground">{value}</div>
-      {caption ? <div className="mt-0.5 text-[11px] text-muted-foreground">{caption}</div> : null}
-    </div>
-  )
-}
-
-function SectionHeader({ title, children }: { title: string; children?: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between gap-3 border-b border-border/40 pb-2">
-      <h3 className="text-base font-semibold tracking-tight">{title}</h3>
-      {children ? <div className="flex flex-wrap items-center gap-2">{children}</div> : null}
-    </div>
-  )
-}
-
+/** A centre: what it does and how big it is on the left, where it is and who runs it on the right. */
 export function CenterDetailsDialog({
   center,
   services: servicesProp,
@@ -102,130 +92,48 @@ export function CenterDetailsDialog({
 
   const services = fetchDetail ? (detail?.services ?? []) : servicesProp
   const tech = fetchDetail ? (detail?.tech ?? []) : techProp
-
-  const centerServices = services.find(
-    (service) => service.cn_unique_key === center.cn_unique_key,
-  )
-
+  const centerServices = services.find((service) => service.cn_unique_key === center.cn_unique_key)
   const centerTech = tech.filter((item) => item.cn_unique_key === center.cn_unique_key)
 
-  const parseLines = (content: string | null | undefined) =>
-    content
-      ? content.split(/\r?\n/).map((l) => l.trim()).filter((l) => l && l !== "-")
-      : []
-
   const serviceCategories = [
-    { key: "it",          icon: RiCodeLine,          title: "IT Services",          items: parseLines(centerServices?.service_it)              },
-    { key: "ai",          icon: RiRobot2Line,        title: "AI Services",          items: parseLines(centerServices?.service_ai)              },
-    { key: "erd",         icon: RiLightbulbLine,     title: "ER&D Services",        items: parseLines(centerServices?.service_erd)             },
-    { key: "finance",     icon: RiMoneyDollarCircleLine,    title: "Finance & Accounting", items: parseLines(centerServices?.service_fna)             },
-    { key: "hr",          icon: RiUserSettingsLine,       title: "HR Services",          items: parseLines(centerServices?.service_hr)              },
-    { key: "procurement", icon: RiShoppingCartLine,  title: "Procurement",          items: parseLines(centerServices?.service_procurement)     },
-    { key: "sales",       icon: RiLineChartLine,    title: "Sales & Marketing",    items: parseLines(centerServices?.service_sales_marketing) },
-    { key: "support",     icon: RiHeadphoneLine,    title: "Customer Support",     items: parseLines(centerServices?.service_customer_support)},
-    { key: "other",       icon: RiMoreLine,title: "Other Services",       items: parseLines(centerServices?.service_others)          },
-  ].filter((cat) => cat.items.length > 0)
+    { key: "it", icon: RiCodeLine, title: "IT services", items: parseLines(centerServices?.service_it) },
+    { key: "ai", icon: RiRobot2Line, title: "AI services", items: parseLines(centerServices?.service_ai) },
+    { key: "erd", icon: RiLightbulbLine, title: "ER&D services", items: parseLines(centerServices?.service_erd) },
+    { key: "finance", icon: RiMoneyDollarCircleLine, title: "Finance and accounting", items: parseLines(centerServices?.service_fna) },
+    { key: "hr", icon: RiUserSettingsLine, title: "HR services", items: parseLines(centerServices?.service_hr) },
+    { key: "procurement", icon: RiShoppingCartLine, title: "Procurement", items: parseLines(centerServices?.service_procurement) },
+    { key: "sales", icon: RiLineChartLine, title: "Sales and marketing", items: parseLines(centerServices?.service_sales_marketing) },
+    { key: "support", icon: RiHeadphoneLine, title: "Customer support", items: parseLines(centerServices?.service_customer_support) },
+    { key: "other", icon: RiMoreLine, title: "Other services", items: parseLines(centerServices?.service_others) },
+  ].filter((category) => category.items.length > 0)
 
-  const getStatusColor = (status: string) => {
-    if (status === "Active Center") return "bg-green-500"
-    if (status === "Upcoming") return "bg-amber-500"
-    if (status === "Non Operational") return "bg-destructive"
-    return "bg-muted-foreground"
-  }
-
-  const getStatusGlow = (status: string) => {
-    if (status === "Active Center") return "shadow-[0_0_10px_rgba(34,197,94,0.55)]"
-    if (status === "Upcoming") return "shadow-[0_0_10px_rgba(245,158,11,0.55)]"
-    if (status === "Non Operational") return "shadow-[0_0_10px_rgba(239,68,68,0.55)]"
-    return ""
-  }
-
-  const statusShortLabel = (status: string) => {
-    if (status === "Active Center") return "Active"
-    if (status === "Non Operational") return "Non Operational"
-    return status
-  }
-
-  const isPresent = (value: string | number | null | undefined) => {
-    if (value === null || value === undefined) return false
-    if (typeof value === "number") return true
-    const trimmed = value.trim()
-    return trimmed !== "" && trimmed !== "-"
-  }
-
-  const announcedCombined = [center.announced_month, center.announced_year].filter(Boolean).join(" ")
-  const centerLocation = formatCenterLocation(center.center_city, center.center_state)
+  const primaryServices = parseLines(centerServices?.primary_service)
+  const focusRegions = parseLines(centerServices?.focus_region)
+  const announced = [center.announced_month, center.announced_year].filter(Boolean).join(" ")
+  const trackLink = (linkType: "website" | "linkedin") =>
+    captureEvent(ANALYTICS_EVENTS.OUTBOUND_LINK_CLICKED, { entity: "center", link_type: linkType })
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glassmorphism-dialog max-h-[90vh] max-w-[95vw] overflow-y-auto">
-        <DialogHeader>
-          <DialogBreadcrumb
-            items={[
-              { label: center.account_global_legal_name, onClick: () => onOpenChange(false) },
-              { label: "Centres", onClick: () => onOpenChange(false) },
-              { label: center.center_name ?? "" },
-            ]}
-          />
-          <DialogDescription className="sr-only">
-            Centre profile details, services, technology usage, location, and related account information.
-          </DialogDescription>
-          <DialogTitle className="flex items-center gap-3 text-2xl font-bold">
-            <CompanyLogo
-              domain={center.center_account_website ?? undefined}
-              companyName={center.account_global_legal_name}
-              size="md"
-              theme="auto"
-            />
-            <div className="flex-1">
-              <div className="flex flex-wrap items-center gap-3">
-                <span>{center.center_name}</span>
-                <div className="flex items-center gap-1.5">
-                  {center.center_website ? (
-                    <a
-                      href={
-                        center.center_website.startsWith("http")
-                          ? center.center_website
-                          : `https://${center.center_website}`
-                      }
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-muted-foreground transition-colors hover:text-primary"
-                      title={center.center_website}
-                      onClick={() =>
-                        captureEvent(ANALYTICS_EVENTS.OUTBOUND_LINK_CLICKED, { entity: "center", link_type: "website" })
-                      }
-                    >
-                      <RiGlobalLine className="h-4 w-4" />
-                    </a>
-                  ) : null}
-                  {center.center_linkedin ? (
-                    <a
-                      href={
-                        center.center_linkedin.startsWith("http")
-                          ? center.center_linkedin
-                          : `https://${center.center_linkedin}`
-                      }
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-muted-foreground transition-colors hover:text-[#0A66C2]"
-                      title="LinkedIn"
-                      onClick={() =>
-                        captureEvent(ANALYTICS_EVENTS.OUTBOUND_LINK_CLICKED, { entity: "center", link_type: "linkedin" })
-                      }
-                    >
-                      <RiLinkedinBoxLine className="h-4 w-4" />
-                    </a>
-                  ) : null}
-                </div>
-                <span
-                  className={`h-3 w-3 shrink-0 rounded-full ${getStatusColor(center.center_status ?? "")} ${getStatusGlow(center.center_status ?? "")}`}
-                  aria-label={center.center_status ?? undefined}
-                  title={center.center_status ?? undefined}
-                />
+      <DialogContent className="flex h-[calc(100dvh-3rem)] max-h-none w-[calc(100vw-3rem)] max-w-[1480px] grid-cols-[minmax(0,1fr)] flex-col gap-0 overflow-hidden p-0 [&>button.absolute]:hidden">
+        <DialogDescription className="sr-only">
+          Centre profile: services, scale, technology, location and the account it belongs to.
+        </DialogDescription>
+
+        <div className="shrink-0 border-b px-6 pb-4 pt-5">
+          <div className="flex items-start gap-3">
+            <CompanyLogo domain={center.center_account_website ?? undefined} companyName={center.account_global_legal_name} size="md" theme="auto" />
+            <div className="min-w-0 flex-1">
+              <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
+                <DialogTitle className="min-w-0 truncate text-xl font-semibold tracking-[-0.01em]">{center.center_name}</DialogTitle>
+                {center.center_status && (
+                  <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground">
+                    <span className={cn("h-2 w-2 rounded-full", statusDot(center.center_status))} />
+                    {centerStatusLabel(center.center_status)}
+                  </span>
+                )}
               </div>
-              <p className="mt-1 text-sm font-normal text-muted-foreground">
-                {center.account_global_legal_name}
+              <p className="mt-0.5 text-[13px] text-muted-foreground">
                 {onAccountOpen ? (
                   <button
                     type="button"
@@ -233,183 +141,145 @@ export function CenterDetailsDialog({
                       captureEvent(ANALYTICS_EVENTS.RELATED_RECORD_OPENED, { parent_entity: "center", entity: "account" })
                       onAccountOpen(center.account_global_legal_name)
                     }}
-                    className="ml-1.5 inline-flex h-5 w-5 translate-y-0.5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    aria-label={`Open account details for ${center.account_global_legal_name}`}
-                    title={`Open account details for ${center.account_global_legal_name}`}
+                    className="inline-flex items-center gap-0.5 font-medium text-primary hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
-                    <RiExternalLinkLine className="h-3.5 w-3.5" />
+                    {center.account_global_legal_name}
+                    <RiArrowRightUpLine className="h-3.5 w-3.5" />
                   </button>
-                ) : null}
+                ) : (
+                  center.account_global_legal_name
+                )}
               </p>
             </div>
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="mt-6 space-y-8">
-          {/* Center Snapshot */}
-          <section className="rounded-xl border border-border/60 bg-background/40 p-5 backdrop-blur-sm lg:p-6 dark:border-white/10 dark:bg-white/5">
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-              <div className="space-y-5 lg:col-span-2">
-                {centerServices?.primary_service ? (
-                  <div>
-                    <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      Primary Services
-                    </p>
-                    <ul className="space-y-1 text-sm leading-relaxed text-foreground/90">
-                      {centerServices.primary_service
-                        .split(/\r?\n/)
-                        .map((line) => line.trim())
-                        .filter(Boolean)
-                        .map((line, idx) => (
-                          <li key={idx} className="flex gap-2">
-                            <span className="mt-[0.55em] h-1 w-1 shrink-0 rounded-full bg-muted-foreground/70" aria-hidden="true" />
-                            <span>{line}</span>
-                          </li>
-                        ))}
-                    </ul>
-                  </div>
-                ) : null}
-                {centerServices?.focus_region ? (
-                  <div>
-                    <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      Focus Region
-                    </p>
-                    <ul className="space-y-1 text-sm leading-relaxed text-foreground/90">
-                      {centerServices.focus_region
-                        .split(/\r?\n/)
-                        .map((line) => line.trim())
-                        .filter(Boolean)
-                        .map((line, idx) => (
-                          <li key={idx} className="flex gap-2">
-                            <span className="mt-[0.55em] h-1 w-1 shrink-0 rounded-full bg-muted-foreground/70" aria-hidden="true" />
-                            <span>{line}</span>
-                          </li>
-                        ))}
-                    </ul>
-                  </div>
-                ) : null}
-                {isPresent(center.center_address) ? (
-                  <div>
-                    <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      Address
-                    </p>
-                    <p className="whitespace-pre-line text-sm leading-relaxed text-foreground/90">
-                      {center.center_address}
-                    </p>
-                  </div>
-                ) : null}
-              </div>
-              <div className="lg:border-l lg:border-border/50 lg:pl-6">
-                <MetaRow label="Status" value={statusShortLabel(center.center_status ?? "")} />
-                <MetaRow label="Centre Type" value={center.center_type} />
-                <MetaRow label="Centre Focus" value={center.center_focus} />
-                <MetaRow label="Micro Location" value={center.center_micro_location} />
-                <MetaRow label="Location" value={centerLocation} />
-                <MetaRow label="Country" value={center.center_country?.trim().toUpperCase() === "TBA" || centerLocation === "India" ? null : center.center_country} />
-                <MetaRow label="Zip Code" value={center.center_zip_code} />
-                <MetaRow label="Boardline" value={center.center_boardline} />
-                <MetaRow label="Management Partner" value={center.center_management_partner} />
-                <MetaRow label="JV Status" value={center.center_jv_status} />
-                <MetaRow label="JV Name" value={center.center_jv_name} />
-              </div>
+            <div className="flex shrink-0 items-center gap-0.5">
+              {center.center_website && (
+                <HintTooltip label="Website" hint={center.center_website}>
+                  <Button asChild variant="ghost" size="icon-sm">
+                    <a href={ensureAbsoluteUrl(center.center_website)} target="_blank" rel="noopener noreferrer" aria-label="Website" onClick={() => trackLink("website")}>
+                      <RiGlobalLine />
+                    </a>
+                  </Button>
+                </HintTooltip>
+              )}
+              {center.center_linkedin && (
+                <HintTooltip label="LinkedIn">
+                  <Button asChild variant="ghost" size="icon-sm">
+                    <a href={ensureAbsoluteUrl(center.center_linkedin)} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" onClick={() => trackLink("linkedin")}>
+                      <RiLinkedinBoxLine />
+                    </a>
+                  </Button>
+                </HintTooltip>
+              )}
+              <Button variant="ghost" size="icon-sm" onClick={() => onOpenChange(false)} aria-label="Close">
+                <RiCloseLine />
+              </Button>
             </div>
-          </section>
+          </div>
+        </div>
 
-          {/* Scale & Timeline */}
-          <section className="space-y-4">
-            <SectionHeader title="Scale & Timeline" />
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-              <KPITile
-                icon={RiGroupLine}
-                label="Employees"
-                value={center.center_employees?.toLocaleString("en-US")}
-                caption={center.center_employees_range}
-              />
-              <KPITile
-                icon={RiCalendarLine}
-                label="Incorporation Year"
-                value={center.center_inc_year}
-                caption={center.center_timeline}
-              />
-              <KPITile
-                icon={RiCalendarLine}
-                label="Announced"
-                value={announcedCombined || null}
-              />
-              <KPITile
-                icon={RiCalendarLine}
-                label="End Year"
-                value={center.center_end_year}
-              />
-            </div>
-          </section>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="grid min-h-full lg:grid-cols-[minmax(0,1fr)_360px]">
+            <div className="min-w-0 px-6 py-5">
+              {primaryServices.length > 0 && (
+                <Section title="Primary services">
+                  <Tags items={primaryServices} />
+                </Section>
+              )}
+              {focusRegions.length > 0 && (
+                <Section title="Focus regions">
+                  <Tags items={focusRegions} />
+                </Section>
+              )}
 
-          {detailError && (
-            <RelatedLoadError message="Services and tech stack for this centre could not load." onRetry={retryDetail} />
-          )}
+              <Section title="Scale and timeline">
+                <StatRow
+                  stats={[
+                    { label: "Employees", value: center.center_employees?.toLocaleString("en-US") ?? center.center_employees_range, caption: center.center_employees != null ? center.center_employees_range : null },
+                    { label: "Incorporated", value: center.center_inc_year, caption: center.center_timeline },
+                    { label: "Announced", value: announced || null },
+                    { label: "End year", value: center.center_end_year },
+                  ]}
+                />
+              </Section>
 
-          {/* Services Offered */}
-          {detailLoading && (
-            <section className="space-y-4">
-              <SectionHeader title="Services Offered" />
-              <div className="divide-y divide-border/30 rounded-lg border border-border/50 dark:border-white/10 overflow-hidden">
-                {[3, 2, 4].map((pills, row) => (
-                  <div key={row} className="flex items-start gap-4 px-4 py-3 bg-background/40 dark:bg-white/5">
-                    <div className="flex w-40 shrink-0 items-center gap-2 pt-0.5">
-                      <Skeleton className="h-3.5 w-3.5 rounded-sm" />
-                      <Skeleton className="h-3 w-24" />
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {Array.from({ length: pills }, (_, i) => (
-                        <Skeleton key={i} className={`h-5 rounded-full ${i % 2 === 0 ? "w-20" : "w-14"}`} />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-          {!detailLoading && centerServices && serviceCategories.length > 0 ? (
-            <section className="space-y-4">
-              <SectionHeader title="Services Offered" />
-              <div className="divide-y divide-border/30 rounded-lg border border-border/50 dark:border-white/10 overflow-hidden">
-                {serviceCategories.map((cat) => (
-                  <div key={cat.key} className="flex items-start gap-4 px-4 py-3 bg-background/40 dark:bg-white/5">
-                    <div className="flex items-center gap-2 shrink-0 w-40 pt-0.5">
-                      <cat.icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                      <span className="text-xs font-medium leading-tight text-muted-foreground">{cat.title}</span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {cat.items.map((item, idx) => (
-                        <span
-                          key={idx}
-                          className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs border border-border/60 bg-background/60 text-foreground/80 dark:border-white/10 dark:bg-white/5"
-                        >
-                          {item}
+              {detailError && (
+                <div className="mt-7">
+                  <RelatedLoadError message="Services and tech stack for this centre could not load." onRetry={retryDetail} />
+                </div>
+              )}
+
+              {detailLoading && (
+                <Section title="Services offered">
+                  <Skeleton className="h-[132px] w-full rounded-xl" />
+                </Section>
+              )}
+              {!detailLoading && serviceCategories.length > 0 && (
+                <Section title="Services offered">
+                  <div className="overflow-hidden rounded-xl border bg-card">
+                    {serviceCategories.map((category, index) => (
+                      <div key={category.key} className={cn("grid gap-3 px-4 py-3 sm:grid-cols-[190px_minmax(0,1fr)]", index > 0 && "border-t border-border/70")}>
+                        <span className="flex items-center gap-2 pt-0.5 text-[13px] text-muted-foreground">
+                          <category.icon className="h-4 w-4 shrink-0" />
+                          {category.title}
                         </span>
-                      ))}
-                    </div>
+                        <Tags items={category.items} />
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </section>
-          ) : null}
+                </Section>
+              )}
 
-          {/* Technology Stack */}
-          {detailLoading && (
-            <section className="space-y-4">
-              <SectionHeader title="Technology Stack" />
-              <Skeleton className="h-[360px] w-full rounded-lg" />
-            </section>
-          )}
-          {!detailLoading && centerTech.length > 0 ? (
-            <section className="space-y-4">
-              <SectionHeader title="Technology Stack" />
-              <div className="rounded-lg border border-border/60 bg-background/40 backdrop-blur-sm shadow-sm overflow-hidden h-[360px] lg:h-[420px] dark:bg-white/5 dark:border-white/10">
-                <TechTreemap tech={centerTech} heightClass="h-full" showTitle={false} />
+              {detailLoading && (
+                <Section title="Technology stack">
+                  <Skeleton className="h-[240px] w-full rounded-xl" />
+                </Section>
+              )}
+              {!detailLoading && centerTech.length > 0 && (
+                <Section title="Technology stack">
+                  <TechTreemap tech={centerTech} />
+                </Section>
+              )}
+            </div>
+
+            <aside className="border-t bg-[color-mix(in_srgb,hsl(var(--muted))_30%,hsl(var(--background)))] px-5 py-5 lg:border-l lg:border-t-0">
+              {/* Stays in view while the left side scrolls; leaves out what the header and the number row already show. */}
+              <div className="lg:sticky lg:top-5">
+                <FactGroup
+                  title="Centre"
+                  rows={[
+                    ["Type", center.center_type],
+                    ["Focus", center.center_focus],
+                  ]}
+                />
+                <FactGroup
+                  title="Location"
+                  rows={[
+                    // City, state and country each on their own row; blank or "TBA" is left out.
+                    ["City", knownText(center.center_city)],
+                    ["State", knownText(center.center_state)],
+                    ["Country", knownText(center.center_country)],
+                    ["Micro location", present(center.center_micro_location) ? center.center_micro_location : null],
+                    ["Zip code", present(center.center_zip_code) ? center.center_zip_code : null],
+                    ["Boardline", present(center.center_boardline) ? center.center_boardline : null],
+                  ]}
+                />
+                {present(center.center_address) && (
+                  <section className="mb-5">
+                    <h4 className="mb-1 text-xs font-medium text-muted-foreground">Address</h4>
+                    <p className="whitespace-pre-line text-[13px] leading-relaxed">{center.center_address}</p>
+                  </section>
+                )}
+                <FactGroup
+                  title="Partnership"
+                  rows={[
+                    ["Management partner", present(center.center_management_partner) ? center.center_management_partner : null],
+                    ["JV status", present(center.center_jv_status) ? center.center_jv_status : null],
+                    ["JV name", present(center.center_jv_name) ? center.center_jv_name : null],
+                  ]}
+                />
               </div>
-            </section>
-          ) : null}
+            </aside>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

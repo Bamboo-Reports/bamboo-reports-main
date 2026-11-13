@@ -1,0 +1,86 @@
+import {
+  DEFAULT_CENTER_INC_YEAR_RANGE,
+  DEFAULT_REVENUE_RANGE,
+  DEFAULT_YEARS_IN_INDIA_RANGE,
+} from "@/lib/dashboard/defaults"
+import { withFilterDefaults } from "@/lib/dashboard/filter-summary"
+import { FILTER_SECTION_IDS, SECTION_SPECS, type FieldSpec, type FilterSectionId } from "@/lib/dashboard/filter-spec"
+import type { FilterValue, Filters } from "@/lib/types"
+
+export type { FilterSectionId }
+
+type Bounds = { min: number; max: number }
+
+/** The data's own limits for each range filter; a range only counts as set once it moves inside them. */
+export interface FilterRangeBounds {
+  revenue: Bounds
+  yearsInIndia: Bounds
+  centerIncYear: Bounds
+}
+
+const toBounds = ([min, max]: readonly [number, number]): Bounds => ({ min, max })
+
+/**
+ * The widest range each filter can hold. Used where the data's limits are not
+ * to hand (analytics on saved filters): a saved range narrower than this
+ * counts as set even when it merely restates the data's limits.
+ */
+export const DEFAULT_RANGE_BOUNDS: FilterRangeBounds = {
+  revenue: toBounds(DEFAULT_REVENUE_RANGE),
+  yearsInIndia: toBounds(DEFAULT_YEARS_IN_INDIA_RANGE),
+  centerIncYear: toBounds(DEFAULT_CENTER_INC_YEAR_RANGE),
+}
+
+interface FieldCheck {
+  /** The filter key this check reads. */
+  key: string
+  isActive: (filters: Filters, bounds: FilterRangeBounds) => boolean
+}
+
+const values = (key: keyof Filters): FieldCheck => ({
+  key,
+  isActive: (filters) => (filters[key] as FilterValue[]).length > 0,
+})
+
+/** A range is set when it narrows the data's limits (a wider one, like an old saved default, isn't). */
+export function isRangeActive(range: [number, number], bounds: Bounds, includeNull = true) {
+  return range[0] > bounds.min || range[1] < bounds.max || !includeNull
+}
+
+/** The check behind one sidebar field: set when it has values, narrows its range, or names a list. */
+function fieldCheck(spec: FieldSpec): FieldCheck {
+  if (spec.kind === "values") return values(spec.key)
+  if (spec.kind === "range") {
+    return {
+      key: spec.key,
+      isActive: (f, b) => isRangeActive(f[spec.key], b[spec.bounds], f[spec.includeNullKey]),
+    }
+  }
+  return { key: spec.key, isActive: (f) => f.accountListValues.length > 0 || f.accountNameValues.length > 0 }
+}
+
+/** Every filter field, by section, as the sidebar counts them: one per field, however many values it has. */
+const SECTION_FIELDS = Object.fromEntries(
+  FILTER_SECTION_IDS.map((section) => [section, SECTION_SPECS[section].map(fieldCheck)])
+) as Record<FilterSectionId, FieldCheck[]>
+
+/** How many fields in a section are set. */
+export function countActiveFields(section: FilterSectionId, filters: Filters, bounds: FilterRangeBounds) {
+  return SECTION_FIELDS[section].filter((field) => field.isActive(filters, bounds)).length
+}
+
+const DEFAULT_VISIBILITY_MODE = "gcc"
+
+/**
+ * How many filters are set: one per field (however many values it has), plus
+ * the "Accounts to show" switch when it isn't on GCCs. The one count behind
+ * the sidebar badge, each saved filter, the exports, the PDF report and
+ * analytics, so they always agree.
+ */
+export function countActiveFilters(source: Partial<Filters>, bounds: FilterRangeBounds = DEFAULT_RANGE_BOUNDS) {
+  // Saved filters can predate newer fields; fill those in before counting.
+  const filters = withFilterDefaults(source)
+  const fields = FILTER_SECTION_IDS.reduce((sum, section) => sum + countActiveFields(section, filters, bounds), 0)
+  const visibility = (filters.accountVisibilityMode ?? DEFAULT_VISIBILITY_MODE) !== DEFAULT_VISIBILITY_MODE
+  return fields + (visibility ? 1 : 0)
+}

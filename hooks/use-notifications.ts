@@ -11,6 +11,7 @@ export function useNotifications() {
     loadingList: ctx.loadingSummaries,
     loadingCount: ctx.loadingCount,
     error: ctx.error,
+    markAllError: ctx.markAllError,
     hasSession: ctx.hasSession,
     refreshUnreadCount: ctx.refreshAll,
     loadNotifications: ctx.loadSummaries,

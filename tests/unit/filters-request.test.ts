@@ -27,6 +27,17 @@ describe("parseFilters", () => {
     ])
   })
 
+  it("ignores keys for filters that no longer exist", () => {
+    const f = parseFilters({
+      accountTypeValues: [{ value: "Public", mode: "include" }],
+      accountDataCoverageValues: [{ value: "Full", mode: "include" }],
+      centerCityValues: [{ value: "Pune", mode: "include" }],
+    })
+    expect(Object.keys(f)).not.toContain("accountTypeValues")
+    expect(Object.keys(f)).not.toContain("accountDataCoverageValues")
+    expect(f.centerCityValues).toEqual([{ value: "Pune", mode: "include" }])
+  })
+
   it("caps each value list (#294)", () => {
     const f = parseFilters({ accountNameValues: values(MAX_FILTER_VALUES + 50) })
     expect(f.accountNameValues).toHaveLength(MAX_FILTER_VALUES)

@@ -252,7 +252,6 @@ describe("export API routes", () => {
         accountVisibilityMode: "all",
         centerCityValues: [{ value: "Bengaluru", mode: "include" }],
       }),
-      access: expect.any(Object),
     })
   })
 
