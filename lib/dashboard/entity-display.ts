@@ -20,30 +20,9 @@ export function formatTimeAgo(value: number | string): string {
   return new Date(ts).toLocaleDateString(undefined, { day: "2-digit", month: "short" })
 }
 
-/** Icon and colour treatment for each entity type, shared across record lists. */
-export const ENTITY_TYPE_META: Record<
-  EntityDisplayType,
-  { icon: typeof RiBuilding2Line; iconClass: string; borderClass: string; badgeClass: string; label: string }
-> = {
-  account: {
-    icon: RiBuilding2Line,
-    iconClass: "text-primary",
-    borderClass: "border-primary/20",
-    badgeClass: "bg-primary/10 text-primary border-primary/20",
-    label: "Account",
-  },
-  center: {
-    icon: RiBriefcaseLine,
-    iconClass: "text-[hsl(var(--chart-2))]",
-    borderClass: "border-[hsl(var(--chart-2))]/25",
-    badgeClass: "bg-[hsl(var(--chart-2)/0.12)] text-[hsl(var(--chart-2))] border-[hsl(var(--chart-2)/0.25)]",
-    label: "Centre",
-  },
-  prospect: {
-    icon: RiGroupLine,
-    iconClass: "text-[hsl(var(--chart-3))]",
-    borderClass: "border-[hsl(var(--chart-3))]/25",
-    badgeClass: "bg-[hsl(var(--chart-3)/0.12)] text-[hsl(var(--chart-3))] border-[hsl(var(--chart-3)/0.25)]",
-    label: "Prospect",
-  },
+/** Icon and label for each entity type, shared across record lists. */
+export const ENTITY_TYPE_META: Record<EntityDisplayType, { icon: typeof RiBuilding2Line; label: string }> = {
+  account: { icon: RiBuilding2Line, label: "Account" },
+  center: { icon: RiBriefcaseLine, label: "Centre" },
+  prospect: { icon: RiGroupLine, label: "Prospect" },
 }

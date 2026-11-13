@@ -27,6 +27,8 @@ type AccountListsContextValue = {
   loading: boolean
   /** True once the lists have been loaded (or there is nobody signed in to load them for). */
   loaded: boolean
+  /** True when the last load failed, so `lists` may be missing lists the user has. */
+  loadFailed: boolean
   userId: string | null
   refresh: () => Promise<void>
   createList: (input: AccountListInput) => Promise<AccountList | null>
@@ -83,6 +85,7 @@ export function AccountListsProvider({ children }: { children: ReactNode }) {
   const [lists, setLists] = useState<AccountList[]>([])
   const [loading, setLoading] = useState(false)
   const [loaded, setLoaded] = useState(false)
+  const [loadFailed, setLoadFailed] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [authReady, setAuthReady] = useState(false)
   // Flips off once the database says the matches column is missing, so later calls skip it.
@@ -149,8 +152,10 @@ export function AccountListsProvider({ children }: { children: ReactNode }) {
       }
 
       setLists([...own, ...shared])
+      setLoadFailed(false)
     } catch (error) {
       devError("Failed to load account lists:", describeError(error))
+      setLoadFailed(true)
     } finally {
       setLoading(false)
       setLoaded(true)
@@ -318,8 +323,8 @@ export function AccountListsProvider({ children }: { children: ReactNode }) {
   )
 
   const value = useMemo<AccountListsContextValue>(
-    () => ({ lists, loading, loaded, userId, refresh, createList, updateList, deleteList, shareList, unshareList, getListShares }),
-    [lists, loading, loaded, userId, refresh, createList, updateList, deleteList, shareList, unshareList, getListShares]
+    () => ({ lists, loading, loaded, loadFailed, userId, refresh, createList, updateList, deleteList, shareList, unshareList, getListShares }),
+    [lists, loading, loaded, loadFailed, userId, refresh, createList, updateList, deleteList, shareList, unshareList, getListShares]
   )
 
   return <AccountListsContext.Provider value={value}>{children}</AccountListsContext.Provider>
@@ -329,6 +334,7 @@ const EMPTY: AccountListsContextValue = {
   lists: [],
   loading: false,
   loaded: true,
+  loadFailed: false,
   userId: null,
   refresh: async () => {},
   createList: async () => null,

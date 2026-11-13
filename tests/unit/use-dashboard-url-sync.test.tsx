@@ -10,7 +10,7 @@ import type { Filters, FilterValue } from "@/lib/types"
 
 vi.mock("@/lib/analytics/client", () => ({ captureEvent: vi.fn() }))
 
-const lists = vi.hoisted(() => ({ value: { lists: [] as unknown[], loaded: false } }))
+const lists = vi.hoisted(() => ({ value: { lists: [] as unknown[], loaded: false, loadFailed: false } }))
 vi.mock("@/contexts/account-lists-context", () => ({ useAccountLists: () => lists.value }))
 
 const toastError = vi.hoisted(() => vi.fn())
@@ -78,7 +78,7 @@ const open = (search: string) => {
 
 beforeEach(() => {
   vi.useFakeTimers()
-  lists.value = { lists: [], loaded: false }
+  lists.value = { lists: [], loaded: false, loadFailed: false }
   toastError.mockClear()
 })
 
@@ -118,7 +118,7 @@ describe("useDashboardUrlSync with the filters hook", () => {
     const { result, rerender } = open(linkTo({ accountListValues: [inc("someone-elses-list")], accountNameValues: [inc("Acme Corp")] }))
     expect(result.current.filtersRestored).toBe(false)
 
-    lists.value = { lists: [], loaded: true }
+    lists.value = { lists: [], loaded: true, loadFailed: false }
     rerender({ serverRanges: null })
     expect(result.current.filtersRestored).toBe(true)
     expect(result.current.filters.accountNameValues).toEqual([inc("Acme Corp")])
@@ -137,7 +137,7 @@ describe("useDashboardUrlSync with the filters hook", () => {
     const bigList = { id: "big-list", name: "Big list", accounts: ["Acme Corp", "Globex"] }
 
     it("drops a list that is not shared, and says so", () => {
-      lists.value = { lists: [], loaded: true }
+      lists.value = { lists: [], loaded: true, loadFailed: false }
       const { result } = open(listLink())
       expect(result.current.filtersRestored).toBe(true)
       expect(result.current.filters.accountListValues).toEqual([])
@@ -147,13 +147,22 @@ describe("useDashboardUrlSync with the filters hook", () => {
       })
     })
 
+    it("says the lists did not load, not that the list is not shared, when loading failed", () => {
+      lists.value = { lists: [], loaded: true, loadFailed: true }
+      const { result } = open(listLink())
+      expect(result.current.filters.accountListValues).toEqual([])
+      expect(toastError).toHaveBeenCalledWith("Could not apply an account list", {
+        description: "Your account lists did not load. Reload the page to try again",
+      })
+    })
+
     it("expands the list once it loads after the wait ran out", () => {
       const { result, rerender } = open(listLink())
       act(() => void vi.advanceTimersByTime(4100))
       expect(result.current.filtersRestored).toBe(true)
       expect(result.current.filters.accountNameValues).toEqual([])
 
-      lists.value = { lists: [bigList], loaded: true }
+      lists.value = { lists: [bigList], loaded: true, loadFailed: false }
       rerender({ serverRanges: null })
       expect(result.current.filters.accountListValues).toEqual([inc("big-list")])
       expect(result.current.filters.accountNameValues).toEqual([inc("Acme Corp"), inc("Globex")])
@@ -165,7 +174,7 @@ describe("useDashboardUrlSync with the filters hook", () => {
       act(() => void vi.advanceTimersByTime(4100))
       expect(result.current.filters.accountListValues).toEqual([inc("big-list")])
 
-      lists.value = { lists: [], loaded: true }
+      lists.value = { lists: [], loaded: true, loadFailed: false }
       rerender({ serverRanges: null })
       expect(result.current.filters.accountListValues).toEqual([])
       expect(toastError).toHaveBeenCalledTimes(1)

@@ -34,8 +34,11 @@ const withoutLists = (filters: Filters, ids: string[]): Filters => ({
   accountListValues: filters.accountListValues.filter((entry) => !ids.includes(entry.value)),
 })
 
-const reportUnsharedList = () =>
-  toast.error("Could not apply an account list", { description: "The link's list is not shared with you" })
+/** Says why a link's list could not be applied: not shared, or the lists did not load at all. */
+const reportMissingList = (loadFailed: boolean) =>
+  toast.error("Could not apply an account list", {
+    description: loadFailed ? "Your account lists did not load. Reload the page to try again" : "The link's list is not shared with you",
+  })
 
 interface UseDashboardUrlSyncParams {
   /** Applied filters. */
@@ -75,7 +78,7 @@ export function useDashboardUrlSync({
   view,
   setView,
 }: UseDashboardUrlSyncParams) {
-  const { lists, loaded: listsLoaded } = useAccountLists()
+  const { lists, loaded: listsLoaded, loadFailed: listsLoadFailed } = useAccountLists()
   const pendingRef = useRef<Partial<Filters> | null>(null)
   // Lists a link named without their accounts that had not loaded when it was applied.
   const unresolvedListsRef = useRef<string[]>([])
@@ -128,7 +131,7 @@ export function useDashboardUrlSync({
     if (unresolved.length > 0) {
       if (listsLoaded) {
         restoredFilters = withoutLists(restoredFilters, unresolved)
-        reportUnsharedList()
+        reportMissingList(listsLoadFailed)
       } else {
         // The lists are still loading (the wait ran out): settled once they arrive.
         unresolvedListsRef.current = unresolved
@@ -139,7 +142,7 @@ export function useDashboardUrlSync({
     // others follow the limits once they arrive.
     applyFilters(restoredFilters, { clampRanges: boundsKnown })
     setRestored(true)
-  }, [restored, bounds, boundsKnown, lists, listsLoaded, listWaitOver, applyFilters, filters])
+  }, [restored, bounds, boundsKnown, lists, listsLoaded, listsLoadFailed, listWaitOver, applyFilters, filters])
 
   // Lists a link was applied without, once they have loaded: a list that has
   // arrived is expanded into its accounts, and one that is still missing is
@@ -151,8 +154,8 @@ export function useDashboardUrlSync({
     const known = new Set(lists.map((list) => list.id))
     const missing = unresolved.filter((id) => !known.has(id))
     applyFilters(missing.length > 0 ? withoutLists(filters, missing) : filters, { clampRanges: boundsKnown })
-    if (missing.length > 0) reportUnsharedList()
-  }, [restored, lists, listsLoaded, filters, applyFilters, boundsKnown])
+    if (missing.length > 0) reportMissingList(listsLoadFailed)
+  }, [restored, lists, listsLoaded, listsLoadFailed, filters, applyFilters, boundsKnown])
 
   // Write every change back to the address.
   useEffect(() => {
