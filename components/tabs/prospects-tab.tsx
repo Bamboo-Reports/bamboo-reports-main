@@ -105,7 +105,8 @@ export function ProspectsTab({
 
   useEffect(() => {
     scrollContainerRef.current?.scrollTo({ top: 0 })
-  }, [currentPage])
+    // Sorting or a new page size returns to page 1, which may already be the page.
+  }, [currentPage, itemsPerPage, server?.sort?.key, server?.sort?.direction, server?.selectionResetKey])
   const openedRecordRef = React.useRef<{
     recordId: string
     openedAt: number
@@ -227,14 +228,8 @@ export function ProspectsTab({
     onDownloadSelection?.({ dataset: "prospects", prospectIds: Array.from(selectedKeys) })
   }
 
-  // Show empty state when no prospects
-  if (server ? server.total === 0 && !server.loading : prospects.length === 0) {
-    return (
-      <TabsContent value="prospects">
-        <EmptyState type="no-results" />
-      </TabsContent>
-    )
-  }
+  // No matches: the heading and view switcher stay, the panel shows why it is empty.
+  const isEmpty = server ? server.total === 0 && !server.loading : prospects.length === 0
 
   return (
     <TabsContent value="prospects">
@@ -266,8 +261,16 @@ export function ProspectsTab({
         />
       </div>
 
+      {isEmpty && (
+        <Card className="w-full flex flex-col h-[var(--dashboard-panel-height)] overflow-hidden border shadow-sm view-content">
+          <CardContent className="flex flex-1 items-center justify-center p-0">
+            <EmptyState type="no-results" />
+          </CardContent>
+        </Card>
+      )}
+
       {/* Charts Section */}
-      {prospectsView === "chart" && (
+      {!isEmpty && prospectsView === "chart" && (
         <div className="w-full mb-6 view-content">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <PieChartCard
@@ -293,7 +296,7 @@ export function ProspectsTab({
       )}
 
        {/* Data Table */}
-       {prospectsView === "data" && (
+       {!isEmpty && prospectsView === "data" && (
          <Card className="w-full flex flex-col h-[var(--dashboard-panel-height)] overflow-hidden border shadow-sm view-content">
             <CardContent className="flex min-h-0 flex-1 flex-col p-0">
               {dataLayout === "table" ? (
@@ -309,7 +312,7 @@ export function ProspectsTab({
                   scrollRef={scrollContainerRef}
                 />
               ) : (
-                <div key="grid" ref={scrollContainerRef} className="view-content min-h-0 flex-1 overflow-auto">
+                <div key="grid" ref={scrollContainerRef} className="min-h-0 flex-1 overflow-auto">
                   <div
                     className={cn(
                       "grid grid-cols-1 gap-4 p-4 transition-opacity sm:grid-cols-2 lg:grid-cols-3",

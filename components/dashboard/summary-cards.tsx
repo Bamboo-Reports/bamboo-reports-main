@@ -278,8 +278,8 @@ export const SummaryCards = React.memo(function SummaryCards({
               }
             } : undefined}
             className={cn(
-              'px-4 py-3 shadow-[0_1px_2px_rgba(0,0,0,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-[border-color,box-shadow] duration-150 ease-[cubic-bezier(0.22,1,0.36,1)]',
-              card.interactive && 'cursor-pointer select-none',
+              'px-4 py-3 shadow-[0_1px_2px_rgba(0,0,0,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-[border-color,box-shadow,transform] duration-150 ease-[cubic-bezier(0.22,1,0.36,1)]',
+              card.interactive && 'cursor-pointer select-none active:scale-[0.98]',
               !card.interactive && card.message && 'cursor-help',
               isActive
                 ? 'border-primary ring-1 ring-primary'

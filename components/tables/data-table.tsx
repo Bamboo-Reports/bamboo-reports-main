@@ -76,7 +76,7 @@ function DataTableRowInner<TData extends RowData>({
   const tableRow = (
     <TableRow
       data-state={selected ? "selected" : undefined}
-      className="cursor-pointer focus-visible:bg-muted/70 focus-visible:outline-none"
+      className="cursor-pointer active:bg-muted focus-visible:bg-muted/50 focus-visible:shadow-[inset_2px_0_0_hsl(var(--ring))] focus-visible:outline-none"
       onClick={() => onRowOpen(item)}
       onKeyDown={(event) => {
         if (event.target !== event.currentTarget) return

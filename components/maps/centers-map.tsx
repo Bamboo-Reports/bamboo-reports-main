@@ -13,12 +13,14 @@ import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { MAPLIBRE_WORKER_URL, prepareBasemap, transformMapRequest, useBasemapStyleUrl } from "@/lib/maps/basemap"
 import { useMapRecovery } from "@/lib/maps/use-map-recovery"
 import { MapErrorState } from "@/components/maps/map-error-state"
+import { Skeleton } from "@/components/ui/skeleton"
 import { DebugLocationSearch } from "@/components/maps/debug-location-search"
 import { createLogger } from "@/lib/logger"
 import type { Center } from "@/lib/types"
 import type { CityAggregate } from "@/lib/dashboard/api-client"
 import "maplibre-gl/dist/maplibre-gl.css"
 import { countsTowardHeadcount } from "@/lib/dashboard/headcount"
+import { INDIA_MAP_VIEW, type MapCamera } from "@/components/maps/map-camera"
 
 interface CentersMapProps {
   centers: Center[]
@@ -26,6 +28,9 @@ interface CentersMapProps {
   cities?: CityAggregate[] | null
   heightClass?: string
   showAccountsCount?: boolean
+  /** Camera to open on, kept by the parent so it survives a City/State switch. */
+  viewState?: MapCamera
+  onViewStateChange?: (view: MapCamera) => void
 }
 
 interface CityCluster {
@@ -71,7 +76,14 @@ const HALO_RADIUS_SCALE = 1.15
 const HOTSPOT_MIN_COUNT = 100
 const logger = createLogger("components/CentersMap")
 
-export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAccountsCount = true }: CentersMapProps) {
+export function CentersMap({
+  centers,
+  cities,
+  heightClass = "h-[750px]",
+  showAccountsCount = true,
+  viewState,
+  onViewStateChange,
+}: CentersMapProps) {
   const [hoveredCity, setHoveredCity] = useState<string | null>(null)
   const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null)
   // Data problems (bad city aggregates) and map failures are handled separately:
@@ -222,36 +234,6 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
     return () => clearTimeout(fallback)
   }, [])
 
-  // Calculate center of all points for initial view
-  const initialViewState = useMemo(() => {
-    if (cityData.length === 0) {
-      return {
-        latitude: 20.5937,
-        longitude: 78.9629,
-        zoom: 4,
-      }
-    }
-
-    const avgLat = cityData.reduce((sum, city) => sum + city.lat, 0) / cityData.length
-    const avgLng = cityData.reduce((sum, city) => sum + city.lng, 0) / cityData.length
-
-    // Dynamically adjust zoom based on number of centers
-    let zoom = 4
-    if (cityData.length === 1) {
-      zoom = 8
-    } else if (cityData.length <= 3) {
-      zoom = 6
-    } else if (cityData.length <= 10) {
-      zoom = 5
-    }
-
-    return {
-      latitude: avgLat,
-      longitude: avgLng,
-      zoom,
-    }
-  }, [cityData])
-
   // Log sizing from a minimum that fits a number (see bubbleRadius); the largest
   // city in view gets the largest bubble.
   const maxCityCount = useMemo(() => Math.max(1, ...cityData.map((c) => c.count)), [cityData])
@@ -371,9 +353,9 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
   const handleRecenter = () => {
     if (mapRef.current) {
       mapRef.current.flyTo({
-        center: [78.9629, 20.5937], // Center of India
-        zoom: 3.5,
-        duration: 1000,
+        center: [INDIA_MAP_VIEW.longitude, INDIA_MAP_VIEW.latitude],
+        zoom: INDIA_MAP_VIEW.zoom,
+        duration: 400,
       })
       captureEvent(ANALYTICS_EVENTS.MAP_RECENTER_CLICKED, {
         map_kind: "city",
@@ -401,13 +383,7 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
   // Wait for client-side rendering
   // Wait for the worker file to be cached before MapLibre starts its workers.
   if (!isClient || !ready) {
-    return (
-      <div className={`flex items-center justify-center ${heightClass} bg-muted rounded-lg`}>
-        <div className="text-center">
-          <p className="text-sm text-muted-foreground">Loading map…</p>
-        </div>
-      </div>
-    )
+    return <Skeleton className={`w-full ${heightClass} rounded-lg`} aria-label="Loading map" />
   }
 
   if (cityData.length === 0) {
@@ -465,7 +441,7 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
         key={mapKey}
         ref={mapRef}
         style={{ width: "100%", height: "100%" }}
-        initialViewState={initialViewState}
+        initialViewState={viewState ?? INDIA_MAP_VIEW}
         mapStyle={mapStyle}
         workerUrl={MAPLIBRE_WORKER_URL}
         transformRequest={transformMapRequest}
@@ -483,11 +459,11 @@ export function CentersMap({ centers, cities, heightClass = "h-[750px]", showAcc
             if (map?.resize) {
               map.resize()
             }
-            handleRecenter()
             setIsMapReady(true)
           }, 200)
         }}
         onMove={handleMapMoveTracked}
+        onMoveEnd={(e) => onViewStateChange?.(e.viewState)}
         interactiveLayerIds={["centers-circles"]}
         onMouseMove={(e) => {
           const features = e.features

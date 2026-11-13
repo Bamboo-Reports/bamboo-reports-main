@@ -4,6 +4,7 @@ import React, { memo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { RiInformationLine, RiPieChartLine } from "@remixicon/react"
 import { HintTooltip } from "@/components/ui/tooltip"
+import { cn } from "@/lib/utils"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { DONUT_CHART_COLORS } from "@/lib/utils/chart-helpers"
@@ -297,6 +298,8 @@ export const PieChartCard = memo(({
       chart: {
         type: "pie",
         backgroundColor: "transparent",
+        // Functional data that changes with every filter: no sweep on mount or update.
+        animation: false,
       },
       title: { text: undefined },
       credits: { enabled: false },
@@ -335,6 +338,7 @@ export const PieChartCard = memo(({
           // A thin ring with an empty centre.
           innerSize: "75%",
           size: "62%",
+          animation: false,
           startAngle: 0,
           dataLabels: {
             enabled: labelDisplay.showCategoryLabels || labelDisplay.showPercentages,
@@ -444,7 +448,7 @@ export const PieChartCard = memo(({
             <HintTooltip label="How to read this chart" hint={note}>
               <button
                 type="button"
-                className="inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground transition-colors duration-150 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <RiInformationLine className="h-4 w-4" aria-hidden />
               </button>
@@ -453,7 +457,7 @@ export const PieChartCard = memo(({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {loading ? (
+        {loading && safeData.length === 0 ? (
           <div className="h-[400px] w-full">
             <ChartWaveSkeleton />
           </div>
@@ -461,8 +465,13 @@ export const PieChartCard = memo(({
           chartLib ? (
             <ContextMenu>
               <ContextMenuTrigger asChild>
+                {/* Stays mounted while a newer filter state loads, dimmed like the table. */}
                 <div
-                  className="h-[400px] w-full"
+                  className={cn(
+                    "h-[400px] w-full transition-opacity duration-150",
+                    loading && "pointer-events-none opacity-50"
+                  )}
+                  aria-busy={loading}
                   aria-label={`${title} chart. Right-click for data label options.`}
                 >
                   <chartLib.HighchartsReact

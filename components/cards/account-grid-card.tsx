@@ -36,11 +36,12 @@ export const AccountGridCard = memo(({ account, onClick }: AccountGridCardProps)
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <Card
-          className="h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className="h-full cursor-pointer select-none transition-[border-color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:border-border active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          onClick={onClick}
           tabIndex={0}
           role="button"
           aria-label={`View details for ${accountName}`}
-          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick() } }}
+          onKeyDown={(e) => { if (e.target !== e.currentTarget) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick() } }}
         >
           <CardContent className="p-4 flex flex-col gap-4 h-full">
             <div className="flex items-start gap-3">
@@ -111,7 +112,11 @@ export const AccountGridCard = memo(({ account, onClick }: AccountGridCardProps)
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={onClick}
+                onClick={(e) => {
+                  // The card opens on click too; open once.
+                  e.stopPropagation()
+                  onClick()
+                }}
                 className="w-full justify-between"
               >
                 View details

@@ -22,6 +22,7 @@ import { AccountDetailsDialog } from "@/components/dialogs/account-details-tabbe
 import { CentersMap } from "@/components/maps/centers-map"
 import { CentersChoroplethMap } from "@/components/maps/centers-choropleth-map"
 import { MapErrorBoundary } from "@/components/maps/map-error-boundary"
+import { INDIA_MAP_VIEW, type MapCamera } from "@/components/maps/map-camera"
 import { ViewSwitcher } from "@/components/ui/view-switcher"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
@@ -95,6 +96,8 @@ export function CentersTab({
   const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false)
   const [dataLayout, setDataLayout] = useDataLayoutPreference()
   const [mapMode, setMapMode] = useState<"city" | "state">("state")
+  // One camera for both map modes, so switching City and State keeps the view.
+  const [mapCamera, setMapCamera] = useState<MapCamera>(INDIA_MAP_VIEW)
   const {
     table,
     totalRows,
@@ -117,7 +120,8 @@ export function CentersTab({
 
   useEffect(() => {
     scrollContainerRef.current?.scrollTo({ top: 0 })
-  }, [currentPage])
+    // Sorting or a new page size returns to page 1, which may already be the page.
+  }, [currentPage, itemsPerPage, server?.sort?.key, server?.sort?.direction, server?.selectionResetKey])
   const previousMapModeRef = React.useRef<"city" | "state">("state")
   const openedRecordRef = React.useRef<{
     recordId: string
@@ -236,14 +240,8 @@ export function CentersTab({
     [handleRowOpen]
   )
 
-  // Show empty state when no centers
-  if (server ? server.total === 0 && !server.loading : centers.length === 0) {
-    return (
-      <TabsContent value="centers">
-        <EmptyState type="no-results" />
-      </TabsContent>
-    )
-  }
+  // No matches: the heading and view switcher stay, the panel shows why it is empty.
+  const isEmpty = server ? server.total === 0 && !server.loading : centers.length === 0
 
   return (
     <TabsContent value="centers">
@@ -282,8 +280,16 @@ export function CentersTab({
         />
       </div>
 
+      {isEmpty && (
+        <Card className="w-full flex flex-col h-[var(--dashboard-panel-height)] overflow-hidden border shadow-sm view-content">
+          <CardContent className="flex flex-1 items-center justify-center p-0">
+            <EmptyState type="no-results" />
+          </CardContent>
+        </Card>
+      )}
+
       {/* Charts Section */}
-      {centersView === "chart" && (
+      {!isEmpty && centersView === "chart" && (
         <div className="w-full mb-6 view-content">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <PieChartCard
@@ -331,7 +337,7 @@ export function CentersTab({
       )}
 
       {/* Map Section */}
-       {centersView === "map" && (
+       {!isEmpty && centersView === "map" && (
          <Card data-tour="map-view" className="w-full flex flex-col h-[var(--dashboard-panel-height)] overflow-hidden border shadow-sm view-content">
            <CardContent className="relative p-0 flex flex-col flex-1 overflow-hidden">
              {mapLoading && <MapUpdatingPill />}
@@ -356,7 +362,7 @@ export function CentersTab({
              </div>
              <MapErrorBoundary>
                {mapMode === "city" ? (
-                 <CentersMap centers={centers} cities={mapData?.cities} heightClass="h-full" />
+                 <CentersMap centers={centers} cities={mapData?.cities} heightClass="h-full" viewState={mapCamera} onViewStateChange={setMapCamera} />
                ) : (
                  <CentersChoroplethMap
                    centers={centers}
@@ -364,6 +370,8 @@ export function CentersTab({
                    states={mapData?.states}
                    scaleStates={mapData?.scaleStates}
                    heightClass="h-full"
+                   viewState={mapCamera}
+                   onViewStateChange={setMapCamera}
                  />
                )}
              </MapErrorBoundary>
@@ -372,7 +380,7 @@ export function CentersTab({
        )}
 
        {/* Data Table */}
-       {centersView === "data" && (
+       {!isEmpty && centersView === "data" && (
          <Card className="w-full flex flex-col h-[var(--dashboard-panel-height)] overflow-hidden border shadow-sm view-content">
             <CardContent className="flex min-h-0 flex-1 flex-col p-0">
               {dataLayout === "table" ? (
@@ -387,7 +395,7 @@ export function CentersTab({
                   scrollRef={scrollContainerRef}
                 />
               ) : (
-                <div key="grid" ref={scrollContainerRef} className="view-content min-h-0 flex-1 overflow-auto">
+                <div key="grid" ref={scrollContainerRef} className="min-h-0 flex-1 overflow-auto">
                   <div
                     className={cn(
                       "grid grid-cols-1 gap-4 p-4 transition-opacity sm:grid-cols-2 lg:grid-cols-3",

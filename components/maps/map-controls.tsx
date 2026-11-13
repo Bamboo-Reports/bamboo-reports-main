@@ -76,7 +76,10 @@ export function MapControls({ onRecenter, position = "top-left" }: MapControlsPr
     }
   }
 
-  const buttonClass = "!flex items-center justify-center text-foreground/80"
+  // The app's hover, focus ring and press feedback replace MapLibre's stock
+  // near-invisible hover tint and blue focus glow.
+  const buttonClass =
+    "!flex items-center justify-center text-foreground/80 transition-colors duration-150 hover:!bg-muted focus-visible:!shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring [&>svg]:transition-transform [&>svg]:duration-100 active:[&>svg]:scale-90"
 
   return createPortal(
     <>

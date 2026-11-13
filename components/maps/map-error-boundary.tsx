@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { Button } from "@/components/ui/button"
+import { MapErrorState } from "@/components/maps/map-error-state"
 import { devError } from "@/lib/utils/dev-log"
 import { captureError } from "@/lib/analytics/client"
 
@@ -32,30 +32,14 @@ export class MapErrorBoundary extends React.Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
+      // The same screen as a map that fails to load; the message and stack go
+      // to analytics and the console, not the page.
       return (
-        <div className="flex items-center justify-center h-[600px] bg-muted rounded-lg">
-          <div className="text-center p-6">
-            <p className="text-base font-medium text-destructive mb-2">The map stopped working</p>
-            <p className="text-sm text-muted-foreground mb-4">
-              {this.state.error?.message || "An error occurred while rendering the map"}
-            </p>
-            <details className="text-left max-w-md mx-auto">
-              <summary className="text-xs text-muted-foreground cursor-pointer mb-2">
-                Error details
-              </summary>
-              <pre className="text-xs bg-background p-2 rounded-md overflow-auto max-h-40">
-                {this.state.error?.stack || "No stack trace available"}
-              </pre>
-            </details>
-            <Button
-              type="button"
-              onClick={() => this.setState({ hasError: false, error: null })}
-              className="mt-4"
-            >
-              Try again
-            </Button>
-          </div>
-        </div>
+        <MapErrorState
+          heightClass="h-full"
+          kind="map"
+          onReload={() => this.setState({ hasError: false, error: null })}
+        />
       )
     }
 

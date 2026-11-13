@@ -17,6 +17,8 @@ import type { Center } from "@/lib/types"
 import type { StateAggregate } from "@/lib/dashboard/api-client"
 import "maplibre-gl/dist/maplibre-gl.css"
 import { countsTowardHeadcount } from "@/lib/dashboard/headcount"
+import { INDIA_MAP_VIEW, type MapCamera } from "@/components/maps/map-camera"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface CentersChoroplethMapProps {
   centers: Center[]
@@ -26,6 +28,9 @@ interface CentersChoroplethMapProps {
   /** Server mode: unfiltered aggregates for the color scale (replaces `allCenters`). */
   scaleStates?: StateAggregate[] | null
   heightClass?: string
+  /** Camera to open on, kept by the parent so it survives a City/State switch. */
+  viewState?: MapCamera
+  onViewStateChange?: (view: MapCamera) => void
 }
 
 interface Admin1Properties {
@@ -206,6 +211,8 @@ export function CentersChoroplethMap({
   states,
   scaleStates,
   heightClass = "h-[750px]",
+  viewState,
+  onViewStateChange,
 }: CentersChoroplethMapProps) {
   const { mapKey, ready, error, errorKind, handleFatalError, handleLoad, reload } = useMapRecovery({
     map_kind: "state",
@@ -362,9 +369,9 @@ export function CentersChoroplethMap({
     if (!mapInstance) return
 
     mapInstance.flyTo({
-      center: [78.9629, 20.5937],
-      zoom: 3.5,
-      duration: 800,
+      center: [INDIA_MAP_VIEW.longitude, INDIA_MAP_VIEW.latitude],
+      zoom: INDIA_MAP_VIEW.zoom,
+      duration: 400,
     })
     captureEvent(ANALYTICS_EVENTS.MAP_RECENTER_CLICKED, {
       map_kind: "state",
@@ -378,13 +385,7 @@ export function CentersChoroplethMap({
 
   // Wait for the worker file to be cached before MapLibre starts its workers.
   if (!isClient || !ready) {
-    return (
-      <div className={`flex items-center justify-center ${heightClass} bg-muted rounded-lg`}>
-        <div className="text-center">
-          <p className="text-sm text-muted-foreground">Loading map…</p>
-        </div>
-      </div>
-    )
+    return <Skeleton className={`w-full ${heightClass} rounded-lg`} aria-label="Loading map" />
   }
 
   if (stateKeysWithCounts.length === 0) {
@@ -406,11 +407,7 @@ export function CentersChoroplethMap({
         key={mapKey}
         ref={mapRef}
         style={{ width: "100%", height: "100%" }}
-        initialViewState={{
-          latitude: 15,
-          longitude: 0,
-          zoom: 1.6,
-        }}
+        initialViewState={viewState ?? INDIA_MAP_VIEW}
         mapStyle={mapStyle}
         workerUrl={MAPLIBRE_WORKER_URL}
         transformRequest={transformMapRequest}
@@ -422,12 +419,10 @@ export function CentersChoroplethMap({
           // Hide the basemap's de-facto international borders; India boundaries
           // come from the SOI overlay below.
           prepareBasemap(e.target)
-          setTimeout(() => {
-            e.target.resize()
-            handleRecenter()
-          }, 200)
+          setTimeout(() => e.target.resize(), 200)
         }}
         interactiveLayerIds={["admin1-fill"]}
+        onMoveEnd={(event) => onViewStateChange?.(event.viewState)}
         onMove={(event) => {
           const now = Date.now()
           const zoom = Number(event?.viewState?.zoom ?? 0)
