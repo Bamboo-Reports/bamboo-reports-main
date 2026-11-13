@@ -56,14 +56,6 @@ export const CenterGridCard = memo(({ center, onClick }: CenterGridCardProps) =>
             <div className="mt-auto flex flex-col gap-4">
               <div className="space-y-2 text-sm">
                 <div className="flex items-center justify-between gap-3 min-w-0">
-                  <span className="text-muted-foreground">Centre type</span>
-                  <TruncatedText
-                    text={center.center_type || "-"}
-                    className="font-medium text-foreground text-right max-w-[160px]"
-                    align="end"
-                  />
-                </div>
-                <div className="flex items-center justify-between gap-3 min-w-0">
                   <span className="text-muted-foreground">Location</span>
                   <TruncatedText
                     text={location}
@@ -72,7 +64,15 @@ export const CenterGridCard = memo(({ center, onClick }: CenterGridCardProps) =>
                   />
                 </div>
                 <div className="flex items-center justify-between gap-3 min-w-0">
-                  <span className="text-muted-foreground">Headcount range</span>
+                  <span className="text-muted-foreground">Centre type</span>
+                  <TruncatedText
+                    text={center.center_type || "-"}
+                    className="font-medium text-foreground text-right max-w-[160px]"
+                    align="end"
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-3 min-w-0">
+                  <span className="text-muted-foreground">Centre headcount</span>
                   <TruncatedText
                     text={center.center_employees_range || "-"}
                     className="font-medium text-foreground text-right max-w-[160px]"

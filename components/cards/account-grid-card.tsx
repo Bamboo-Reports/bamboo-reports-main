@@ -86,9 +86,17 @@ export const AccountGridCard = memo(({ account, onClick }: AccountGridCardProps)
                   />
                 </div>
                 <div className="flex items-center justify-between gap-3 min-w-0">
-                  <span className="text-muted-foreground">Revenue</span>
+                  <span className="text-muted-foreground">Revenue range</span>
                   <TruncatedText
                     text={account.account_hq_revenue_range || "-"}
+                    className="font-medium text-foreground text-right max-w-[160px]"
+                    align="end"
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-3 min-w-0">
+                  <span className="text-muted-foreground">GCC aggregate headcount (India)</span>
+                  <TruncatedText
+                    text={account.account_center_employees_range || "-"}
                     className="font-medium text-foreground text-right max-w-[160px]"
                     align="end"
                   />

@@ -73,17 +73,17 @@ export const ProspectGridCard = memo(({ prospect, onClick }: ProspectGridCardPro
                   />
                 </div>
                 <div className="flex items-center justify-between gap-3 min-w-0">
-                  <span className="text-muted-foreground">Department</span>
+                  <span className="text-muted-foreground">Job title</span>
                   <TruncatedText
-                    text={prospect.prospect_department || "-"}
+                    text={prospect.prospect_title || "-"}
                     className="font-medium text-foreground text-right max-w-[160px]"
                     align="end"
                   />
                 </div>
                 <div className="flex items-center justify-between gap-3 min-w-0">
-                  <span className="text-muted-foreground">Level</span>
+                  <span className="text-muted-foreground">Department</span>
                   <TruncatedText
-                    text={prospect.prospect_level || "-"}
+                    text={prospect.prospect_department || "-"}
                     className="font-medium text-foreground text-right max-w-[160px]"
                     align="end"
                   />
