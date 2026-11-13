@@ -145,9 +145,9 @@ Column labels and cells are defined per tab in the column files listed below. Th
 | Account Name | `name` (required) | `account_global_legal_name` | `accounts` | Clickable text | Opens the Account Details dialog |
 | *(NASSCOM chip)* | | `account_nasscom_status` | `accounts` | Chip | "NASSCOM" chip when the value is `yes` (case-insensitive) |
 | *(Visibility note chip)* | | `account_visibility`, `account_visibility_note` | `accounts` | Chip | Shows the note when `account_visibility = 'exclude'` and a note exists |
+| Location | `location` | `account_hq_city` + `account_hq_state` + `account_hq_country` | `accounts` | Computed text | `formatAccountLocation`: the city, else the state, else the country; blank and `TBA` values are skipped. Sorts by `account_hq_city` |
 | Sub Industry | `industry` | `account_hq_industry` | `accounts` | Text | |
 | Revenue Range | `revenue` | `account_hq_revenue_range` | `accounts` | Text | Bucketed range string |
-| GCC Aggregate Headcount (India) | `employees` | `account_center_employees_range` | `accounts` | Text | Bucketed range string |
 
 ### 2.2 Centres Table
 

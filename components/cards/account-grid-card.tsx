@@ -13,15 +13,14 @@ import {
 } from "@/components/ui/context-menu"
 import type { Account } from "@/lib/types"
 import { ensureAbsoluteUrl } from "@/lib/utils"
+import { formatAccountLocation } from "@/lib/utils/helpers"
 interface AccountGridCardProps {
   account: Account
   onClick: () => void
 }
 
 export const AccountGridCard = memo(({ account, onClick }: AccountGridCardProps) => {
-  const location = [account.account_hq_city, account.account_hq_country]
-    .filter(Boolean)
-    .join(", ")
+  const location = formatAccountLocation(account)
   const accountName = account.account_global_legal_name || "Account"
   const isNasscomVerified = account.account_nasscom_status?.toLowerCase() === "yes"
   const visibilityNote =
@@ -89,14 +88,6 @@ export const AccountGridCard = memo(({ account, onClick }: AccountGridCardProps)
                   <span className="text-muted-foreground">Revenue range</span>
                   <TruncatedText
                     text={account.account_hq_revenue_range || "-"}
-                    className="font-medium text-foreground text-right max-w-[160px]"
-                    align="end"
-                  />
-                </div>
-                <div className="flex items-center justify-between gap-3 min-w-0">
-                  <span className="text-muted-foreground">GCC aggregate headcount (India)</span>
-                  <TruncatedText
-                    text={account.account_center_employees_range || "-"}
                     className="font-medium text-foreground text-right max-w-[160px]"
                     align="end"
                   />

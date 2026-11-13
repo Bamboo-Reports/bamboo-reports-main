@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 import {
+  formatAccountLocation,
   formatLocation,
   formatRevenueInMillions,
   getPageInfo,
@@ -57,6 +58,15 @@ describe("formatLocation", () => {
     expect(formatLocation("tba", "", "United States")).toBe("United States")
     expect(formatLocation(null, null, "TBA")).toBe("India")
     expect(formatLocation(undefined, undefined)).toBe("India")
+  })
+})
+
+describe("formatAccountLocation", () => {
+  it("uses the HQ city, else state, else country, and stays blank with none", () => {
+    expect(formatAccountLocation({ account_hq_city: "Campbell", account_hq_state: "California", account_hq_country: "United States" })).toBe("Campbell")
+    expect(formatAccountLocation({ account_hq_city: "TBA", account_hq_state: "California", account_hq_country: "United States" })).toBe("California")
+    expect(formatAccountLocation({ account_hq_city: null, account_hq_state: "", account_hq_country: "Japan" })).toBe("Japan")
+    expect(formatAccountLocation({ account_hq_city: null, account_hq_country: null })).toBe("")
   })
 })
 

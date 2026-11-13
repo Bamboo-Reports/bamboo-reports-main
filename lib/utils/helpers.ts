@@ -54,15 +54,21 @@ export const knownText = (value: string | null | undefined): string | null => {
 }
 
 /**
- * Where a centre or prospect is, as one place: the city when known, else the
- * state, else the country ("India" if even that is missing). Blank and "TBA"
+ * Where a centre, prospect or account HQ is, as one place: the city when
+ * known, else the state, else the country, else `fallback`. Blank and "TBA"
  * count as unknown at every level.
  */
 export const formatLocation = (
   city: string | null | undefined,
   state: string | null | undefined,
   country?: string | null | undefined,
-): string => knownText(city) ?? knownText(state) ?? knownText(country) ?? "India"
+  fallback = "India",
+): string => knownText(city) ?? knownText(state) ?? knownText(country) ?? fallback
+
+/** An account's HQ location. With nothing known it is blank, not "India". */
+export const formatAccountLocation = (
+  account: { account_hq_city?: string | null; account_hq_state?: string | null; account_hq_country?: string | null },
+): string => formatLocation(account.account_hq_city, account.account_hq_state, account.account_hq_country, "")
 
 export const formatProspectLocation = formatLocation
 export const formatCenterLocation = formatLocation

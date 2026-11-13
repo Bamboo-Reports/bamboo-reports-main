@@ -10,6 +10,7 @@ import { DataTableColumnHeader } from "@/components/tables/data-table-column-hea
 import type { DataTableFeatures } from "@/components/tables/data-table-features"
 import type { Account } from "@/lib/types"
 import { ensureAbsoluteUrl } from "@/lib/utils"
+import { formatAccountLocation } from "@/lib/utils/helpers"
 
 export const getAccountKey = (account: Account) => account.account_global_legal_name ?? ""
 const getAccountName = (account: Account) => account.account_global_legal_name || "account"
@@ -65,6 +66,13 @@ export const accountColumns = columnHelper.columns([
     sortFn: "text",
     meta: { className: "w-[280px]" },
   }),
+  columnHelper.accessor((account) => formatAccountLocation(account), {
+    id: "location",
+    header: ({ column }) => <DataTableColumnHeader column={column} title="Location" />,
+    cell: ({ getValue }) => <TruncatedText value={getValue() || null} />,
+    sortFn: "text",
+    meta: { className: "w-[200px]" },
+  }),
   columnHelper.accessor((account) => account.account_hq_industry, {
     id: "industry",
     header: ({ column }) => <DataTableColumnHeader column={column} title="Sub industry" />,
@@ -78,13 +86,6 @@ export const accountColumns = columnHelper.columns([
     cell: ({ getValue }) => <TruncatedText value={getValue()} />,
     sortFn: "text",
     meta: { className: "w-[140px]" },
-  }),
-  columnHelper.accessor((account) => account.account_center_employees_range, {
-    id: "employees",
-    header: ({ column }) => <DataTableColumnHeader column={column} title="GCC aggregate headcount (India)" />,
-    cell: ({ getValue }) => <TruncatedText value={getValue()} />,
-    sortFn: "text",
-    meta: { className: "w-[200px]" },
   }),
 ])
 
