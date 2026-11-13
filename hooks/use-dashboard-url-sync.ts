@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import { toast } from "sonner"
 import type { Filters } from "@/lib/types"
 import { useAccountLists } from "@/contexts/account-lists-context"
 import { countActiveFilters, type FilterRangeBounds } from "@/lib/dashboard/active-filters"
@@ -26,6 +27,15 @@ const hasAppliedFilter = (filters: Filters) =>
     yearsInIndia: { min: filters.accountYearsInIndiaRange[0], max: filters.accountYearsInIndiaRange[1] },
     centerIncYear: { min: filters.centerIncYearRange[0], max: filters.centerIncYearRange[1] },
   }) > 0
+
+/** The filters without the given account lists. */
+const withoutLists = (filters: Filters, ids: string[]): Filters => ({
+  ...filters,
+  accountListValues: filters.accountListValues.filter((entry) => !ids.includes(entry.value)),
+})
+
+const reportUnsharedList = () =>
+  toast.error("Could not apply an account list", { description: "The link's list is not shared with you" })
 
 interface UseDashboardUrlSyncParams {
   /** Applied filters. */
@@ -67,6 +77,8 @@ export function useDashboardUrlSync({
 }: UseDashboardUrlSyncParams) {
   const { lists, loaded: listsLoaded } = useAccountLists()
   const pendingRef = useRef<Partial<Filters> | null>(null)
+  // Lists a link named without their accounts that had not loaded when it was applied.
+  const unresolvedListsRef = useRef<string[]>([])
   const [restored, setRestored] = useState(false)
   // The section and view are applied on the first effect; the filters may wait for the account lists.
   const [layoutRestored, setLayoutRestored] = useState(false)
@@ -106,12 +118,41 @@ export function useDashboardUrlSync({
     // (someone else's, or deleted): the link's own names stand in for it.
     if (!listsReady && !listsLoaded && !listWaitOver) return
     pendingRef.current = null
+    let restoredFilters = filtersFromUrl(pending, bounds)
+    // A link too long to carry its lists' names names the lists alone. A list
+    // that is not to hand then has no accounts to apply.
+    const unresolved =
+      (pending.accountNameValues ?? []).length === 0
+        ? (pending.accountListValues ?? []).map((entry) => entry.value).filter((id) => !known.has(id))
+        : []
+    if (unresolved.length > 0) {
+      if (listsLoaded) {
+        restoredFilters = withoutLists(restoredFilters, unresolved)
+        reportUnsharedList()
+      } else {
+        // The lists are still loading (the wait ran out): settled once they arrive.
+        unresolvedListsRef.current = unresolved
+      }
+    }
     // The data's limits are not needed to apply a link: a range the link sets
     // is kept as it is (not clamped to the placeholder limits), and the
     // others follow the limits once they arrive.
-    applyFilters(filtersFromUrl(pending, bounds), { clampRanges: boundsKnown })
+    applyFilters(restoredFilters, { clampRanges: boundsKnown })
     setRestored(true)
   }, [restored, bounds, boundsKnown, lists, listsLoaded, listWaitOver, applyFilters, filters])
+
+  // Lists a link was applied without, once they have loaded: a list that has
+  // arrived is expanded into its accounts, and one that is still missing is
+  // dropped, so the sidebar never shows a list that filters nothing.
+  useEffect(() => {
+    const unresolved = unresolvedListsRef.current
+    if (!restored || unresolved.length === 0 || !listsLoaded) return
+    unresolvedListsRef.current = []
+    const known = new Set(lists.map((list) => list.id))
+    const missing = unresolved.filter((id) => !known.has(id))
+    applyFilters(missing.length > 0 ? withoutLists(filters, missing) : filters, { clampRanges: boundsKnown })
+    if (missing.length > 0) reportUnsharedList()
+  }, [restored, lists, listsLoaded, filters, applyFilters, boundsKnown])
 
   // Write every change back to the address.
   useEffect(() => {

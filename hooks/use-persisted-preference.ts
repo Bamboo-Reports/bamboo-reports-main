@@ -28,10 +28,13 @@ function listenersFor(key: string): Set<() => void> {
 }
 
 function readRaw(key: string): string | null {
+  // A choice whose write failed is newer than whatever storage still holds.
+  const pending = unsaved.get(key)
+  if (pending !== undefined) return pending
   try {
-    return window.localStorage.getItem(key) ?? unsaved.get(key) ?? null
+    return window.localStorage.getItem(key)
   } catch {
-    return unsaved.get(key) ?? null
+    return null
   }
 }
 

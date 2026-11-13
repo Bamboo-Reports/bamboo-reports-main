@@ -7,6 +7,7 @@ import { buildTrackedFiltersSnapshot, normalizeTrackedText } from "@/lib/analyti
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { countActiveFilters } from "@/lib/dashboard/active-filters"
 import { withFilterDefaults } from "@/lib/dashboard/filter-summary"
+import { withUnsetRanges } from "@/lib/dashboard/range-limits"
 import type { Filters } from "@/lib/types"
 
 export interface SavedFilter {
@@ -157,7 +158,7 @@ export function useSavedFilters() {
     try {
       const { data, error } = await supabase
         .from("saved_filters")
-        .insert({ name: normalizedName, filters: filters, user_id: userId })
+        .insert({ name: normalizedName, filters: withUnsetRanges(filters), user_id: userId })
         .select("id, name")
         .single()
 
@@ -217,7 +218,7 @@ export function useSavedFilters() {
         .from("saved_filters")
         .update({
           name: normalizedName,
-          filters: filters,
+          filters: withUnsetRanges(filters),
           updated_at: new Date().toISOString(),
         })
         .eq("id", id)

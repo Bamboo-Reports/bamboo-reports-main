@@ -13,6 +13,9 @@ vi.mock("@/lib/analytics/client", () => ({ captureEvent: vi.fn() }))
 const lists = vi.hoisted(() => ({ value: { lists: [] as unknown[], loaded: false } }))
 vi.mock("@/contexts/account-lists-context", () => ({ useAccountLists: () => lists.value }))
 
+const toastError = vi.hoisted(() => vi.fn())
+vi.mock("sonner", () => ({ toast: { error: toastError } }))
+
 const RANGES = {
   revenue: { min: 1, max: 1000 },
   yearsInIndia: { min: 1, max: 50 },
@@ -76,6 +79,7 @@ const open = (search: string) => {
 beforeEach(() => {
   vi.useFakeTimers()
   lists.value = { lists: [], loaded: false }
+  toastError.mockClear()
 })
 
 afterEach(() => {
@@ -126,5 +130,45 @@ describe("useDashboardUrlSync with the filters hook", () => {
     expect(result.current.filtersRestored).toBe(false)
     act(() => void vi.advanceTimersByTime(200))
     expect(result.current.filtersRestored).toBe(true)
+  })
+
+  describe("a link that names a list without its accounts (too long to carry them)", () => {
+    const listLink = () => linkTo({ accountListValues: [inc("big-list")] })
+    const bigList = { id: "big-list", name: "Big list", accounts: ["Acme Corp", "Globex"] }
+
+    it("drops a list that is not shared, and says so", () => {
+      lists.value = { lists: [], loaded: true }
+      const { result } = open(listLink())
+      expect(result.current.filtersRestored).toBe(true)
+      expect(result.current.filters.accountListValues).toEqual([])
+      expect(result.current.filters.accountNameValues).toEqual([])
+      expect(toastError).toHaveBeenCalledWith("Could not apply an account list", {
+        description: "The link's list is not shared with you",
+      })
+    })
+
+    it("expands the list once it loads after the wait ran out", () => {
+      const { result, rerender } = open(listLink())
+      act(() => void vi.advanceTimersByTime(4100))
+      expect(result.current.filtersRestored).toBe(true)
+      expect(result.current.filters.accountNameValues).toEqual([])
+
+      lists.value = { lists: [bigList], loaded: true }
+      rerender({ serverRanges: null })
+      expect(result.current.filters.accountListValues).toEqual([inc("big-list")])
+      expect(result.current.filters.accountNameValues).toEqual([inc("Acme Corp"), inc("Globex")])
+      expect(toastError).not.toHaveBeenCalled()
+    })
+
+    it("drops the list when the lists load late without it", () => {
+      const { result, rerender } = open(listLink())
+      act(() => void vi.advanceTimersByTime(4100))
+      expect(result.current.filters.accountListValues).toEqual([inc("big-list")])
+
+      lists.value = { lists: [], loaded: true }
+      rerender({ serverRanges: null })
+      expect(result.current.filters.accountListValues).toEqual([])
+      expect(toastError).toHaveBeenCalledTimes(1)
+    })
   })
 })

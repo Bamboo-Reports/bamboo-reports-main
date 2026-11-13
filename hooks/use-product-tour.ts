@@ -144,11 +144,19 @@ export function useProductTour({ userId, dataLoaded, hasMapView }: UseProductTou
     if (hasAutoStartedRef.current || isLoading || isCompleted || !dataLoaded) return
     hasAutoStartedRef.current = true
 
+    let fired = false
     const timer = window.setTimeout(() => {
+      fired = true
       startTour()
     }, TOUR_AUTO_START_DELAY_MS)
 
-    return () => window.clearTimeout(timer)
+    // A timer cancelled before it fired has not started the tour, so the next
+    // run schedules it again (startTour changes when the view does, and
+    // StrictMode re-runs effects).
+    return () => {
+      window.clearTimeout(timer)
+      if (!fired) hasAutoStartedRef.current = false
+    }
   }, [isLoading, isCompleted, dataLoaded, startTour])
 
   // Cleanup on unmount

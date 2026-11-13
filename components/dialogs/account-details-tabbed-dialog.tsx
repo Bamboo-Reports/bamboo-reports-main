@@ -37,7 +37,6 @@ import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { cn, ensureAbsoluteUrl } from "@/lib/utils"
 import { formatRevenueRange, knownText } from "@/lib/utils/helpers"
 import {
-  FactChip,
   FactGroup,
   FilterMenu,
   sortByCount,
@@ -108,7 +107,8 @@ export function AccountDetailsDialog({
   const [financialData, setFinancialData] = useState<AccountFinancialInfo | null>(null)
   const [financialLoading, setFinancialLoading] = useState(false)
   const [financialError, setFinancialError] = useState<string | null>(null)
-  const [financialTickerLoaded, setFinancialTickerLoaded] = useState<string | null>(null)
+  // The account and ticker the financials were last loaded for.
+  const [financialLoadedKey, setFinancialLoadedKey] = useState<string | null>(null)
   const [showAllOfferings, setShowAllOfferings] = useState(false)
   // Table or Grid for the centre and prospect lists, remembered across records.
   const [listLayout, setListLayout] = useDataLayoutPreference(RECORD_LIST_LAYOUT_STORAGE_KEY)
@@ -129,6 +129,7 @@ export function AccountDetailsDialog({
 
   const accountName = account?.account_global_legal_name ?? ""
   const ticker = account?.account_hq_stock_ticker?.trim() ?? ""
+  const hqCountry = account?.account_hq_country ?? null
 
   const accountCenters = React.useMemo(
     () => account
@@ -314,7 +315,6 @@ export function AccountDetailsDialog({
     setFinancialData(null)
     setFinancialLoading(false)
     setFinancialError(null)
-    setFinancialTickerLoaded(null)
     setShowAllOfferings(false)
     setCenterQuery("")
     setCenterTypeFilter(new Set())
@@ -332,23 +332,26 @@ export function AccountDetailsDialog({
     let cancelled = false
 
     async function loadFinancialData() {
-      if (!open || activeTab !== "info" || !ticker || financialTickerLoaded === ticker) {
+      // Keyed by the account too, so switching to another account loads once
+      // and an account that shares a ticker with the previous one still loads.
+      const loadKey = `${accountName}|${ticker}`
+      if (!open || activeTab !== "info" || !ticker || financialLoadedKey === loadKey) {
         return
       }
 
       setFinancialLoading(true)
       setFinancialError(null)
 
-      const response = await requestAccountFinancialInfo(ticker, account?.account_hq_country, account?.account_global_legal_name)
+      const response = await requestAccountFinancialInfo(ticker, hqCountry, accountName)
       if (cancelled) return
 
       if (response.success && response.data) {
         setFinancialData(response.data)
-        setFinancialTickerLoaded(ticker)
+        setFinancialLoadedKey(loadKey)
         setFinancialError(null)
       } else {
         setFinancialData(null)
-        setFinancialTickerLoaded(ticker)
+        setFinancialLoadedKey(loadKey)
         setFinancialError(response.error || "Unable to fetch financial data")
         captureEvent(ANALYTICS_EVENTS.FINANCIALS_LOAD_FAILED, {
           error_message: response.error || "Unable to fetch financial data",
@@ -362,7 +365,7 @@ export function AccountDetailsDialog({
     return () => {
       cancelled = true
     }
-  }, [activeTab, financialTickerLoaded, open, ticker])
+  }, [activeTab, financialLoadedKey, open, ticker, hqCountry, accountName])
 
   if (!account) return null
 
@@ -395,15 +398,15 @@ export function AccountDetailsDialog({
           </DialogDescription>
           <Tabs value={shownTab} onValueChange={handleTabChange} className="flex min-h-0 flex-1 flex-col">
             <div className="shrink-0 border-b px-6 pt-5">
-              <div className="flex items-center gap-3">
+              <div className="flex items-start gap-3">
                 <CompanyLogo domain={account.account_hq_website ?? undefined} companyName={account.account_global_legal_name} size="md" theme="auto" />
-                <div className="min-w-0 flex-1">
-                  <DialogTitle className="truncate text-xl font-semibold tracking-[-0.015em]">{account.account_global_legal_name}</DialogTitle>
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+                  <DialogTitle className="min-w-0 truncate text-xl font-semibold tracking-[-0.01em]">{account.account_global_legal_name}</DialogTitle>
                   {/* Industry, type, ticker, listings and rankings live in the fact sheet; only the Non-GCC flag is called out here. */}
                   {account.account_visibility === "exclude" && (
-                    <div className="mt-2">
-                      <FactChip tone="warn">Non-GCC</FactChip>
-                    </div>
+                    <span className="inline-flex h-5 items-center rounded-md bg-amber-500/10 px-1.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                      Non-GCC
+                    </span>
                   )}
                 </div>
                 <div className="flex shrink-0 items-center gap-0.5">

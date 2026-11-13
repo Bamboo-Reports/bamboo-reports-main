@@ -3,6 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { act, cleanup, renderHook } from "@testing-library/react"
 import { captureEvent } from "@/lib/analytics/client"
 import { useDashboardFilters } from "@/hooks/use-dashboard-filters"
+import { normalizeFiltersForServer } from "@/hooks/use-server-dashboard-data"
+import { DEFAULT_RANGE_BOUNDS } from "@/lib/dashboard/active-filters"
+import { getCurrentRangeLimits, UNSET_RANGE, withUnsetRanges } from "@/lib/dashboard/range-limits"
+import { filtersFromUrl } from "@/lib/dashboard/url-state"
 import type { Filters, FilterValue } from "@/lib/types"
 
 vi.mock("@/lib/analytics/client", () => ({ captureEvent: vi.fn() }))
@@ -116,6 +120,39 @@ describe("useDashboardFilters", () => {
     expect(result.current.filters.centerIncYearRange).toEqual([1990, 2000])
   })
 
+  describe("saved filters when the data's limits grow", () => {
+    const GROWN = { revenue: { min: 1, max: 1200 }, yearsInIndia: { min: 1, max: 60 }, centerIncYear: { min: 1990, max: 2031 } }
+
+    it("records the limits only once they are known", () => {
+      const { rerender } = setup(null as unknown as typeof RANGES)
+      expect(getCurrentRangeLimits()).toBeNull()
+      rerender({ serverRanges: RANGES })
+      expect(getCurrentRangeLimits()).toEqual(RANGES)
+    })
+
+    it("stores ranges left at the limits as unset, and keeps a narrowed one", () => {
+      const { result } = setup()
+      const stored = withUnsetRanges({ ...result.current.filters, centerIncYearRange: [2000, 2030] }, RANGES)
+      expect(stored.accountHqRevenueRange).toEqual(UNSET_RANGE)
+      expect(stored.accountYearsInIndiaRange).toEqual(UNSET_RANGE)
+      expect(stored.centerIncYearRange).toEqual([2000, 2030])
+    })
+
+    it("loads an untouched range over the new data, not counted as a filter or sent to the server", () => {
+      const { result, rerender } = setup()
+      const stored = withUnsetRanges(result.current.filters, RANGES)
+      rerender({ serverRanges: GROWN })
+      act(() => result.current.handleLoadSavedFilters(stored))
+      expect(result.current.filters.accountHqRevenueRange).toEqual([1, 1200])
+      expect(result.current.filters.accountYearsInIndiaRange).toEqual([1, 60])
+      expect(result.current.filters.centerIncYearRange).toEqual([1990, 2031])
+      expect(result.current.getTotalActiveFilters()).toBe(0)
+      const wire = normalizeFiltersForServer(result.current.filters, GROWN)
+      expect(wire.accountHqRevenueRange).toEqual(UNSET_RANGE)
+      expect(wire.centerIncYearRange).toEqual(UNSET_RANGE)
+    })
+  })
+
   it("range sliders update the pending filters", () => {
     const { result } = setup()
     act(() => {
@@ -169,8 +206,11 @@ describe("useDashboardFilters", () => {
 
     it("keeps a range wider than the placeholder limits", () => {
       const { result, rerender } = setupBeforeLimits()
+      // Restored the way the address bar restores it (fresh value lists, not the hook's own).
       act(() =>
-        result.current.handleLoadSavedFilters(linkFilters(result, { accountHqRevenueRange: [0, 2_000_000] }), { clampRanges: false })
+        result.current.handleLoadSavedFilters(filtersFromUrl({ accountHqRevenueRange: [0, 2_000_000] }, DEFAULT_RANGE_BOUNDS), {
+          clampRanges: false,
+        })
       )
       expect(result.current.filters.accountHqRevenueRange).toEqual([0, 2_000_000])
       rerender({ serverRanges: { ...RANGES, revenue: { min: 0, max: 5_000_000 } } })

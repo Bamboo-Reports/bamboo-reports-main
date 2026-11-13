@@ -23,6 +23,7 @@ import {
 import { getAccountChartData, getCenterChartData, getProspectChartData } from "@/lib/dashboard/charts"
 import { perfLog } from "@/lib/utils/dev-log"
 import { countActiveFilters, type FilterRangeBounds } from "@/lib/dashboard/active-filters"
+import { setCurrentRangeLimits } from "@/lib/dashboard/range-limits"
 import { useAccountLists } from "@/contexts/account-lists-context"
 import { expandAccountLists } from "@/lib/accounts/account-lists"
 import { useFilterChangeTracking } from "@/hooks/use-filter-change-tracking"
@@ -240,6 +241,10 @@ export function useDashboardFilters({
   )
 
   useEffect(() => {
+    // Server mode before the facets arrive: there is no data to narrow
+    // against, only the placeholder limits, and clamping to them would cut a
+    // link's revenue range that is wider than the placeholder.
+    if (!serverRanges && accounts.length === 0) return
     setRevenueRange(dynamicRevenueRange)
 
     setPendingFilters((prev) => {
@@ -269,7 +274,7 @@ export function useDashboardFilters({
 
       return prev
     })
-  }, [dynamicRevenueRange])
+  }, [dynamicRevenueRange, serverRanges, accounts])
 
   const filterStateForOptions = useMemo(
     () => ({
@@ -324,6 +329,14 @@ export function useDashboardFilters({
     () => ({ revenue: revenueRange, yearsInIndia: yearsInIndiaRange, centerIncYear: centerIncYearRange }),
     [revenueRange, yearsInIndiaRange, centerIncYearRange]
   )
+
+  // Saved filters store a range left at these limits as unset, so it still
+  // spans the data when the limits grow. Placeholder limits are not recorded.
+  const limitsKnown = Boolean(serverRanges) || accounts.length > 0 || centers.length > 0
+  useEffect(() => {
+    setCurrentRangeLimits(limitsKnown ? rangeBaselines : null)
+    return () => setCurrentRangeLimits(null)
+  }, [limitsKnown, rangeBaselines])
 
   const getActiveFilterCountFor = useCallback(
     (sourceFilters: Filters) => countActiveFilters(sourceFilters, rangeBaselines),
