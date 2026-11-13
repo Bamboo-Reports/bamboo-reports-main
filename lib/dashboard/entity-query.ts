@@ -125,6 +125,30 @@ function rangeOrder(column: string, direction: "asc" | "desc"): string {
   )
 }
 
+/** A trimmed value, or null when it is blank or "TBA" (lib/utils/helpers.ts knownText). */
+const knownSql = (column: string) => `case when upper(trim(${column})) in ('', 'TBA') then null else trim(${column}) end`
+
+/** The city, else the state, else the country, else `fallback`, as formatLocation shows it. */
+const locationSql = (city: string, state: string, country: string, fallback?: string) =>
+  `coalesce(${[city, state, country].map(knownSql).join(", ")}${fallback ? `, '${fallback}'` : ""})`
+
+/**
+ * Sort keys that are not stored columns, mapped to the SQL that computes them.
+ * "location" sorts by the place the Location column shows, so a row whose
+ * city is TBA sorts by its state instead of under T.
+ */
+const DERIVED_SORT_COLUMNS: Record<QueryEntity, Record<string, string>> = {
+  accounts: { location: locationSql("account_hq_city", "account_hq_state", "account_hq_country") },
+  centers: { location: locationSql("center_city", "center_state", "center_country", "India") },
+  prospects: { location: locationSql("prospect_city", "prospect_state", "prospect_country", "India") },
+}
+
+/** The SQL a sort key orders by: a stored column as it is, a derived key as its expression. */
+export function sortExpression(entity: QueryEntity, column: string): string {
+  const derived = DERIVED_SORT_COLUMNS[entity]
+  return Object.hasOwn(derived, column) ? `(${derived[column]})` : column
+}
+
 /**
  * Resolves the ORDER BY for a page request, always ending in a tiebreak that
  * makes the ordering total.
@@ -137,8 +161,9 @@ function rangeOrder(column: string, direction: "asc" | "desc"): string {
  */
 export function resolveOrder(entity: QueryEntity, sort: SortSpec | undefined): string {
   const cfg = CONFIG[entity]
-  const chosen =
-    sort && typeof sort.column === "string" && cfg.sortable.has(sort.column) ? sort.column : null
+  const isSortable = (column: unknown): column is string =>
+    typeof column === "string" && (cfg.sortable.has(column) || Object.hasOwn(DERIVED_SORT_COLUMNS[entity], column))
+  const chosen = sort && isSortable(sort.column) ? sort.column : null
   const column = chosen ?? cfg.defaultColumn
   const direction: "asc" | "desc" = chosen !== null && sort?.direction === "desc" ? "desc" : "asc"
 
@@ -147,7 +172,7 @@ export function resolveOrder(entity: QueryEntity, sort: SortSpec | undefined): s
       `${column} ${direction} nulls last`
     : RANGE_SORT_COLUMNS.has(column)
       ? rangeOrder(column, direction)
-      : textOrder(column, direction)
+      : textOrder(sortExpression(entity, column), direction)
 
   const extra = cfg.tiebreak.filter((tiebreakColumn) => tiebreakColumn !== column)
   if (extra.length === 0) return base

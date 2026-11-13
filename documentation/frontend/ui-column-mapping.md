@@ -144,7 +144,7 @@ Column labels and cells are defined per tab in the column files listed below. Th
 | *(Logo)* | | `account_hq_website` | `accounts` | Company logo | Brandfetch lookup by domain; falls back to a monogram |
 | Account Name | `name` (required) | `account_global_legal_name` | `accounts` | Clickable text | Opens the Account Details dialog |
 | *(Visibility note chip)* | | `account_visibility`, `account_visibility_note` | `accounts` | Chip | Shows the note when `account_visibility = 'exclude'` and a note exists |
-| Location | `location` | `account_hq_city` + `account_hq_state` + `account_hq_country` | `accounts` | Computed text | `formatAccountLocation`: the city, else the state, else the country; blank and `TBA` values are skipped. Sorts by `account_hq_city` |
+| Location | `location` | `account_hq_city` + `account_hq_state` + `account_hq_country` | `accounts` | Computed text | `formatAccountLocation`: the city, else the state, else the country; blank and `TBA` values are skipped. Sorts by the same place it shows |
 | Sub Industry | `industry` | `account_hq_industry` | `accounts` | Text | |
 | Revenue Range | `revenue` | `account_hq_revenue_range` | `accounts` | Text | Bucketed range string |
 

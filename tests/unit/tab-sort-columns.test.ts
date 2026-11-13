@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { TAB_SORT_COLUMNS } from "@/lib/dashboard/entity-columns"
-import { resolveOrder, type QueryEntity } from "@/lib/dashboard/entity-query"
+import { resolveOrder, sortExpression, type QueryEntity } from "@/lib/dashboard/entity-query"
 
 /**
  * resolveOrder silently falls back to the default order for a column outside
@@ -15,7 +15,8 @@ describe("TAB_SORT_COLUMNS", () => {
 
   it.each(entries)("$entity.$key sorts by $column on the server", ({ entity, column }) => {
     const order = resolveOrder(entity, { column, direction: "desc" })
+    const expression = sortExpression(entity, column)
     expect(order).not.toBe(resolveOrder(entity, undefined))
-    expect(order.startsWith(`case when ${column} is null`) || order.startsWith(`${column} desc`)).toBe(true)
+    expect(order.startsWith(`case when ${expression} is null`) || order.startsWith(`${column} desc`)).toBe(true)
   })
 })

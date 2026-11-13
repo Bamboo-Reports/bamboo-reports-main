@@ -63,19 +63,19 @@ export const ACCOUNT_PROJECTION = [
 export const TAB_SORT_COLUMNS: Record<"accounts" | "centers" | "prospects", Record<string, string>> = {
   accounts: {
     name: "account_global_legal_name",
-    location: "account_hq_city",
+    location: "location",
     industry: "account_hq_industry",
     revenue: "account_hq_revenue_range",
   },
   centers: {
     name: "center_name",
-    location: "center_city",
+    location: "location",
     type: "center_type",
     employees: "center_employees_range",
   },
   prospects: {
     name: "prospect_full_name",
-    location: "prospect_city",
+    location: "location",
     title: "prospect_title",
     department: "prospect_department",
   },
