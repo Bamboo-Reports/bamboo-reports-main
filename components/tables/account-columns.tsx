@@ -4,7 +4,6 @@ import { createColumnHelper } from "@tanstack/react-table"
 import { RiCheckboxCircleLine, RiExternalLinkLine, RiEyeLine, RiGlobalLine } from "@remixicon/react"
 import { CompanyLogo } from "@/components/ui/company-logo"
 import { ContextMenuItem, ContextMenuSeparator } from "@/components/ui/context-menu"
-import { HintTooltip } from "@/components/ui/tooltip"
 import { TruncatedText as TruncatedSpan } from "@/components/ui/truncated-text"
 import { TruncatedText, createSelectColumn } from "@/components/tables/data-table"
 import { DataTableColumnHeader } from "@/components/tables/data-table-column-header"
@@ -37,27 +36,15 @@ function AccountNameCell({ account }: { account: Account }) {
         {(isNasscomVerified || visibilityNote) && (
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
             {isNasscomVerified && (
-              <HintTooltip label="NASSCOM listed">
-                <div
-                  role="img"
-                  tabIndex={0}
-                  className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <RiCheckboxCircleLine className="h-3 w-3" aria-hidden="true" />
-                  NASSCOM
-                </div>
-              </HintTooltip>
+              <div className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
+                <RiCheckboxCircleLine className="h-3 w-3" aria-hidden="true" />
+                NASSCOM
+              </div>
             )}
             {visibilityNote && (
-              <HintTooltip label="Visibility note" hint={visibilityNote}>
-                <div
-                  role="img"
-                  tabIndex={0}
-                  className="inline-flex h-5 max-w-[220px] items-center gap-1 rounded-md bg-amber-500/10 px-1.5 text-xs font-medium text-amber-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-amber-300"
-                >
-                  <span className="truncate">{visibilityNote}</span>
-                </div>
-              </HintTooltip>
+              <div className="inline-flex h-5 max-w-[220px] items-center gap-1 rounded-md bg-amber-500/10 px-1.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                <span className="truncate">{visibilityNote}</span>
+              </div>
             )}
           </div>
         )}
