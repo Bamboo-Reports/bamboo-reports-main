@@ -66,7 +66,10 @@ const config: Config = {
   				'4': 'hsl(var(--chart-4))',
   				'5': 'hsl(var(--chart-5))'
   			},
-  			include: 'hsl(var(--include))',
+  			include: {
+  				DEFAULT: 'hsl(var(--include))',
+  				strong: 'hsl(var(--include-strong))'
+  			},
   			exclude: 'hsl(var(--exclude))',
   			sidebar: {
   				DEFAULT: 'hsl(var(--sidebar-background))',

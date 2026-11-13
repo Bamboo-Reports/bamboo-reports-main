@@ -164,21 +164,21 @@ export function ProspectEngagementTimeline({ psUniqueKey }: { psUniqueKey: strin
                       </time>
                     )}
                     <span
-                      className={`mx-3 grid h-9 w-9 shrink-0 place-items-center rounded-lg sm:mx-4 ${
+                      className={`mx-3 grid h-8 w-8 shrink-0 place-items-center rounded-lg border sm:mx-4 ${
                         isLatest
-                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
-                          : "bg-muted text-muted-foreground"
+                          ? "border-include/25 bg-include/[0.08] text-include-strong"
+                          : "bg-card text-muted-foreground"
                       }`}
                       aria-hidden
                     >
-                      <Icon className="h-[18px] w-[18px]" />
+                      <Icon className="h-4 w-4" />
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium leading-snug text-foreground break-words">{tp.campaign}</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
                         {label}
                         {isLatest && touchpoints.length > 1 ? (
-                          <span className="font-medium text-emerald-700 dark:text-emerald-300"> · Latest</span>
+                          <span className="font-medium text-include-strong"> · Latest</span>
                         ) : null}
                       </p>
                     </div>

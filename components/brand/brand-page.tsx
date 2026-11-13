@@ -53,7 +53,7 @@ export function BrandPage({ children, className, homeHref = "/" }: BrandPageProp
         </div>
       </main>
 
-      <footer className="px-6 py-4 text-center text-xs text-muted-foreground/80">A Research NXT product</footer>
+      <footer className="px-6 py-4 text-center text-xs text-muted-foreground">A Research NXT product</footer>
     </div>
   )
 }

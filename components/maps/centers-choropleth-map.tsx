@@ -11,6 +11,7 @@ import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { MAPLIBRE_WORKER_URL, prepareBasemap, transformMapRequest, useBasemapStyleUrl } from "@/lib/maps/basemap"
 import { useMapRecovery } from "@/lib/maps/use-map-recovery"
 import { MapErrorState } from "@/components/maps/map-error-state"
+import { useThemeColor } from "@/components/maps/use-theme-color"
 import { DebugLocationSearch } from "@/components/maps/debug-location-search"
 import { devError } from "@/lib/utils/dev-log"
 import type { Center } from "@/lib/types"
@@ -363,6 +364,9 @@ export function CentersChoroplethMap({
   }, [featureKeyExpression, hoveredFeatureKeys])
 
   const mapStyle = useBasemapStyleUrl()
+  // Chrome lines follow the theme; the state fills keep the fixed orange scale.
+  const baseOutlineColor = useThemeColor("hsl(var(--muted-foreground))", "#64748b")
+  const stateOutlineColor = useThemeColor("var(--treemap-border-color)", "#ffffff")
 
   const handleRecenter = () => {
     const mapInstance = mapRef.current?.getMap()
@@ -505,7 +509,7 @@ export function CentersChoroplethMap({
             type="line"
             filter={["==", ["get", "level"], 1]}
             paint={{
-              "line-color": "#64748b",
+              "line-color": baseOutlineColor,
               "line-width": 0.5,
               "line-opacity": 0.5,
             }}
@@ -526,7 +530,7 @@ export function CentersChoroplethMap({
             type="line"
             filter={layerFilter}
             paint={{
-              "line-color": "#ffffff",
+              "line-color": stateOutlineColor,
               "line-width": 0.7,
               "line-opacity": 0.8,
             }}

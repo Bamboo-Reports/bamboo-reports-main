@@ -54,7 +54,7 @@ function AccountNameCell({ account }: { account: Account }) {
                 <div
                   role="img"
                   tabIndex={0}
-                  className="inline-flex max-w-[220px] items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-xs font-medium text-amber-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-amber-300"
+                  className="inline-flex h-5 max-w-[220px] items-center gap-1 rounded-md bg-amber-500/10 px-1.5 text-xs font-medium text-amber-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-amber-300"
                 >
                   <span className="truncate">{visibilityNote}</span>
                 </div>

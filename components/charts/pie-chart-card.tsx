@@ -440,8 +440,8 @@ export const PieChartCard = memo(({
 
   return (
     <Card className="border shadow-sm">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base font-medium flex items-center gap-2">
+      <CardHeader className="p-4 pb-3">
+        <CardTitle className="text-base font-medium leading-6 tracking-normal flex items-center gap-2">
           <RiPieChartLine className="h-4 w-4 text-muted-foreground" />
           {title}
           {note && (
@@ -456,7 +456,7 @@ export const PieChartCard = memo(({
           )}
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-4 pt-0">
         {loading && safeData.length === 0 ? (
           <div className="h-[400px] w-full">
             <ChartWaveSkeleton />

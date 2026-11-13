@@ -246,9 +246,9 @@ export function ProspectDetailsDialog({
             <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-muted text-base font-semibold text-foreground">{initials || "?"}</div>
             <div className="min-w-0 flex-1">
               <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                <DialogTitle className="min-w-0 truncate text-xl font-semibold tracking-[-0.015em]">{fullName || "Prospect"}</DialogTitle>
+                <DialogTitle className="min-w-0 truncate text-xl font-semibold tracking-[-0.01em]">{fullName || "Prospect"}</DialogTitle>
                 {engaged && (
-                  <span className="rounded-md bg-include/[0.12] px-1.5 text-xs font-medium leading-5 text-include">Engaged</span>
+                  <span className="inline-flex h-5 items-center rounded-md bg-include/[0.08] px-1.5 text-xs font-medium text-include-strong">Engaged</span>
                 )}
                 {showHeadType && headType && <HeadTypeBadge headType={headType} />}
               </div>

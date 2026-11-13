@@ -224,7 +224,7 @@ export function FilterRangeField({
           >
             <span
               className={cn(
-                "absolute top-0.5 h-3 w-3 rounded-full bg-white shadow-sm transition-transform duration-150 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                "absolute top-0.5 h-3 w-3 rounded-full bg-background shadow-sm dark:bg-foreground transition-transform duration-150 ease-[cubic-bezier(0.22,1,0.36,1)]",
                 includeNull ? "left-0.5 translate-x-3" : "left-0.5"
               )}
             />

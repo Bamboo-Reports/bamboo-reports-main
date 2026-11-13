@@ -122,7 +122,7 @@ export function HistoryDialog({
       >
         <DialogHeader className="shrink-0 space-y-0 border-b px-5 py-3 pr-12">
           <div className="flex min-h-8 items-center gap-2.5">
-            <DialogTitle className="text-base">History</DialogTitle>
+            <DialogTitle>History</DialogTitle>
             {!empty && <span className="text-[13px] tabular-nums text-muted-foreground">{plural(recentItems.length, "record")}</span>}
             <span className="flex-1" />
             {!empty && (
@@ -137,9 +137,9 @@ export function HistoryDialog({
 
         {empty ? (
           <div className="grid flex-1 place-items-center p-8 text-center">
-            <div className="max-w-xs">
+            <div className="max-w-sm">
               <RiHistoryLine className="mx-auto h-7 w-7 text-muted-foreground" />
-              <p className="mt-2 text-sm font-medium">No history yet</p>
+              <p className="mt-3 text-sm font-medium">No history yet</p>
               <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
                 Accounts, centres and prospects you open from the dashboard will appear here, so you can get back to them quickly.
               </p>

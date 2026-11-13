@@ -71,7 +71,7 @@ export function SelectionActionBar({
       <div
         data-mounted={entered && !exiting ? "" : undefined}
         className={
-          "pointer-events-auto flex items-center gap-3 rounded-xl border bg-card px-3 py-2 shadow-float transition-[opacity,transform] ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:translate-y-0 " +
+          "pointer-events-auto flex items-center gap-3 rounded-lg border bg-card px-3 py-2 shadow-float transition-[opacity,transform] ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:translate-y-0 " +
           (entered && !exiting ? "translate-y-0 opacity-100 duration-200" : "translate-y-4 opacity-0 duration-150")
         }
       >

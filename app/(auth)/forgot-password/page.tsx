@@ -70,7 +70,7 @@ export default function ForgotPasswordPage() {
           <span className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-full bg-muted text-foreground">
             <RiMailSendLine className="h-6 w-6" />
           </span>
-          <h1 className="text-xl font-semibold tracking-[-0.015em]">Check your email</h1>
+          <h1 className="text-[22px] font-semibold tracking-[-0.01em]">Check your email</h1>
           <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
             If an account exists for <span className="font-medium text-foreground">{sentTo}</span>, a link to set a new
             password is on its way. It can take a few minutes; check spam too.

@@ -199,7 +199,7 @@ export function SavedFiltersLibrary({
                         <dd className="flex min-w-0 flex-wrap gap-1.5">
                           {field.values?.map((item) => <FilterValueTag key={`${item.mode}-${item.value}`} item={item} />)}
                           {field.text && (
-                            <span className="inline-flex h-6 items-center rounded-md border bg-background px-2 text-xs font-medium tabular-nums">
+                            <span className="inline-flex h-6 items-center rounded-md border bg-card px-2 text-xs font-medium tabular-nums">
                               {field.text}
                             </span>
                           )}

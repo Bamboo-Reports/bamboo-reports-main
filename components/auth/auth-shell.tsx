@@ -23,8 +23,8 @@ export function AuthShell({ title, description, children, footer, formCardClassN
   return (
     <BrandPage homeHref="/signin">
       <Card className={cn("border-border/70 bg-card shadow-sm", formCardClassName)}>
-        <div className="p-6 sm:p-7">
-          {title && <h1 className="text-[22px] font-semibold tracking-[-0.015em] text-foreground">{title}</h1>}
+        <div className="p-6">
+          {title && <h1 className="text-[22px] font-semibold tracking-[-0.01em] text-foreground">{title}</h1>}
           {description && <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{description}</p>}
 
           <div className={title || description ? "mt-6" : undefined}>{children}</div>

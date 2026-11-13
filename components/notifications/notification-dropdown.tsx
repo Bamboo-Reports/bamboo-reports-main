@@ -91,7 +91,7 @@ export function NotificationDropdown() {
         </TooltipContent>
       </Tooltip>
       <PopoverContent align="end" className="w-[380px] overflow-hidden p-0">
-        <div className="flex items-center gap-2.5 border-b px-3.5 py-3">
+        <div className="flex items-center gap-2 border-b px-4 py-3">
           <p className="text-sm font-medium text-foreground">Updates</p>
           {showList && (
             <span className="text-xs tabular-nums text-muted-foreground">
@@ -140,7 +140,7 @@ export function NotificationDropdown() {
             <div>
               {[1, 2, 3].map((i) => (
                 <div key={i} className="flex items-start gap-2.5 px-2.5 py-2.5">
-                  <Skeleton className="h-7 w-7 shrink-0 rounded-md" />
+                  <Skeleton className="h-8 w-8 shrink-0 rounded-lg" />
                   <div className="min-w-0 flex-1">
                     <Skeleton className="h-3.5 w-1/2" />
                     <Skeleton className="mt-2 h-3 w-4/5" />
@@ -156,7 +156,7 @@ export function NotificationDropdown() {
                 const more = summary.record_count - summary.record_labels.length
                 return (
                   <div key={`${summary.table_name}:${summary.change_type}`} className="flex items-start gap-2.5 rounded-lg px-2.5 py-2.5">
-                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md border text-muted-foreground">
+                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border bg-card text-muted-foreground">
                       <Icon className="h-4 w-4" />
                     </span>
                     <div className="min-w-0 flex-1">

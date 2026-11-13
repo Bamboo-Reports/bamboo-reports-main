@@ -69,7 +69,7 @@ export function LoadingState() {
 
       <div className="flex flex-1 overflow-hidden" aria-hidden="true">
         {/* Collapsed filter rail: mirrors components/filters/filters-sidebar.tsx. */}
-        <aside className="ml-6 mb-3 mt-6 flex w-16 shrink-0 flex-col items-center gap-1 rounded-2xl border border-sidebar-border bg-sidebar py-3">
+        <aside className="ml-6 mb-3 mt-6 flex w-16 shrink-0 flex-col items-center gap-1 rounded-xl border border-sidebar-border bg-sidebar py-3">
           <RailGhost />
           <span className="h-2" />
           {Array.from({ length: 5 }, (_, index) => (
@@ -120,13 +120,13 @@ export function LoadingState() {
           <div className="grid min-h-0 grid-cols-1 gap-4 md:grid-cols-2">
             {Array.from({ length: 4 }, (_, index) => (
               <Card key={index} className="border shadow-sm">
-                <CardHeader className="pb-3">
+                <CardHeader className="p-4 pb-3">
                   <div className="flex h-6 items-center gap-2">
                     <Skeleton className="h-4 w-4 rounded" />
                     <Skeleton className="h-4 w-32" />
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-4 pt-0">
                   <div className="h-[400px] w-full">
                     <ChartWaveSkeleton />
                   </div>

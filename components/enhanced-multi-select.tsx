@@ -66,7 +66,7 @@ const EnhancedSelectItem = React.memo(({
         e.stopPropagation()
         handler()
       }}
-      className={cn("inline-flex h-5 items-center gap-0.5 rounded px-1.5 text-[11px] font-medium", className)}
+      className={cn("inline-flex h-5 items-center gap-0.5 rounded px-1.5 text-xs font-medium", className)}
       aria-label={ariaLabel ?? `${label} ${value}`}
     >
       {children}
@@ -393,7 +393,7 @@ export const EnhancedMultiSelect = React.memo(function EnhancedMultiSelect({
             </CommandGroup>
           </CommandList>
           {options.length > 0 && (
-            <p className="border-t px-3 py-1.5 text-[11px] text-muted-foreground">
+            <p className="border-t px-3 py-1.5 text-xs text-muted-foreground">
               {hasMoreOptions ? `Showing the top ${DEFAULT_VISIBLE_OPTIONS}. Search to find the rest. ` : ""}
               Enter includes, Shift+Enter excludes.
             </p>

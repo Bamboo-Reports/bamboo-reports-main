@@ -82,7 +82,7 @@ export const Header = React.memo(function Header({ onRefresh, refreshing = false
               >
                 <RiSearchLine className="h-4 w-4 shrink-0" />
                 <span className="flex-1 text-left">Search</span>
-                <kbd className="inline-grid h-5 min-w-5 place-items-center rounded-[5px] border bg-background px-1 font-sans text-[11px] font-medium text-muted-foreground">
+                <kbd className="inline-grid h-5 min-w-5 place-items-center rounded border bg-muted/60 px-1 font-sans text-[11px] font-medium text-muted-foreground">
                   {shortcut}
                 </kbd>
               </button>

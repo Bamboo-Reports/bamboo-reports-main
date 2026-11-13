@@ -96,9 +96,9 @@ function rowsFromResults(results: AccountMatchResult[]): ReviewRow[] {
 const STATUS_DOT: Record<AccountMatchStatus, string> = { matched: "bg-include", review: "bg-amber-500", not_found: "bg-exclude" }
 
 const STATUS_META: Record<AccountMatchStatus, { label: string; className: string; Icon: typeof RiCheckboxCircleLine }> = {
-  matched: { label: "Matched", className: "border-green-500/40 bg-green-500/10 text-green-700 dark:text-green-300", Icon: RiCheckboxCircleLine },
+  matched: { label: "Matched", className: "border-include/35 bg-include/[0.08] text-include-strong", Icon: RiCheckboxCircleLine },
   review: { label: "Needs review", className: "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300", Icon: RiQuestionLine },
-  not_found: { label: "Not found", className: "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300", Icon: RiCloseCircleLine },
+  not_found: { label: "Not found", className: "border-exclude/35 bg-exclude/[0.07] text-exclude", Icon: RiCloseCircleLine },
 }
 
 function viaLabel(candidate: AccountMatchCandidate | null): string | null {
@@ -546,7 +546,7 @@ function UploadSteps({ step }: { step: Step }) {
     <span className={cn("inline-flex items-center gap-1.5", state === "current" && "font-medium text-foreground")}>
       <span
         className={cn(
-          "grid h-5 w-5 place-items-center rounded-full text-[11px] font-medium tabular-nums",
+          "grid h-5 w-5 place-items-center rounded-full text-xs font-medium tabular-nums",
           state === "current" && "bg-primary text-primary-foreground",
           state === "done" && "bg-include/15 text-include",
           state === "next" && "bg-muted text-muted-foreground"

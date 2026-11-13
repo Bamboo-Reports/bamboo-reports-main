@@ -398,7 +398,7 @@ export function AccountAutocomplete({
                         </span>
                       )}
                       {suggestion.visibility?.visibility === "exclude" && (
-                        <span className="mt-0.5 block truncate text-xs font-medium text-amber-700 dark:text-amber-300">
+                        <span className="mt-1 inline-flex h-5 items-center rounded-md bg-amber-500/10 px-1.5 text-xs font-medium text-amber-700 dark:text-amber-300">
                           Non-GCC
                         </span>
                       )}

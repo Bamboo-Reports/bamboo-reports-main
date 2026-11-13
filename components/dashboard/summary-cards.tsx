@@ -149,7 +149,7 @@ const SummaryFigure = React.memo(function SummaryFigure({
         <FigureText
           text={shownValue}
           full={fullValue}
-          className={cn('shrink-0 text-sidebar-foreground', NUMBER_CLASS)}
+          className={cn('shrink-0 text-foreground', NUMBER_CLASS)}
         />
       )}
       <FigureText
@@ -287,7 +287,7 @@ export const SummaryCards = React.memo(function SummaryCards({
               !isActive && card.interactive && 'hover:border-border'
             )}
           >
-            <div className="flex items-center gap-2 text-[13px] font-medium text-sidebar-foreground">
+            <div className="flex items-center gap-2 text-[13px] font-medium text-foreground">
               <Icon className={cn('h-4 w-4 shrink-0', card.iconClassName)} />
               <TruncatedText text={card.title} className="min-w-0" />
             </div>

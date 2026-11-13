@@ -6,6 +6,7 @@ import { DONUT_CHART_COLORS } from "@/lib/utils/chart-helpers"
 import { bubbleRadius } from "@/lib/maps/bubble-size"
 import { knownText } from "@/lib/utils/helpers"
 import React, { useMemo, useState, useEffect, useCallback, useLayoutEffect } from "react"
+import { RiMapLine } from "@remixicon/react"
 import { Map as MapGL, Source, Layer, type MapRef, type ViewStateChangeEvent } from "@vis.gl/react-maplibre"
 import type { ExpressionSpecification } from "maplibre-gl"
 import { captureEvent } from "@/lib/analytics/client"
@@ -13,6 +14,7 @@ import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { MAPLIBRE_WORKER_URL, prepareBasemap, transformMapRequest, useBasemapStyleUrl } from "@/lib/maps/basemap"
 import { useMapRecovery } from "@/lib/maps/use-map-recovery"
 import { MapErrorState } from "@/components/maps/map-error-state"
+import { useThemeColor } from "@/components/maps/use-theme-color"
 import { Skeleton } from "@/components/ui/skeleton"
 import { DebugLocationSearch } from "@/components/maps/debug-location-search"
 import { createLogger } from "@/lib/logger"
@@ -348,6 +350,8 @@ export function CentersMap({
   )
 
   const mapStyle = useBasemapStyleUrl()
+  // State lines are chrome, so they follow the theme like the basemap.
+  const stateOutlineColor = useThemeColor("hsl(var(--muted-foreground))", "#64748b")
 
   // Handler to recenter the map to India
   const handleRecenter = () => {
@@ -367,10 +371,11 @@ export function CentersMap({
   // Show error if any
   if (dataError) {
     return (
-      <div className={`flex items-center justify-center ${heightClass} bg-muted rounded-lg`}>
-        <div className="text-center">
-          <p className="text-base font-medium text-destructive mb-2">Could not load the map</p>
-          <p className="text-sm text-muted-foreground">{dataError}</p>
+      <div className={`flex items-center justify-center ${heightClass} rounded-lg bg-muted`} role="alert">
+        <div className="max-w-sm px-6 text-center">
+          <RiMapLine className="mx-auto h-6 w-6 text-muted-foreground" aria-hidden="true" />
+          <p className="mt-3 text-sm font-medium text-foreground">Could not load the map</p>
+          <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">{dataError}</p>
         </div>
       </div>
     )
@@ -506,7 +511,7 @@ export function CentersMap({
             id="india-admin-outline"
             type="line"
             paint={{
-              "line-color": "#64748b",
+              "line-color": stateOutlineColor,
               "line-width": 0.5,
               "line-opacity": 0.5,
             }}
@@ -616,13 +621,14 @@ export function CentersMap({
   } catch (err) {
     logger.error("render_failed", { error: err })
     return (
-      <div className={`flex items-center justify-center ${heightClass} bg-muted rounded-lg`}>
-        <div className="text-center">
-          <p className="text-base font-medium text-destructive mb-2">Could not draw the map</p>
-          <p className="text-sm text-muted-foreground">
+      <div className={`flex items-center justify-center ${heightClass} rounded-lg bg-muted`} role="alert">
+        <div className="max-w-sm px-6 text-center">
+          <RiMapLine className="mx-auto h-6 w-6 text-muted-foreground" aria-hidden="true" />
+          <p className="mt-3 text-sm font-medium text-foreground">Could not draw the map</p>
+          <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
             {err instanceof Error ? err.message : "Unknown error occurred"}
           </p>
-          <p className="text-xs text-muted-foreground mt-2">Check browser console for details</p>
+          <p className="mt-2 text-xs text-muted-foreground">Check browser console for details</p>
         </div>
       </div>
     )

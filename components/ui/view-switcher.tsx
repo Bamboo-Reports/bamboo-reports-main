@@ -32,7 +32,8 @@ export function ViewSwitcher<V extends string>({
   const iconOnly = size === "sm"
   return (
     <Tabs value={value} onValueChange={(v) => onValueChange(v as V)} className={cn("w-fit", className)} data-tour={dataTour}>
-      <TabsList className={cn("bg-secondary/80", iconOnly ? "h-8 gap-0.5 rounded-lg p-0.5" : "gap-2")}>
+      {/* Same track and active segment as the sidebar, library and history segmented controls. */}
+      <TabsList className="h-8 gap-0.5 rounded-lg border-0 bg-muted/80 p-0.5">
         {options.map(({ value: optionValue, label, icon }) => {
           const trigger = (
             <TabsTrigger
@@ -42,8 +43,8 @@ export function ViewSwitcher<V extends string>({
               // panel to point at; Radix's default aria-controls would dangle.
               aria-controls={undefined}
               className={cn(
-                "gap-2 border border-transparent data-[state=active]:bg-background data-[state=active]:ring-1 data-[state=active]:ring-black/10 dark:data-[state=active]:ring-white/15 data-[state=inactive]:hover:bg-muted/60 data-[state=inactive]:hover:text-foreground",
-                iconOnly && "w-8 rounded-md px-0"
+                "gap-2 rounded-md px-2.5 text-[13px] data-[state=active]:bg-background data-[state=active]:shadow-[0_1px_2px_rgba(0,0,0,0.08),0_0_0_1px_hsl(var(--border)/0.6)] data-[state=inactive]:hover:bg-transparent data-[state=inactive]:hover:text-foreground",
+                iconOnly && "w-7 px-0"
               )}
               asChild={iconOnly}
             >

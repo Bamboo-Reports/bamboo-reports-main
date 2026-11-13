@@ -225,7 +225,7 @@ export function ExportsDialog({ open, onOpenChange, describeFilters }: ExportsDi
         <div className="grid flex-1 place-items-center p-8 text-center" role="alert">
           <div>
             <RiErrorWarningLine className="mx-auto h-7 w-7 text-exclude" />
-            <p className="mt-2 text-sm font-medium">Could not load your exports</p>
+            <p className="mt-3 text-sm font-medium">Could not load your exports</p>
             <p className="mt-1 text-[13px] text-muted-foreground">{error}</p>
             <Button variant="outline" size="sm" className="mt-3" onClick={() => void fetchExports()}>
               Try again
@@ -246,9 +246,9 @@ export function ExportsDialog({ open, onOpenChange, describeFilters }: ExportsDi
       if (exports.length > 0) return null
       return (
         <div className="grid flex-1 place-items-center p-8 text-center">
-          <div className="max-w-xs">
+          <div className="max-w-sm">
             <RiFileExcel2Line className="mx-auto h-7 w-7 text-muted-foreground" />
-            <p className="mt-2 text-sm font-medium">No exports yet</p>
+            <p className="mt-3 text-sm font-medium">No exports yet</p>
             <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
               Use Export in the filters panel to download the dashboard as an Excel file. Every export is kept here so you can download it again.
             </p>
@@ -280,7 +280,7 @@ export function ExportsDialog({ open, onOpenChange, describeFilters }: ExportsDi
             </p>
           )}
           <section>
-            <h4 className="mb-1.5 text-xs font-medium text-muted-foreground">Sheets</h4>
+            <h4 className="mb-2 text-xs font-medium text-muted-foreground">Sheets</h4>
             <div className="text-[13px]">
               {datasets.map((key) => {
                 const Icon = SHEET_ICONS[key] ?? RiFileExcel2Line
@@ -332,9 +332,9 @@ export function ExportsDialog({ open, onOpenChange, describeFilters }: ExportsDi
             </summary>
             <dl className="mt-2 grid grid-cols-[110px_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-[13px]">
               <dt className="text-muted-foreground">File name</dt>
-              <dd className="break-all text-xs">{selected.filename}</dd>
+              <dd className="break-all">{selected.filename}</dd>
               <dt className="text-muted-foreground">IP address</dt>
-              <dd className="text-xs tabular-nums">{ip ?? "Not recorded"}</dd>
+              <dd className="tabular-nums">{ip ?? "Not recorded"}</dd>
               <dt className="text-muted-foreground">Browser</dt>
               <dd>
                 {browser && selected.user_agent ? (

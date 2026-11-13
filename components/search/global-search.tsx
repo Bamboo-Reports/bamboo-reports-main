@@ -73,7 +73,7 @@ function Highlight({ text, query }: { text: string; query: string }) {
 
 function IconTile({ icon: Icon }: { icon: typeof RiBuildingLine }) {
   return (
-    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md border bg-card text-muted-foreground">
+    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border bg-card text-muted-foreground">
       <Icon className="h-4 w-4" />
     </span>
   )
@@ -90,7 +90,7 @@ function SearchResultRow({ result, query }: { result: SearchResult; query: strin
             <Highlight text={result.title} query={query} />
           </span>
           {account?.account_visibility === "exclude" && (
-            <span className="shrink-0 text-[11px] font-medium text-amber-700 dark:text-amber-300">Non-GCC</span>
+            <span className="inline-flex h-5 shrink-0 items-center rounded-md bg-amber-500/10 px-1.5 text-xs font-medium text-amber-700 dark:text-amber-300">Non-GCC</span>
           )}
         </p>
         {result.matchedAlias && (
@@ -346,7 +346,7 @@ export function GlobalSearch({
         )}
       </CommandList>
 
-      <div className="flex items-center gap-3.5 border-t px-3.5 py-2 text-xs text-muted-foreground">
+      <div className="flex items-center gap-4 border-t px-4 py-2 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1">
           <Kbd>&uarr;</Kbd>
           <Kbd>&darr;</Kbd>

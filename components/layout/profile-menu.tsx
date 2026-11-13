@@ -143,7 +143,7 @@ interface ProfileMenuProps {
   onOpenHistory?: () => void
 }
 
-const ITEM_CLASS = "h-8 gap-2.5 rounded-md px-3 text-[13px] [&_svg]:h-4 [&_svg]:w-4 [&_svg]:text-muted-foreground"
+const ITEM_CLASS = "h-8 gap-2.5 rounded-md px-2 text-[13px] [&_svg]:h-4 [&_svg]:w-4 [&_svg]:text-muted-foreground"
 
 /** Who you are, theme and number format, then My exports, History, the tour and Sign out. */
 export function ProfileMenu({ user, children, side = 'bottom', align = 'end', onStartTour, onOpenExports, onOpenHistory }: ProfileMenuProps) {

@@ -15,23 +15,17 @@ import {
 import type { Center } from "@/lib/types"
 import { ensureAbsoluteUrl } from "@/lib/utils"
 import { formatCenterLocation } from "@/lib/utils/helpers"
+import { statusDot } from "@/components/dialogs/account-related-columns"
 interface CenterGridCardProps {
   center: Center
   onClick: () => void
-}
-
-const getStatusDotColor = (status: string | null | undefined) => {
-  if (status === "Active Center") return "bg-green-500"
-  if (status === "Upcoming") return "bg-yellow-500"
-  if (status === "Non Operational") return "bg-red-500"
-  return "bg-gray-400"
 }
 
 export const CenterGridCard = memo(({ center, onClick }: CenterGridCardProps) => {
   const centerName = center.center_name || "Centre"
   const accountName = center.account_global_legal_name || "Account"
   const location = formatCenterLocation(center.center_city, center.center_state)
-  const statusColor = getStatusDotColor(center.center_status)
+  const statusColor = statusDot(center.center_status)
 
   return (
     <ContextMenu>
@@ -60,7 +54,7 @@ export const CenterGridCard = memo(({ center, onClick }: CenterGridCardProps) =>
                     <span
                       role="img"
                       tabIndex={0}
-                      className={`inline-flex h-2.5 w-2.5 shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${statusColor}`}
+                      className={`inline-flex h-2 w-2 shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${statusColor}`}
                     />
                   </HintTooltip>
                 </h3>

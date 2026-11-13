@@ -57,10 +57,10 @@ export function FilterMenu({
           type="button"
           className={cn(
             "inline-flex h-8 max-w-[240px] items-center gap-1.5 rounded-lg border px-2.5 text-[13px] font-medium transition-[color,background-color,border-color,transform] duration-150 ease-out active:scale-[0.97] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            active ? "border-primary/50 bg-primary/[0.08] text-primary" : "bg-card hover:border-foreground/25"
+            active ? "border-primary/50 bg-primary/10 text-primary-strong" : "bg-card hover:border-foreground/25"
           )}
         >
-          <span className={cn("shrink-0 font-normal", active ? "text-primary/80" : "text-muted-foreground")}>{label}</span>
+          <span className={cn("shrink-0 font-normal", active ? "text-primary-strong" : "text-muted-foreground")}>{label}</span>
           <span className="truncate">{summary}</span>
           <RiArrowDownSLine className="h-4 w-4 shrink-0 opacity-70" />
         </button>
@@ -165,25 +165,10 @@ export function StatRow({ stats }: { stats: Array<{ label: string; value: React.
       {present.map((stat, index) => (
         <div key={stat.label} className={cn("min-w-0 px-4 py-3", index > 0 && "border-l")}>
           <div className="text-xs text-muted-foreground">{stat.label}</div>
-          <div className="mt-0.5 truncate text-xl font-semibold tabular-nums tracking-[-0.02em]">{stat.value}</div>
+          <div className="mt-0.5 truncate text-xl font-medium tabular-nums tracking-[-0.01em]">{stat.value}</div>
           {stat.caption && <div className="truncate text-xs text-muted-foreground">{stat.caption}</div>}
         </div>
       ))}
     </div>
-  )
-}
-
-/** A small fact chip for the header: "Public NYSE: MMM". */
-export function FactChip({ children, tone = "plain" }: { children: React.ReactNode; tone?: "plain" | "good" | "warn" }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex h-6 items-center gap-1 whitespace-nowrap rounded-md border bg-card px-2 text-xs font-medium",
-        tone === "good" && "border-include/35 text-include",
-        tone === "warn" && "border-amber-500/40 text-amber-700 dark:text-amber-300"
-      )}
-    >
-      {children}
-    </span>
   )
 }

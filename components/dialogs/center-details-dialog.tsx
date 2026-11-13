@@ -125,7 +125,7 @@ export function CenterDetailsDialog({
             <CompanyLogo domain={center.center_account_website ?? undefined} companyName={center.account_global_legal_name} size="md" theme="auto" />
             <div className="min-w-0 flex-1">
               <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
-                <DialogTitle className="min-w-0 truncate text-xl font-semibold tracking-[-0.015em]">{center.center_name}</DialogTitle>
+                <DialogTitle className="min-w-0 truncate text-xl font-semibold tracking-[-0.01em]">{center.center_name}</DialogTitle>
                 {center.center_status && (
                   <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground">
                     <span className={cn("h-2 w-2 rounded-full", statusDot(center.center_status))} />

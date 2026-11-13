@@ -68,7 +68,7 @@ export function LibraryDialog({
       >
         <DialogHeader className="shrink-0 space-y-0 px-5 py-4 pr-12">
           <div className="flex items-baseline gap-2.5">
-            <DialogTitle className="text-base">{title}</DialogTitle>
+            <DialogTitle>{title}</DialogTitle>
             {titleMeta && <span className="text-[13px] tabular-nums text-muted-foreground">{titleMeta}</span>}
           </div>
           <DialogDescription className="sr-only">{description}</DialogDescription>
@@ -141,12 +141,12 @@ export function LibraryItem({ selected, onSelect, icon, name, meta, badge }: Lib
       aria-current={selected || undefined}
       className={cn(
         "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-        selected ? "bg-primary/[0.12]" : "hover:bg-muted/70"
+        selected ? "bg-primary/10" : "hover:bg-muted/70"
       )}
     >
-      <span className={cn("grid h-4 w-4 shrink-0 place-items-center", selected ? "text-primary" : "text-muted-foreground")}>{icon}</span>
+      <span className={cn("grid h-4 w-4 shrink-0 place-items-center", selected ? "text-primary-strong" : "text-muted-foreground")}>{icon}</span>
       <span className="min-w-0 flex-1">
-        <TruncatedText text={name} className={cn("text-[13px] font-medium", selected && "text-primary")} />
+        <TruncatedText text={name} className={cn("text-[13px] font-medium", selected && "text-primary-strong")} />
         <span className="block truncate text-xs tabular-nums text-muted-foreground">{meta}</span>
       </span>
       {badge}
@@ -186,7 +186,7 @@ export function LibraryPaneHeader({ title, meta, actions }: LibraryPaneHeaderPro
 export function LibraryPaneTitle({ children, badge }: { children: React.ReactNode; badge?: React.ReactNode }) {
   return (
     <div className="flex min-w-0 items-center gap-2">
-      <h3 className="min-w-0 truncate text-[17px] font-semibold tracking-[-0.01em]">{children}</h3>
+      <h3 className="min-w-0 truncate text-[15px] font-semibold">{children}</h3>
       {badge}
     </div>
   )
@@ -263,7 +263,7 @@ export function LibraryCountBadge({ count, label }: { count: number; label: stri
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className="grid h-5 min-w-5 shrink-0 place-items-center rounded-md bg-amber-500/15 px-1.5 text-[11px] font-medium tabular-nums text-amber-700 dark:text-amber-300">
+        <span className="grid h-5 min-w-5 shrink-0 place-items-center rounded-md bg-amber-500/10 px-1.5 text-xs font-medium tabular-nums text-amber-800 dark:text-amber-300">
           <span aria-hidden="true">{count}</span>
           <span className="sr-only">{label}</span>
         </span>

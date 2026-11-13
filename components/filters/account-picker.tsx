@@ -169,7 +169,7 @@ export function AccountPicker({ value, onChange, suggestions = [], placeholder =
                   )}
                 </span>
                 {option.visibility?.visibility === "exclude" && (
-                  <span className="shrink-0 rounded-md bg-amber-500/10 px-1.5 text-[11px] font-medium text-amber-700 dark:text-amber-300">
+                  <span className="inline-flex h-5 shrink-0 items-center rounded-md bg-amber-500/10 px-1.5 text-xs font-medium text-amber-700 dark:text-amber-300">
                     Non-GCC
                   </span>
                 )}

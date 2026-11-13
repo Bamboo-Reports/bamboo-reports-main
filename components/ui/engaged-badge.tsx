@@ -13,7 +13,7 @@ export function EngagedBadge({ className }: { className?: string }) {
       <span
         tabIndex={0}
         className={cn(
-          "inline-flex items-center gap-1 rounded-md border border-transparent bg-emerald-100 px-2 py-0.5 text-xs font-normal text-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:bg-emerald-500/15 dark:text-emerald-300",
+          "inline-flex h-5 items-center gap-1 rounded-md bg-include/[0.08] px-1.5 text-xs font-medium text-include-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           className,
         )}
       >
@@ -32,7 +32,7 @@ export function EngagedIcon({ className }: { className?: string }) {
         role="img"
         tabIndex={0}
         aria-label="Engaged with Bamboo Reports"
-        className={cn("inline-flex shrink-0 rounded-sm text-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-emerald-400", className)}
+        className={cn("inline-flex shrink-0 rounded-sm text-include focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", className)}
       >
         <RiMailCheckLine className="h-4 w-4" aria-hidden />
       </span>

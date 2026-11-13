@@ -431,7 +431,7 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <RiShareLine className="h-5 w-5" />
+              <RiShareLine className="h-4 w-4 text-muted-foreground" />
               Share list
             </DialogTitle>
             <DialogDescription>
@@ -464,7 +464,7 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
                 </Button>
               </div>
               {shareError && <p className="text-sm text-destructive">{shareError}</p>}
-              {shareSuccess && <p className="text-sm text-green-600 dark:text-green-400">{shareSuccess}</p>}
+              {shareSuccess && <p className="text-sm text-include-strong">{shareSuccess}</p>}
             </div>
             {currentShares.length > 0 ? (
               <div className="space-y-2">

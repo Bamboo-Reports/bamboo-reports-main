@@ -30,9 +30,9 @@
     --secondary-foreground: 214 45% 22%;
     --muted: 210 25% 94%;
     --muted-foreground: 215 20% 39%;
-    --accent: 28 90% 94%;
+    --accent: 210 25% 94%;
     --accent-foreground: 214 45% 18%;
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 72% 46%;
     --destructive-foreground: 0 0% 98%;
     --border: 212 24% 86%;
     --input: 212 24% 86%;
@@ -54,6 +54,8 @@
     --sidebar-ring: 28 88% 53%;
     /* Filter values: included (+) and excluded (−). */
     --include: 142 64% 32%;
+    /* Green text on a green tint (bg-include/[0.08]): darker than --include so it keeps 4.5:1. */
+    --include-strong: 142 64% 27%;
     --exclude: 0 72% 46%;
     /* Tooltips: one surface for labels, charts and map hovers. */
     --tooltip: 0 0% 100%;
@@ -76,8 +78,8 @@
     --muted-foreground: 0 0% 65%;
     --accent: 0 0% 16%;
     --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 50%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 72% 65%;
+    --destructive-foreground: 0 0% 10%;
     --border: 0 0% 24%;
     --input: 0 0% 24%;
     --ring: 0 0% 83.1%;
@@ -96,6 +98,7 @@
     --sidebar-border: 0 0% 24%;
     --sidebar-ring: 28 88% 60%;
     --include: 142 55% 55%;
+    --include-strong: 142 55% 60%;
     --exclude: 0 80% 66%;
     /* One step above the card (12%), so a tooltip never melts into it. */
     --tooltip: 0 0% 17%;

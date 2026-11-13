@@ -3,6 +3,7 @@
 import * as React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { RiCloseLine } from "@remixicon/react"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 const Dialog = DialogPrimitive.Root
@@ -44,16 +45,18 @@ const DialogContent = React.forwardRef<
       <DialogPrimitive.Content
         ref={ref}
         className={cn(
-          "pointer-events-auto relative grid w-full max-w-lg gap-4 border bg-background p-6 shadow-xl shadow-black/10 dark:shadow-black/40 sm:rounded-lg",
+          "pointer-events-auto relative grid w-full max-w-lg gap-4 border bg-background p-6 shadow-float sm:rounded-lg",
           !instant && "duration-200 data-[state=closed]:duration-150 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
           className
         )}
         {...props}
       >
         {children}
-        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-[opacity,background-color] hover:opacity-100 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground interactive">
-          <RiCloseLine className="h-4 w-4" />
-          <span className="sr-only">Close</span>
+        {/* Same ghost icon button as the record windows' own close. */}
+        <DialogPrimitive.Close asChild>
+          <Button variant="ghost" size="icon-sm" className="absolute right-2 top-2" aria-label="Close">
+            <RiCloseLine />
+          </Button>
         </DialogPrimitive.Close>
       </DialogPrimitive.Content>
     </div>
@@ -96,7 +99,7 @@ const DialogTitle = React.forwardRef<
   <DialogPrimitive.Title
     ref={ref}
     className={cn(
-      "text-lg font-semibold leading-none tracking-tight",
+      "text-[17px] font-semibold leading-none tracking-[-0.01em]",
       className
     )}
     {...props}

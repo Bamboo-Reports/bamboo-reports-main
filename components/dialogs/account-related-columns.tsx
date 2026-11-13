@@ -196,7 +196,7 @@ export const accountProspectColumns = prospectHelper.columns([
           <div className="flex min-w-0 items-center gap-1.5">
             <TruncatedLine className="font-medium" text={prospectFullName(prospect) || "N/A"} />
             {engaged && (
-              <span className="shrink-0 rounded-md bg-include/[0.12] px-1.5 text-[11px] font-medium leading-5 text-include">Engaged</span>
+              <span className="inline-flex h-5 shrink-0 items-center rounded-md bg-include/[0.08] px-1.5 text-xs font-medium text-include-strong">Engaged</span>
             )}
           </div>
           <TruncatedLine className="text-xs text-muted-foreground" text={prospect.prospect_title || "N/A"} />

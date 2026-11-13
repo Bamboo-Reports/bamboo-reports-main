@@ -272,7 +272,7 @@ export function FiltersSidebar({
       id="filters-sidebar"
       data-tour="filters-sidebar"
       className={cn(
-        'bg-sidebar overflow-hidden shrink-0 relative ml-6 mt-[var(--dashboard-content-top-gap)] mb-[var(--dashboard-content-bottom-gap)] rounded-2xl border border-sidebar-border',
+        'bg-sidebar overflow-hidden shrink-0 relative ml-6 mt-[var(--dashboard-content-top-gap)] mb-[var(--dashboard-content-bottom-gap)] rounded-xl border border-sidebar-border',
         // No width transition: animating it relaid out the dashboard every frame.
         // The rail and the panel below crossfade instead.
         isCollapsed ? 'w-16' : 'w-[320px]'
@@ -322,7 +322,7 @@ export function FiltersSidebar({
                 onClick={() => expandTo(id)}
               >
                 <Icon className="h-[18px] w-[18px]" />
-                {count > 0 && <CountBadge count={count} className="absolute -right-0.5 top-0.5 h-4 min-w-4 rounded-full bg-primary px-1 text-[10px] text-primary-foreground shadow-[0_0_0_2px_hsl(var(--sidebar-background))]" />}
+                {count > 0 && <CountBadge count={count} className="absolute -right-0.5 top-0.5 h-4 min-w-4 rounded-md bg-[color-mix(in_srgb,hsl(var(--primary))_10%,hsl(var(--sidebar-background)))] px-1 text-[11px] font-medium text-primary-strong shadow-[0_0_0_2px_hsl(var(--sidebar-background))]" />}
               </button>
             </HintTooltip>
           )
@@ -423,11 +423,11 @@ export function FiltersSidebar({
                 variant="ghost"
                 size="icon-sm"
                 onClick={onToggleCollapse}
-                className="text-muted-foreground"
+                className="text-muted-foreground [&_svg]:size-[18px]"
                 aria-expanded={true}
                 aria-controls="filters-sidebar"
               >
-                <RiSideBarLine className="h-[18px] w-[18px]" />
+                <RiSideBarLine />
               </Button>
             </HintTooltip>
           </div>
