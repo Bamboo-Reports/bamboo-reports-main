@@ -474,7 +474,7 @@ export function AccountDetailsDialog({
                     <Section title="Key offerings" meta={offerings.length}>
                       <div className="flex flex-wrap gap-1.5">
                         {shownOfferings.map((offering) => (
-                          <span key={offering} className="inline-flex h-6 items-center rounded-md bg-muted px-2 text-xs">
+                          <span key={offering} className="inline-flex min-h-6 items-center rounded-md bg-muted px-2 py-0.5 text-xs">
                             {offering}
                           </span>
                         ))}
@@ -482,7 +482,7 @@ export function AccountDetailsDialog({
                           <button
                             type="button"
                             onClick={() => setShowAllOfferings((v) => !v)}
-                            className="inline-flex h-6 items-center rounded-md border border-dashed px-2 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                            className="inline-flex h-6 items-center rounded-md border border-dashed px-2 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           >
                             {showAllOfferings ? "Show fewer" : `+${offerings.length - VISIBLE_OFFERINGS} more`}
                           </button>

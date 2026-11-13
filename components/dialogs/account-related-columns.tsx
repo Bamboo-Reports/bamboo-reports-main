@@ -1,7 +1,8 @@
 "use client"
 
 import { createColumnHelper } from "@tanstack/react-table"
-import { RiLinkedinBoxLine, RiMailLine } from "@remixicon/react"
+import { useEffect, useRef, useState } from "react"
+import { RiCheckLine, RiLinkedinBoxLine, RiMailLine } from "@remixicon/react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { CompanyLogo } from "@/components/ui/company-logo"
@@ -115,6 +116,12 @@ export const accountCenterColumns = centerHelper.columns([
 function ProspectActions({ prospect }: { prospect: Prospect }) {
   const name = prospectFullName(prospect) || "this prospect"
   const email = prospect.prospect_email?.trim()
+  // A tick in place of the icon confirms the copy; only a failure gets a toast.
+  const [copied, setCopied] = useState(false)
+  const copiedTimer = useRef<number | null>(null)
+  useEffect(() => () => {
+    if (copiedTimer.current !== null) window.clearTimeout(copiedTimer.current)
+  }, [])
   return (
     <div className="flex justify-end gap-0.5">
       {prospect.prospect_linkedin_url && (
@@ -133,7 +140,7 @@ function ProspectActions({ prospect }: { prospect: Prospect }) {
         </HintTooltip>
       )}
       {email && (
-        <HintTooltip label={`Copy ${name}'s email`} hint={email}>
+        <HintTooltip label={copied ? "Copied" : `Copy ${name}'s email`} hint={email}>
           <Button
             variant="ghost"
             size="icon-sm"
@@ -141,13 +148,15 @@ function ProspectActions({ prospect }: { prospect: Prospect }) {
             onClick={async () => {
               try {
                 await navigator.clipboard.writeText(email)
-                toast.success("Email copied", { description: email })
+                setCopied(true)
+                if (copiedTimer.current !== null) window.clearTimeout(copiedTimer.current)
+                copiedTimer.current = window.setTimeout(() => setCopied(false), 1500)
               } catch {
                 toast.error("Could not copy the email address")
               }
             }}
           >
-            <RiMailLine />
+            {copied ? <RiCheckLine className="text-include" /> : <RiMailLine />}
           </Button>
         </HintTooltip>
       )}

@@ -93,6 +93,8 @@ function rowsFromResults(results: AccountMatchResult[]): ReviewRow[] {
   }))
 }
 
+const STATUS_DOT: Record<AccountMatchStatus, string> = { matched: "bg-include", review: "bg-amber-500", not_found: "bg-exclude" }
+
 const STATUS_META: Record<AccountMatchStatus, { label: string; className: string; Icon: typeof RiCheckboxCircleLine }> = {
   matched: { label: "Matched", className: "border-green-500/40 bg-green-500/10 text-green-700 dark:text-green-300", Icon: RiCheckboxCircleLine },
   review: { label: "Needs review", className: "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300", Icon: RiQuestionLine },
@@ -138,6 +140,8 @@ export function AccountListUploadPanel({ existingList = null, onDone, onApply }:
   const [statusFilter, setStatusFilter] = useState<AccountMatchStatus | "all">("all")
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
+  // Which save button was pressed, so only that one shows the spinner.
+  const [pendingSave, setPendingSave] = useState<"save" | "apply" | null>(null)
 
   useEffect(() => {
     captureEvent(ANALYTICS_EVENTS.ACCOUNT_LIST_UPLOAD_OPENED, { mode: existingList ? "update" : "create" })
@@ -242,7 +246,9 @@ export function AccountListUploadPanel({ existingList = null, onDone, onApply }:
       if (!name || mappedNames.length === 0) return
       const unmatched = rows.filter((r) => !r.selected).map((r) => r.input)
       const input = { name, accounts: mappedNames, unmatched, matches: rowsToMatches(rows), sourceFile: fileName }
+      setPendingSave(apply ? "apply" : "save")
       const saved = existingList ? await updateList(existingList.id, input) : await createList(input)
+      setPendingSave(null)
       if (!saved) {
         toast.error("Could not save the list", { description: "Try again in a moment" })
         return
@@ -291,7 +297,10 @@ export function AccountListUploadPanel({ existingList = null, onDone, onApply }:
                 e.preventDefault()
                 setDragging(true)
               }}
-              onDragLeave={() => setDragging(false)}
+              // dragleave also fires when the pointer crosses the icon and text inside.
+              onDragLeave={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragging(false)
+              }}
               onDrop={(e) => {
                 e.preventDefault()
                 setDragging(false)
@@ -299,7 +308,7 @@ export function AccountListUploadPanel({ existingList = null, onDone, onApply }:
                 if (file) void handleFile(file)
               }}
               className={cn(
-                "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-8 text-center transition-colors",
+                "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-8 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 dragging ? "border-primary bg-primary/5" : "border-muted-foreground/30 hover:border-primary/60 hover:bg-accent/30"
               )}
             >
@@ -336,7 +345,7 @@ export function AccountListUploadPanel({ existingList = null, onDone, onApply }:
                   id="account-list-column"
                   value={column}
                   onChange={(e) => setColumn(Number(e.target.value))}
-                  className="flex h-9 w-full max-w-full min-w-0 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                  className="flex h-9 w-full max-w-full min-w-0 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-[border-color,box-shadow] focus-visible:border-primary/60 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/15"
                 >
                   {table.headers.map((header, i) => (
                     <option key={`${header}-${i}`} value={i}>
@@ -356,7 +365,7 @@ export function AccountListUploadPanel({ existingList = null, onDone, onApply }:
                   onChange={(e) => setPasted(e.target.value)}
                   rows={6}
                   placeholder={"Infosys Ltd\nTata Consultancy Services\nAccenture"}
-                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-[border-color,box-shadow] placeholder:text-muted-foreground focus-visible:border-primary/60 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/15"
                 />
               </div>
             )}
@@ -397,13 +406,15 @@ export function AccountListUploadPanel({ existingList = null, onDone, onApply }:
                     type="button"
                     onClick={() => setStatusFilter(key)}
                     aria-pressed={active}
+                    // Same chip as the matches view in the list details (account-list-matches.tsx).
                     className={cn(
-                      "rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
-                      active ? "border-primary bg-primary text-primary-foreground" : "hover:bg-accent",
-                      !active && key !== "all" && STATUS_META[key].className
+                      "inline-flex h-7 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      active ? "border-primary/50 bg-primary/10 text-primary-strong" : "border-border bg-card text-muted-foreground hover:text-foreground"
                     )}
                   >
-                    {label} <span className="tabular-nums opacity-80">{count}</span>
+                    {key !== "all" && <span className={cn("h-2 w-2 rounded-full", STATUS_DOT[key])} />}
+                    {label}
+                    <span className={cn("tabular-nums", active ? "text-primary-strong" : "text-foreground")}>{count}</span>
                   </button>
                 )
               })}
@@ -459,7 +470,7 @@ export function AccountListUploadPanel({ existingList = null, onDone, onApply }:
                                     <button
                                       type="button"
                                       onClick={() => updateRow(index, c.name)}
-                                      className="max-w-[220px] truncate rounded-md border px-2 py-0.5 text-xs transition-colors hover:bg-accent"
+                                      className="max-w-[220px] truncate rounded-md border px-2 py-0.5 text-xs transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                     >
                                       {c.name}
                                     </button>
@@ -505,11 +516,20 @@ export function AccountListUploadPanel({ existingList = null, onDone, onApply }:
                 <RiArrowLeftLine className="h-4 w-4" />
                 Back
               </Button>
-              <Button variant="outline" onClick={() => handleSave(false)} disabled={!filterName.trim() || mappedNames.length === 0 || saving}>
-                {saving ? "Saving…" : existingList ? "Update list" : "Save list"}
+              <Button
+                variant="outline"
+                onClick={() => handleSave(false)}
+                disabled={!filterName.trim() || mappedNames.length === 0 || (saving && pendingSave !== "save")}
+                loading={pendingSave === "save"}
+              >
+                {existingList ? "Update list" : "Save list"}
               </Button>
               {onApply && (
-                <Button onClick={() => handleSave(true)} disabled={!filterName.trim() || mappedNames.length === 0 || saving}>
+                <Button
+                  onClick={() => handleSave(true)}
+                  disabled={!filterName.trim() || mappedNames.length === 0 || (saving && pendingSave !== "apply")}
+                  loading={pendingSave === "apply"}
+                >
                   Save and apply
                 </Button>
               )}

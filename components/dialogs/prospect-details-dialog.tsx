@@ -12,7 +12,7 @@ import {
 import { RiArrowRightUpLine, RiCheckLine, RiCloseLine, RiFileCopyLine, RiLinkedinBoxLine, RiMailLine, RiSearchLine } from "@remixicon/react"
 import type { Prospect } from "@/lib/types"
 import { knownText } from "@/lib/utils/helpers"
-import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { HintTooltip } from "@/components/ui/tooltip"
 import { ProspectGridCard } from "@/components/cards/prospect-grid-card"
@@ -58,8 +58,22 @@ export function ProspectDetailsDialog({
   onAccountOpen,
   fetchRelated = false,
 }: ProspectDetailsDialogProps) {
-  const copy = useCopyToClipboard()
+  // A tick in place of the copy icon confirms the copy; only a failure gets a toast.
   const [copied, setCopied] = useState(false)
+  const copiedTimer = useRef<number | null>(null)
+  useEffect(() => () => {
+    if (copiedTimer.current !== null) window.clearTimeout(copiedTimer.current)
+  }, [])
+  const copyEmail = async (email: string) => {
+    try {
+      await navigator.clipboard.writeText(email)
+      setCopied(true)
+      if (copiedTimer.current !== null) window.clearTimeout(copiedTimer.current)
+      copiedTimer.current = window.setTimeout(() => setCopied(false), 1500)
+    } catch {
+      toast.error("Could not copy the email address")
+    }
+  }
   const bodyRef = useRef<HTMLDivElement>(null)
   const [current, setCurrent] = useState<Prospect | null>(prospect)
   const [contactQuery, setContactQuery] = useState("")
@@ -195,7 +209,9 @@ export function ProspectDetailsDialog({
       captureEvent(ANALYTICS_EVENTS.RELATED_RECORD_OPENED, { parent_entity: "prospect", entity: "prospect" })
       setCurrent(contact)
       resetContacts()
-      bodyRef.current?.scrollTo({ top: 0, behavior: "smooth" })
+      // An explicit smooth scroll ignores the CSS reduced-motion override, so check here.
+      const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false
+      bodyRef.current?.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" })
     },
     [resetContacts]
   )
@@ -376,9 +392,7 @@ export function ProspectDetailsDialog({
                               size="icon-xs"
                               onClick={() => {
                                 captureEvent(ANALYTICS_EVENTS.CONTACT_EMAIL_COPIED, { entity: "prospect" })
-                                copy(p.prospect_email!, "Email")
-                                setCopied(true)
-                                setTimeout(() => setCopied(false), 1500)
+                                void copyEmail(p.prospect_email!)
                               }}
                               className="shrink-0 text-muted-foreground"
                             >

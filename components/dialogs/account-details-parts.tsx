@@ -56,7 +56,7 @@ export function FilterMenu({
         <button
           type="button"
           className={cn(
-            "inline-flex h-8 max-w-[240px] items-center gap-1.5 rounded-lg border px-2.5 text-[13px] font-medium transition-colors",
+            "inline-flex h-8 max-w-[240px] items-center gap-1.5 rounded-lg border px-2.5 text-[13px] font-medium transition-[color,background-color,border-color,transform] duration-150 ease-out active:scale-[0.97] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             active ? "border-primary/50 bg-primary/[0.08] text-primary" : "bg-card hover:border-foreground/25"
           )}
         >

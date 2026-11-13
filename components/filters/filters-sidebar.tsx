@@ -24,6 +24,7 @@ import {
 } from '@/components/filters/filter-sections'
 import { countActiveFields, countActiveFilters, type FilterRangeBounds, type FilterSectionId } from '@/lib/dashboard/active-filters'
 import { describeFilters } from '@/components/filters/filter-description'
+import { onSegmentKeyDown } from '@/components/filters/segment-keys'
 import { ProfileMenu } from '@/components/layout/profile-menu'
 import { useAccountLists } from '@/contexts/account-lists-context'
 import { Button } from '@/components/ui/button'
@@ -37,6 +38,8 @@ const ACCOUNT_VISIBILITY_OPTIONS: Array<{ value: AccountVisibilityMode; label: s
   { value: "gcc", label: "GCCs" },
   { value: "nonGcc", label: "Non-GCCs" },
 ]
+
+const VISIBILITY_VALUES = ACCOUNT_VISIBILITY_OPTIONS.map((option) => option.value)
 
 const SECTIONS: Array<{ id: FilterSectionId; label: string; icon: React.ComponentType<{ className?: string }> }> = [
   { id: "accounts", label: "Accounts", icon: RiBuildingLine },
@@ -199,6 +202,14 @@ export function FiltersSidebar({
     handleExportAll()
   }
 
+  const selectVisibility = (value: AccountVisibilityMode) => {
+    setOptimisticVisibilityMode(value)
+    setActiveFilter("accountVisibilityMode")
+    React.startTransition(() => {
+      setPendingFilters((prev) => ({ ...prev, accountVisibilityMode: value }))
+    })
+  }
+
   const expandTo = (section?: FilterSectionId) => {
     if (section) setOpenSection(section)
     if (isCollapsed) onToggleCollapse()
@@ -256,7 +267,7 @@ export function FiltersSidebar({
     </button>
   )
 
-  const railButton = "relative grid h-10 w-10 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+  const railButton = "relative grid h-10 w-10 place-items-center rounded-lg text-muted-foreground transition-[color,background-color,transform] duration-150 ease-out hover:bg-muted hover:text-foreground active:scale-[0.97] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
 
   return (
     <aside
@@ -264,7 +275,8 @@ export function FiltersSidebar({
       data-tour="filters-sidebar"
       className={cn(
         'bg-sidebar overflow-hidden shrink-0 relative ml-6 mt-[var(--dashboard-content-top-gap)] mb-[var(--dashboard-content-bottom-gap)] rounded-2xl border border-sidebar-border',
-        'transition-[width] duration-200 ease-[cubic-bezier(0.22_1_0.36_1)] motion-reduce:transition-none',
+        // No width transition: animating it relaid out the dashboard every frame.
+        // The rail and the panel below crossfade instead.
         isCollapsed ? 'w-16' : 'w-[320px]'
       )}
       aria-label="Filters sidebar"
@@ -404,7 +416,7 @@ export function FiltersSidebar({
               type="button"
               onClick={resetFilters}
               disabled={totalActiveFilters === 0}
-              className="rounded-md px-2 py-1 text-[13px] font-medium text-primary transition-colors hover:bg-primary/[0.08] disabled:pointer-events-none disabled:text-muted-foreground disabled:opacity-60"
+              className="rounded-md px-2 py-1 text-[13px] font-medium text-primary transition-colors hover:bg-primary/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:text-muted-foreground disabled:opacity-60"
             >
               Clear all
             </button>
@@ -445,15 +457,13 @@ export function FiltersSidebar({
                     type="button"
                     role="radio"
                     aria-checked={isSelected}
-                    onClick={() => {
-                      setOptimisticVisibilityMode(option.value)
-                      setActiveFilter("accountVisibilityMode")
-                      React.startTransition(() => {
-                        setPendingFilters((prev) => ({ ...prev, accountVisibilityMode: option.value }))
-                      })
-                    }}
+                    tabIndex={isSelected ? 0 : -1}
+                    onClick={() => selectVisibility(option.value)}
+                    onKeyDown={(event) =>
+                      onSegmentKeyDown(event, VISIBILITY_VALUES, optimisticVisibilityMode, selectVisibility)
+                    }
                     className={cn(
-                      "h-7 rounded-md text-[13px] font-medium transition-colors duration-150",
+                      "h-7 rounded-md text-[13px] font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       isSelected
                         ? "bg-background text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.08),0_0_0_1px_hsl(var(--border)/0.6)]"
                         : "text-muted-foreground hover:text-foreground"
@@ -503,7 +513,7 @@ export function FiltersSidebar({
           <div
             aria-hidden="true"
             className={cn(
-              "pointer-events-none absolute inset-x-0 -top-8 h-8 bg-gradient-to-t from-sidebar to-transparent transition-opacity duration-300",
+              "pointer-events-none absolute inset-x-0 -top-8 h-8 bg-gradient-to-t from-sidebar to-transparent transition-opacity duration-200 ease-out",
               canScrollDown ? "opacity-100" : "opacity-0"
             )}
           />
@@ -513,7 +523,7 @@ export function FiltersSidebar({
               <p className="min-w-0 flex-1">{exportAccessError}</p>
               <button
                 type="button"
-                className="grid h-5 w-5 shrink-0 place-items-center rounded text-amber-800 hover:bg-amber-500/15 dark:text-amber-200"
+                className="grid h-5 w-5 shrink-0 place-items-center rounded text-amber-800 hover:bg-amber-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-amber-200"
                 onClick={() => setExportAccessError(null)}
                 aria-label="Dismiss export access warning"
               >

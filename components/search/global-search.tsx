@@ -232,7 +232,7 @@ export function GlobalSearch({
               disabled={chip.key !== null && chip.count === 0}
               onClick={() => onFocusChange?.(chip.key)}
               className={cn(
-                "inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium transition-colors disabled:opacity-45",
+                "inline-flex h-7 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-45",
                 on ? "border-primary/50 bg-primary/10 text-primary-strong" : "bg-card text-muted-foreground enabled:hover:text-foreground"
               )}
             >

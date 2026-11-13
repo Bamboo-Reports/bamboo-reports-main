@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useId, useState } from "react"
 import { Input } from "@/components/ui/input"
 import { FilterChip } from "@/components/filters/filter-chip"
 import { captureEvent } from "@/lib/analytics/client"
@@ -24,6 +24,9 @@ export function TitleKeywordInput({
   trackingKey,
 }: TitleKeywordInputProps) {
   const [inputValue, setInputValue] = useState("")
+  // Set when Enter repeats a keyword already in the list; cleared on the next edit.
+  const [duplicate, setDuplicate] = useState<string | null>(null)
+  const duplicateId = useId()
   const sourceFilterKey = trackingKey ?? placeholder
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -31,18 +34,21 @@ export function TitleKeywordInput({
       e.preventDefault()
       const trimmedValue = inputValue.trim()
       const mode: FilterValue["mode"] = e.shiftKey ? "exclude" : "include"
-      if (!keywords.find((k) => k.value === trimmedValue)) {
-        const nextKeywords = [...keywords, { value: trimmedValue, mode }]
-        onChange(nextKeywords)
-        captureEvent(ANALYTICS_EVENTS.FILTER_KEYWORD_CHANGED, {
-          filter_key: sourceFilterKey,
-          action: "add",
-          keyword_value: trimmedValue,
-          mode,
-          selected_values: toTrackedFilterPlainValues(nextKeywords),
-          selected_values_with_mode: toTrackedFilterValueArray(nextKeywords),
-        })
+      if (keywords.some((k) => k.value === trimmedValue)) {
+        // Keep the text so it is clear nothing was added, and say why.
+        setDuplicate(trimmedValue)
+        return
       }
+      const nextKeywords = [...keywords, { value: trimmedValue, mode }]
+      onChange(nextKeywords)
+      captureEvent(ANALYTICS_EVENTS.FILTER_KEYWORD_CHANGED, {
+        filter_key: sourceFilterKey,
+        action: "add",
+        keyword_value: trimmedValue,
+        mode,
+        selected_values: toTrackedFilterPlainValues(nextKeywords),
+        selected_values_with_mode: toTrackedFilterValueArray(nextKeywords),
+      })
       setInputValue("")
     }
   }
@@ -81,7 +87,7 @@ export function TitleKeywordInput({
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" data-chip-field="">
       <Input
         type="text"
         placeholder={placeholder}
@@ -89,6 +95,7 @@ export function TitleKeywordInput({
         onChange={(e) => {
           const value = e.target.value
           setInputValue(value)
+          setDuplicate(null)
           captureEvent(ANALYTICS_EVENTS.FILTER_SEARCH_TYPED, {
             filter_key: sourceFilterKey,
             query_text: normalizeTrackedText(value),
@@ -97,8 +104,15 @@ export function TitleKeywordInput({
           })
         }}
         onKeyDown={handleKeyDown}
+        aria-describedby={duplicate ? duplicateId : undefined}
+        data-chip-add=""
         className="h-8 text-[13px] md:text-[13px]"
       />
+      {duplicate && (
+        <p id={duplicateId} role="status" className="text-xs text-muted-foreground">
+          Already added
+        </p>
+      )}
       {keywords.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {keywords.map((keyword) => (

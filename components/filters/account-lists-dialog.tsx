@@ -99,6 +99,8 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
   const [shareSuccess, setShareSuccess] = useState<string | null>(null)
   const [currentShares, setCurrentShares] = useState<AccountListShare[]>([])
   const [sharing, setSharing] = useState(false)
+  const [unsharingId, setUnsharingId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const openShare = useCallback(
     async (list: AccountList) => {
@@ -116,7 +118,8 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
   )
 
   const handleShare = useCallback(async () => {
-    if (!listToShare || !shareEmail.trim()) return
+    // Enter in the email box can fire again while a share is still in flight.
+    if (!listToShare || !shareEmail.trim() || sharing) return
     setSharing(true)
     setShareError(null)
     setShareSuccess(null)
@@ -134,14 +137,18 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
       setShareError(result.error ?? "Failed to share list")
     }
     setSharing(false)
-  }, [listToShare, shareEmail, shareList, getListShares])
+  }, [listToShare, shareEmail, sharing, shareList, getListShares])
 
   const handleUnshare = useCallback(
     async (share: AccountListShare) => {
+      setUnsharingId(share.id)
       const ok = await unshareList(share.list_id, share.shared_with_user_id)
+      setUnsharingId(null)
       if (ok) {
         captureEvent(ANALYTICS_EVENTS.ACCOUNT_LIST_UNSHARED, { account_list_id: share.list_id })
         setCurrentShares((prev) => prev.filter((s) => s.id !== share.id))
+      } else {
+        toast.error("Could not stop sharing")
       }
     },
     [unshareList]
@@ -169,9 +176,9 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
         // The copy saved by an earlier mapping, unless the list has moved on since.
         const base = saved && saved.updated_at >= list.updated_at ? saved : list
         const updated = await updateList(list.id, mapUnmatchedName(base, input, account))
+        // No success toast: the row shows the account as soon as it is saved.
         if (updated) {
           mappedListsRef.current.set(list.id, updated)
-          toast.success(`Matched "${input}"`, { description: `to ${account}` })
         } else {
           toast.error("Could not update the list")
         }
@@ -184,15 +191,19 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
 
   const confirmDelete = useCallback(async () => {
     if (!listToDelete) return
+    setDeleting(true)
     const ok = await deleteList(listToDelete.id)
+    setDeleting(false)
     if (ok) {
       captureEvent(ANALYTICS_EVENTS.ACCOUNT_LIST_DELETED, {
         account_list_id: listToDelete.id,
         accounts_count: listToDelete.accounts.length,
       })
       toast.success(`Deleted "${listToDelete.name}"`)
-    } else toast.error("Could not delete the list")
-    setListToDelete(null)
+      setListToDelete(null)
+    } else {
+      toast.error("Could not delete the list")
+    }
   }, [listToDelete, deleteList])
 
   const handleApply = useCallback(
@@ -448,8 +459,8 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
                     }
                   }}
                 />
-                <Button onClick={handleShare} disabled={!shareEmail.trim() || sharing} size="lg" className="shrink-0">
-                  {sharing ? "Sharing…" : "Share"}
+                <Button onClick={handleShare} disabled={!shareEmail.trim()} loading={sharing} size="lg" className="shrink-0">
+                  Share
                 </Button>
               </div>
               {shareError && <p className="text-sm text-destructive">{shareError}</p>}
@@ -467,10 +478,11 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
                         variant="ghost-destructive"
                         size="icon-xs"
                         className="shrink-0"
+                        loading={unsharingId === share.id}
                         onClick={() => handleUnshare(share)}
                         aria-label={`Stop sharing with ${share.shared_with_email}`}
                       >
-                        <RiCloseLine className="h-3.5 w-3.5" />
+                        {unsharingId === share.id ? null : <RiCloseLine className="h-3.5 w-3.5" />}
                       </Button>
                     </div>
                   ))}
@@ -493,8 +505,16 @@ export function AccountListsDialog({ open, onOpenChange, onApply }: AccountLists
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className={buttonVariants({ variant: "destructive" })}>
-              Delete
+            {/* preventDefault keeps the dialog open until the delete finishes, so a failure stays in view. */}
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault()
+                void confirmDelete()
+              }}
+              disabled={deleting}
+              className={buttonVariants({ variant: "destructive" })}
+            >
+              {deleting ? "Deleting…" : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

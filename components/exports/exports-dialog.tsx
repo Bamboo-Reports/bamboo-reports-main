@@ -13,6 +13,7 @@ import {
 } from "@remixicon/react"
 import { devError } from "@/lib/utils/dev-log"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { HintTooltip } from "@/components/ui/tooltip"
 import { TruncatedText } from "@/components/ui/truncated-text"
 import {
@@ -160,6 +161,8 @@ export function ExportsDialog({ open, onOpenChange, describeFilters }: ExportsDi
     try {
       const url = await resolveExportDownloadUrl(row.id)
       window.open(url, "_self")
+      // Held a moment after success so the spinner covers the browser starting the download.
+      setTimeout(() => setDownloadingId(null), 1500)
       const createdAt = Date.parse(row.created_at)
       captureEvent(ANALYTICS_EVENTS.EXPORT_DOWNLOAD_CLICKED, {
         export_id: row.id,
@@ -176,8 +179,7 @@ export function ExportsDialog({ open, onOpenChange, describeFilters }: ExportsDi
         error_message: err instanceof Error ? err.message : "Unknown download error",
       })
       setDownloadError(err instanceof Error ? err.message : "The download did not start. Try again.")
-    } finally {
-      setTimeout(() => setDownloadingId(null), 1500)
+      setDownloadingId(null)
     }
   }
 
@@ -185,10 +187,10 @@ export function ExportsDialog({ open, onOpenChange, describeFilters }: ExportsDi
     if (loading && !loaded) {
       return Array.from({ length: 6 }).map((_, i) => (
         <div key={i} className="flex items-center gap-2.5 px-2.5 py-2.5">
-          <div className="skeleton-loading h-4 w-4 rounded" />
+          <Skeleton className="h-4 w-4 rounded" />
           <div className="flex-1 space-y-1.5">
-            <div className="skeleton-loading h-3 w-3/5 rounded" />
-            <div className="skeleton-loading h-2.5 w-2/5 rounded" />
+            <Skeleton className="h-3 w-3/5 rounded" />
+            <Skeleton className="h-2.5 w-2/5 rounded" />
           </div>
         </div>
       ))
@@ -235,8 +237,8 @@ export function ExportsDialog({ open, onOpenChange, describeFilters }: ExportsDi
     if (loading && !loaded) {
       return (
         <div className="space-y-3 p-5">
-          <div className="skeleton-loading h-4 w-48 rounded" />
-          <div className="skeleton-loading h-3 w-64 rounded" />
+          <Skeleton className="h-4 w-48 rounded" />
+          <Skeleton className="h-3 w-64 rounded" />
         </div>
       )
     }
@@ -324,8 +326,8 @@ export function ExportsDialog({ open, onOpenChange, describeFilters }: ExportsDi
           </section>
 
           <details className="group">
-            <summary className="inline-flex cursor-pointer list-none items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground [&::-webkit-details-marker]:hidden">
-              <RiArrowRightSLine className="h-4 w-4 transition-transform group-open:rotate-90" />
+            <summary className="inline-flex cursor-pointer list-none items-center gap-1 rounded-sm text-xs font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+              <RiArrowRightSLine className="h-4 w-4 transition-transform duration-200 ease-out motion-reduce:transition-none group-open:rotate-90" />
               Request details
             </summary>
             <dl className="mt-2 grid grid-cols-[110px_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-[13px]">

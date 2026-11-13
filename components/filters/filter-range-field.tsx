@@ -142,7 +142,9 @@ export function FilterRangeField({
     if (typed === null) return
     const clamped = Math.max(bounds.min, Math.min(bounds.max, typed))
     if (clamped !== typed) {
-      toast.info(`${label} ranges from ${formatRangeValue(bounds.min, unit)} to ${formatRangeValue(bounds.max, unit)}`)
+      toast.info(`${label} ranges from ${formatRangeValue(bounds.min, unit)} to ${formatRangeValue(bounds.max, unit)}`, {
+        id: `range-${label}`,
+      })
     }
     const next: [number, number] = end === 0 ? [clamped, hi] : [lo, clamped]
     onChange(next[0] <= next[1] ? next : [next[1], next[0]])
@@ -194,7 +196,7 @@ export function FilterRangeField({
                 aria-pressed={selected}
                 onClick={() => onChange(selected ? [bounds.min, bounds.max] : preset.range)}
                 className={cn(
-                  "h-6 rounded-md border px-2 text-xs tabular-nums transition-colors",
+                  "h-6 rounded-md border px-2 text-xs tabular-nums transition-[color,background-color,border-color,transform] duration-150 ease-out active:scale-[0.97] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   selected
                     ? "border-primary/50 bg-primary/10 text-primary-strong"
                     : "border-border bg-background text-muted-foreground hover:border-foreground/20 hover:text-foreground"
@@ -212,7 +214,7 @@ export function FilterRangeField({
           role="switch"
           aria-checked={includeNull}
           onClick={() => onIncludeNullChange(!includeNull)}
-          className="flex items-center gap-2 text-left text-xs text-muted-foreground hover:text-foreground"
+          className="flex items-center gap-2 rounded-sm text-left text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <span
             className={cn(

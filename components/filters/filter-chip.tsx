@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import { RiAddLine, RiCloseLine, RiSubtractLine } from "@remixicon/react"
 import { HintTooltip, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { TruncatedText } from "@/components/ui/truncated-text"
@@ -18,10 +19,33 @@ interface FilterChipProps {
  * (+ include, − exclude); excluded values are also tinted red, so the mode
  * never relies on colour alone.
  */
+const CHIP_BUTTON =
+  "grid h-5 w-5 shrink-0 place-items-center rounded transition-[background-color,color,transform] duration-150 ease-out hover:bg-foreground/[0.08] active:scale-95 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+
+/**
+ * Removing a chip unmounts the focused button, so focus moves on to the chip
+ * that took its place, the one before it, or else the field's own input or
+ * Add button (marked data-chip-add inside a data-chip-field container).
+ */
+function moveFocusAfterRemove(chip: HTMLElement | null) {
+  const group = chip?.parentElement
+  if (!chip || !group) return
+  const before = Array.from(group.querySelectorAll<HTMLElement>("[data-chip-remove]"))
+  const index = before.findIndex((button) => chip.contains(button))
+  const field = group.closest<HTMLElement>("[data-chip-field]")
+  requestAnimationFrame(() => {
+    const after = Array.from(group.querySelectorAll<HTMLElement>("[data-chip-remove]"))
+    const target = after[index] ?? after[index - 1] ?? field?.querySelector<HTMLElement>("[data-chip-add]")
+    target?.focus()
+  })
+}
+
 export function FilterChip({ item, onToggleMode, onRemove, className }: FilterChipProps) {
   const isInclude = item.mode === "include"
+  const chipRef = React.useRef<HTMLSpanElement>(null)
   return (
     <span
+      ref={chipRef}
       className={cn(
         "inline-flex h-6 min-w-0 max-w-full items-center gap-0.5 rounded-md border px-0.5 text-xs font-medium",
         isInclude ? "border-include/35 bg-include/[0.08]" : "border-exclude/35 bg-exclude/[0.07]",
@@ -36,10 +60,7 @@ export function FilterChip({ item, onToggleMode, onRemove, className }: FilterCh
             event.stopPropagation()
             onToggleMode()
           }}
-          className={cn(
-            "grid h-5 w-5 shrink-0 place-items-center rounded hover:bg-foreground/[0.08]",
-            isInclude ? "text-include" : "text-exclude"
-          )}
+          className={cn(CHIP_BUTTON, isInclude ? "text-include" : "text-exclude")}
         >
           {isInclude ? <RiAddLine className="h-3.5 w-3.5" /> : <RiSubtractLine className="h-3.5 w-3.5" />}
         </button>
@@ -51,9 +72,12 @@ export function FilterChip({ item, onToggleMode, onRemove, className }: FilterCh
           onClick={(event) => {
             event.preventDefault()
             event.stopPropagation()
+            const hadFocus = document.activeElement === event.currentTarget
             onRemove()
+            if (hadFocus) moveFocusAfterRemove(chipRef.current)
           }}
-          className="grid h-5 w-5 shrink-0 place-items-center rounded text-muted-foreground hover:bg-foreground/[0.08] hover:text-foreground"
+          data-chip-remove=""
+          className={cn(CHIP_BUTTON, "text-muted-foreground hover:text-foreground")}
         >
           <RiCloseLine className="h-3.5 w-3.5" />
         </button>

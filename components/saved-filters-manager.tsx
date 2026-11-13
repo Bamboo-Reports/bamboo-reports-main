@@ -32,7 +32,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { RiAddLine, RiArrowDownSLine, RiBookmarkLine, RiCheckLine, RiDeleteBinLine, RiFileList3Line, RiGroupLine, RiSave3Line, RiSettings4Line, RiShareLine } from "@remixicon/react"
+import { RiAddLine, RiArrowDownSLine, RiBookmarkLine, RiCheckLine, RiCloseLine, RiFileList3Line, RiGroupLine, RiSave3Line, RiSettings4Line, RiShareLine } from "@remixicon/react"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { buildTrackedFiltersSnapshot, normalizeTrackedText, toTrackedStringArray } from "@/lib/analytics/tracking"
@@ -141,6 +141,8 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
   const [shareError, setShareError] = useState<string | null>(null)
   const [shareSuccess, setShareSuccess] = useState<string | null>(null)
   const [currentShares, setCurrentShares] = useState<FilterShare[]>([])
+  const [sharing, setSharing] = useState(false)
+  const [unsharingId, setUnsharingId] = useState<string | null>(null)
 
   // Split filters into own and shared
   const myFilters = useMemo(
@@ -234,6 +236,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
       if (appliedFilter?.id === filterToDelete.id) setAppliedFilter(null)
       setDeleteConfirmOpen(false)
       setFilterToDelete(null)
+      toast.success(`Deleted "${filterToDelete.name}"`)
     } else {
       toast.error("Could not delete the filter")
     }
@@ -273,12 +276,15 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
   }, [getFilterShares])
 
   const handleShareFilter = useCallback(async () => {
-    if (!filterToShare || !shareEmail.trim()) return
+    // Enter in the email box can fire again while a share is still in flight.
+    if (!filterToShare || !shareEmail.trim() || sharing) return
 
     setShareError(null)
     setShareSuccess(null)
+    setSharing(true)
 
     const result = await shareFilter(filterToShare.id, shareEmail)
+    setSharing(false)
     if (result.success) {
       setShareSuccess(`Shared with ${shareEmail.trim()}`)
       setShareEmail("")
@@ -288,13 +294,17 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
     } else {
       setShareError(result.error ?? "Failed to share filter")
     }
-  }, [filterToShare, shareEmail, shareFilter, getFilterShares])
+  }, [filterToShare, shareEmail, sharing, shareFilter, getFilterShares])
 
   const handleUnshareFilter = useCallback(async (share: FilterShare) => {
     if (!filterToShare) return
+    setUnsharingId(share.id)
     const success = await unshareFilter(share.filter_id, share.shared_with_user_id)
+    setUnsharingId(null)
     if (success) {
       setCurrentShares((prev) => prev.filter((s) => s.id !== share.id))
+    } else {
+      toast.error("Could not stop sharing")
     }
   }, [filterToShare, unshareFilter])
 
@@ -548,8 +558,12 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setFilterToDelete(null)}>Cancel</AlertDialogCancel>
+            {/* preventDefault keeps the dialog open until the delete finishes, so "Deleting…" and a failure stay in view. */}
             <AlertDialogAction
-              onClick={confirmDeleteFilter}
+              onClick={(event) => {
+                event.preventDefault()
+                void confirmDeleteFilter()
+              }}
               className={buttonVariants({ variant: "destructive" })}
               disabled={loading}
             >
@@ -608,11 +622,12 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
                 />
                 <Button
                   onClick={handleShareFilter}
-                  disabled={!shareEmail.trim() || loading}
+                  disabled={!shareEmail.trim()}
+                  loading={sharing}
                   size="lg"
                   className="shrink-0"
                 >
-                  {loading ? "Sharing…" : "Share"}
+                  Share
                 </Button>
               </div>
               {shareError && (
@@ -639,16 +654,19 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
                         variant="ghost-destructive"
                         size="icon-xs"
                         className="shrink-0"
+                        loading={unsharingId === share.id}
                         onClick={() => handleUnshareFilter(share)}
-                        aria-label={`Revoke access for ${share.shared_with_email}`}
+                        aria-label={`Stop sharing with ${share.shared_with_email}`}
                       >
-                        <RiDeleteBinLine className="h-3.5 w-3.5" />
+                        {unsharingId === share.id ? null : <RiCloseLine className="h-3.5 w-3.5" />}
                       </Button>
                     </div>
                   ))}
                 </div>
               </div>
-            ) : null}
+            ) : (
+              <p className="text-xs text-muted-foreground">Not shared with anyone yet</p>
+            )}
           </div>
         </DialogContent>
       </Dialog>

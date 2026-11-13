@@ -255,10 +255,20 @@ export function SavedFiltersLibrary({
       }
       footer={
         tab === "mine" ? (
-          <Button variant="outline" className="w-full" onClick={onSaveCurrent} disabled={!canSaveCurrent}>
-            <RiAddLine />
-            Save current filters
-          </Button>
+          canSaveCurrent ? (
+            <Button variant="outline" className="w-full" onClick={onSaveCurrent}>
+              <RiAddLine />
+              Save current filters
+            </Button>
+          ) : (
+            // aria-disabled, not disabled, so it keeps focus and its tooltip can say why.
+            <HintTooltip label="Save current filters" hint="Set at least one filter first">
+              <Button variant="outline" className="w-full opacity-50 active:scale-100" aria-disabled="true">
+                <RiAddLine />
+                Save current filters
+              </Button>
+            </HintTooltip>
+          )
         ) : undefined
       }
     >

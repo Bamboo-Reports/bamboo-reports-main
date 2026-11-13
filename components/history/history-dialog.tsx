@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button"
 import { HintTooltip } from "@/components/ui/tooltip"
 import { LibraryEmpty, LibraryGroupLabel } from "@/components/filters/library-dialog"
+import { onSegmentKeyDown } from "@/components/filters/segment-keys"
 import { cn } from "@/lib/utils"
 import { ENTITY_TYPE_META } from "@/lib/dashboard/entity-display"
 import { describeWhen, groupByDay } from "@/lib/utils/day-groups"
@@ -26,6 +27,7 @@ const TYPE_FILTERS: Array<{ id: TypeFilter; label: string }> = [
   { id: "center", label: "Centres" },
   { id: "prospect", label: "Prospects" },
 ]
+const TYPE_IDS = TYPE_FILTERS.map((filter) => filter.id)
 
 interface HistoryDialogProps {
   open: boolean
@@ -52,6 +54,7 @@ export function HistoryDialog({
   const [query, setQuery] = useState("")
   const [type, setType] = useState<TypeFilter>("all")
   const searchRef = useRef<HTMLInputElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
 
   // Each opening starts on everything, with nothing typed.
   useEffect(() => {
@@ -88,9 +91,20 @@ export function HistoryDialog({
     withUndo("History cleared", before)
   }
 
-  const removeOne = (item: RecentItem) => {
+  const removeOne = (item: RecentItem, button: HTMLElement) => {
+    // The row (and its focused button) goes away, so focus moves to the row that
+    // takes its place, the one before it, or else the search box.
+    const rows = () => Array.from(listRef.current?.querySelectorAll<HTMLElement>("[data-history-open]") ?? [])
+    const hadFocus = document.activeElement === button
+    const index = rows().findIndex((row) => row.parentElement?.contains(button))
     onRemoveItem(item)
     withUndo(`Removed ${item.title} from history`, [item])
+    if (hadFocus) {
+      requestAnimationFrame(() => {
+        const after = rows()
+        ;(after[index] ?? after[index - 1] ?? searchRef.current)?.focus()
+      })
+    }
   }
 
   const empty = recentItems.length === 0
@@ -152,9 +166,11 @@ export function HistoryDialog({
                     type="button"
                     role="tab"
                     aria-selected={type === filter.id}
+                    tabIndex={type === filter.id ? 0 : -1}
                     onClick={() => setType(filter.id)}
+                    onKeyDown={(event) => onSegmentKeyDown(event, TYPE_IDS, type, setType)}
                     className={cn(
-                      "h-7 rounded-md px-1 text-xs font-medium transition-colors",
+                      "h-7 rounded-md px-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       type === filter.id
                         ? "bg-background text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.08),0_0_0_1px_hsl(var(--border)/0.6)]"
                         : "text-muted-foreground hover:text-foreground"
@@ -167,7 +183,7 @@ export function HistoryDialog({
               </div>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 [--library-group-bg:hsl(var(--background))]">
+            <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 [--library-group-bg:hsl(var(--background))]">
               {visible.length === 0 ? (
                 <LibraryEmpty>{query.trim() ? <>Nothing matches &ldquo;{query.trim()}&rdquo;</> : "Nothing of this type yet"}</LibraryEmpty>
               ) : (
@@ -181,6 +197,7 @@ export function HistoryDialog({
                         <div key={`${item.type}:${item.id}`} className="group relative">
                           <button
                             type="button"
+                            data-history-open=""
                             onClick={() => {
                               onOpenChange(false)
                               onItemSelect(item)
@@ -202,7 +219,7 @@ export function HistoryDialog({
                           <HintTooltip label={`Remove ${item.title} from History`}>
                             <button
                               type="button"
-                              onClick={() => removeOne(item)}
+                              onClick={(event) => removeOne(item, event.currentTarget)}
                               className="absolute right-2.5 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-focus-within:opacity-100 group-hover:opacity-100"
                             >
                               <RiCloseLine className="h-3.5 w-3.5" />

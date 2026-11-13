@@ -7,6 +7,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { TruncatedText } from "@/components/ui/truncated-text"
 import { cn } from "@/lib/utils"
+import { onSegmentKeyDown } from "@/components/filters/segment-keys"
+
+const LIBRARY_TABS: readonly LibraryTab[] = ["mine", "shared"]
 
 export type LibraryTab = "mine" | "shared"
 
@@ -94,9 +97,11 @@ export function LibraryDialog({
                     type="button"
                     role="tab"
                     aria-selected={tab === value}
+                    tabIndex={tab === value ? 0 : -1}
                     onClick={() => onTabChange(value)}
+                    onKeyDown={(event) => onSegmentKeyDown(event, LIBRARY_TABS, tab, onTabChange)}
                     className={cn(
-                      "h-7 rounded-md text-xs font-medium transition-colors",
+                      "h-7 rounded-md text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       tab === value
                         ? "bg-background text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.08),0_0_0_1px_hsl(var(--border)/0.6)]"
                         : "text-muted-foreground hover:text-foreground"
@@ -202,6 +207,21 @@ export function LibraryRename({
   onCancel: () => void
 }) {
   const [value, setValue] = React.useState(initial)
+  // What had focus before the box opened (the Rename button). Read on the first
+  // render, before autoFocus moves focus into the box.
+  const [returnTo] = React.useState(() => (typeof document === "undefined" ? null : (document.activeElement as HTMLElement | null)))
+  React.useEffect(
+    () => () => {
+      // Once the box closes, hand focus back unless the user has moved it elsewhere
+      // (the dialog's focus trap parks lost focus on the dialog itself).
+      requestAnimationFrame(() => {
+        const active = document.activeElement
+        const lost = !active || active === document.body || active.getAttribute("role") === "dialog"
+        if (lost && returnTo?.isConnected) returnTo.focus()
+      })
+    },
+    [returnTo]
+  )
   const save = () => {
     if (saving) return
     const name = value.trim()

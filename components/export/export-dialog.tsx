@@ -74,6 +74,9 @@ interface ExportDialogProps {
   onExportCompleted?: () => void
 }
 
+/** How long the bar glides to each new value; the result shows once it has filled. */
+const PROGRESS_TRANSITION_MS = 300
+
 const SINGULAR: Record<ExportDatasetKey, string> = { accounts: "account", centers: "centre", services: "service", prospects: "prospect" }
 
 const DATASET_META: Array<{
@@ -136,56 +139,22 @@ export function ExportDialog({
   })
   const [isExporting, setIsExporting] = useState(false)
   const [progress, setProgress] = useState(0)
-  const [displayedProgress, setDisplayedProgress] = useState(0)
   const [stage, setStage] = useState("Preparing export")
   const [error, setError] = useState<string | null>(null)
   const [exportResult, setExportResult] = useState<ServerExportResponse | null>(null)
   // Result is held back until the progress bar visually fills to 100%.
   const [isComplete, setIsComplete] = useState(false)
   const [showAllFilters, setShowAllFilters] = useState(false)
+  const [downloading, setDownloading] = useState(false)
   const wasOpenRef = useRef(false)
-  const rafRef = useRef<number | null>(null)
 
+  // The bar glides between values with a CSS transform transition (off the
+  // main thread), so the result waits one transition for it to fill.
   useEffect(() => {
-    if (exportResult && progress >= 100 && displayedProgress >= 100) {
-      setIsComplete(true)
-    }
-  }, [exportResult, progress, displayedProgress])
-
-  useEffect(() => {
-    if (rafRef.current !== null) {
-      cancelAnimationFrame(rafRef.current)
-      rafRef.current = null
-    }
-
-    let last = performance.now()
-    const tick = (now: number) => {
-      const dt = now - last
-      last = now
-      setDisplayedProgress((current) => {
-        if (current === progress) {
-          rafRef.current = null
-          return current
-        }
-        // Tween at ~140%/second. helper emits ramped ticks so we just
-        // need to glide the last pixels between them.
-        const step = (dt / 1000) * 140
-        const diff = progress - current
-        if (Math.abs(diff) <= step) return progress
-        const next = current + Math.sign(diff) * step
-        rafRef.current = requestAnimationFrame(tick)
-        return next
-      })
-    }
-    rafRef.current = requestAnimationFrame(tick)
-
-    return () => {
-      if (rafRef.current !== null) {
-        cancelAnimationFrame(rafRef.current)
-        rafRef.current = null
-      }
-    }
-  }, [progress])
+    if (!exportResult || progress < 100) return
+    const timer = window.setTimeout(() => setIsComplete(true), PROGRESS_TRANSITION_MS)
+    return () => window.clearTimeout(timer)
+  }, [exportResult, progress])
 
   const getSelectedDatasets = (currentSelection: Record<ExportDatasetKey, boolean>) =>
     (Object.keys(currentSelection) as ExportDatasetKey[]).filter((dataset) => currentSelection[dataset])
@@ -219,7 +188,6 @@ export function ExportDialog({
     setSelection(initialSelection)
     setIsExporting(false)
     setProgress(0)
-    setDisplayedProgress(0)
     setStage("Preparing export")
     setError(null)
     setExportResult(null)
@@ -289,7 +257,6 @@ export function ExportDialog({
     setIsExporting(true)
     setError(null)
     setProgress(0)
-    setDisplayedProgress(0)
     setIsComplete(false)
     setStage("Requesting export")
     const startedAt = Date.now()
@@ -327,6 +294,14 @@ export function ExportDialog({
           await new Promise((r) => setTimeout(r, stepDelay))
         }
         current = s.to
+      }
+      // Past the last stage the bar keeps creeping toward 99% instead of
+      // freezing, so a long export never looks stuck.
+      setStage("Still working, large exports take a minute")
+      while (!rampCancelled) {
+        current += (99 - current) * 0.015
+        setProgress(current)
+        await new Promise((r) => setTimeout(r, 200))
       }
     }
 
@@ -395,7 +370,8 @@ export function ExportDialog({
   }
 
   const handleDownload = async () => {
-    if (!exportResult) return
+    if (!exportResult || downloading) return
+    setDownloading(true)
     captureEvent(ANALYTICS_EVENTS.EXPORT_DOWNLOAD_CLICKED, {
       export_id: exportResult.id,
       source: "export_dialog",
@@ -412,8 +388,11 @@ export function ExportDialog({
       })
       // The footer keeps showing the finished file, so the failure is a toast and Download stays for a retry.
       toast.error("The download did not start", {
+        id: "export-download-failed",
         description: err instanceof Error ? err.message : "Try again.",
       })
+    } finally {
+      setDownloading(false)
     }
   }
 
@@ -422,7 +401,6 @@ export function ExportDialog({
     setIsComplete(false)
     setError(null)
     setProgress(0)
-    setDisplayedProgress(0)
   }
 
   // After the server responds we keep showing the progress bar until it
@@ -441,10 +419,13 @@ export function ExportDialog({
           <div className="min-w-0 flex-1" role="status" aria-live="polite">
             <div className="flex justify-between text-xs">
               <span>{stage}</span>
-              <span className="tabular-nums text-muted-foreground">{Math.round(displayedProgress)}%</span>
+              <span className="tabular-nums text-muted-foreground">{Math.round(progress)}%</span>
             </div>
             <div className="mt-2 h-1 overflow-hidden rounded-full bg-muted">
-              <div className="h-full origin-left rounded-full bg-primary" style={{ transform: `scaleX(${displayedProgress / 100})` }} />
+              <div
+                className="h-full origin-left rounded-full bg-primary transition-transform ease-linear"
+                style={{ transform: `scaleX(${progress / 100})`, transitionDuration: `${PROGRESS_TRANSITION_MS}ms` }}
+              />
             </div>
           </div>
         </>
@@ -465,8 +446,8 @@ export function ExportDialog({
               Export again
             </Button>
           )}
-          <Button onClick={handleDownload}>
-            <RiDownloadLine />
+          <Button onClick={handleDownload} loading={downloading}>
+            {downloading ? null : <RiDownloadLine />}
             Download
           </Button>
         </>
@@ -561,7 +542,7 @@ export function ExportDialog({
                 <button
                   type="button"
                   onClick={() => setShowAllFilters(true)}
-                  className="inline-flex h-6 items-center rounded-md border border-dashed px-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+                  className="inline-flex h-6 items-center rounded-md border border-dashed px-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   +{hiddenFilters} more
                 </button>
@@ -577,7 +558,7 @@ export function ExportDialog({
               type="button"
               onClick={() => handleSelectAll(!allOn)}
               disabled={locked}
-              className="font-medium text-primary hover:underline hover:underline-offset-2 disabled:text-muted-foreground disabled:no-underline"
+              className="rounded-sm font-medium text-primary hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:text-muted-foreground disabled:no-underline"
             >
               {allOn ? "Clear" : "Select all"}
             </button>

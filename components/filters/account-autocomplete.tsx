@@ -61,14 +61,14 @@ export function AccountAutocomplete({
   const sourceFilterKey = trackingKey ?? "accountGlobalLegalNameKeywords"
   const comboboxId = useId()
 
-  // Debounce input value for performance
+  // Debounce the server lookup; filtering the local names needs no wait.
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedValue(inputValue)
-    }, 300)
+    }, serverSuggest ? 300 : 0)
 
     return () => clearTimeout(timer)
-  }, [inputValue])
+  }, [inputValue, serverSuggest])
 
   // Get unique, sorted account names (memoized for performance)
   const uniqueAccountNames = useMemo(() => {
@@ -212,6 +212,13 @@ export function AccountAutocomplete({
 
   // Keyboard navigation
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    // Escape also closes the "Searching" and "No accounts found" panels.
+    if (e.key === 'Escape' && isOpen) {
+      e.preventDefault()
+      setIsOpen(false)
+      setHighlightedIndex(0)
+      return
+    }
     if (!isOpen || suggestions.length === 0) {
       if (e.key === 'ArrowDown' && inputValue.trim()) {
         setIsOpen(true)
@@ -236,11 +243,6 @@ export function AccountAutocomplete({
           handleSelectAccount(suggestions[highlightedIndex].name)
         }
         break
-      case 'Escape':
-        e.preventDefault()
-        setIsOpen(false)
-        setHighlightedIndex(0)
-        break
     }
   }, [isOpen, suggestions, highlightedIndex, handleSelectAccount, inputValue])
 
@@ -248,6 +250,11 @@ export function AccountAutocomplete({
   useEffect(() => {
     setHighlightedIndex(0)
   }, [suggestions])
+
+  // Keep the keyboard highlight in view inside the scrolling list.
+  useEffect(() => {
+    if (activeOptionId) document.getElementById(activeOptionId)?.scrollIntoView?.({ block: "nearest" })
+  }, [activeOptionId])
 
   useEffect(() => {
     if (!isOpen) return
@@ -309,7 +316,7 @@ export function AccountAutocomplete({
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" data-chip-field="">
       {/* Selected Accounts as Badges */}
       {selectedAccounts.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
@@ -348,6 +355,7 @@ export function AccountAutocomplete({
             aria-expanded={isOpen}
             aria-controls={listboxId}
             aria-activedescendant={activeOptionId}
+            data-chip-add=""
             className="h-8 text-[13px] md:text-[13px]"
           />
         </div>
@@ -356,7 +364,7 @@ export function AccountAutocomplete({
         {isSuggestionsOpen && (
           <div
             ref={dropdownRef}
-            className="relative z-50 mt-1 w-full rounded-lg border bg-popover shadow-float"
+            className="absolute z-50 mt-1 w-full rounded-lg border bg-popover shadow-float"
             role="listbox"
             id={listboxId}
             aria-label="Account suggestions"
@@ -368,7 +376,7 @@ export function AccountAutocomplete({
                     key={suggestion.name}
                     id={`${comboboxId}-option-${index}`}
                     className={cn(
-                      "flex items-center justify-between px-3 py-2 cursor-pointer rounded-sm text-sm transition-colors",
+                      "flex items-center justify-between px-3 py-2 cursor-pointer rounded-sm text-sm",
                       highlightedIndex === index
                         ? "bg-accent text-accent-foreground"
                         : "hover:bg-accent/50"

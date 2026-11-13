@@ -76,13 +76,14 @@ export function AccountListPicker({ selected, accountNameCount, onChange, onClea
         onChange={handleChange}
         placeholder={lists.length === 0 ? "No account lists uploaded yet" : "Choose account lists"}
         trackingKey="accountListValues"
+        emptyMessage="No lists yet. Upload one from Account lists."
       />
       {selected.length === 0 && accountNameCount > 0 && (
         <HintTooltip label={`Clear ${accountNameCount} accounts from a shared list`} hint="They come from a list that is not in your lists">
           <button
             type="button"
             onClick={onClearNames}
-            className="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent"
+            className="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {accountNameCount} accounts from a shared list
             <RiCloseLine className="h-3.5 w-3.5" />

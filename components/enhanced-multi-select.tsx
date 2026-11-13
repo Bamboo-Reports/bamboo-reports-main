@@ -28,6 +28,8 @@ interface EnhancedMultiSelectProps {
   isApplying?: boolean
   /** Bands like "<50", "51 - 100", "1K - 5K": list them smallest to largest instead of by count. */
   ordered?: boolean
+  /** Shown in the list when there are no options at all (rather than "Nothing matches"). */
+  emptyMessage?: React.ReactNode
 }
 
 const DEFAULT_VISIBLE_OPTIONS = 20
@@ -114,6 +116,7 @@ export const EnhancedMultiSelect = React.memo(function EnhancedMultiSelect({
   className,
   isApplying = false,
   ordered = false,
+  emptyMessage,
 }: EnhancedMultiSelectProps) {
   const [open, setOpenState] = React.useState(false)
   // The selection as it was when the list opened: what the list is ordered by.
@@ -123,6 +126,8 @@ export const EnhancedMultiSelect = React.memo(function EnhancedMultiSelect({
     setOpenState(next)
   }
   const [searchQuery, setSearchQuery] = React.useState("")
+  // The row the keyboard highlight is on, so Shift+Enter can exclude it.
+  const [activeValue, setActiveValue] = React.useState("")
   const listId = React.useId()
   const searchTrackTimeoutRef = React.useRef<number | null>(null)
   const sourceFilterKey = trackingKey ?? placeholder
@@ -330,7 +335,7 @@ export const EnhancedMultiSelect = React.memo(function EnhancedMultiSelect({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <div className={cn("relative flex flex-wrap items-center gap-1.5", className)}>
+      <div className={cn("relative flex flex-wrap items-center gap-1.5", className)} data-chip-field="">
         {selected.map((item) => (
           <FilterChip
             key={item.value}
@@ -345,6 +350,7 @@ export const EnhancedMultiSelect = React.memo(function EnhancedMultiSelect({
             aria-controls={listId}
             aria-expanded={open}
             aria-haspopup="listbox"
+            data-chip-add=""
             className="inline-flex h-6 items-center gap-1 rounded-md border border-dashed border-border bg-background px-2 text-xs text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <RiAddLine className="h-3.5 w-3.5" />
@@ -359,24 +365,39 @@ export const EnhancedMultiSelect = React.memo(function EnhancedMultiSelect({
         </PopoverAnchor>
       </div>
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] min-w-64 p-0" align="start" sideOffset={0}>
-        <Command shouldFilter={false}>
+        <Command shouldFilter={false} value={activeValue} onValueChange={setActiveValue}>
           <CommandInput
             placeholder={hasMoreOptions ? `Search all ${options.length.toLocaleString()} options` : "Search"}
             className="h-9"
             value={searchQuery}
             onValueChange={setSearchQuery}
+            onKeyDown={(event) => {
+              // Enter includes (cmdk's own handling); Shift+Enter excludes the highlighted row.
+              if (event.key !== "Enter" || !event.shiftKey) return
+              event.preventDefault()
+              // cmdk trims item values, so match the option the same way.
+              const option = visibleOptions.find((o) => o.value.trim() === activeValue)
+              if (option && !option.disabled) handleSelect(option.value, "exclude")
+            }}
           />
           <CommandList id={listId} className="max-h-64 p-1">
-            <CommandEmpty>Nothing matches</CommandEmpty>
+            <CommandEmpty>
+              {options.length === 0 && emptyMessage
+                ? emptyMessage
+                : searchQuery.trim()
+                  ? <>Nothing matches &ldquo;{searchQuery.trim()}&rdquo;</>
+                  : "Nothing matches"}
+            </CommandEmpty>
             <CommandGroup className="p-0">
               {renderOptions}
             </CommandGroup>
           </CommandList>
-          {hasMoreOptions ? (
+          {options.length > 0 && (
             <p className="border-t px-3 py-1.5 text-[11px] text-muted-foreground">
-              Showing the top {DEFAULT_VISIBLE_OPTIONS}. Search to find the rest.
+              {hasMoreOptions ? `Showing the top ${DEFAULT_VISIBLE_OPTIONS}. Search to find the rest. ` : ""}
+              Enter includes, Shift+Enter excludes.
             </p>
-          ) : null}
+          )}
         </Command>
       </PopoverContent>
     </Popover>

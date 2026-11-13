@@ -62,7 +62,7 @@ export function AccountListMatches({ matches, onMap }: AccountListMatchesProps) 
                 aria-pressed={on}
                 onClick={() => setFilter(f.id)}
                 className={cn(
-                  "inline-flex h-7 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors",
+                  "inline-flex h-7 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   on ? "border-primary/50 bg-primary/10 text-primary-strong" : "border-border bg-card text-muted-foreground hover:text-foreground"
                 )}
               >
