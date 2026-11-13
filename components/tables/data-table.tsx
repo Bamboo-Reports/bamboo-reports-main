@@ -76,7 +76,8 @@ function DataTableRowInner<TData extends RowData>({
   const tableRow = (
     <TableRow
       data-state={selected ? "selected" : undefined}
-      className="cursor-pointer active:bg-muted focus-visible:bg-muted/50 focus-visible:shadow-[inset_2px_0_0_hsl(var(--ring))] focus-visible:outline-none"
+      // Chrome does not paint box-shadow on a table row, so the focus bar sits on its first cell.
+      className="cursor-pointer active:bg-muted focus-visible:bg-muted/50 focus-visible:outline-none [&:focus-visible>td:first-child]:shadow-[inset_2px_0_0_hsl(var(--ring))]"
       onClick={() => onRowOpen(item)}
       onKeyDown={(event) => {
         if (event.target !== event.currentTarget) return

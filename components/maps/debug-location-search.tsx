@@ -64,7 +64,7 @@ export function DebugLocationSearch({ mapRef }: DebugLocationSearchProps) {
     setResults([])
     setQuery(r.label.split(",")[0])
     const map = mapRef.current?.getMap()
-    map?.flyTo({ center: [r.lng, r.lat], zoom: 11, duration: 1000 })
+    map?.flyTo({ center: [r.lng, r.lat], zoom: 11, duration: 400 })
   }
 
   if (!open) return null

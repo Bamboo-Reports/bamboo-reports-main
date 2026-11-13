@@ -443,9 +443,14 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
                 <span className="truncate">Update &ldquo;{activeSavedFilter.name}&rdquo;</span>
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem className="gap-2.5" disabled={totalActiveFilters === 0} onSelect={() => setSaveDialogOpen(true)}>
-              <RiAddLine className="h-4 w-4 shrink-0 text-muted-foreground" />
-              Save current filters as new…
+            <DropdownMenuItem className="gap-2.5 data-[disabled]:opacity-100" disabled={totalActiveFilters === 0} onSelect={() => setSaveDialogOpen(true)}>
+              <RiAddLine className={cn("h-4 w-4 shrink-0 text-muted-foreground", totalActiveFilters === 0 && "opacity-50")} />
+              {/* A disabled menu item cannot show a tooltip, so the reason sits under the label,
+                  at full strength: only the label and icon are dimmed. */}
+              <span className="flex min-w-0 flex-col">
+                <span className={cn(totalActiveFilters === 0 && "opacity-50")}>Save current filters as new…</span>
+                {totalActiveFilters === 0 && <span className="text-xs text-muted-foreground">Set at least one filter first</span>}
+              </span>
             </DropdownMenuItem>
             {(myFilters.length > 0 || sharedWithMeFilters.length > 0) && (
               <DropdownMenuItem className="gap-2.5" onSelect={() => setManageDialogOpen(true)}>
