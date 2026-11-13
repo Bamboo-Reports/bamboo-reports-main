@@ -1,7 +1,7 @@
 "use client"
 
 import { createColumnHelper } from "@tanstack/react-table"
-import { RiCheckboxCircleLine, RiExternalLinkLine, RiEyeLine, RiGlobalLine } from "@remixicon/react"
+import { RiExternalLinkLine, RiEyeLine, RiGlobalLine } from "@remixicon/react"
 import { CompanyLogo } from "@/components/ui/company-logo"
 import { ContextMenuItem, ContextMenuSeparator } from "@/components/ui/context-menu"
 import { TruncatedText as TruncatedSpan } from "@/components/ui/truncated-text"
@@ -17,7 +17,6 @@ const getAccountName = (account: Account) => account.account_global_legal_name |
 
 function AccountNameCell({ account }: { account: Account }) {
   const accountName = getAccountName(account)
-  const isNasscomVerified = account.account_nasscom_status?.toLowerCase() === "yes"
   const visibilityNote =
     account.account_visibility === "exclude" && account.account_visibility_note
       ? account.account_visibility_note
@@ -34,19 +33,11 @@ function AccountNameCell({ account }: { account: Account }) {
       />
       <div className="min-w-0">
         <TruncatedSpan text={accountName} className="min-w-0 font-medium" />
-        {(isNasscomVerified || visibilityNote) && (
+        {visibilityNote && (
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            {isNasscomVerified && (
-              <div className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
-                <RiCheckboxCircleLine className="h-3 w-3" aria-hidden="true" />
-                NASSCOM
-              </div>
-            )}
-            {visibilityNote && (
-              <div className="inline-flex h-5 max-w-[220px] items-center gap-1 rounded-md bg-amber-500/10 px-1.5 text-xs font-medium text-amber-700 dark:text-amber-300">
-                <span className="truncate">{visibilityNote}</span>
-              </div>
-            )}
+            <div className="inline-flex h-5 max-w-[220px] items-center gap-1 rounded-md bg-amber-500/10 px-1.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+              <span className="truncate">{visibilityNote}</span>
+            </div>
           </div>
         )}
       </div>

@@ -1,5 +1,5 @@
 import { memo } from "react"
-import { RiArrowRightUpLine, RiCheckboxCircleLine, RiExternalLinkLine, RiEyeLine, RiGlobalLine } from "@remixicon/react"
+import { RiArrowRightUpLine, RiExternalLinkLine, RiEyeLine, RiGlobalLine } from "@remixicon/react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CompanyLogo } from "@/components/ui/company-logo"
@@ -22,12 +22,10 @@ interface AccountGridCardProps {
 export const AccountGridCard = memo(({ account, onClick }: AccountGridCardProps) => {
   const location = formatAccountLocation(account)
   const accountName = account.account_global_legal_name || "Account"
-  const isNasscomVerified = account.account_nasscom_status?.toLowerCase() === "yes"
   const visibilityNote =
     account.account_visibility === "exclude" && account.account_visibility_note
       ? account.account_visibility_note
       : null
-  const showChipRow = isNasscomVerified || visibilityNote !== null
 
   return (
     <ContextMenu>
@@ -41,7 +39,7 @@ export const AccountGridCard = memo(({ account, onClick }: AccountGridCardProps)
           onKeyDown={(e) => { if (e.target !== e.currentTarget) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick() } }}
         >
           <CardContent className="p-4 flex flex-col gap-4 h-full">
-            <div className="flex items-start gap-3">
+            <div className="flex items-center gap-3">
               <CompanyLogo
                 domain={account.account_hq_website ?? undefined}
                 companyName={accountName}
@@ -53,29 +51,25 @@ export const AccountGridCard = memo(({ account, onClick }: AccountGridCardProps)
                 <h3 className="min-w-0 text-base font-medium leading-snug text-foreground">
                   <TruncatedText text={accountName} />
                 </h3>
-                <TruncatedText
-                  text={location || account.account_hq_country || "-"}
-                  className="text-sm text-muted-foreground mt-1"
-                />
-                {showChipRow && (
+                {visibilityNote && (
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                    {isNasscomVerified && (
-                      <div className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
-                        <RiCheckboxCircleLine className="h-3 w-3" aria-hidden="true" />
-                        NASSCOM
-                      </div>
-                    )}
-                    {visibilityNote && (
-                      <div className="inline-flex h-5 max-w-[220px] items-center gap-1 rounded-md bg-amber-500/10 px-1.5 text-xs font-medium text-amber-700 dark:text-amber-300">
-                        <span className="truncate">{visibilityNote}</span>
-                      </div>
-                    )}
+                    <div className="inline-flex h-5 max-w-[220px] items-center gap-1 rounded-md bg-amber-500/10 px-1.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                      <span className="truncate">{visibilityNote}</span>
+                    </div>
                   </div>
                 )}
               </div>
             </div>
             <div className="mt-auto flex flex-col gap-4">
               <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between gap-3 min-w-0">
+                  <span className="text-muted-foreground">Location</span>
+                  <TruncatedText
+                    text={location || "-"}
+                    className="font-medium text-foreground text-right max-w-[160px]"
+                    align="end"
+                  />
+                </div>
                 <div className="flex items-center justify-between gap-3 min-w-0">
                   <span className="text-muted-foreground">Sub industry</span>
                   <TruncatedText
