@@ -103,8 +103,6 @@ function DashboardContent(): React.JSX.Element | null {
     itemsPerPage,
     setItemsPerPage,
     entitySorts,
-    isSidebarCollapsed,
-    toggleSidebar: handleToggleSidebar,
   } = layout
 
   // What is visible right now, so charts/map/rows fetch lazily (#249 perf).
@@ -227,7 +225,7 @@ function DashboardContent(): React.JSX.Element | null {
     dataLoaded,
   })
 
-  const { startTour } = useProductTour({ userId, dataLoaded, hasMapView, isSidebarCollapsed })
+  const { startTour } = useProductTour({ userId, dataLoaded, hasMapView })
 
   const { refreshing, handleRefresh, handleErrorRetry } = useDashboardRefresh(serverData, filtersPaginationResetKey)
 
@@ -349,8 +347,6 @@ function DashboardContent(): React.JSX.Element | null {
             availableOptions={viewAvailableOptions}
             serverMode
             isApplying={isApplying}
-            isCollapsed={isSidebarCollapsed}
-            onToggleCollapse={handleToggleSidebar}
             revenueRange={revenueRange}
             yearsInIndiaRange={yearsInIndiaRange}
             centerIncYearRange={centerIncYearRange}

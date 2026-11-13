@@ -30,6 +30,7 @@ import { useAccountLists } from '@/contexts/account-lists-context'
 import { Button } from '@/components/ui/button'
 import { HintTooltip, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useCurrentProfile } from '@/hooks/use-current-profile'
+import { useSidebarCollapsed } from '@/hooks/use-sidebar-collapsed'
 import { cn } from '@/lib/utils'
 import type { AccountVisibilityMode, Alias, AvailableOptions, Filters } from '@/lib/types'
 
@@ -59,8 +60,6 @@ interface FiltersSidebarProps {
   pendingFilters: Filters
   availableOptions: AvailableOptions
   isApplying: boolean
-  isCollapsed: boolean
-  onToggleCollapse: () => void
   revenueRange: { min: number; max: number }
   yearsInIndiaRange: { min: number; max: number }
   centerIncYearRange: { min: number; max: number }
@@ -103,8 +102,6 @@ export function FiltersSidebar({
   pendingFilters,
   availableOptions,
   isApplying,
-  isCollapsed,
-  onToggleCollapse,
   revenueRange,
   yearsInIndiaRange,
   centerIncYearRange,
@@ -126,6 +123,7 @@ export function FiltersSidebar({
   onOpenHistory,
 }: FiltersSidebarProps): React.JSX.Element {
   const user = useCurrentProfile()
+  const { isSidebarCollapsed: isCollapsed, toggleSidebar: onToggleCollapse } = useSidebarCollapsed()
   const { lists: accountLists } = useAccountLists()
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
   const [openSection, setOpenSection] = useState<FilterSectionId | null>('accounts')

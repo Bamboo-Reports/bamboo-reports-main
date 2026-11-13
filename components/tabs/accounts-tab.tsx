@@ -84,7 +84,7 @@ interface AccountsTabProps {
 const getAccountRowLabel = (account: Account) =>
   `View account details for ${account.account_global_legal_name || "account"}`
 
-export function AccountsTab({
+export const AccountsTab = React.memo(function AccountsTab({
   accounts,
   centers,
   prospects,
@@ -433,4 +433,4 @@ export function AccountsTab({
       />
     </TabsContent>
   )
-}
+})

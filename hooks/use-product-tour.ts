@@ -6,15 +6,16 @@ import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { TOUR_AUTO_START_DELAY_MS } from "@/lib/tour/constants"
 import { getAnalyticsStepTitle, getDashboardTourSteps } from "@/lib/tour/steps"
 import { useTourPersistence } from "@/hooks/use-tour-persistence"
+import { subscribePreference } from "@/hooks/use-persisted-preference"
+import { readSidebarCollapsed, SIDEBAR_COLLAPSED_STORAGE_KEY } from "@/hooks/use-sidebar-collapsed"
 
 interface UseProductTourOptions {
   userId: string | null
   dataLoaded: boolean
   hasMapView: boolean
-  isSidebarCollapsed: boolean
 }
 
-export function useProductTour({ userId, dataLoaded, hasMapView, isSidebarCollapsed }: UseProductTourOptions) {
+export function useProductTour({ userId, dataLoaded, hasMapView }: UseProductTourOptions) {
   const { isCompleted, isLoading, markCompleted } = useTourPersistence(userId)
   const [isRunning, setIsRunning] = useState(false)
   const driverRef = useRef<Driver | null>(null)
@@ -22,9 +23,13 @@ export function useProductTour({ userId, dataLoaded, hasMapView, isSidebarCollap
   const stepIndexRef = useRef(0)
   const isRefreshingRef = useRef(false)
   const tourLayoutRef = useRef<{ hasMapView: boolean; isSidebarCollapsed: boolean } | null>(null)
+  // The sidebar state is read when the tour needs it, not subscribed to, so a
+  // sidebar toggle does not re-render the page. Only a running tour listens,
+  // to re-point its steps at the new layout.
+  const [sidebarVersion, setSidebarVersion] = useState(0)
 
   const createDriver = useCallback(() => {
-    const steps = getDashboardTourSteps({ hasMapView, isSidebarCollapsed })
+    const steps = getDashboardTourSteps({ hasMapView, isSidebarCollapsed: readSidebarCollapsed() })
 
     const instance = driver({
       showProgress: true,
@@ -74,7 +79,7 @@ export function useProductTour({ userId, dataLoaded, hasMapView, isSidebarCollap
     })
 
     return instance
-  }, [hasMapView, isSidebarCollapsed, markCompleted])
+  }, [hasMapView, markCompleted])
 
   const driveTour = useCallback(
     (startIndex = 0, trackStart = true) => {
@@ -87,11 +92,11 @@ export function useProductTour({ userId, dataLoaded, hasMapView, isSidebarCollap
         })
       }
 
-      tourLayoutRef.current = { hasMapView, isSidebarCollapsed }
+      tourLayoutRef.current = { hasMapView, isSidebarCollapsed: readSidebarCollapsed() }
       setIsRunning(true)
       instance.drive(startIndex)
     },
-    [createDriver, isCompleted, hasMapView, isSidebarCollapsed]
+    [createDriver, isCompleted, hasMapView]
   )
 
   const startTour = useCallback(() => {
@@ -105,10 +110,16 @@ export function useProductTour({ userId, dataLoaded, hasMapView, isSidebarCollap
   }, [isRunning, driveTour])
 
   useEffect(() => {
+    if (!isRunning) return
+    return subscribePreference(SIDEBAR_COLLAPSED_STORAGE_KEY, () => setSidebarVersion((v) => v + 1))
+  }, [isRunning])
+
+  useEffect(() => {
     if (!isRunning || !driverRef.current) {
       return
     }
 
+    const isSidebarCollapsed = readSidebarCollapsed()
     const previousLayout = tourLayoutRef.current
     if (
       previousLayout &&
@@ -126,7 +137,7 @@ export function useProductTour({ userId, dataLoaded, hasMapView, isSidebarCollap
     isRefreshingRef.current = false
 
     driveTour(nextIndex, false)
-  }, [isRunning, hasMapView, isSidebarCollapsed, driveTour])
+  }, [isRunning, hasMapView, sidebarVersion, driveTour])
 
   // Auto-start for first-time users
   useEffect(() => {

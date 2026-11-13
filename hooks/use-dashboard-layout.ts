@@ -3,14 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import type { PieChartLabelDisplay } from "@/components/charts/pie-chart-card"
 import type { TabSort } from "@/components/tabs/accounts-tab"
-import { captureEvent } from "@/lib/analytics/client"
-import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import type { EntitySort } from "@/lib/dashboard/api-client"
 import { TAB_SORT_COLUMNS } from "@/lib/dashboard/entity-columns"
 import { DEFAULT_PAGE_SIZE, isPageSizeOption } from "@/lib/dashboard/page-size"
-import { BOOLEAN_PREFERENCE, usePersistedPreference, type PreferenceCodec } from "@/hooks/use-persisted-preference"
+import { usePersistedPreference, type PreferenceCodec } from "@/hooks/use-persisted-preference"
 
-export const SIDEBAR_COLLAPSED_STORAGE_KEY = "br-dashboard-sidebar-collapsed"
 export const PAGE_SIZE_STORAGE_KEY = "br-dashboard-page-size"
 
 export type DashboardSection = "accounts" | "centers" | "prospects"
@@ -79,8 +76,6 @@ export function useDashboardLayout({ filtersKey }: { filtersKey: string }) {
     [accountsSort, centersSort, prospectsSort]
   )
 
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = usePersistedPreference(SIDEBAR_COLLAPSED_STORAGE_KEY, BOOLEAN_PREFERENCE)
-
   const activeView: EntityView | ProspectsView =
     activeSection === "accounts" ? accountsView : activeSection === "centers" ? centersView : prospectsView
   const activePage =
@@ -94,13 +89,6 @@ export function useDashboardLayout({ filtersKey }: { filtersKey: string }) {
     setCentersPage(1)
     setProspectsPage(1)
   }, [filtersKey])
-
-  // Reported from the toggle itself, so the saved state on load is not counted as a toggle.
-  const toggleSidebar = useCallback(() => {
-    const next = !isSidebarCollapsed
-    setIsSidebarCollapsed(next)
-    captureEvent(ANALYTICS_EVENTS.SIDEBAR_TOGGLED, { is_collapsed: next })
-  }, [isSidebarCollapsed, setIsSidebarCollapsed])
 
   return {
     activeSection,
@@ -131,8 +119,6 @@ export function useDashboardLayout({ filtersKey }: { filtersKey: string }) {
     prospectsSort,
     setProspectsSort,
     entitySorts,
-    isSidebarCollapsed,
-    toggleSidebar,
   }
 }
 

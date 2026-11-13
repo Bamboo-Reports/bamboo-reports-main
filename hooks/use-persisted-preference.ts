@@ -46,6 +46,29 @@ function writeRaw(key: string, raw: string) {
 }
 
 /**
+ * Calls `listener` when the preference changes, in this tab or another. For code
+ * outside render that must react to a change without re-rendering on every one.
+ */
+export function subscribePreference(key: string, listener: () => void): () => void {
+  const set = listenersFor(key)
+  set.add(listener)
+  // Other tabs write through the storage event; this tab notifies directly.
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === key) listener()
+  }
+  window.addEventListener("storage", onStorage)
+  return () => {
+    set.delete(listener)
+    window.removeEventListener("storage", onStorage)
+  }
+}
+
+/** The current value, read outside render (event handlers, effects). */
+export function readPreference<T>(key: string, codec: PreferenceCodec<T>): T {
+  return codec.parse(readRaw(key))
+}
+
+/**
  * A per-browser preference in localStorage, read through useSyncExternalStore
  * so the first render already has it (the server render and hydration see the
  * default) and every component using the same key stays in step, in this tab
@@ -53,22 +76,7 @@ function writeRaw(key: string, raw: string) {
  * default applies, and a choice made in the meantime still holds for the tab.
  */
 export function usePersistedPreference<T>(key: string, codec: PreferenceCodec<T>): [T, (next: T) => void] {
-  const subscribe = useCallback(
-    (listener: () => void) => {
-      const set = listenersFor(key)
-      set.add(listener)
-      // Other tabs write through the storage event; this tab notifies directly.
-      const onStorage = (event: StorageEvent) => {
-        if (event.key === key) listener()
-      }
-      window.addEventListener("storage", onStorage)
-      return () => {
-        set.delete(listener)
-        window.removeEventListener("storage", onStorage)
-      }
-    },
-    [key]
-  )
+  const subscribe = useCallback((listener: () => void) => subscribePreference(key, listener), [key])
   const getSnapshot = useCallback(() => codec.parse(readRaw(key)), [key, codec])
   const getServerSnapshot = useCallback(() => codec.parse(null), [codec])
   const value = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)

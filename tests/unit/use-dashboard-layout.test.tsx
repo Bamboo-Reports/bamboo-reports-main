@@ -2,11 +2,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { act, cleanup, renderHook } from "@testing-library/react"
 import { captureEvent } from "@/lib/analytics/client"
-import {
-  PAGE_SIZE_STORAGE_KEY,
-  SIDEBAR_COLLAPSED_STORAGE_KEY,
-  useDashboardLayout,
-} from "@/hooks/use-dashboard-layout"
+import { PAGE_SIZE_STORAGE_KEY, useDashboardLayout } from "@/hooks/use-dashboard-layout"
+import { readSidebarCollapsed, SIDEBAR_COLLAPSED_STORAGE_KEY, useSidebarCollapsed } from "@/hooks/use-sidebar-collapsed"
 import { makeSortHandler } from "@/hooks/use-entity-table-props"
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "@/lib/dashboard/page-size"
 
@@ -95,12 +92,14 @@ describe("useDashboardLayout", () => {
 
   it("remembers the sidebar and reports toggles, not the initial state", () => {
     window.localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, "true")
-    const { result } = setup()
+    const { result } = renderHook(() => useSidebarCollapsed())
     expect(result.current.isSidebarCollapsed).toBe(true)
+    expect(readSidebarCollapsed()).toBe(true)
     expect(captureEvent).not.toHaveBeenCalled()
     act(() => result.current.toggleSidebar())
     expect(result.current.isSidebarCollapsed).toBe(false)
     expect(window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY)).toBe("false")
+    expect(readSidebarCollapsed()).toBe(false)
     expect(captureEvent).toHaveBeenCalledWith("sidebar_toggled", { is_collapsed: false })
   })
 

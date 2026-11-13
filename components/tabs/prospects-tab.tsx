@@ -57,7 +57,7 @@ interface ProspectsTabProps {
 
 const getProspectRowLabel = (prospect: Prospect) => `View prospect details for ${getProspectDisplayNameUtil(prospect)}`
 
-export function ProspectsTab({
+export const ProspectsTab = React.memo(function ProspectsTab({
   accounts,
   centers,
   prospects,
@@ -376,4 +376,4 @@ export function ProspectsTab({
       />
     </TabsContent>
   )
-}
+})

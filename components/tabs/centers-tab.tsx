@@ -67,7 +67,7 @@ interface CentersTabProps {
 
 const getCenterRowLabel = (center: Center) => `View centre details for ${center.center_name || "center"}`
 
-export function CentersTab({
+export const CentersTab = React.memo(function CentersTab({
   accounts,
   centers,
   allCenters,
@@ -460,4 +460,4 @@ export function CentersTab({
       />
     </TabsContent>
   )
-}
+})
