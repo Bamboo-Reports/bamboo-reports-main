@@ -23,7 +23,7 @@ interface CenterGridCardProps {
 export const CenterGridCard = memo(({ center, onClick }: CenterGridCardProps) => {
   const centerName = center.center_name || "Centre"
   const accountName = center.account_global_legal_name || "Account"
-  const location = formatCenterLocation(center.center_city, center.center_state)
+  const location = formatCenterLocation(center.center_city, center.center_state, center.center_country)
 
   return (
     <ContextMenu>

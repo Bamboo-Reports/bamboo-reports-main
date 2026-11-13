@@ -20,7 +20,7 @@ export function centerHistoryItem(center: Center): RecordHistoryItem {
     type: "center",
     id: center.cn_unique_key ?? "",
     title: center.center_name ?? "Unknown Centre",
-    subtitle: formatCenterLocation(center.center_city, center.center_state),
+    subtitle: formatCenterLocation(center.center_city, center.center_state, center.center_country),
   }
 }
 

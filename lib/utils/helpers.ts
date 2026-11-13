@@ -54,41 +54,23 @@ export const knownText = (value: string | null | undefined): string | null => {
 }
 
 /**
- * Builds a human-readable location string for a prospect.
- * Values that are null, empty, or exactly "TBA" (case-insensitive) are ignored.
- * If nothing meaningful remains after filtering, falls back to `country`, then "India".
+ * Where a centre or prospect is: "City, State" when the city is known, else
+ * the state, else the country, else "India". Blank and "TBA" count as unknown
+ * at every level.
  */
-export const formatProspectLocation = (
+export const formatLocation = (
   city: string | null | undefined,
   state: string | null | undefined,
   country?: string | null | undefined,
 ): string => {
-  const isMeaningful = (v: string | null | undefined): v is string =>
-    !!v && v.trim() !== "" && v.trim().toUpperCase() !== "TBA"
-
-  if (isMeaningful(city)) {
-    return isMeaningful(state) ? `${city.trim()}, ${state.trim()}` : city.trim()
-  }
-  if (isMeaningful(country)) return country
-  return "India"
+  const knownCity = knownText(city)
+  const knownState = knownText(state)
+  if (knownCity) return knownState ? `${knownCity}, ${knownState}` : knownCity
+  return knownState ?? knownText(country) ?? "India"
 }
-/**
- * Builds a human-readable location string for a center.
- * A city that is null, empty, or exactly "TBA" (case-insensitive) is treated as absent.
- * If city is absent, returns "India" as the fallback.
- */
-export const formatCenterLocation = (
-  city: string | null | undefined,
-  state: string | null | undefined,
-): string => {
-  const isMeaningful = (v: string | null | undefined): v is string =>
-    !!v && v.trim() !== "" && v.trim().toUpperCase() !== "TBA"
 
-  if (isMeaningful(city)) {
-    return isMeaningful(state) ? `${city.trim()}, ${state.trim()}` : city.trim()
-  }
-  return "India"
-}
+export const formatProspectLocation = formatLocation
+export const formatCenterLocation = formatLocation
 
 /** "1 account", "2,400 accounts". */
 export const plural = (n: number, word: string) => `${n.toLocaleString()} ${word}${n === 1 ? "" : "s"}`

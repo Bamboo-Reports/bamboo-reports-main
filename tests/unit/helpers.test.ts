@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 import {
+  formatLocation,
   formatRevenueInMillions,
   getPageInfo,
   getPaginatedData,
@@ -37,6 +38,25 @@ describe("formatRevenueInMillions", () => {
 
   it("uses locale grouping for large values", () => {
     expect(formatRevenueInMillions(1000)).toBe(`${(1000).toLocaleString()}M`)
+  })
+})
+
+describe("formatLocation", () => {
+  it("shows the city with its state when the city is known", () => {
+    expect(formatLocation("Pune", "Maharashtra", "India")).toBe("Pune, Maharashtra")
+    expect(formatLocation(" Pune ", "TBA", "India")).toBe("Pune")
+  })
+
+  it("falls back to the state when the city is blank or TBA", () => {
+    expect(formatLocation("TBA", "Karnataka", "India")).toBe("Karnataka")
+    expect(formatLocation("  ", "Karnataka", "India")).toBe("Karnataka")
+    expect(formatLocation(null, "Karnataka")).toBe("Karnataka")
+  })
+
+  it("falls back to the country, then India", () => {
+    expect(formatLocation("tba", "", "United States")).toBe("United States")
+    expect(formatLocation(null, null, "TBA")).toBe("India")
+    expect(formatLocation(undefined, undefined)).toBe("India")
   })
 })
 

@@ -66,7 +66,7 @@ export const accountCenterColumns = centerHelper.columns([
     sortFn: "text",
     meta: { className: "w-[300px]" },
   }),
-  centerHelper.accessor((center) => formatCenterLocation(center.center_city, center.center_state), {
+  centerHelper.accessor((center) => formatCenterLocation(center.center_city, center.center_state, center.center_country), {
     id: "location",
     header: ({ column }) => <DataTableColumnHeader column={column} title="Location" />,
     cell: ({ getValue }) => <TruncatedText value={getValue()} />,
