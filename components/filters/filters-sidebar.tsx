@@ -8,7 +8,6 @@ import {
   RiBuildingLine,
   RiCloseLine,
   RiDownload2Line,
-  RiFileList3Line,
   RiFilePdf2Line,
   RiGroupLine,
   RiLoader4Line,
@@ -17,6 +16,7 @@ import {
   RiSideBarLine,
 } from "@remixicon/react"
 import { SavedFiltersManager } from '@/components/saved-filters-manager'
+import { AccountListsIcon } from '@/components/filters/account-lists-icon'
 import {
   AccountFiltersSection,
   CenterFiltersSection,
@@ -346,7 +346,7 @@ export function FiltersSidebar({
             className={railButton}
             onClick={() => setAccountListsSignal((n) => n + 1)}
           >
-            <RiFileList3Line className="h-[18px] w-[18px]" />
+            <AccountListsIcon size={18} />
           </button>
         </HintTooltip>
         <div className="mt-auto flex flex-col items-center gap-1">

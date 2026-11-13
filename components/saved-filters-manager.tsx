@@ -32,7 +32,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { RiAddLine, RiArrowDownSLine, RiBookmarkLine, RiCheckLine, RiCloseLine, RiFileList3Line, RiGroupLine, RiSave3Line, RiSettings4Line, RiShareLine } from "@remixicon/react"
+import { RiAddLine, RiArrowDownSLine, RiBookmarkLine, RiCheckLine, RiCloseLine, RiGroupLine, RiSave3Line, RiSettings4Line, RiShareLine } from "@remixicon/react"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { buildTrackedFiltersSnapshot, normalizeTrackedText, toTrackedStringArray } from "@/lib/analytics/tracking"
@@ -43,6 +43,7 @@ import { SavedFiltersLibrary } from "@/components/filters/saved-filters-library"
 import type { DescribedSection } from "@/components/filters/filter-description"
 import { useSavedFilters, type FilterShare, type SavedFilter } from "@/hooks/use-saved-filters"
 import { AccountListsDialog } from "@/components/filters/account-lists-dialog"
+import { AccountListsIcon } from "@/components/filters/account-lists-icon"
 import { useAccountLists } from "@/contexts/account-lists-context"
 import { withAccountLists, type AccountList } from "@/lib/accounts/account-lists"
 
@@ -524,7 +525,7 @@ export const SavedFiltersManager = memo(function SavedFiltersManager({
             }}
             data-tour="account-lists-button"
           >
-            <RiFileList3Line className="h-4 w-4" />
+            <AccountListsIcon size={16} />
           </Button>
         </HintTooltip>
 
