@@ -147,7 +147,6 @@ function SignInForm() {
             type="email"
             autoComplete="email"
             required
-            className="h-10 rounded-lg"
             {...register("email")}
           />
           {errors.email ? <p className="text-xs text-destructive">{errors.email.message}</p> : null}
@@ -168,7 +167,6 @@ function SignInForm() {
             id="password"
             autoComplete="current-password"
             required
-            className="h-10 rounded-lg"
             {...register("password")}
           />
           {errors.password ? <p className="text-xs text-destructive">{errors.password.message}</p> : null}

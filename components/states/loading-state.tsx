@@ -4,7 +4,6 @@ import { BrandMark } from "@/components/brand/brand-mark"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { ChartWaveSkeleton } from "@/components/ui/chart-wave-skeleton"
 import { Skeleton } from "@/components/ui/skeleton"
-import { TopProgressBar } from "@/components/ui/top-progress-bar"
 import { getEnvironmentLabel } from "@/lib/config/environment"
 import { NOTIFICATIONS_ENABLED } from "@/lib/config/notifications"
 import { cn } from "@/lib/utils"
@@ -20,7 +19,8 @@ import { cn } from "@/lib/utils"
  * swap reads as content filling in rather than a screen change.
  *
  * Motion is deliberately limited to what the loaded dashboard already uses:
- * the top progress bar, the skeleton shimmer and the resting chart wave. The
+ * the skeleton shimmer and the resting chart wave. The top progress bar is
+ * rendered by the page, so the same bar runs on through the swap. The
  * only extra moment is the four petals of the logo assembling once on entry.
  */
 export function LoadingState() {
@@ -31,8 +31,6 @@ export function LoadingState() {
       aria-busy="true"
       aria-label="Loading dashboard"
     >
-      <TopProgressBar active />
-
       {/* Header ghost: mirrors components/layout/header.tsx so nothing moves on swap. */}
       <div className="sticky top-0 z-20 border-b border-border/80 bg-background">
         <div className="mx-auto w-full px-6 py-3">

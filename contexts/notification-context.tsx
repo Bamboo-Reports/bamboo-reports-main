@@ -171,7 +171,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const unreadCount = hasSession ? (countQuery.data ?? 0) : 0
   const summaries = hasSession ? (summariesQuery.data ?? EMPTY_SUMMARIES) : EMPTY_SUMMARIES
   const loadingCount = hasSession && countQuery.isFetching
-  const loadingSummaries = hasSession && summariesQuery.isFetching
+  // Skeletons only before the first load: a reopen refetches behind the cached list.
+  const loadingSummaries = hasSession && summariesQuery.isLoading
 
   const value = useMemo<NotificationContextValue>(
     () => ({

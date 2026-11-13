@@ -32,10 +32,12 @@ export function TopProgressBar({ active }: { active: boolean }) {
 
     if (trickleRef.current) clearInterval(trickleRef.current)
     setProgress((p) => (p === 0 ? 0 : 100))
+    // Let the bar fill to 100%, then fade it out, then reset. Doing both in one
+    // update unmounts the bar before the fade can paint.
     hideRef.current = setTimeout(() => {
       setVisible(false)
-      setProgress(0)
-    }, 400)
+      hideRef.current = setTimeout(() => setProgress(0), 300)
+    }, 300)
     return () => {
       if (hideRef.current) clearTimeout(hideRef.current)
     }

@@ -131,7 +131,13 @@ export function CompanyLogo({
       {/* Fallback while loading */}
       {!imageLoaded && (
         <div className="absolute inset-0 flex items-center justify-center bg-muted">
-          <RiBuilding2Line className={cn("text-muted-foreground", sizeConfig.icon)} />
+          {fallbackMode === "monogram" ? (
+            <span className={cn("font-semibold text-foreground", size === "xl" ? "text-3xl" : "text-sm")}>
+              {companyMonogram}
+            </span>
+          ) : (
+            <RiBuilding2Line className={cn("text-muted-foreground", sizeConfig.icon)} />
+          )}
         </div>
       )}
 

@@ -18,6 +18,8 @@ export default function ForgotPasswordPage() {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
   const [sentTo, setSentTo] = useState("")
+  // True after a resend succeeds, so "Send it again" visibly confirms it worked.
+  const [resent, setResent] = useState(false)
   const {
     register,
     handleSubmit,
@@ -50,6 +52,7 @@ export default function ForgotPasswordPage() {
     })
 
     // Always show success so the form does not reveal whether an email exists.
+    setResent(sent)
     setSentTo(values.email.trim())
     setSent(true)
   }
@@ -83,9 +86,12 @@ export default function ForgotPasswordPage() {
               type="button"
               className="font-medium text-primary hover:underline disabled:opacity-60"
               disabled={isSubmitting}
-              onClick={() => void handleSubmit(onSubmit)()}
+              onClick={() => {
+                setResent(false)
+                void handleSubmit(onSubmit)()
+              }}
             >
-              {isSubmitting ? "Sending" : "Send it again"}
+              {isSubmitting ? "Sending" : resent ? "Sent again" : "Send it again"}
             </button>{" "}
             or{" "}
             <button
@@ -93,6 +99,7 @@ export default function ForgotPasswordPage() {
               className="font-medium text-primary hover:underline"
               onClick={() => {
                 setSent(false)
+                setResent(false)
                 setSubmitError(null)
               }}
             >
@@ -133,7 +140,6 @@ export default function ForgotPasswordPage() {
             autoComplete="email"
             required
             placeholder="you@company.com"
-            className="h-10 rounded-lg"
             {...register("email")}
           />
           {errors.email ? <p className="text-xs text-destructive">{errors.email.message}</p> : null}

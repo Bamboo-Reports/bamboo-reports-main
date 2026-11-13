@@ -14,7 +14,7 @@ import {
 /**
  * App toaster (design in mockups/toasts.html). Toasts are a small floating
  * card like the menus and popovers: card surface, hairline border, the shared
- * soft shadow and a 12px corner. The only colour is the 16px icon. Calls keep
+ * soft shadow and the same 8px corner. The only colour is the 16px icon. Calls keep
  * a short title and put detail in `description`; actions render as a small
  * outline button on the right.
  */
@@ -39,7 +39,7 @@ export function Toaster() {
         unstyled: true,
         classNames: {
           toast:
-            "group/toast flex w-[var(--width)] items-start gap-2.5 rounded-xl border border-border bg-popover py-3 pl-4 pr-3 font-sans text-popover-foreground shadow-float",
+            "group/toast flex w-[var(--width)] items-start gap-2.5 rounded-lg border border-border bg-popover py-3 pl-4 pr-3 font-sans text-popover-foreground shadow-float",
           // relative: sonner centres its loading spinner absolutely inside this box.
           icon: "relative mt-px flex h-4 w-4 shrink-0 items-center justify-center text-muted-foreground [&>svg]:h-4 [&>svg]:w-4",
           success: "[&_[data-icon]]:text-include",
@@ -49,9 +49,9 @@ export function Toaster() {
           title: "text-[13px] font-medium leading-[18px]",
           description: "text-xs leading-4 text-muted-foreground [overflow-wrap:anywhere]",
           actionButton:
-            "h-7 shrink-0 self-center rounded-lg border border-border bg-card px-2.5 text-xs font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "h-7 shrink-0 self-center rounded-lg border border-border bg-card px-2.5 text-xs font-medium text-foreground transition-[background-color,transform] hover:bg-muted active:scale-[0.97] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           cancelButton:
-            "h-7 shrink-0 self-center rounded-lg px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+            "h-7 shrink-0 self-center rounded-lg px-2.5 text-xs font-medium text-muted-foreground transition-[background-color,color,transform] hover:bg-muted hover:text-foreground active:scale-[0.97] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           closeButton:
             "order-last -mr-1 -mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         },

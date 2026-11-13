@@ -49,7 +49,6 @@ export function useProductTour({ userId, dataLoaded, hasMapView, isSidebarCollap
       },
       onDestroyStarted: (_element, _step, opts) => {
         if (isRefreshingRef.current) {
-          document.documentElement.classList.remove("tour-active")
           instance.destroy()
           return
         }
@@ -68,7 +67,6 @@ export function useProductTour({ userId, dataLoaded, hasMapView, isSidebarCollap
           })
         }
 
-        document.documentElement.classList.remove("tour-active")
         markCompleted()
         setIsRunning(false)
         instance.destroy()
@@ -82,8 +80,6 @@ export function useProductTour({ userId, dataLoaded, hasMapView, isSidebarCollap
     (startIndex = 0, trackStart = true) => {
       const instance = createDriver()
       driverRef.current = instance
-
-      document.documentElement.classList.add("tour-active")
 
       if (trackStart) {
         captureEvent(ANALYTICS_EVENTS.TOUR_STARTED, {
@@ -147,7 +143,6 @@ export function useProductTour({ userId, dataLoaded, hasMapView, isSidebarCollap
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      document.documentElement.classList.remove("tour-active")
       if (driverRef.current) {
         driverRef.current.destroy()
       }

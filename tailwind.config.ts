@@ -101,16 +101,6 @@ const config: Config = {
   					height: '0'
   				}
   			},
-  			'fade-in': {
-  				from: {
-  					opacity: '0',
-  					transform: 'translateY(4px)'
-  				},
-  				to: {
-  					opacity: '1',
-  					transform: 'translateY(0)'
-  				}
-  			},
   			'shimmer': {
   				'0%': {
   					transform: 'translateX(-100%)'
@@ -131,8 +121,7 @@ const config: Config = {
   		animation: {
   			'accordion-down': 'accordion-down 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
   			'accordion-up': 'accordion-up 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
-  			'fade-in': 'fade-in 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
-  			'shimmer': 'shimmer 2s infinite',
+  			'shimmer': 'shimmer 1.5s linear infinite',
   			'chart-wave': 'chart-wave 6s linear infinite'
   		}
   	}

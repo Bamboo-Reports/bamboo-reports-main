@@ -6,11 +6,9 @@ import { RiBriefcaseLine, RiBuildingLine, RiCheckDoubleLine, RiFileList2Line, Ri
 import { Button } from "@/components/ui/button"
 import { HintTooltip, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { TruncatedText } from "@/components/ui/truncated-text"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+// A popover, not a menu: the panel holds a button and focusable dates, which a
+// menu would keep out of the Tab order.
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useNotifications } from "@/hooks/use-notifications"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
@@ -47,6 +45,7 @@ export function NotificationDropdown() {
   } = useNotifications()
 
   const [isOpen, setIsOpen] = useState(false)
+  const [markingAll, setMarkingAll] = useState(false)
 
   useEffect(() => {
     if (!isOpen || !hasSession) return
@@ -61,16 +60,22 @@ export function NotificationDropdown() {
   }
 
   const handleMarkAllRead = async () => {
+    if (markingAll) return
+    setMarkingAll(true)
     captureEvent(ANALYTICS_EVENTS.NOTIFICATIONS_MARKED_READ, { record_count: totalRecords })
-    await markAllAsRead()
+    try {
+      await markAllAsRead()
+    } finally {
+      setMarkingAll(false)
+    }
   }
 
   const showList = !isLoading && !error && notificationSummaries.length > 0
 
   return (
-    <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
+    <Popover open={isOpen} onOpenChange={handleOpenChange}>
       <Tooltip>
-        <DropdownMenuTrigger asChild>
+        <PopoverTrigger asChild>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon-sm" className="relative" aria-label="Updates">
               <RiNotification3Line className="h-4 w-4" />
@@ -79,13 +84,13 @@ export function NotificationDropdown() {
               ) : null}
             </Button>
           </TooltipTrigger>
-        </DropdownMenuTrigger>
+        </PopoverTrigger>
         <TooltipContent side="bottom" aria-label={unreadCount > 0 ? `${unreadCount} unread` : ""}>
           Updates
           {unreadCount > 0 && <span className="br-tip-hint">{unreadCount} unread</span>}
         </TooltipContent>
       </Tooltip>
-      <DropdownMenuContent align="end" className="w-[380px] overflow-hidden p-0">
+      <PopoverContent align="end" className="w-[380px] overflow-hidden p-0">
         <div className="flex items-center gap-2.5 border-b px-3.5 py-3">
           <p className="text-sm font-medium text-foreground">Updates</p>
           {showList && (
@@ -98,9 +103,11 @@ export function NotificationDropdown() {
             <button
               type="button"
               onClick={handleMarkAllRead}
-              className="text-xs font-medium text-primary hover:underline hover:underline-offset-2"
+              disabled={markingAll}
+              aria-busy={markingAll || undefined}
+              className="rounded-sm text-xs font-medium text-primary hover:underline hover:underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
             >
-              Mark all as read
+              {markingAll ? "Marking as read" : "Mark all as read"}
             </button>
           ) : null}
         </div>
@@ -176,7 +183,7 @@ export function NotificationDropdown() {
               })
             : null}
         </div>
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </PopoverContent>
+    </Popover>
   )
 }

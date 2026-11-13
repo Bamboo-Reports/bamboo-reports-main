@@ -277,34 +277,48 @@ function DashboardContent(): React.JSX.Element | null {
     onReload: serverData.reload,
   })
 
-  if (!authReady || !userId) {
-    return null
-  }
+  // One bar in the same tree position for every branch below, so it keeps
+  // running from the loading ghost into the dashboard instead of restarting.
+  const progressBar = (
+    <TopProgressBar
+      active={
+        !authReady ||
+        !userId ||
+        pageLoading ||
+        serverData.pending.core ||
+        serverData.pending[activeSection] ||
+        (dashboardViews.needCharts && serverData.pending.charts) ||
+        (dashboardViews.needMap && serverData.pending.map)
+      }
+    />
+  )
 
-  if (pageLoading) {
-    return <LoadingState />
+  if (!authReady || !userId || pageLoading) {
+    return (
+      <>
+        {progressBar}
+        <LoadingState />
+      </>
+    )
   }
 
   if (pageError) {
     return (
-      <ErrorState
-        error={pageError}
-        onRetry={handleErrorRetry}
-      />
+      <>
+        {progressBar}
+        <ErrorState
+          error={pageError}
+          onRetry={handleErrorRetry}
+        />
+      </>
     )
   }
 
   return (
+    <>
+    {progressBar}
     <RecordHistoryProvider recordOpened={addRecentItem}>
     <div className="h-screen bg-background flex flex-col overflow-hidden">
-      <TopProgressBar
-        active={
-          serverData.pending.core ||
-          serverData.pending[activeSection] ||
-          (dashboardViews.needCharts && serverData.pending.charts) ||
-          (dashboardViews.needMap && serverData.pending.map)
-        }
-      />
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-foreground focus:shadow"
@@ -447,6 +461,7 @@ function DashboardContent(): React.JSX.Element | null {
       )}
     </div>
     </RecordHistoryProvider>
+    </>
   )
 }
 

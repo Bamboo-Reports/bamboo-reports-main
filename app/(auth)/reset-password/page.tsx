@@ -141,8 +141,7 @@ export default function ResetPasswordPage() {
               id="password"
               autoComplete="new-password"
               required
-              className="h-10 rounded-lg"
-              aria-describedby="password-rules"
+                aria-describedby="password-rules"
               {...register("password")}
             />
             {errors.password ? <p className="text-xs text-destructive">{errors.password.message}</p> : null}
@@ -155,8 +154,7 @@ export default function ResetPasswordPage() {
               id="confirmPassword"
               autoComplete="new-password"
               required
-              className="h-10 rounded-lg"
-              aria-describedby="password-rules"
+                aria-describedby="password-rules"
               {...register("confirmPassword")}
             />
             {errors.confirmPassword ? <p className="text-xs text-destructive">{errors.confirmPassword.message}</p> : null}

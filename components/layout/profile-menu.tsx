@@ -3,10 +3,12 @@
 import React, { useEffect, useState } from 'react'
 import { RiCompass3Line, RiFileExcel2Line, RiHistoryLine, RiLogoutBoxRLine } from "@remixicon/react"
 import { useTheme } from 'next-themes'
+import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuRadioGroup,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
@@ -24,9 +26,13 @@ const THEME_OPTIONS: Array<{ value: ThemeMode; label: string }> = [
 ]
 
 const SEGMENT_GROUP_CLASS = "inline-grid grid-cols-3 rounded-lg bg-muted/80 p-0.5"
-const SEGMENT_BUTTON_CLASS = "h-6 rounded-md px-2.5 text-xs font-medium transition-colors disabled:pointer-events-none disabled:opacity-60"
+// Segments are menu radio items, so arrow keys reach them like the other rows.
+const SEGMENT_BUTTON_CLASS = "flex h-6 cursor-default select-none items-center justify-center rounded-md px-2.5 text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring data-[disabled]:pointer-events-none data-[disabled]:opacity-60"
 const SEGMENT_ACTIVE_CLASS = `${SEGMENT_BUTTON_CLASS} bg-background text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.08),0_0_0_1px_hsl(var(--border)/0.6)]`
-const SEGMENT_IDLE_CLASS = `${SEGMENT_BUTTON_CLASS} text-muted-foreground hover:text-foreground`
+const SEGMENT_IDLE_CLASS = `${SEGMENT_BUTTON_CLASS} text-muted-foreground hover:text-foreground data-[highlighted]:text-foreground`
+
+/** Keeps the menu open when a segment is picked, as the old buttons did. */
+const keepMenuOpen = (event: Event) => event.preventDefault()
 
 function PreferenceRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -49,33 +55,33 @@ function ProfileThemeSwitcher() {
 
   return (
     <PreferenceRow label="Theme">
-      <div className={SEGMENT_GROUP_CLASS} role="radiogroup" aria-label="Theme">
-        {THEME_OPTIONS.map((option) => {
-          const isActive = activeTheme === option.value
-          return (
-            <button
-              key={option.value}
-              type="button"
-              role="radio"
-              aria-checked={isActive}
-              disabled={!mounted}
-              onClick={() => {
-                if (option.value !== activeTheme) {
-                  captureEvent(ANALYTICS_EVENTS.THEME_CHANGED, {
-                    theme: option.value,
-                    previous_theme: activeTheme,
-                    source: 'profile_menu',
-                  })
-                }
-                setTheme(option.value)
-              }}
-              className={isActive ? SEGMENT_ACTIVE_CLASS : SEGMENT_IDLE_CLASS}
-            >
-              {option.label}
-            </button>
-          )
-        })}
-      </div>
+      <DropdownMenuRadioGroup
+        className={SEGMENT_GROUP_CLASS}
+        aria-label="Theme"
+        value={activeTheme}
+        onValueChange={(value) => {
+          if (value !== activeTheme) {
+            captureEvent(ANALYTICS_EVENTS.THEME_CHANGED, {
+              theme: value,
+              previous_theme: activeTheme,
+              source: 'profile_menu',
+            })
+          }
+          setTheme(value)
+        }}
+      >
+        {THEME_OPTIONS.map((option) => (
+          <DropdownMenuPrimitive.RadioItem
+            key={option.value}
+            value={option.value}
+            disabled={!mounted}
+            onSelect={keepMenuOpen}
+            className={activeTheme === option.value ? SEGMENT_ACTIVE_CLASS : SEGMENT_IDLE_CLASS}
+          >
+            {option.label}
+          </DropdownMenuPrimitive.RadioItem>
+        ))}
+      </DropdownMenuRadioGroup>
     </PreferenceRow>
   )
 }
@@ -93,32 +99,33 @@ function ProfileNumberFormatSwitcher() {
   return (
     <>
       <PreferenceRow label="Numbers">
-        <div className={SEGMENT_GROUP_CLASS} role="radiogroup" aria-label="Summary number format">
-          {NUMBER_FORMAT_OPTIONS.map((option) => {
-            const isActive = preference === option.value
-            return (
-              <button
-                key={option.value}
-                type="button"
-                role="radio"
-                aria-checked={isActive}
-                onClick={() => {
-                  if (option.value !== preference) {
-                    captureEvent(ANALYTICS_EVENTS.NUMBER_FORMAT_CHANGED, {
-                      number_format: option.value,
-                      previous_number_format: preference,
-                      source: 'profile_menu',
-                    })
-                  }
-                  setPreference(option.value)
-                }}
-                className={isActive ? SEGMENT_ACTIVE_CLASS : SEGMENT_IDLE_CLASS}
-              >
-                {option.label}
-              </button>
-            )
-          })}
-        </div>
+        <DropdownMenuRadioGroup
+          className={SEGMENT_GROUP_CLASS}
+          aria-label="Summary number format"
+          value={preference}
+          onValueChange={(value) => {
+            const next = value as NumberFormatPreference
+            if (next !== preference) {
+              captureEvent(ANALYTICS_EVENTS.NUMBER_FORMAT_CHANGED, {
+                number_format: next,
+                previous_number_format: preference,
+                source: 'profile_menu',
+              })
+            }
+            setPreference(next)
+          }}
+        >
+          {NUMBER_FORMAT_OPTIONS.map((option) => (
+            <DropdownMenuPrimitive.RadioItem
+              key={option.value}
+              value={option.value}
+              onSelect={keepMenuOpen}
+              className={preference === option.value ? SEGMENT_ACTIVE_CLASS : SEGMENT_IDLE_CLASS}
+            >
+              {option.label}
+            </DropdownMenuPrimitive.RadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
       </PreferenceRow>
       <p className="px-4 pb-3 pt-1 text-xs text-muted-foreground">{active.hint}</p>
     </>
@@ -136,7 +143,7 @@ interface ProfileMenuProps {
   onOpenHistory?: () => void
 }
 
-const ITEM_CLASS = "h-8 cursor-pointer gap-2.5 rounded-md px-3 text-[13px] [&_svg]:h-4 [&_svg]:w-4 [&_svg]:text-muted-foreground"
+const ITEM_CLASS = "h-8 gap-2.5 rounded-md px-3 text-[13px] [&_svg]:h-4 [&_svg]:w-4 [&_svg]:text-muted-foreground"
 
 /** Who you are, theme and number format, then My exports, History, the tour and Sign out. */
 export function ProfileMenu({ user, children, side = 'bottom', align = 'end', onStartTour, onOpenExports, onOpenHistory }: ProfileMenuProps) {
