@@ -35,7 +35,7 @@ import { accountHistoryItem } from "@/lib/dashboard/record-history"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import { cn, ensureAbsoluteUrl } from "@/lib/utils"
-import { formatRevenueRange, knownText } from "@/lib/utils/helpers"
+import { knownText } from "@/lib/utils/helpers"
 import {
   FactGroup,
   FilterMenu,
@@ -504,7 +504,7 @@ export function AccountDetailsDialog({
                             label: "Revenue",
                             // Stored in millions; shown in the same compact form as market cap and net profit.
                             value: account.account_hq_revenue != null ? formatCompactNumber(account.account_hq_revenue * 1_000_000) : null,
-                            caption: formatRevenueRange(account.account_hq_revenue_range) || null,
+                            caption: account.account_hq_revenue_range,
                           },
                           { label: "Market cap", value: financialData ? formatCompactNumber(financialData.marketCap) : null, caption: marketSource },
                           { label: "Net profit", value: financialData?.netProfit != null ? formatCompactNumber(financialData.netProfit) : null, caption: marketSource },

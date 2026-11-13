@@ -10,7 +10,6 @@ import { TruncatedText, createSelectColumn } from "@/components/tables/data-tabl
 import { DataTableColumnHeader } from "@/components/tables/data-table-column-header"
 import type { DataTableFeatures } from "@/components/tables/data-table-features"
 import type { Account } from "@/lib/types"
-import { formatRevenueRange } from "@/lib/utils/helpers"
 import { ensureAbsoluteUrl } from "@/lib/utils"
 
 export const getAccountKey = (account: Account) => account.account_global_legal_name ?? ""
@@ -89,7 +88,7 @@ export const accountColumns = columnHelper.columns([
   columnHelper.accessor((account) => account.account_hq_revenue_range, {
     id: "revenue",
     header: ({ column }) => <DataTableColumnHeader column={column} title="Revenue range" />,
-    cell: ({ getValue }) => <TruncatedText value={formatRevenueRange(getValue()) || null} />,
+    cell: ({ getValue }) => <TruncatedText value={getValue()} />,
     sortFn: "text",
     meta: { className: "w-[140px]" },
   }),

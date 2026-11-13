@@ -28,7 +28,6 @@ import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
 import type { CityAggregate, StateAggregate } from "@/lib/dashboard/api-client"
 import type { Account, AccountVisibilityMode, Center, Prospect, Service, Function, Tech } from "@/lib/types"
 import { accountHeadcountChartTitle } from "@/lib/utils/chart-helpers"
-import { formatRevenueRange } from "@/lib/utils/helpers"
 
 export type TabSort = { key: string; direction: "asc" | "desc" }
 
@@ -296,7 +295,6 @@ export const AccountsTab = React.memo(function AccountsTab({
               title="Revenue range"
               analyticsTitle="Revenue Range"
               order="range"
-              formatName={formatRevenueRange}
               data={accountChartData.revenueRangeData}
               countLabel="Total accounts"
               showBigPercentage

@@ -13,7 +13,6 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
 import type { Account } from "@/lib/types"
-import { formatRevenueRange } from "@/lib/utils/helpers"
 import { ensureAbsoluteUrl } from "@/lib/utils"
 interface AccountGridCardProps {
   account: Account
@@ -102,7 +101,7 @@ export const AccountGridCard = memo(({ account, onClick }: AccountGridCardProps)
                 <div className="flex items-center justify-between gap-3 min-w-0">
                   <span className="text-muted-foreground">Revenue</span>
                   <TruncatedText
-                    text={formatRevenueRange(account.account_hq_revenue_range) || "-"}
+                    text={account.account_hq_revenue_range || "-"}
                     className="font-medium text-foreground text-right max-w-[160px]"
                     align="end"
                   />
