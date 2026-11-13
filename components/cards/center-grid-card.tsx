@@ -3,7 +3,6 @@ import { RiArrowRightUpLine, RiExternalLinkLine, RiEyeLine, RiGlobalLine } from 
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CompanyLogo } from "@/components/ui/company-logo"
-import { HintTooltip } from "@/components/ui/tooltip"
 import { TruncatedText } from "@/components/ui/truncated-text"
 import {
   ContextMenu,
@@ -15,7 +14,7 @@ import {
 import type { Center } from "@/lib/types"
 import { ensureAbsoluteUrl } from "@/lib/utils"
 import { formatCenterLocation } from "@/lib/utils/helpers"
-import { statusDot } from "@/components/dialogs/account-related-columns"
+import { CenterStatusDot } from "@/components/ui/center-status-dot"
 interface CenterGridCardProps {
   center: Center
   onClick: () => void
@@ -25,7 +24,6 @@ export const CenterGridCard = memo(({ center, onClick }: CenterGridCardProps) =>
   const centerName = center.center_name || "Centre"
   const accountName = center.account_global_legal_name || "Account"
   const location = formatCenterLocation(center.center_city, center.center_state)
-  const statusColor = statusDot(center.center_status)
 
   return (
     <ContextMenu>
@@ -50,13 +48,7 @@ export const CenterGridCard = memo(({ center, onClick }: CenterGridCardProps) =>
               <div className="min-w-0">
                 <h3 className="min-w-0 text-base font-medium leading-snug text-foreground flex items-center gap-2">
                   <TruncatedText text={centerName} className="min-w-0" />
-                  <HintTooltip label={center.center_status ?? "Unknown status"}>
-                    <span
-                      role="img"
-                      tabIndex={0}
-                      className={`inline-flex h-2 w-2 shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${statusColor}`}
-                    />
-                  </HintTooltip>
+                  <CenterStatusDot status={center.center_status} />
                 </h3>
                 <TruncatedText text={accountName} className="text-sm text-muted-foreground mt-1" />
               </div>

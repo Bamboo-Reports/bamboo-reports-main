@@ -2,6 +2,7 @@
 
 import { createColumnHelper } from "@tanstack/react-table"
 import { RiExternalLinkLine, RiEyeLine, RiGlobalLine } from "@remixicon/react"
+import { CenterStatusDot } from "@/components/ui/center-status-dot"
 import { CompanyLogo } from "@/components/ui/company-logo"
 import { ContextMenuItem, ContextMenuSeparator } from "@/components/ui/context-menu"
 import { TruncatedText as TruncatedSpan } from "@/components/ui/truncated-text"
@@ -26,7 +27,10 @@ function CenterNameCell({ center }: { center: Center }) {
         theme="auto"
       />
       <div className="min-w-0">
-        <TruncatedSpan text={center.center_name || "N/A"} className="font-medium" />
+        <div className="flex min-w-0 items-center gap-2">
+          <TruncatedSpan text={center.center_name || "N/A"} className="min-w-0 font-medium" />
+          <CenterStatusDot status={center.center_status} />
+        </div>
         <TruncatedSpan text={center.account_global_legal_name || "N/A"} className="text-xs text-muted-foreground" />
       </div>
     </div>
