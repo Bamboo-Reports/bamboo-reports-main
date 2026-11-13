@@ -326,7 +326,6 @@ export const CentersTab = React.memo(function CentersTab({
               title="Function"
               data={centerChartData.functionData}
               countLabel="Total centres"
-              note="A centre can have several functions, so shares are of all functions listed, not of centres"
               showBigPercentage
               labelDisplay={chartLabelDisplay}
               onLabelDisplayChange={onChartLabelDisplayChange}

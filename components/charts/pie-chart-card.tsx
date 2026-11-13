@@ -2,8 +2,7 @@
 
 import React, { memo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { RiInformationLine, RiPieChartLine } from "@remixicon/react"
-import { HintTooltip } from "@/components/ui/tooltip"
+import { RiPieChartLine } from "@remixicon/react"
 import { cn } from "@/lib/utils"
 import { captureEvent } from "@/lib/analytics/client"
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events"
@@ -161,8 +160,6 @@ interface PieChartCardProps {
    * order, shaded light to dark, instead of largest first.
    */
   order?: "size" | "range"
-  /** A short note on how to read the chart, behind an info icon next to the title. */
-  note?: string
 }
 
 export const PieChartCard = memo(({
@@ -176,7 +173,6 @@ export const PieChartCard = memo(({
   onLabelDisplayChange,
   loading = false,
   order = "size",
-  note,
 }: PieChartCardProps) => {
   const OTHERS_THRESHOLD_PERCENT = 5
   // "Total accounts" reads as "Accounts: 1,184" in the tooltip.
@@ -298,7 +294,7 @@ export const PieChartCard = memo(({
       accessibility: {
         enabled: true,
         landmarkVerbosity: "one",
-        description: `${title}. ${seriesData.length} segments. ${countLabel} total ${total.toLocaleString()}.${note ? ` ${note}.` : ""}`,
+        description: `${title}. ${seriesData.length} segments. ${countLabel} total ${total.toLocaleString()}.`,
         point: {
           descriptionFormatter: (point) =>
             describePieSlice(String(point.name ?? ""), typeof point.y === "number" ? point.y : 0, total, countLineLabel),
@@ -428,7 +424,7 @@ export const PieChartCard = memo(({
         ],
       },
     }
-  }, [seriesData, total, countLabel, countLineLabel, showBigPercentage, title, analyticsTitle, labelDisplay, note])
+  }, [seriesData, total, countLabel, countLineLabel, showBigPercentage, title, analyticsTitle, labelDisplay])
 
   return (
     <Card className="border shadow-sm">
@@ -436,16 +432,6 @@ export const PieChartCard = memo(({
         <CardTitle className="text-base font-medium leading-6 tracking-normal flex items-center gap-2">
           <RiPieChartLine className="h-4 w-4 text-muted-foreground" />
           {title}
-          {note && (
-            <HintTooltip label="How to read this chart" hint={note}>
-              <button
-                type="button"
-                className="inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground transition-colors duration-150 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <RiInformationLine className="h-4 w-4" aria-hidden />
-              </button>
-            </HintTooltip>
-          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-4 pt-0">
