@@ -157,7 +157,7 @@ Column labels and cells are defined per tab in the column files listed below. Th
 |---------------|-----------|-----------------|-------|-------------|-------|
 | *(Logo)* | | `center_account_website` | `centers` | Company logo | Brandfetch lookup by parent account domain |
 | Centre Name | `name` (required) | `center_name` | `centers` | Clickable text | Opens the Centre Details dialog; second line shows `account_global_legal_name` |
-| Location | `location` | `center_city` + `center_state` + `center_country` | `centers` | Computed text | `formatCenterLocation`: "City, State", else the state, else the country, else "India"; blank and `TBA` values are skipped |
+| Location | `location` | `center_city` + `center_state` + `center_country` | `centers` | Computed text | `formatCenterLocation`: the city, else the state, else the country, else "India"; blank and `TBA` values are skipped |
 | Centre Type | `type` | `center_type` | `centers` | Text | |
 | Centre Headcount | `employees` | `center_employees_range` | `centers` | Text | Bucketed range string |
 
@@ -171,7 +171,7 @@ The row context menu also uses `center_website` and `center_linkedin`. `cn_uniqu
 |---------------|-----------|-----------------|-------|-------------|-------|
 | *(Avatar)* | `avatar` (required) | `prospect_full_name` or `prospect_first_name` + `prospect_last_name` | `prospects` | Initials badge | |
 | Name | `name` (required) | `prospect_full_name` or `prospect_first_name` + `prospect_last_name` | `prospects` | Clickable text | Opens the Prospect Details dialog; second line shows `account_global_legal_name` |
-| Location | `location` | `prospect_city` + `prospect_state` + `prospect_country` | `prospects` | Computed text | `formatProspectLocation`: "City, State", else the state, else the country, else "India"; blank and `TBA` values are skipped |
+| Location | `location` | `prospect_city` + `prospect_state` + `prospect_country` | `prospects` | Computed text | `formatProspectLocation`: the city, else the state, else the country, else "India"; blank and `TBA` values are skipped |
 | Job Title | `title` | `prospect_title` | `prospects` | Text | |
 | Department | `department` | `prospect_department` | `prospects` | Text | |
 

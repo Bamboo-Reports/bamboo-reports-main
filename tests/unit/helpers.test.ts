@@ -42,8 +42,8 @@ describe("formatRevenueInMillions", () => {
 })
 
 describe("formatLocation", () => {
-  it("shows the city with its state when the city is known", () => {
-    expect(formatLocation("Pune", "Maharashtra", "India")).toBe("Pune, Maharashtra")
+  it("shows only the city when the city is known", () => {
+    expect(formatLocation("Pune", "Maharashtra", "India")).toBe("Pune")
     expect(formatLocation(" Pune ", "TBA", "India")).toBe("Pune")
   })
 

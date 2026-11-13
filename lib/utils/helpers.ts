@@ -54,20 +54,15 @@ export const knownText = (value: string | null | undefined): string | null => {
 }
 
 /**
- * Where a centre or prospect is: "City, State" when the city is known, else
- * the state, else the country, else "India". Blank and "TBA" count as unknown
- * at every level.
+ * Where a centre or prospect is, as one place: the city when known, else the
+ * state, else the country ("India" if even that is missing). Blank and "TBA"
+ * count as unknown at every level.
  */
 export const formatLocation = (
   city: string | null | undefined,
   state: string | null | undefined,
   country?: string | null | undefined,
-): string => {
-  const knownCity = knownText(city)
-  const knownState = knownText(state)
-  if (knownCity) return knownState ? `${knownCity}, ${knownState}` : knownCity
-  return knownState ?? knownText(country) ?? "India"
-}
+): string => knownText(city) ?? knownText(state) ?? knownText(country) ?? "India"
 
 export const formatProspectLocation = formatLocation
 export const formatCenterLocation = formatLocation
