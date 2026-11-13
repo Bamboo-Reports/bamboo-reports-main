@@ -111,16 +111,6 @@ const config: Config = {
   					transform: 'translateY(0)'
   				}
   			},
-  			'scale-in': {
-  				from: {
-  					transform: 'scale(0.97)',
-  					opacity: '0'
-  				},
-  				to: {
-  					transform: 'scale(1)',
-  					opacity: '1'
-  				}
-  			},
   			'shimmer': {
   				'0%': {
   					transform: 'translateX(-100%)'
@@ -142,7 +132,6 @@ const config: Config = {
   			'accordion-down': 'accordion-down 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
   			'accordion-up': 'accordion-up 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
   			'fade-in': 'fade-in 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
-  			'scale-in': 'scale-in 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)',
   			'shimmer': 'shimmer 2s infinite',
   			'chart-wave': 'chart-wave 6s linear infinite'
   		}

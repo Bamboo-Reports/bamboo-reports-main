@@ -144,7 +144,7 @@ export function CompanyLogo({
         // in the browser instead.
         unoptimized
         className={cn(
-          "object-contain transition-opacity duration-300",
+          "object-contain transition-opacity duration-150",
           zoom && sizeConfig.zoom,
           imageLoaded ? "opacity-100" : "opacity-0"
         )}

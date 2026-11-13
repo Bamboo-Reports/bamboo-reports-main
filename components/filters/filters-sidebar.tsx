@@ -264,7 +264,7 @@ export function FiltersSidebar({
       data-tour="filters-sidebar"
       className={cn(
         'bg-sidebar overflow-hidden shrink-0 relative ml-6 mt-[var(--dashboard-content-top-gap)] mb-[var(--dashboard-content-bottom-gap)] rounded-2xl border border-sidebar-border',
-        'transition-[width] duration-300 ease-[cubic-bezier(0.22_1_0.36_1)] motion-reduce:transition-none',
+        'transition-[width] duration-200 ease-[cubic-bezier(0.22_1_0.36_1)] motion-reduce:transition-none',
         isCollapsed ? 'w-16' : 'w-[320px]'
       )}
       aria-label="Filters sidebar"

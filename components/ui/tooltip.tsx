@@ -28,8 +28,8 @@ const TooltipContent = React.forwardRef<
       collisionPadding={collisionPadding}
       className={cn(
         "br-tip br-tip-label z-[100]",
-        "data-[state=delayed-open]:animate-in data-[state=instant-open]:animate-in data-[state=closed]:animate-out",
-        "data-[state=closed]:fade-out-0 data-[state=delayed-open]:fade-in-0 data-[state=instant-open]:fade-in-0 duration-100",
+        "data-[state=delayed-open]:animate-in data-[state=closed]:animate-out",
+        "data-[state=closed]:fade-out-0 data-[state=delayed-open]:fade-in-0 duration-100",
         "motion-reduce:animate-none",
         className
       )}
