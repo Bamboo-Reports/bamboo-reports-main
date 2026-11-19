@@ -19,6 +19,10 @@ const nextConfig = {
   logging: {
     browserToTerminal: true,
   },
+  experimental: {
+    // `next dev` checks npm security advisories and nudges coding agents to upgrade.
+    agentUpgrade: "security",
+  },
   images: {
     minimumCacheTTL: 7776000, // cache for 90 days
     remotePatterns: [
